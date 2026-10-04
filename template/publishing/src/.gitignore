@@ -1,0 +1,13 @@
+# .gitignore — publishing/src/
+#
+# Template-owned; copier update keeps it current. Project-wide rules belong in the root .gitignore.
+# No inline comments in this file: Git reads a # after a pattern as part of the pattern.
+
+# ----------------------------------------------------------------------------
+# Rendered deliverables, burned versions and thumbnail PNGs
+# ----------------------------------------------------------------------------
+# Made by the toolkit from the master, the captions and the thumbnail layouts on request:
+# regenerable, and too large for plain Git. The folder's README stays tracked, so the folder
+# and its explanation exist in every checkout. Never force a render past this rule.
+/renders/*
+!/renders/README.md

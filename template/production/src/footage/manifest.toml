@@ -1,0 +1,21 @@
+# manifest.toml — every source file the pieces of <%BRAND_NAME%> are cut from
+#
+# Written by `python3 toolkit/media.py footage add`, which copies a file into raw/ (it never
+# moves the original), hashes and measures it, and appends the next [[file]] table here. Read by
+# `footage verify`, `assemble` and `captions retime`. The files themselves live in external
+# storage by decision: footage is large and rarely diffed, and would exhaust Git LFS quotas.
+# raw/ is this machine's git-ignored mirror, and the sha256 below each file proves it.
+# production/docs/reference/source-media.md explains every field.
+#
+# This project's own file: written once, when the project was generated, and never changed by
+# `copier update`; if you delete it, the next update restores it empty.
+#
+# One [[file]] table per source file, appended in the order logged. Never reorder the tables,
+# and never reuse or renumber an ID: a retired file keeps its table, with the date in notes.
+#
+# Fields: id ("F0001" onwards; permanent) · path (relative to production/src/footage/, under
+# raw/) · kind (video | audio | music | stock | image | generated) · sha256 · bytes · duration
+# (decimal seconds; 0.0 for an image) · location (where the master copy lives: a label, never a
+# link that carries a secret) · recorded (DD/MM/YYYY) · rights ("RR0001" when the file is
+# licensed or shows people; empty otherwise) · notes (for a generated file, the take or chapter
+# it archives).

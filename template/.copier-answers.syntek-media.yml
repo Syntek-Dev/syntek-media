@@ -1,0 +1,10 @@
+# This file is rendered by Copier into every generated project.
+#
+# In the generated project it records the template source, the commit it was
+# generated from, and every answer given — which is what makes `copier update`
+# able to three-way-merge later syntek-media improvements into a live project.
+#
+# Do not edit it by hand in a generated project: `copier update` overwrites it.
+# Its name is not Copier's default, so every update names it:
+#   uvx copier update --trust -a .copier-answers.syntek-media.yml
+<% _copier_answers|to_nice_yaml -%>

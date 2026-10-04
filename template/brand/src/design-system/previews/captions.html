@@ -1,0 +1,48 @@
+<!-- @dsCard group="Components" -->
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Captions — <%BRAND_NAME%></title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /* The whole page is one frame: vh here is a share of the frame's height, exactly as
+     captions burn reads --caption-size and --caption-outline-width. Text sits above the
+     bottom safe margin the renderer sets, or 8% of the height where none is set. */
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    background: linear-gradient(160deg, var(--color-surface), var(--color-bg));
+    font-family: var(--caption-font);
+  }
+  .cue {
+    position: absolute;
+    left: max(var(--safe-left, 0px), 5vw);
+    right: max(var(--safe-right, 0px), 5vw);
+    bottom: max(var(--safe-bottom, 0px), 8vh);
+    margin: 0;
+    text-align: center;
+    color: var(--caption-text);
+    font-weight: var(--caption-weight);
+    font-size: var(--caption-size);
+    line-height: 1.25;
+    -webkit-text-stroke: calc(var(--caption-outline-width) * 2) var(--caption-outline);
+    paint-order: stroke fill;
+  }
+  .note {
+    position: absolute;
+    top: max(var(--safe-top, 0px), 4vh);
+    left: max(var(--safe-left, 0px), 5vw);
+    right: max(var(--safe-right, 0px), 5vw);
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 2.4vmin;
+    color: var(--color-text-muted);
+  }
+</style>
+</head>
+<body>
+<p class="note">--caption-font · --caption-weight · --caption-size · --caption-text · --caption-outline · --caption-outline-width</p>
+<p class="cue">Captions sit in the safe zone,<br>two lines at most, on brand.</p>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# author-nonfiction.answers.yml — an INVENTED example of answers for a non-fiction author.
+#
+# A shape to copy, not a project: every value below is made up. Copy this file outside the
+# project you are applying the template to, change every value, then pass it to `copier copy`
+# with --data-file (README.md, "Applying to a syntek-author project"). Keys are the questions in
+# copier.yml, and the lists hold choice values, never their labels; a question left out here is
+# asked, or takes its default under --defaults.
+BRAND_NAME: Robin Example
+BRAND_SLUG: robin-example
+BRAND_KIND: author-nonfiction
+BRAND_DESCRIPTION: >-
+  Recorded talks, a podcast and the audiobook of a book on the shared table in a small
+  congregation, for church members with no theological training.
+AUDIENCE_TEST: A thoughtful listener with no specialist training, hearing it on a commute.
+OWNER_NAME: Robin Example
+OWNER_FIRST_NAME: Robin
+PLATFORMS:
+  - youtube
+  - podcast
+  - facebook
+MEDIA_KINDS:
+  - long-video
+  - podcast
+  - audiobook
+  - short-video
+SEED_EXAMPLES: false
+MODEL_MECHANICAL: sonnet
+TIMEZONE: Europe/London
+DATE: 03/10/2026

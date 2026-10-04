@@ -1,0 +1,99 @@
+# syntek-author-names.txt — the names syntek-media never takes (DESIGN.md D27).
+#
+# Baseline: syntek-author af7467c plus working tree, read 04/10/2026.
+# Written only by: bash .github/scripts/coexist-test.sh --refresh-names --author DIR
+# Never edit by hand. shipped-brands.sh check 11 and skill-conformance.sh check 20 read it
+# on every run; coexist-test.sh check 20 fails when syntek-author moves past it.
+#
+# top <entry>     an entry of syntek-author's template/, plus build
+# claude <entry>  an entry of its template/.claude/
+# skill <name>    a skill folder
+# rules <file>    a file of its rules folder
+claude CLAUDE.md
+claude CONTEXT.md
+claude MEMORY.md
+claude hooks
+claude rules
+claude settings.json
+claude skills
+rules 00-project.md
+rules 01-layout-and-routing.md
+rules 02-skills.md
+rules 03-authorship.md
+rules 04-build-pipeline.md
+rules 05-model-allocation.md
+rules 06-global-rules.md
+rules 07-session-boundaries.md
+rules 08-naming-and-memory.md
+skill accounting-documents
+skill adapt-section
+skill add-reference
+skill add-word
+skill approach-a-reader
+skill argument-audit
+skill build
+skill build-language
+skill business-documents
+skill category-check
+skill causality
+skill character-voice
+skill chart-character-arc
+skill clause-consistency
+skill comprehension
+skill continuity
+skill create-creature
+skill create-name
+skill design-quest
+skill design-script
+skill draft-section
+skill email-documents
+skill fact-check
+skill flow
+skill grammar
+skill grill-me
+skill grill-with-docs
+skill grilling
+skill handoff
+skill improve-section
+skill learn-voice
+skill legal-documents
+skill msp-scp-documents
+skill obligation-check
+skill pacing
+skill promote-section
+skill pronounce
+skill prototype
+skill research
+skill run-workflow
+skill sensitivity-pass
+skill social-media-documents
+skill spelling
+skill steelman
+skill structure-review
+skill teach
+skill tone
+skill tradition-check
+skill typeset
+skill wait-what
+skill wayfinder
+top .claude
+top .copier-answers.syntek-author.yml
+top .github
+top .gitignore
+top .mcp.json
+top CONTEXT.md
+top Makefile
+top README.md
+top assets
+top build
+top handoffs
+top learning
+top library
+top manuscript
+top planning
+top proposal
+top research
+top standards
+top tooling
+top typeset
+top world

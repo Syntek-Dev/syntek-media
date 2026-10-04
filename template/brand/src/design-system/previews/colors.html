@@ -1,0 +1,57 @@
+<!-- @dsCard group="Colors" -->
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colours — <%BRAND_NAME%></title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    box-sizing: border-box;
+    padding: calc(var(--space-unit) * 4);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: var(--weight-body);
+    font-size: 2.6vmin;
+  }
+  h1 { margin: 0 0 calc(var(--space-unit) * 3); font-family: var(--font-display); font-weight: var(--weight-display); font-size: 4.5vmin; }
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(var(--space-unit) * 2); }
+  .swatch { border-radius: var(--radius); overflow: hidden; background: var(--color-surface); }
+  .chip { height: 14vmin; border-bottom: 1px solid var(--color-text-muted); }
+  .label { padding: var(--space-unit) calc(var(--space-unit) * 1.5); }
+  .name { display: block; }
+  .value { display: block; color: var(--color-text-muted); font-size: 2.2vmin; }
+  .pair { margin-top: calc(var(--space-unit) * 3); display: flex; gap: calc(var(--space-unit) * 2); }
+  .pair span { padding: var(--space-unit) calc(var(--space-unit) * 2); border-radius: var(--radius); }
+  @media (max-aspect-ratio: 1/1) { .swatches { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<h1>Colour</h1>
+<div class="swatches">
+  <div class="swatch"><div class="chip" style="background: var(--color-bg)"></div><div class="label"><span class="name">--color-bg</span><span class="value" data-token="--color-bg"></span></div></div>
+  <div class="swatch"><div class="chip" style="background: var(--color-surface)"></div><div class="label"><span class="name">--color-surface</span><span class="value" data-token="--color-surface"></span></div></div>
+  <div class="swatch"><div class="chip" style="background: var(--color-text)"></div><div class="label"><span class="name">--color-text</span><span class="value" data-token="--color-text"></span></div></div>
+  <div class="swatch"><div class="chip" style="background: var(--color-text-muted)"></div><div class="label"><span class="name">--color-text-muted</span><span class="value" data-token="--color-text-muted"></span></div></div>
+  <div class="swatch"><div class="chip" style="background: var(--color-accent)"></div><div class="label"><span class="name">--color-accent</span><span class="value" data-token="--color-accent"></span></div></div>
+  <div class="swatch"><div class="chip" style="background: var(--color-on-accent)"></div><div class="label"><span class="name">--color-on-accent</span><span class="value" data-token="--color-on-accent"></span></div></div>
+  <div class="swatch"><div class="chip" style="background: var(--caption-text)"></div><div class="label"><span class="name">--caption-text</span><span class="value" data-token="--caption-text"></span></div></div>
+  <div class="swatch"><div class="chip" style="background: var(--caption-outline)"></div><div class="label"><span class="name">--caption-outline</span><span class="value" data-token="--caption-outline"></span></div></div>
+</div>
+<div class="pair">
+  <span style="background: var(--color-bg); color: var(--color-text)">Text on background</span>
+  <span style="background: var(--color-surface); color: var(--color-text)">Text on surface</span>
+  <span style="background: var(--color-accent); color: var(--color-on-accent)">On accent</span>
+</div>
+<script>
+  // Show each token's current value beside its name; the swatches work without this.
+  var root = getComputedStyle(document.documentElement);
+  document.querySelectorAll("[data-token]").forEach(function (el) {
+    el.textContent = root.getPropertyValue(el.dataset.token).trim();
+  });
+</script>
+</body>
+</html>

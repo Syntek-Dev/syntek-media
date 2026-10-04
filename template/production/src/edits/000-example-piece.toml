@@ -1,0 +1,81 @@
+# 000-example-piece.toml — the edit decision list of the worked example
+#
+# Seeded once with the project; copier update never brings it back. It cuts the example's
+# 30-second master from four takes of one camera recording, F0000: one clip per beat of
+# the piece's script, scripts/src/pieces/000-example-piece/script.md, with the title card
+# over the first four seconds. The sound is the recording's own: the piece is spoken on
+# camera, so there is no voiceover register and no [[audio]] table.
+#
+# No project has F0000: the footage manifest numbers its files from F0001, so assemble
+# stops on this file with exit 2 and names the missing footage:
+#   python3 toolkit/media.py assemble production/src/edits/000-example-piece.toml
+# That stop is the end of the walk-through, as the piece's brief says. The fields are
+# explained in production/docs/reference/edit-decision-lists.md.
+
+[edit]
+piece = "000-example-piece"
+version = 1
+size = "1080x1920"          # shot vertical, so every vertical deliverable is cut without reframing
+audio_rate = 48000
+loudness = "social"
+
+[[clip]]                    # B01, S01: 00:00–00:05 on the master
+id = "c01"
+source = "F0000"
+in = "00:00:06.200"
+out = "00:00:11.200"
+seconds = 0.0
+colour = ""
+frame = "fit"
+x = 0
+mute = false
+motion = "none"
+transition = "cut"
+transition_seconds = 0.0
+
+[[clip]]                    # B02, S02: 00:05–00:15 on the master
+id = "c02"
+source = "F0000"
+in = "00:00:24.800"
+out = "00:00:34.800"
+seconds = 0.0
+colour = ""
+frame = "fit"
+x = 0
+mute = false
+motion = "none"
+transition = "cut"
+transition_seconds = 0.0
+
+[[clip]]                    # B03, S03: 00:15–00:24 on the master
+id = "c03"
+source = "F0000"
+in = "00:00:52.400"
+out = "00:01:01.400"
+seconds = 0.0
+colour = ""
+frame = "fit"
+x = 0
+mute = false
+motion = "none"
+transition = "cut"
+transition_seconds = 0.0
+
+[[clip]]                    # B04, S04: 00:24–00:30 on the master
+id = "c04"
+source = "F0000"
+in = "00:01:17.600"
+out = "00:01:23.600"
+seconds = 0.0
+colour = ""
+frame = "fit"
+x = 0
+mute = false
+motion = "none"
+transition = "cut"
+transition_seconds = 0.0
+
+[[overlay]]                 # B01, S05: the title card, rendered with a transparent background
+source = "production/src/cards/000-example-piece.title.html"
+at = "00:00:00.000"
+until = "00:00:04.000"

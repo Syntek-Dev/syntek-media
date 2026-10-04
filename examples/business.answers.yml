@@ -1,0 +1,28 @@
+# business.answers.yml — an INVENTED example of answers for a business brand.
+#
+# A shape to copy, not a project: every value below is made up. Copy this file outside the
+# project you are applying the template to, change every value, then pass it to `copier copy`
+# with --data-file (README.md, "Applying to a syntek-author project"). Keys are the questions in
+# copier.yml, and the lists hold choice values, never their labels; a question left out here is
+# asked, or takes its default under --defaults.
+BRAND_NAME: Harbour Lane Studio
+BRAND_SLUG: harbour-lane-studio
+BRAND_KIND: business
+BRAND_DESCRIPTION: >-
+  Short explainers, recorded talks and behind-the-scenes clips from a two-person design
+  studio, for small businesses deciding whether to commission a new identity.
+AUDIENCE_TEST: A small-business owner watching on a phone between meetings, with the sound off.
+OWNER_NAME: Harbour Lane Studio
+OWNER_FIRST_NAME: Casey
+PLATFORMS:
+  - youtube
+  - linkedin
+  - instagram
+MEDIA_KINDS:
+  - short-video
+  - long-video
+  - voiceover
+SEED_EXAMPLES: false
+MODEL_MECHANICAL: opus
+TIMEZONE: Europe/London
+DATE: 03/10/2026

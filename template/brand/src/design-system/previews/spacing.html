@@ -1,0 +1,37 @@
+<!-- @dsCard group="Spacing" -->
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spacing — <%BRAND_NAME%></title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    box-sizing: border-box;
+    padding: calc(var(--space-unit) * 5);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: var(--weight-body);
+    font-size: 2.6vmin;
+  }
+  h1 { margin: 0 0 calc(var(--space-unit) * 3); font-family: var(--font-display); font-weight: var(--weight-display); font-size: 4.5vmin; }
+  .row { display: flex; align-items: center; gap: calc(var(--space-unit) * 2); margin-bottom: calc(var(--space-unit) * 1.5); }
+  .row span { width: 14ch; color: var(--color-text-muted); }
+  .bar { height: calc(var(--space-unit) * 2); background: var(--color-accent); border-radius: calc(var(--radius) / 2); }
+  .radius { margin-top: calc(var(--space-unit) * 3); width: 24vmin; height: 12vmin; border-radius: var(--radius); background: var(--color-surface); display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+<h1>Space</h1>
+<div class="row"><span>1 × unit</span><div class="bar" style="width: calc(var(--space-unit) * 1)"></div></div>
+<div class="row"><span>2 × unit</span><div class="bar" style="width: calc(var(--space-unit) * 2)"></div></div>
+<div class="row"><span>3 × unit</span><div class="bar" style="width: calc(var(--space-unit) * 3)"></div></div>
+<div class="row"><span>5 × unit</span><div class="bar" style="width: calc(var(--space-unit) * 5)"></div></div>
+<div class="row"><span>8 × unit</span><div class="bar" style="width: calc(var(--space-unit) * 8)"></div></div>
+<div class="row"><span>13 × unit</span><div class="bar" style="width: calc(var(--space-unit) * 13)"></div></div>
+<div class="radius">--radius</div>
+</body>
+</html>

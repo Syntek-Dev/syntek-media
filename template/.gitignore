@@ -1,0 +1,53 @@
+# .gitignore — <%BRAND_SLUG%>
+# <%OWNER_NAME%>: the plans, scripts and records behind the video and audio of <%BRAND_NAME%>.
+#
+# No inline comments in this file: Git reads a # after a pattern as part of the pattern.
+# Rules that belong to one folder of the template live in a nested .gitignore inside that
+# folder, so this file stays the project's own. Renders, generated audio and the local footage
+# mirror are ignored by production/src/.gitignore and publishing/src/.gitignore, never here.
+
+# ----------------------------------------------------------------------------
+# Credentials and secrets — NEVER commit these
+# ----------------------------------------------------------------------------
+.env
+*.env
+.env.*
+!.env.example
+
+# ----------------------------------------------------------------------------
+# Claude Code — per-user local settings (the shared .claude/ config IS committed)
+# ----------------------------------------------------------------------------
+.claude/settings.local.json
+
+# ----------------------------------------------------------------------------
+# Operating system artefacts
+# ----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ----------------------------------------------------------------------------
+# Editor and IDE files
+# ----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ----------------------------------------------------------------------------
+# Python — the toolkit/ scripts and any local virtual environment
+# ----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# ----------------------------------------------------------------------------
+# Temporary files
+# ----------------------------------------------------------------------------
+*.tmp
+*.bak
+*.orig

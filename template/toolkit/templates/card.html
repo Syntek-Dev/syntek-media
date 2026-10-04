@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card — <%BRAND_NAME%></title>
+<link rel="stylesheet" href="../../brand/src/design-system/tokens.css">
+<!--
+  The toolkit's fallback title and end card layout, used only where the brand has no
+  brand/src/design-system/previews/card.html (the brand's own layout always wins).
+  cut-for-platform copies it to production/src/cards/<piece>.<card>.html, fixing the path to
+  tokens.css, and changes only the copy: the words, and the body's class. class="title" is a
+  lower-third title over the picture; class="end" is a centred end card with its call to
+  action. The background stays transparent, so the card can overlay a picture (an [[overlay]]
+  is rendered with --transparent); add the class "solid" to a card that fills the frame on its
+  own, as a [[clip]] does. One file serves every aspect ratio, and the words stay inside the
+  safe zone uv run toolkit/card.py sets on :root.
+-->
+<!-- AUTHOR TO CONFIRM: the words of this card, and whether it is a title or an end card, over the picture or solid (this is the toolkit's fallback layout; the brand's own layout lives in brand/src/design-system/previews/card.html). -->
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    background: transparent;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: var(--weight-body);
+  }
+  body.solid { background: var(--color-bg); }
+  .safe {
+    position: absolute;
+    top: var(--safe-top, 0px);
+    right: var(--safe-right, 0px);
+    bottom: var(--safe-bottom, 0px);
+    left: var(--safe-left, 0px);
+    box-sizing: border-box;
+    padding: calc(var(--space-unit) * 5);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-start;
+  }
+  .plate {
+    max-width: 70%;
+    padding: calc(var(--space-unit) * 2.5) calc(var(--space-unit) * 3.5);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-unit);
+  }
+  .kicker { margin: 0; font-size: 3vmin; color: var(--color-accent); }
+  .headline {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: var(--weight-display);
+    font-size: 7vmin;
+    line-height: 1.05;
+  }
+  .byline { margin: 0; font-size: 2.8vmin; color: var(--color-text-muted); }
+  .cta {
+    display: none;
+    margin: calc(var(--space-unit) * 1.5) 0 0;
+    align-self: flex-start;
+    padding: var(--space-unit) calc(var(--space-unit) * 2.5);
+    border-radius: var(--radius);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-size: 3.4vmin;
+  }
+
+  /* An end card: centred, with its call to action. */
+  body.end .safe { justify-content: center; align-items: center; }
+  body.end .plate { align-items: center; text-align: center; }
+  body.end .cta { display: block; align-self: center; }
+
+  /* Square and portrait (1:1, 4:5, 3:4): the plate takes the full width. */
+  @media (max-aspect-ratio: 1/1) {
+    .plate { max-width: 100%; }
+    .headline { font-size: 8vmin; }
+  }
+  /* Tall vertical (9:16): a title card sits in the middle band, clear of the platforms'
+     controls at the bottom of the frame. */
+  @media (max-aspect-ratio: 2/3) {
+    body.title .safe { justify-content: center; }
+    .headline { font-size: 9vmin; }
+  }
+</style>
+</head>
+<body class="title">
+<main class="safe">
+  <div class="plate">
+    <p class="kicker">Kicker</p>
+    <h1 class="headline">The title of the piece</h1>
+    <p class="byline"><%BRAND_NAME%></p>
+    <p class="cta">The call to action</p>
+  </div>
+</main>
+</body>
+</html>

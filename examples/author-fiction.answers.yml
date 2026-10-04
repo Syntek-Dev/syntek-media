@@ -1,0 +1,30 @@
+# author-fiction.answers.yml — an INVENTED example of answers for a novelist's brand.
+#
+# A shape to copy, not a project: every value below is made up. Copy this file outside the
+# project you are applying the template to, change every value, then pass it to `copier copy`
+# with --data-file (README.md, "Applying to a syntek-author project"). Keys are the questions in
+# copier.yml, and the lists hold choice values, never their labels; a question left out here is
+# asked, or takes its default under --defaults.
+BRAND_NAME: Morgan Example
+BRAND_SLUG: morgan-example
+BRAND_KIND: author-fiction
+BRAND_DESCRIPTION: >-
+  Trailers, read-aloud clips and the audiobook of a fantasy novel about a ferry pilot on a
+  drowned coast, for readers who have not yet opened the book.
+AUDIENCE_TEST: A reader who has never heard of the book, scrolling with the sound off.
+OWNER_NAME: Morgan Example
+OWNER_FIRST_NAME: Morgan
+PLATFORMS:
+  - tiktok
+  - instagram
+  - youtube
+  - facebook
+MEDIA_KINDS:
+  - trailer
+  - short-video
+  - audiobook
+  - voiceover
+SEED_EXAMPLES: false
+MODEL_MECHANICAL: sonnet
+TIMEZONE: Europe/London
+DATE: 03/10/2026

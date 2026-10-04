@@ -1,0 +1,36 @@
+<!-- @dsCard group="Brand" -->
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brand — <%BRAND_NAME%></title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    box-sizing: border-box;
+    padding: calc(var(--space-unit) * 6);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: var(--weight-body);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: calc(var(--space-unit) * 3);
+  }
+  .wordmark { margin: 0; font-family: var(--font-display); font-weight: var(--weight-display); font-size: 12vmin; line-height: 1; }
+  .rule { width: calc(var(--space-unit) * 16); height: calc(var(--space-unit) * 1.5); background: var(--color-accent); border-radius: var(--radius); }
+  .strapline { margin: 0; font-size: 3.6vmin; color: var(--color-text-muted); }
+  .chip { align-self: flex-start; padding: var(--space-unit) calc(var(--space-unit) * 2.5); border-radius: var(--radius); background: var(--color-accent); color: var(--color-on-accent); font-size: 3vmin; }
+</style>
+</head>
+<body>
+<!-- AUTHOR TO CONFIRM: how the brand's name appears on screen: this wordmark set in the display face, or a logo exported to brand/src/exports/ and placed here by relative path; and whether a strapline appears with it. -->
+<p class="wordmark"><%BRAND_NAME%></p>
+<div class="rule"></div>
+<p class="strapline">A strapline, where the brand uses one</p>
+<span class="chip">Accent</span>
+</body>
+</html>

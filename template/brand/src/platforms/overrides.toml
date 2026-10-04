@@ -1,0 +1,26 @@
+# overrides.toml — confirmed corrections to toolkit/data/platforms.toml for <%BRAND_NAME%>
+#
+# Read by the toolkit wherever it reads a deliverable's preset; `python3 toolkit/media.py
+# presets` prints every table with each override it applies. The platform data in
+# toolkit/data/platforms.toml is template-owned and refreshed by `copier update`, so a value the
+# brand has confirmed is different today is never edited there: it is recorded here, with the
+# platform's own words, where it says them and the date checked, and the toolkit applies it.
+#
+# Seeded once and never overwritten by `copier update`; it ships whatever platforms the project
+# posts to, so removing a platform never deletes a confirmed correction. Remove a removed
+# platform's tables by hand. An override is a confirmed fact, never a preference: the brand's own
+# choices (cadence, tone, hashtags, deliverables used) belong in its profile beside this file.
+#
+# Fields: key (<platform>.<format>.<field> of platforms.toml) · value (a TOML value of the
+# field's own type) · why (what the platform now says) · source (where it says it) · checked
+# (DD/MM/YYYY). One [[override]] table per corrected field, written in this form:
+#
+# [[override]]
+# key = "<platform>.<format>.<field>"
+# value = 0
+# why = ""
+# source = ""
+# checked = ""
+#
+# This file has no overrides until the author confirms one through
+# brand/workflows/04-set-up-a-platform/ or publishing/workflows/07-refresh-the-platform-specs/.

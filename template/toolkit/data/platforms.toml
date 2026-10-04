@@ -1,0 +1,499 @@
+# platforms.toml — delivery specs for every platform deliverable syntek-media cuts, encodes or briefs
+#
+# Read by the toolkit's ffmpeg presets (cut-for-platform, captions burn-in, repurpose) and by the
+# thumbnail-brief skill. Each [platform.<name>.<format>] table is one deliverable; each
+# [audiobook.<store>] table is a mastering and delivery target. Values come from the platform's
+# own help centre, developer documentation or ads guide, checked on the date in `checked`.
+# Read by `python3 toolkit/media.py` and `uv run toolkit/card.py`; `media.py presets` prints it.
+#
+# Rules for readers:
+# - A key named in `verify` was NOT confirmed from an official source on `checked`; re-check it
+#   before relying on it. A key that is ABSENT means "no published value": presets keep the
+#   source value (frame rate, sample rate) or skip that check (loudness, safe zone).
+# - `max_size` strings are copied as the platform states them ("4 GB"); never convert units.
+# - `safe_zone` is in pixels at this table's width x height; scale it for other sizes. Inside
+#   safe_zone, 0 means "no margin published for that edge".
+# - `caption_formats = []` means no sidecar upload is documented: burn captions in.
+# - `chosen = [...]` names keys this file fixed inside an official range (e.g. 1920x1080 inside
+#   LinkedIn's 256x144-4096x2304); they are house choices, not platform rules.
+#
+# Template-owned: `copier update` may refresh it. Platforms change specs without notice:
+# re-check every `source` at least every six months and update `checked` (DD/MM/YYYY).
+# The brand's confirmed corrections never go here: each is an [[override]] table in
+# brand/src/platforms/overrides.toml, which the toolkit applies and prints, so an update to this
+# file never loses them (`media.py presets --stale-after 183 --today DD/MM/YYYY` lists old tables).
+#
+# Fields: kind (video | image | audio) · width · height · aspect ("W:H") · min_seconds ·
+# max_seconds · fps_min · fps_max · container · video_codec · video_bitrate · audio_codec ·
+# audio_bitrate · audio_sample_rate · loudness_lufs · true_peak_db · safe_zone {top, bottom,
+# left, right} · caption_formats · max_size · checked · source · extra_sources · verify · chosen · notes.
+
+# ---------------------------------------------------------------------------------------------
+# House values: decisions, NOT platform specs (DESIGN.md D24).
+# No social video platform publishes a loudness target ("-14 LUFS for YouTube" is folklore, not in
+# YouTube's help), so social video masters to -14 LUFS integrated and -1 dBTP by house decision.
+# Podcast loudness comes from [platform.podcast.apple_rss_audio]; audiobook targets from
+# [audiobook.acx], which ACX measures in RMS, peak and noise floor, not LUFS.
+[house]
+social_loudness_lufs = -14.0
+social_true_peak_db = -1.0
+basis = "house decision: no social platform publishes a loudness target"
+checked = "03/10/2026"
+source = "DESIGN.md D24"
+
+# =============================================================================================
+# YouTube
+# =============================================================================================
+[platform.youtube]
+title_max_chars = 100
+description_max_chars = 5000
+hashtags_ignored_over = 60          # "more than 60 hashtags" -> every hashtag on that content ignored
+hashtags_shown_by_title = 3         # up to three, chosen by YouTube from the description
+checked = "03/10/2026"
+source = "https://support.google.com/youtube/answer/57404?hl=en"
+extra_sources = ["https://support.google.com/youtube/answer/6390658?hl=en"]   # scrub: allow — a help-centre article ID, not personal data
+
+[platform.youtube.long]
+kind = "video"
+width = 1920
+height = 1080
+aspect = "16:9"
+max_seconds = 43200                 # 12 hours or 256 GB, whichever is less
+max_seconds_unverified = 900        # default 15-minute cap until the account is verified
+container = "mp4"                   # moov atom at the front (faststart), no edit lists
+video_codec = "h264"                # High profile, progressive, 2 consecutive B-frames, closed GOP, CABAC, 4:2:0
+pix_fmt = "yuv420p"
+colour = "bt709"
+video_bitrate = "8M"                # 1080p at 24/25/30 fps; 12M at 48/50/60 fps
+video_bitrate_high_fps = "12M"
+fps_allowed = [24, 25, 30, 48, 50, 60]   # "should match original recording" - presets keep source fps
+audio_codec = "aac"                 # AAC-LC (Opus also accepted)
+audio_bitrate = "384k"              # stereo; mono 128k; 5.1 512k
+audio_sample_rate = 48000
+caption_formats = ["srt", "sbv", "sub", "mpsub", "lrc", "cap", "smi", "sami", "rt", "vtt", "ttml", "dfxp", "scc", "stl", "tds", "cin", "asc"]
+max_size = "256 GB"
+checked = "03/10/2026"
+source = "https://support.google.com/youtube/answer/1722171?hl=en"   # scrub: allow — a help-centre article ID, not personal data
+extra_sources = ["https://support.google.com/youtube/answer/71673?hl=en", "https://support.google.com/youtube/answer/2734698?hl=en"]   # scrub: allow — a help-centre article ID, not personal data
+notes = "No safe zone published for 16:9 long-form; 4K (3840x2160) bitrate 35-45M at 24-30 fps."
+
+[platform.youtube.short]
+kind = "video"
+width = 1080
+height = 1920
+aspect = "9:16"                     # "square or vertical" qualifies as a Short
+max_seconds = 180
+container = "mp4"
+video_codec = "h264"
+pix_fmt = "yuv420p"
+audio_codec = "aac"
+audio_sample_rate = 48000
+safe_zone = { top = 288, bottom = 672, left = 48, right = 192 }
+caption_formats = ["srt", "vtt"]
+checked = "03/10/2026"
+source = "https://support.google.com/youtube/answer/15424877?hl=en"   # scrub: allow — a help-centre article ID, not personal data
+extra_sources = ["https://support.google.com/google-ads/answer/9128498?hl=en", "https://support.google.com/google-ads/answer/16041697?hl=en"]   # scrub: allow — a help-centre article ID, not personal data
+verify = ["safe_zone", "caption_formats"]
+notes = "Safe zone is Google's 'YouTube | Vertical Video Ads' diagram at 1080x1920 (ads UI); used as the best official proxy for organic Shorts. A Short over 60 s with ANY active Content ID claim is blocked globally. Ads guidance: only the first 60 s play in the Shorts feed. Caption sidecar support for Shorts specifically not confirmed."
+
+[platform.youtube.thumbnail]
+kind = "image"
+width = 3840
+height = 2160
+aspect = "16:9"
+min_width = 640
+formats = ["jpg", "png"]
+max_size = "50 MB"                  # desktop upload; mobile upload limit is 2 MB
+max_size_mobile = "2 MB"
+checked = "03/10/2026"
+source = "https://support.google.com/youtube/answer/72431?hl=en"
+
+[platform.youtube.short_thumbnail]
+kind = "image"
+width = 2160
+height = 3840
+aspect = "9:16"
+min_height = 640
+formats = ["jpg", "png"]
+max_size = "50 MB"
+checked = "03/10/2026"
+source = "https://support.google.com/youtube/answer/72431?hl=en"
+
+[platform.youtube.podcast_thumbnail]
+kind = "image"
+aspect = "1:1"                      # podcast playlists
+formats = ["jpg", "png"]
+max_size = "50 MB"                  # desktop; mobile 10 MB
+max_size_mobile = "10 MB"
+checked = "03/10/2026"
+source = "https://support.google.com/youtube/answer/72431?hl=en"
+verify = ["width", "height"]
+notes = "No pixel size published for 1:1 podcast thumbnails; width/height deliberately absent."
+
+# =============================================================================================
+# TikTok (TikTok's help centre is JavaScript-rendered; developer and ads docs are the official text)
+# =============================================================================================
+[platform.tiktok]
+caption_max_chars = 2200            # Content Posting API: "maximum length is 2200 in UTF-16 runes"
+caption_max_chars_app = 4000        # in-app, reported by third parties only
+ai_flag_api_field = "is_aigc"       # API field that applies the "Creator labeled as AI-generated" tag
+checked = "03/10/2026"
+source = "https://developers.tiktok.com/doc/content-posting-api-reference-direct-post"
+verify = ["caption_max_chars_app"]
+
+[platform.tiktok.video]
+kind = "video"
+width = 1080
+height = 1920
+aspect = "9:16"
+min_width = 360                     # API: 360-4096 px on both sides
+max_width = 4096
+max_seconds = 180                   # API: "All TikTok creators can post 3-minute videos"
+max_seconds_some_creators = 600     # "some have access to post 5-minute or 10-minute videos"
+fps_min = 23
+fps_max = 60
+container = "mp4"                   # MP4 recommended; WebM, MOV accepted
+video_codec = "h264"                # H.264 recommended; H.265, VP8, VP9 accepted
+audio_codec = "aac"
+safe_zone = { top = 288, bottom = 672, left = 65, right = 192 }
+caption_formats = []
+max_size = "4 GB"
+checked = "03/10/2026"
+source = "https://developers.tiktok.com/doc/content-posting-api-media-transfer-guide"
+extra_sources = ["https://ads.tiktok.com/help/article/video-ads-specifications?lang=en"]
+verify = ["width", "height", "audio_codec", "safe_zone", "caption_formats", "max_seconds"]
+notes = "TikTok publishes NO safe-zone numbers (downloadable overlay files only; size varies with caption length). The safe_zone here is DERIVED: the larger of YouTube vertical (288/672/48/192) and Meta Reels (14%/35%/6% = 269/672/65/65) on each edge. Third parties report 60-minute uploads in the app (unconfirmed). Ads spec: 9:16 >= 540x960, <= 10 min, <= 500 MB, bitrate >= 516 kbps. No sidecar caption upload documented: burn in, or use TikTok auto-captions."
+
+# =============================================================================================
+# Instagram
+# =============================================================================================
+[platform.instagram]
+caption_max_chars = 2200
+hashtags_max = 5                    # platform cap announced 18/12/2025 (third-party reports); API doc (updated 09/07/2025) still says 30
+mentions_max = 20
+grid_aspect = "3:4"                 # profile grid crop since January 2025 (third-party reports of Mosseri announcement)
+checked = "03/10/2026"
+source = "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media"
+extra_sources = ["https://betanews.com/2025/12/19/instagram-puts-a-limit-on-hashtag-usage/"]
+verify = ["hashtags_max", "grid_aspect"]
+
+[platform.instagram.reel]
+kind = "video"
+width = 1080
+height = 1920
+aspect = "9:16"                     # accepted 0.01:1 to 10:1, 9:16 recommended
+max_width = 1920
+min_seconds = 3
+max_seconds = 900                   # API: 15 minutes
+max_seconds_reach = 180             # reels up to 3 min eligible for non-followers (Jan 2025 announcement)
+fps_min = 23
+fps_max = 60
+container = "mp4"                   # MOV or MP4, no edit lists, moov atom at the front
+video_codec = "h264"                # HEVC or H264, progressive, closed GOP, 4:2:0
+video_bitrate_max = "25M"           # VBR
+audio_codec = "aac"
+audio_bitrate = "128k"
+audio_sample_rate = 48000           # maximum
+safe_zone = { top = 269, bottom = 672, left = 65, right = 65 }
+caption_formats = []
+max_size = "300 MB"                 # API; Ads Manager allows 4 GB
+checked = "03/10/2026"
+source = "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media"
+extra_sources = ["https://www.facebook.com/business/ads-guide/update/video/instagram-reels", "https://www.facebook.com/business/help/980593475366490"]   # scrub: allow — a help-centre article ID, not personal data
+verify = ["max_seconds_reach", "caption_formats"]
+chosen = ["width", "height"]
+notes = "Safe zone = Meta's 'at least 14% of the top, 35% of the bottom and 6% on each side' at 1080x1920, rounded up. Meta ads guide recommends 1440x2560. Leave the bottom 40% clear if a disclaimer is shown (ads). Third parties report 20-minute reels for some accounts (unconfirmed)."
+
+[platform.instagram.story]
+kind = "video"
+width = 1080
+height = 1920
+aspect = "9:16"
+min_seconds = 3
+max_seconds = 60
+fps_min = 23
+fps_max = 60
+container = "mp4"
+video_codec = "h264"
+video_bitrate_max = "25M"
+audio_codec = "aac"
+audio_sample_rate = 48000
+safe_zone = { top = 269, bottom = 672, left = 65, right = 65 }
+caption_formats = []
+max_size = "100 MB"
+checked = "03/10/2026"
+source = "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media"
+extra_sources = ["https://www.facebook.com/business/ads-guide/update/video/instagram-story"]
+chosen = ["width", "height"]
+verify = ["caption_formats"]
+
+[platform.instagram.reel_cover]
+kind = "image"
+width = 1080
+height = 1920
+aspect = "9:16"                     # "recommend 9:16 to avoid cropping"
+formats = ["jpg"]
+colour = "srgb"
+max_size = "8 MB"
+checked = "03/10/2026"
+source = "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media"
+chosen = ["width", "height"]
+notes = "The profile grid shows a 3:4 centre crop (1080x1440 of 1080x1920): keep title text inside it."
+
+[platform.instagram.feed_image]
+kind = "image"
+width = 1080
+height = 1350
+aspect = "4:5"                      # API accepts 4:5 to 1.91:1
+max_width = 1440                    # larger is scaled down
+formats = ["jpg"]
+checked = "03/10/2026"
+source = "https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media"
+chosen = ["width", "height"]
+
+# =============================================================================================
+# Facebook
+# =============================================================================================
+[platform.facebook]
+checked = "03/10/2026"
+source = "https://creators.facebook.com/blog/making-it-easier-to-create-videos-on-facebook"
+verify = ["caption_max_chars"]
+notes = "Since the 17/06/2025 announcement every Facebook video posts as a reel with no length or orientation limit. No organic caption/description character limit found."
+
+[platform.facebook.reel]
+kind = "video"
+width = 1080
+height = 1920
+aspect = "9:16"
+min_width = 540                     # minimum 540x960
+min_seconds = 3
+api_max_seconds = 90                # Reels Publishing API (Graph v25.0); organic uploads have no limit
+fps_min = 24
+fps_max = 60
+container = "mp4"
+video_codec = "h264"                # H.264 or H.265 (VP9, AV1 also supported); closed GOP 2-5 s; 4:2:0
+audio_codec = "aac"                 # AAC Low Complexity, stereo
+audio_bitrate = "128k"              # "128kbs+"
+audio_sample_rate = 48000
+safe_zone = { top = 269, bottom = 672, left = 65, right = 65 }
+caption_formats = ["srt"]
+checked = "03/10/2026"
+source = "https://developers.facebook.com/docs/video-api/guides/reels-publishing"
+extra_sources = ["https://www.facebook.com/business/help/980593475366490", "https://creators.facebook.com/blog/making-it-easier-to-create-videos-on-facebook"]   # scrub: allow — a help-centre article ID, not personal data
+verify = ["safe_zone", "caption_formats"]
+notes = "Safe zone: Meta applies one 9:16 guidance to Stories, Reels, Feed and Facebook in-stream reels; the 14/35/6% figures are published on the Instagram Reels ads page. SRT sidecar naming filename.en_GB.srt is reported by third parties only."
+
+[platform.facebook.feed_video]
+kind = "video"
+width = 1440
+height = 1800
+aspect = "4:5"
+min_seconds = 1
+max_seconds = 14460                 # ads guide: "1 second to 241 minutes"
+container = "mp4"
+video_codec = "h264"                # square pixels, fixed frame rate, progressive
+audio_codec = "aac"                 # stereo AAC 128 kbps+
+audio_bitrate = "128k"
+caption_formats = ["srt"]
+max_size = "4 GB"                   # ads
+checked = "03/10/2026"
+source = "https://www.facebook.com/business/ads-guide/update/video/facebook-feed"
+verify = ["caption_formats"]
+notes = "Ads-guide values (no organic feed spec found; organic videos now post as reels). Ads text: primary 50-150 chars, headline 27 chars."
+
+[platform.facebook.story]
+kind = "video"
+width = 1440
+height = 2560
+aspect = "9:16"
+min_seconds = 1
+max_seconds = 180                   # ads guide: "1 second to 3 minutes"
+container = "mp4"
+video_codec = "h264"
+audio_codec = "aac"
+audio_bitrate = "128k"
+safe_zone = { top = 250, bottom = 340, left = 0, right = 0 }
+caption_formats = []
+max_size = "4 GB"
+checked = "03/10/2026"
+source = "https://www.facebook.com/business/ads-guide/update/video/facebook-story"
+verify = ["safe_zone", "caption_formats"]
+notes = "Safe zone copied verbatim: '14% (250 pixels) of the top and 20% (340 pixels) of the bottom'. The pixel and percentage figures disagree at 1440x2560 (14% = 358 px, 20% = 512 px); prefer the percentages. No side margin stated (left/right 0 = none published)."
+
+# =============================================================================================
+# LinkedIn
+# =============================================================================================
+[platform.linkedin]
+post_max_chars = 3000
+checked = "03/10/2026"
+source = "https://www.linkedin.com/help/linkedin/answer/a528176"
+
+[platform.linkedin.video_landscape]
+kind = "video"
+width = 1920
+height = 1080
+aspect = "16:9"                     # LinkedIn accepts 1:2.4 to 2.4:1
+min_width = 256                     # resolution range 256x144 to 4096x2304
+max_width = 4096
+min_seconds = 3                     # desktop; 2 s from the mobile app
+max_seconds = 900                   # 15 minutes
+fps_min = 10
+fps_max = 60
+video_bitrate_min = "192k"
+video_bitrate_max = "30M"
+container = "mp4"                   # MP4, MOV, AVI, WEBM, MKV, WMV ... ProRes uploads but will not process
+video_codec = "h264"
+audio_codec = "aac"
+caption_formats = ["srt"]
+max_size = "5 GB"                   # minimum 75 KB
+checked = "03/10/2026"
+source = "https://www.linkedin.com/help/linkedin/answer/a548372"
+chosen = ["width", "height", "video_codec", "audio_codec"]
+verify = ["caption_formats", "safe_zone"]
+notes = "LinkedIn says only 'keep the edges (top, bottom, and sides) ... free of key elements'; no numbers, so safe_zone is absent. Help page last updated about two years before the check. SRT upload (desktop) reported by third parties."
+
+[platform.linkedin.video_vertical]
+kind = "video"
+width = 1080
+height = 1920
+aspect = "9:16"
+min_seconds = 3
+max_seconds = 900
+fps_min = 10
+fps_max = 60
+video_bitrate_min = "192k"
+video_bitrate_max = "30M"
+container = "mp4"
+video_codec = "h264"
+audio_codec = "aac"
+caption_formats = ["srt"]
+max_size = "5 GB"
+checked = "03/10/2026"
+source = "https://www.linkedin.com/help/linkedin/answer/a548372"
+chosen = ["width", "height", "video_codec", "audio_codec"]
+verify = ["caption_formats", "safe_zone"]
+
+# =============================================================================================
+# Podcast (Apple Podcasts and Spotify)
+# =============================================================================================
+[platform.podcast.apple_rss_audio]
+kind = "audio"
+audio_codec = "aac"                 # "strongly recommend using AAC instead of MP3" for RSS
+audio_codec_alt = "mp3"
+audio_bitrate = "128k"              # stereo 128-256 kbps at 44.1/48 kHz; mono 64-128 kbps
+audio_bitrate_max = "256k"
+audio_sample_rate = 44100           # 44.1 or 48 kHz
+loudness_lufs = -16.0               # "around -16 dB LKFS, with a +/- 1 dB tolerance" (ITU-R BS.1770-5)
+loudness_tolerance_db = 1.0
+true_peak_db = -1.0                 # "doesn't exceed -1 dB FS"
+checked = "03/10/2026"
+source = "https://podcasters.apple.com/support/893-audio-requirements"
+
+[platform.podcast.apple_connect_audio]
+kind = "audio"
+audio_codec = "flac"                # WAV, FLAC or MP3 accepted for Apple Podcasts Connect (subscriber audio)
+audio_sample_rate = 44100           # minimum 44.1 kHz 16/24-bit; recommended 24-bit
+loudness_lufs = -16.0
+loudness_tolerance_db = 1.0
+true_peak_db = -1.0
+checked = "03/10/2026"
+source = "https://podcasters.apple.com/support/893-audio-requirements"
+notes = "A single-channel file is rejected: mono sources must be sent as two identical channels."
+
+[platform.podcast.spotify_audio]
+kind = "audio"
+audio_codec = "mp3"                 # "high bitrate (128kbps+) MP3" or MP4 with AAC-LC
+audio_bitrate = "128k"
+max_seconds = 43200                 # 12 hours recommended/supported
+checked = "03/10/2026"
+source = "https://support.spotify.com/us/creators/article/podcast-specification-doc/"
+extra_sources = ["https://support.spotify.com/us/creators/article/publishing-audio-episodes/"]
+verify = ["loudness_lufs", "true_peak_db"]
+notes = "Spotify Podcast Delivery Specification v1.10 (May 2025). No loudness target published; use [platform.podcast.apple_rss_audio]. Spotify for Creators uploads take MP3, M4A or WAV, mono or stereo, no file-size limit. Spec: consumer-facing elements other than descriptions should not exceed 20 characters to fit every client."
+
+[platform.podcast.cover]
+kind = "image"
+width = 3000
+height = 3000
+aspect = "1:1"
+min_width = 1400                    # Apple via RSS: 1400x1400 to 3000x3000, largest preferred
+formats = ["png", "jpg"]
+alpha = false                       # "cannot contain transparency"
+checked = "03/10/2026"
+source = "https://podcasters.apple.com/support/5514-show-cover-template"
+extra_sources = ["https://support.spotify.com/us/creators/article/podcast-specification-doc/"]
+notes = "Spotify: fully square, highest resolution available, TIFF/PNG/JPEG. Apple supplies a template with an art safe area (not given in pixels)."
+
+[platform.podcast.episode_art]
+kind = "image"
+width = 3000
+height = 3000
+aspect = "1:1"
+min_width = 1400
+formats = ["png", "jpg"]
+checked = "03/10/2026"
+source = "https://podcasters.apple.com/support/5516-episode-art-template"
+notes = "Apple: avoid the podcast logo or any text; the episode title shows beneath the art."
+
+# =============================================================================================
+# Audiobook stores (mastering and delivery targets)
+# =============================================================================================
+[audiobook.acx]
+kind = "audio"
+audio_codec = "mp3"
+audio_bitrate = "192k"              # 192 kbps or higher, CBR
+cbr = true
+audio_sample_rate = 44100
+channels = "consistent"             # all mono or all stereo
+rms_min_db = -23.0
+rms_max_db = -18.0
+peak_max_db = -3.0
+noise_floor_max_db = -60.0          # RMS
+room_tone_min_seconds = 1.0         # head and tail, recommended 1-5 s
+room_tone_max_seconds = 5.0         # must not exceed 5 s
+file_max_seconds = 7200             # 120 minutes per file
+sample_max_seconds = 300            # retail sample 5 minutes or less
+one_section_per_file = true         # credits are separate files
+human_narration_required = true     # "unless otherwise authorized"
+cover_min_px = 2400
+cover_formats = ["jpg", "png", "tif"]
+cover_max_size = "8 MB"
+checked = "03/10/2026"
+source = "https://help.acx.com/s/article/acx-audio-submission-requirements"
+extra_sources = ["https://help.acx.com/s/article/cover-art-requirements"]
+
+[audiobook.google_play]
+kind = "audio"
+audio_codec = "mp3"                 # also aac, flac, wav, zip, lpf
+audio_bitrate = "256k"              # >= 256 kbps stereo; >= 128 kbps mono; CBR preferred
+audio_bitrate_mono = "128k"
+audio_sample_rate = 44100           # FLAC/WAV: 16-bit, >= 44.1 kHz
+min_seconds = 300
+max_seconds = 360000                # 100 hours
+cover_min_px = 1024
+cover_max_px = 7200
+checked = "03/10/2026"
+source = "https://support.google.com/books/partner/answer/3424254?hl=en"   # scrub: allow — a help-centre article ID, not personal data
+extra_sources = ["https://support.google.com/books/partner/answer/14183077?hl=en"]   # scrub: allow — a help-centre article ID, not personal data
+
+[audiobook.spotify_authors]
+kind = "audio"
+audio_formats = ["mp3", "wav", "flac"]
+cover_px = 3000                     # 1:1, PNG or JPEG, recommended
+dvn_toggle = "This audiobook uses digital voice narration"
+checked = "03/10/2026"
+source = "https://support.spotify.com/us/authors/article/uploading-audiobooks/"
+extra_sources = ["https://support.spotify.com/us/authors/article/digital-voice-narration/"]
+verify = ["audio_bitrate", "audio_sample_rate", "loudness"]
+notes = "Bitrate and level rules live in a linked guidelines PDF that was not read."
+
+[audiobook.inaudio]
+kind = "audio"
+cbr = true
+cover_min_px = 2400
+dvn_sources = ["Google Play Books", "ElevenLabs", "Spoken Press"]   # unmodified LPF packages only
+checked = "03/10/2026"
+source = "https://voicessupport.inaudio.com/en/articles/3219456"   # scrub: allow — a help-centre article ID, not personal data
+extra_sources = ["https://voicessupport.inaudio.com/en/articles/3219584"]   # scrub: allow — a help-centre article ID, not personal data
+verify = ["cbr", "audio_bitrate", "audio_sample_rate", "rms", "peak", "noise_floor"]
+notes = "Voices by INaudio is the former Findaway Voices third-party distribution arm (Spotify kept Spotify for Authors). Technical audio page requires sign-in; CBR rule seen only in a search snippet."

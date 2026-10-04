@@ -1,0 +1,12 @@
+# .gitignore — toolkit/
+#
+# Template-owned; copier update keeps it current. Project-wide rules belong in the root .gitignore.
+# No inline comments in this file: Git reads a # after a pattern as part of the pattern.
+
+# ----------------------------------------------------------------------------
+# Python bytecode
+# ----------------------------------------------------------------------------
+# Written by python3 when media.py imports its helper modules: machine-specific and regenerable.
+# The rule sits here rather than in the root .gitignore because the root file belongs to
+# whichever template wrote it first, and the toolkit is media's own.
+/__pycache__/

@@ -1,0 +1,343 @@
+#!/usr/bin/env bash
+#
+# update-test.sh — Prove `copier update` keeps the author's work and delivers the template's.
+#
+#                  A generated project lives for years and takes template improvements by
+#                  `copier update -a .copier-answers.syntek-media.yml` (DESIGN.md D3). Each
+#                  ownership class (Section 3) is a promise about what an update does: a seed
+#                  the author edited is kept, and one they deleted comes back; a seed-once
+#                  example they deleted stays deleted; a copy-only shared file is never touched
+#                  again, deleted or edited; their own pieces are never touched; a
+#                  template-owned file takes the new version; a platform taken away takes its
+#                  two files and nothing else. Every one of those promises rests on a line in
+#                  copier.yml, and none of them fails loudly when the line is wrong — the
+#                  update reports success either way. So this test performs real updates, the
+#                  way an author meets them, per brand kind:
+#
+#                    1. snapshot the working tree as a template and render a project from it;
+#                    2. act as the author: add a MEMORY.md entry, edit tokens.css, delete the
+#                       seed-once examples, delete publish-log.md, write a piece of their own,
+#                       delete .claude/skills/CLAUDE.md and edit CONTEXT.md; commit;
+#                    3. change a template-owned skill in the template; commit;
+#                    4. `copier update -a` (the answers file is not Copier's default); commit;
+#                    5. update again with nothing changed;
+#                    6. in a clone, try an update that changes BRAND_KIND (D14 refuses it);
+#                    7. update with one platform taken away;
+#                    8. assert.
+#
+#                  Fifteen checks per brand kind:
+#                    1. The project renders.
+#                    2. `copier update` succeeds.
+#                    3. The author's MEMORY.md entry survives.
+#                    4. The author's edit to brand/src/design-system/tokens.css survives.
+#                    5. The deleted seed-once examples stay deleted (and at least one shipped).
+#                    6. The deleted publishing/src/publish-log.md comes back (skills cite it).
+#                    7. The author's own piece is byte-for-byte untouched.
+#                    8. The template-owned skill carries the template's change.
+#                    9. No conflict is left behind (no *.rej file, no conflict marker).
+#                   10. An update that changes BRAND_KIND is refused, by BRAND_KIND's own
+#                       validator ("BRAND_KIND cannot change on update"), not by some other
+#                       failure such as a dirty tree.
+#                   11. The refused update touched nothing: the clone's work tree is clean and
+#                       its answers file still records the original BRAND_KIND.
+#                   12. The update printed _message_before_update ("Before you answer: removing
+#                       a platform or a media kind deletes …"), naming every platform and every
+#                       media kind — the only warning before a removal deletes filled-in seeds.
+#                   13. An update that takes one platform away succeeds, deletes exactly that
+#                       platform's two files (its profile and its guide) and nothing else, and
+#                       leaves no conflict (D16).
+#                   14. A copy-only shared file the author deleted stays deleted, and one they
+#                       edited stays as edited (D11: copy only, never on update).
+#                   15. A second update with no template change leaves `git status
+#                       --porcelain` empty.
+#
+#                  Copier prints a MissingFileWarning on a fresh copy and on every update (the
+#                  previous answers are read through _external_data, D14). It is expected and
+#                  never a finding: only exit statuses, messages and files are judged.
+#
+#                  Numbers are stable identifiers. Append, never renumber.
+#
+#                  What it CANNOT check: an upgrade from a released version (there is none
+#                  before 0.1.0; the first release that moves a folder writes its migration and
+#                  adds its flow here), or a project applied over syntek-author, which is
+#                  coexist-test.sh's.
+#
+# SELF-TEST. --self-test runs the whole flow against the fixture media template of _common.sh,
+#            proves the result clean, then mutates the result once per check and asserts
+#            exactly one finding each.
+#
+# Requirements: bash 4.3+, git, rsync, uvx (or COPIER_CMD). Network on the first uvx run only.
+#
+# Usage: update-test.sh [--root DIR] [--brand-kind K[,K…]] [--quiet] [--self-test] [--help]
+#        --brand-kind defaults to business,author-fiction,author-nonfiction.
+#
+# Exit codes:  0 = every promise held, for every brand kind tested
+#              1 = finding(s), or the self-test no longer separates
+#              2 = script error (bad arguments, missing tools, a template with nothing to update)
+
+set -euo pipefail
+SCRIPT_NAME="update-test.sh"
+# shellcheck source=_common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+KINDS="$SM_KINDS"
+SELF_TEST=false
+
+usage() {
+  cat <<'EOF'
+update-test.sh — Prove `copier update` keeps the author's work and delivers the template's
+
+Usage: update-test.sh [--root DIR] [--brand-kind K[,K…]] [--quiet] [--self-test] [--help]
+
+  --root DIR         The template repository (default: this repository)
+  --brand-kind LIST  Which kinds to test (default: business,author-fiction,author-nonfiction)
+  --quiet            Print findings only
+  --self-test        Prove the checks still fire against the fixture template
+  --help             Show this message
+
+Exit codes: 0 = every promise held  1 = finding(s), or the self-test no longer separates
+            2 = script error
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --root)       [[ $# -gt 1 ]] || die "--root needs a value"; SM_ROOT="$(cd "$2" && pwd)" || die "no such directory: $2"; shift 2 ;;
+    --brand-kind) [[ $# -gt 1 ]] || die "--brand-kind needs a value"; KINDS="${2//,/ }"; shift 2 ;;
+    --quiet|-q)   QUIET=true; shift ;;
+    --self-test)  SELF_TEST=true; shift ;;
+    --help|-h)    usage; exit 0 ;;
+    *)            die "unknown argument: $1" ;;
+  esac
+done
+
+MEMORY_MARK="Update-test entry"
+TOKENS_MARK="/* update-test: the author's own token edit */"
+SHARED_MARK="<!-- update-test: the author's own line in a shared file -->"
+TEMPLATE_MARK="<!-- update-test: a template change -->"
+TOKENS=brand/src/design-system/tokens.css
+PUBLISH_LOG=publishing/src/publish-log.md
+OWN_PIECE=scripts/src/pieces/101-update-test-piece/brief.md
+DELETED_SHARED=.claude/skills/CLAUDE.md
+EDITED_SHARED=CONTEXT.md
+
+# State the checks read. --self-test mutates it.
+KIND=""; PROJ=""; W=""; COPY_STATUS=0; UPDATE_STATUS=0; OWN_SUM=""; TARGET_REL=""
+UPDATE_LOG=""; SWITCH_STATUS=0; SWITCH_LOG=""; SWITCH_DIRTY=""; SWITCH_RECORDED=""
+AGAIN_STATUS=0; AGAIN_DIRTY=""; REMOVE_STATUS=0; REMOVE_PLATFORM=""; REMOVED=""; REMOVE_CONFLICTS=""
+DELETED=()
+
+other_kind() { # the kind a BRAND_KIND change is attempted to
+  case "$1" in business) echo author-fiction ;; author-fiction) echo author-nonfiction ;; *) echo business ;; esac
+}
+
+run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the state
+  local src="$1" tpl="$3/tpl" e log="$3/flow.log" clone="$3/proj-switch" before
+  KIND="$2"; W="$3"; PROJ="$3/proj"; COPY_STATUS=0; UPDATE_STATUS=0; DELETED=()
+  UPDATE_LOG="$3/update.log"; SWITCH_STATUS=0; SWITCH_LOG="$3/switch.log"; SWITCH_DIRTY=""; SWITCH_RECORDED=""
+  AGAIN_STATUS=0; AGAIN_DIRTY=""; REMOVE_STATUS=0; REMOVE_PLATFORM=""; REMOVED=""; REMOVE_CONFLICTS=""
+  : > "$UPDATE_LOG"; : > "$SWITCH_LOG"
+  sm_snapshot "$src" "$tpl" >>"$log" 2>&1 || die "could not snapshot $src"
+
+  sm_render "$tpl" "$PROJ" "$KIND" >>"$log" 2>&1 || COPY_STATUS=$?
+  [[ "$COPY_STATUS" -eq 0 ]] || return 0
+  [[ -d "$PROJ/.git" ]] || sm_git "$PROJ" init -q
+  sm_commit_all "$PROJ" 'generated'
+
+  # The author at work.
+  printf -- '- **01/01/2027** — **%s.** An author decision that must survive every update.\n' "$MEMORY_MARK" >> "$PROJ/.claude/MEMORY.md"
+  printf '\n%s\n' "$TOKENS_MARK" >> "$PROJ/$TOKENS"
+  for e in $SM_EXAMPLES; do
+    [[ -e "$PROJ/$e" ]] && { rm -rf "${PROJ:?}/$e"; DELETED+=("$e"); }
+  done
+  rm -f "$PROJ/$PUBLISH_LOG"
+  mkdir -p "$(dirname "$PROJ/$OWN_PIECE")"
+  printf -- '---\npiece: 101-update-test-piece\nstatus: briefed\n---\n\n# Written by the author\n\nA brief no update may touch.\n' > "$PROJ/$OWN_PIECE"
+  OWN_SUM="$(sha1sum < "$PROJ/$OWN_PIECE")"
+  rm -f "$PROJ/$DELETED_SHARED"
+  printf '\n%s\n' "$SHARED_MARK" >> "$PROJ/$EDITED_SHARED"
+  sm_commit_all "$PROJ" 'the author at work'
+
+  # The template moves on: a template-owned skill every kind ships, or the layout rule.
+  TARGET_REL=".claude/skills/run-media-workflow/SKILL.md"
+  [[ -f "$tpl/template/$TARGET_REL" ]] || TARGET_REL=".claude/rules/syntek-media/01-layout-and-routing.md"
+  [[ -f "$tpl/template/$TARGET_REL" ]] || die "the template has neither run-media-workflow/SKILL.md nor the layout rule — nothing template-owned to update"
+  printf '\n%s\n' "$TEMPLATE_MARK" >> "$tpl/template/$TARGET_REL"
+  sm_commit_all "$tpl" 'a template change'
+
+  sm_update "$PROJ" >"$UPDATE_LOG" 2>&1 || UPDATE_STATUS=$?
+  cat "$UPDATE_LOG" >>"$log"
+  sm_commit_all "$PROJ" 'updated'
+
+  # Again, with nothing changed.
+  sm_update "$PROJ" >>"$log" 2>&1 || AGAIN_STATUS=$?
+  AGAIN_DIRTY="$(git -C "$PROJ" status --porcelain 2>/dev/null)"
+  sm_commit_all "$PROJ" 'updated again'
+
+  # A changed BRAND_KIND, tried in a clone so the other checks judge the real update alone. The
+  # clone starts clean and committed, so a refusal can only come from the template.
+  git clone -q "$PROJ" "$clone" >>"$log" 2>&1 || die "could not clone $PROJ"
+  sm_update "$clone" --data "BRAND_KIND=$(other_kind "$KIND")" >"$SWITCH_LOG" 2>&1 || SWITCH_STATUS=$?
+  cat "$SWITCH_LOG" >>"$log"
+  SWITCH_DIRTY="$(git -C "$clone" status --porcelain 2>/dev/null)"
+  SWITCH_RECORDED="$(answer_value BRAND_KIND "$clone/$SM_ANSWERS_FILE")"
+
+  # One platform taken away (D16): its two files go, nothing else does.
+  REMOVE_PLATFORM="$(removable_value PLATFORMS "$PROJ/$SM_ANSWERS_FILE" "$tpl/copier.yml")"
+  if [[ -n "$REMOVE_PLATFORM" ]]; then
+    before="$(mktemp)"; tree_files "$PROJ" > "$before"
+    sm_update "$PROJ" --data "PLATFORMS=$(list_without PLATFORMS "$PROJ/$SM_ANSWERS_FILE" "$REMOVE_PLATFORM")" >"$3/remove.log" 2>&1 || REMOVE_STATUS=$?
+    cat "$3/remove.log" >>"$log"
+    REMOVED="$(tree_files "$PROJ" | LC_ALL=C comm -23 "$before" - | paste -sd' ' -)"
+    REMOVE_CONFLICTS="$(conflicts_in "$PROJ" | paste -sd' ' -)"
+    rm -f "$before"
+    sm_commit_all "$PROJ" 'a platform taken away'
+  fi
+  return 0
+}
+
+run_checks() {
+  FINDINGS=()
+  local e f text want
+  local L="[$KIND]"
+  if [[ "$COPY_STATUS" -ne 0 ]]; then
+    finding "check 1 — $L the project did not render (exit $COPY_STATUS) — see $W/flow.log"
+    return 0
+  fi
+  [[ "$UPDATE_STATUS" -eq 0 ]] || finding "check 2 — $L copier update failed (exit $UPDATE_STATUS) — see $UPDATE_LOG"
+  grep -qF "$MEMORY_MARK" "$PROJ/.claude/MEMORY.md" 2>/dev/null \
+    || finding "check 3 — $L the author's MEMORY.md entry did not survive the update"
+  grep -qF "$TOKENS_MARK" "$PROJ/$TOKENS" 2>/dev/null \
+    || finding "check 4 — $L the author's edit to $TOKENS did not survive the update"
+  [[ ${#DELETED[@]} -gt 0 ]] \
+    || finding "check 5 — $L the render shipped no seed-once example to delete, so 'stays deleted' was never tested"
+  for e in "${DELETED[@]}"; do
+    [[ -e "$PROJ/$e" ]] && finding "check 5 — $L the deleted example $e came back on update"
+  done
+  [[ -f "$PROJ/$PUBLISH_LOG" ]] \
+    || finding "check 6 — $L the deleted $PUBLISH_LOG was not recreated — skills cite it"
+  [[ -f "$PROJ/$OWN_PIECE" && "$(sha1sum < "$PROJ/$OWN_PIECE")" == "$OWN_SUM" ]] \
+    || finding "check 7 — $L the author's own $OWN_PIECE changed or vanished"
+  grep -qF "$TEMPLATE_MARK" "$PROJ/$TARGET_REL" 2>/dev/null \
+    || finding "check 8 — $L $TARGET_REL did not take the template's change"
+  while IFS= read -r f; do
+    [[ -n "$f" ]] && finding "check 9 — $L conflict left behind: $f"
+  done < <(conflicts_in "$PROJ")
+  if [[ "$SWITCH_STATUS" -eq 0 ]]; then
+    finding "check 10 — $L an update changing BRAND_KIND to $(other_kind "$KIND") was accepted — it must be refused (DESIGN.md D14)"
+  elif ! grep -qF "$SM_KIND_REFUSAL" "$SWITCH_LOG" 2>/dev/null; then
+    finding "check 10 — $L the BRAND_KIND change failed (exit $SWITCH_STATUS), but not with BRAND_KIND's validator message — see $SWITCH_LOG"
+  fi
+  if [[ -n "$SWITCH_DIRTY" || "$SWITCH_RECORDED" != "$KIND" ]]; then
+    finding "check 11 — $L the refused BRAND_KIND change touched the project ($(printf '%s\n' "$SWITCH_DIRTY" | grep -c . || true) path(s) changed; the answers record '$SWITCH_RECORDED')"
+  fi
+  text="$(copier_message_text "$UPDATE_LOG")"
+  if [[ "$text" != *"$SM_BEFORE_UPDATE_MARK"* ]]; then
+    finding "check 12 — $L copier update printed no removal warning (_message_before_update)"
+  else
+    text="${text#*"$SM_BEFORE_UPDATE_MARK"}"
+    for e in $SM_PLATFORMS $SM_MEDIA_KINDS; do
+      [[ "$text" == *"$e"* ]] || finding "check 12 — $L the removal warning does not name $e"
+    done
+  fi
+  if [[ -z "$REMOVE_PLATFORM" ]]; then
+    finding "check 13 — $L the project's PLATFORMS name no gated platform that could be taken away"
+  elif [[ "$REMOVE_STATUS" -ne 0 ]]; then
+    finding "check 13 — $L the update taking $REMOVE_PLATFORM away failed (exit $REMOVE_STATUS) — see $W/remove.log"
+  else
+    want="brand/src/platforms/$REMOVE_PLATFORM.md publishing/docs/reference/$REMOVE_PLATFORM.md"
+    [[ "$REMOVED" == "$want" ]] \
+      || finding "check 13 — $L taking $REMOVE_PLATFORM away deleted '${REMOVED:-nothing}', not exactly its two files ($want)"
+    [[ -z "$REMOVE_CONFLICTS" ]] \
+      || finding "check 13 — $L taking $REMOVE_PLATFORM away left a conflict: $REMOVE_CONFLICTS"
+  fi
+  [[ -e "$PROJ/$DELETED_SHARED" ]] \
+    && finding "check 14 — $L the shared $DELETED_SHARED, deleted by the author, came back on update (D11: copy only)"
+  grep -qF "$SHARED_MARK" "$PROJ/$EDITED_SHARED" 2>/dev/null \
+    || finding "check 14 — $L the author's edit to the shared $EDITED_SHARED did not survive the update"
+  if [[ "$AGAIN_STATUS" -ne 0 || -n "$AGAIN_DIRTY" ]]; then
+    finding "check 15 — $L a second update with no template change was not a no-op (exit $AGAIN_STATUS; $(printf '%s\n' "$AGAIN_DIRTY" | grep -c . || true) path(s) changed)"
+  fi
+}
+
+self_test() {
+  local tmp h
+  bold "▸ $SCRIPT_NAME --self-test"; log ""
+  copier_init
+  tmp="$(sm_mktemp)"
+  # shellcheck disable=SC2064
+  trap "rm -rf '$tmp'" RETURN
+  h="$tmp/held"
+  sm_fixture_template "$tmp/fixture" >/dev/null
+  mkdir -p "$tmp/w"
+  run_flow "$tmp/fixture" author-fiction "$tmp/w"
+  st_baseline "real updates of the fixture template"
+
+  COPY_STATUS=1;   probe "check 1 fires when the render fails" "check 1"; COPY_STATUS=0
+  UPDATE_STATUS=1; probe "check 2 fires when the update fails" "check 2"; UPDATE_STATUS=0
+  cp "$PROJ/.claude/MEMORY.md" "$h"; grep -vF "$MEMORY_MARK" "$h" > "$PROJ/.claude/MEMORY.md"
+  probe "check 3 fires when the MEMORY entry is lost" "check 3"; cp "$h" "$PROJ/.claude/MEMORY.md"
+  cp "$PROJ/$TOKENS" "$h"; grep -vF "$TOKENS_MARK" "$h" > "$PROJ/$TOKENS"
+  probe "check 4 fires when the tokens.css edit is lost" "check 4"; cp "$h" "$PROJ/$TOKENS"
+  mkdir -p "$PROJ/${DELETED[0]}"; probe "check 5 fires when an example comes back" "check 5"; rm -rf "${PROJ:?}/${DELETED[0]}"
+  mv "$PROJ/$PUBLISH_LOG" "$h"; probe "check 6 fires when publish-log.md is not recreated" "check 6"; mv "$h" "$PROJ/$PUBLISH_LOG"
+  cp "$PROJ/$OWN_PIECE" "$h"; printf 'tidied\n' >> "$PROJ/$OWN_PIECE"; probe "check 7 fires when the author's piece changes" "check 7"; cp "$h" "$PROJ/$OWN_PIECE"
+  cp "$PROJ/$TARGET_REL" "$h"; grep -vF "$TEMPLATE_MARK" "$h" > "$PROJ/$TARGET_REL"
+  probe "check 8 fires when the template change does not arrive" "check 8"; cp "$h" "$PROJ/$TARGET_REL"
+  printf 'x\n' > "$PROJ/README.md.rej"; probe "check 9 fires on a rejected hunk" "check 9"; rm -f "$PROJ/README.md.rej"
+  SWITCH_STATUS=0; probe "check 10 fires when a BRAND_KIND change is accepted" "check 10"; SWITCH_STATUS=1
+  cp "$SWITCH_LOG" "$h"; grep -vF "$SM_KIND_REFUSAL" "$h" > "$SWITCH_LOG" || true
+  probe "check 10 fires when the update failed for another reason" "check 10 — [author-fiction] the BRAND_KIND change failed"; cp "$h" "$SWITCH_LOG"
+  SWITCH_DIRTY=" M README.md"; probe "check 11 fires when the refused update touched a file" "check 11"; SWITCH_DIRTY=""
+  SWITCH_RECORDED=business; probe "check 11 fires when the answers record the new BRAND_KIND" "check 11"; SWITCH_RECORDED=author-fiction
+  cp "$UPDATE_LOG" "$h"; grep -vF "Before you answer" "$h" > "$UPDATE_LOG" || true
+  probe "check 12 fires when the removal warning is not printed" "check 12 — [author-fiction] copier update printed no removal warning"; cp "$h" "$UPDATE_LOG"
+  sed -i 's/facebook/f-book/g' "$UPDATE_LOG"
+  probe "check 12 fires when the warning leaves a platform out" "check 12 — [author-fiction] the removal warning does not name facebook"; cp "$h" "$UPDATE_LOG"
+  REMOVE_STATUS=1; probe "check 13 fires when taking a platform away fails" "check 13 — [author-fiction] the update taking"; REMOVE_STATUS=0
+  REMOVED="$REMOVED production/src/audiobook/CONTEXT.md"
+  probe "check 13 fires when taking a platform away deletes something else" "check 13 — [author-fiction] taking youtube away deleted"; REMOVED="${REMOVED% *}"
+  REMOVE_CONFLICTS="README.md.rej"; probe "check 13 fires when taking a platform away leaves a conflict" "check 13"; REMOVE_CONFLICTS=""
+  printf 'x\n' > "$PROJ/$DELETED_SHARED"; probe "check 14 fires when a deleted shared file comes back" "check 14 — [author-fiction] the shared $DELETED_SHARED"; rm -f "$PROJ/$DELETED_SHARED"
+  cp "$PROJ/$EDITED_SHARED" "$h"; grep -vF "$SHARED_MARK" "$h" > "$PROJ/$EDITED_SHARED"
+  probe "check 14 fires when the edit to a shared file is lost" "check 14 — [author-fiction] the author's edit"; cp "$h" "$PROJ/$EDITED_SHARED"
+  AGAIN_DIRTY=" M README.md"; probe "check 15 fires when a second update changes a file" "check 15"; AGAIN_DIRTY=""
+  probe_clean "the fixture's updates keep every promise again once every mutation is undone"
+  st_finish "an update that keeps its promises from one that breaks them"
+}
+
+if $SELF_TEST; then
+  self_test
+  exit $?
+fi
+
+[[ -f "$SM_ROOT/copier.yml" ]] || die "no copier.yml at $SM_ROOT"
+for k in $KINDS; do [[ " $SM_KINDS " == *" $k "* ]] || die "unknown BRAND_KIND: $k"; done
+copier_init
+bold "▸ $SCRIPT_NAME"
+STATUS=0
+for kind in $KINDS; do
+  work="$(sm_mktemp)"
+  run_flow "$SM_ROOT" "$kind" "$work"
+  run_checks
+  if [[ ${#FINDINGS[@]} -eq 0 ]]; then
+    log "  ✓ $kind — edits kept, examples still gone, publish-log.md recreated, own piece untouched, $TARGET_REL updated; shared files left alone; BRAND_KIND change refused untouched; warning printed; $REMOVE_PLATFORM taken away with its two files; a second update a no-op"
+    rm -rf "$work"
+  else
+    bold "✗ $kind — ${#FINDINGS[@]} finding(s) (work kept in $work; Copier's output in $work/flow.log):"
+    print_findings
+    # On a CI runner the work directory is gone once the job ends, so show Copier's output here.
+    if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
+      echo "::group::Copier output for $kind (last 80 lines of flow.log)"
+      tail -n 80 "$work/flow.log" 2>/dev/null || true
+      echo "::endgroup::"
+    fi
+    STATUS=1
+  fi
+done
+log ""
+[[ "$STATUS" -eq 0 ]] && { bold "✓ copier update keeps every ownership promise."; exit 0; }
+log "  Each promise rests on one copier.yml line: _skip_if_exists for seeds, the copy-only"
+log "  _exclude gates for examples and the shared files (DESIGN.md Sections 3.1–3.6), BRAND_KIND's"
+log "  validator with _external_data (D14), the gated _exclude lines and _message_before_update (D16)."
+exit 1

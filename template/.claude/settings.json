@@ -1,0 +1,30 @@
+{
+  "model": "opus",
+  "autoCompactEnabled": false,
+  "permissions": {
+    "allow": [
+      "Bash(python3 toolkit/*.py *)",
+      "Bash(uv run toolkit/*.py *)",
+      "Bash(ffmpeg *)",
+      "Bash(ffprobe *)",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "ask": [
+      "mcp__elevenlabs__text_to_speech",
+      "mcp__elevenlabs__speech_to_text",
+      "mcp__elevenlabs__compose_music",
+      "mcp__elevenlabs__text_to_sound_effects",
+      "mcp__elevenlabs__speech_to_speech",
+      "mcp__elevenlabs__voice_clone",
+      "mcp__elevenlabs__isolate_audio",
+      "mcp__elevenlabs__text_to_voice",
+      "mcp__elevenlabs__create_voice_from_preview"
+    ],
+    "deny": [
+      "AskUserQuestion",
+      "Edit(**/generated/**)",
+      "Edit(**/renders/**)"
+    ]
+  }
+}

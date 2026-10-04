@@ -1,0 +1,122 @@
+<: if BRAND_KIND == 'business' :>1
+00:00:00,300 --> 00:00:04,000
+Every meeting you call needs
+one line before it starts.
+
+2
+00:00:05,300 --> 00:00:09,500
+Put the decision you need in
+the first line of the invite.
+
+3
+00:00:09,600 --> 00:00:11,400
+Not the topic, the decision.
+
+4
+00:00:11,900 --> 00:00:14,900
+'Agree the price list',
+not 'Pricing catch-up'.
+
+5
+00:00:15,300 --> 00:00:18,700
+People arrive knowing what
+they're there to decide.
+
+6
+00:00:18,800 --> 00:00:21,800
+If you can't write it,
+skip the meeting.
+
+7
+00:00:22,200 --> 00:00:23,700
+Send an email instead.
+
+8
+00:00:24,300 --> 00:00:26,500
+Try it on your next invite.
+
+9
+00:00:26,600 --> 00:00:29,600
+Then come back
+and tell us what changed.
+<: elif BRAND_KIND == 'author-fiction' :>1
+00:00:00,300 --> 00:00:03,600
+Count the stones,
+and the river lets you pass.
+
+2
+00:00:05,300 --> 00:00:07,200
+Tam taught Maren the count.
+
+3
+00:00:07,300 --> 00:00:10,600
+Three stones to the post,
+four to the willow.
+
+4
+00:00:11,100 --> 00:00:14,800
+Tonight she has to cross
+the ford in the dark.
+
+5
+00:00:15,300 --> 00:00:17,200
+She counts to the post.
+
+6
+00:00:17,800 --> 00:00:19,700
+She counts to the willow.
+
+7
+00:00:20,700 --> 00:00:22,700
+Then something upstream moves.
+
+8
+00:00:24,300 --> 00:00:26,900
+That night is where
+my novel begins.
+
+9
+00:00:27,000 --> 00:00:29,200
+Follow to see the cover first.
+<: else :>1
+00:00:00,300 --> 00:00:03,600
+Making a newcomer welcome once
+is the easy part.
+
+2
+00:00:05,300 --> 00:00:08,900
+The real test of a welcome
+is the second visit.
+
+3
+00:00:09,300 --> 00:00:11,400
+Does anyone remember their name?
+
+4
+00:00:11,500 --> 00:00:14,800
+Does anyone notice
+that they came back at all?
+
+5
+00:00:15,300 --> 00:00:17,900
+A welcome isn't finished
+at the door.
+
+6
+00:00:18,000 --> 00:00:20,700
+It's finished when
+they're expected back.
+
+7
+00:00:21,200 --> 00:00:23,100
+That holds for any group.
+
+8
+00:00:24,300 --> 00:00:26,900
+It's the heart of my next book.
+
+9
+00:00:27,000 --> 00:00:29,600
+Follow for the rest
+of the argument.
+<: endif :>

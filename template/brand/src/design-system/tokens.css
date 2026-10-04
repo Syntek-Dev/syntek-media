@@ -1,0 +1,52 @@
+/* tokens.css — the brand kit of <%BRAND_NAME%>: every token a layout or a burned caption reads
+ *
+ * Read by every layout (the preview cards beside this file, and each piece's thumbnail and
+ * card, which link it by relative path), by `python3 toolkit/media.py tokens` and
+ * `captions burn`, and by `uv run toolkit/card.py`. Seeded once: `copier update` never
+ * overwrites this file. Change it with the author through
+ * brand/workflows/01-set-up-the-brand-kit/, then run `python3 toolkit/media.py tokens`.
+ *
+ * Rules:
+ * - The eighteen required properties in the :root block are read by name. Never rename or
+ *   remove one; add the brand's own tokens beside them.
+ * - Colours are #RRGGBB. Caption sizes are in vh, a share of the frame's height, so a burned
+ *   caption scales with every deliverable.
+ * - Fonts: put each file in fonts/, then add one font-face rule for it between this comment and
+ *   the :root block, its src naming the file relative to this one (fonts/<file>), and name its
+ *   family in --font-display, --font-body or --caption-font. Record its licence in
+ *   production/src/rights-register.md first. Nothing is ever loaded over the network.
+ * - The seed values are neutral greys and generic font families. Remove each AUTHOR TO CONFIRM
+ *   comment once the author has decided its group.
+ */
+
+:root {
+  /* Colour ------------------------------------------------------------------------------- */
+  /* AUTHOR TO CONFIRM: the brand's screen colours, agreed with the written brand guide where one is present; text on --color-bg and on --color-surface, and --color-on-accent on --color-accent, each at least 4.5:1 contrast (WCAG 2.2 AA). */
+  --color-bg: #1F1F1F;
+  --color-surface: #2E2E2E;
+  --color-text: #F5F5F5;
+  --color-text-muted: #B3B3B3;
+  --color-accent: #D9D9D9;
+  --color-on-accent: #1F1F1F;
+
+  /* Type --------------------------------------------------------------------------------- */
+  /* AUTHOR TO CONFIRM: the display and body faces and their weights; each family is either loaded by a font-face rule from fonts/ or a generic family. */
+  --font-display: system-ui, sans-serif;
+  --font-body: system-ui, sans-serif;
+  --weight-display: 700;
+  --weight-body: 400;
+
+  /* Space -------------------------------------------------------------------------------- */
+  /* AUTHOR TO CONFIRM: the spacing unit every layout multiplies, and the corner radius; relative units keep a layout the same at every deliverable's size. */
+  --space-unit: 1vmin;
+  --radius: 1vmin;
+
+  /* Captions ----------------------------------------------------------------------------- */
+  /* AUTHOR TO CONFIRM: the burned-caption style: a face in fonts/ or installed, its weight, its size and outline width in vh, and text and outline colours as #RRGGBB. One size serves every aspect ratio, so choose it for the narrowest: a full vertical caption line must fit inside that deliverable's safe zone. */
+  --caption-font: sans-serif;
+  --caption-weight: 700;
+  --caption-size: 2.8vh;
+  --caption-text: #FFFFFF;
+  --caption-outline: #000000;
+  --caption-outline-width: 0.25vh;
+}

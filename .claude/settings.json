@@ -1,0 +1,20 @@
+{
+  "claudeMdExcludes": [
+    "**/template/**/CLAUDE.md",
+    "**/template/.claude/**"
+  ],
+  "permissions": {
+    "deny": [
+      "Skill(run-media-workflow)",
+      "Skill(write-script)",
+      "Skill(storyboard)",
+      "Skill(repurpose)",
+      "Skill(thumbnail-brief)",
+      "Skill(prepare-post)",
+      "Skill(voiceover)",
+      "Skill(narrate-audiobook)",
+      "Skill(captions)",
+      "Skill(cut-for-platform)"
+    ]
+  }
+}

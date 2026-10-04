@@ -1,0 +1,200 @@
+name: Audit — Template Integrity
+
+# Every audit and test in DESIGN.md Section 7, on every push to every branch.
+#
+# NO PATH FILTER AND NO BRANCH FILTER ON PUSH. A template-integrity defect is invisible until
+# somebody generates, and whoever generates is not whoever broke it (syntek-base, 15–16/08/2026:
+# seventeen commits ran blind and five shipped a template that could not generate at all). A
+# gate that waits for a pull request lets a feature branch drift for as long as it lives.
+#
+# THREE JOBS, in parallel. [1/3] reads the template source; [2/3] renders every brand kind and
+# profile once, standalone and over syntek-author, and audits the renders; [3/3] performs a real
+# update, and applies media over a real syntek-author project and the other way round, each in
+# its own scratch project. Every script's --self-test runs before its real run: a detector nobody
+# has seen fail is a detector nobody knows works. Failures ACCUMULATE as ::error:: lines and the
+# job fails at the end, so one broken gate never hides the next.
+#
+# SYNTEK-AUTHOR ARRIVES BY A PLAIN SHELL STEP (DESIGN.md D27). Jobs 2 and 3 clone it into the
+# runner's temporary folder and export SYNTEK_AUTHOR_DIR through the environment file. A clone
+# that fails prints a warning and the scripts that need it report a named SKIP, exit 0 — never a
+# pass, and never grounds for a release tag. A second checkout action would turn a missing or
+# private repository into a red job, and a token would need expression syntax.
+#
+# NO JOB MATRIX, NO CONCURRENCY GROUP AND NO SECRET. All three need GitHub's expression syntax,
+# and this file must never contain the dollar-brace-brace sequence at all: GitHub parses it
+# anywhere in a workflow file, even inside a run block. Render paths are a shell loop instead,
+# and values pass between steps through $GITHUB_ENV. No step has an ElevenLabs key: no test
+# calls the service.
+#
+# Locally, one command does all three: bash .github/scripts/run-all.sh --author ../syntek-author
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Copier commits inside its own scratch repositories during an update, and the runner has no
+  # git identity; without one, every update test fails on "Please tell me who you are".
+  GIT_AUTHOR_NAME: syntek-media audit
+  GIT_AUTHOR_EMAIL: audit@example.com
+  GIT_COMMITTER_NAME: syntek-media audit
+  GIT_COMMITTER_EMAIL: audit@example.com
+
+jobs:
+  source:
+    name: "[1/3] Template source"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # Tokens, the generated mode-file block, pairs and routed shapes, the line cap, personal
+      # data, development isolation, seeds and skills — every one reads template/ or the
+      # repository root, and none renders anything. skill-conformance.sh check 20 reads the
+      # frozen syntek-author names and never skips.
+      - name: Prove each detector, then run it on the template source
+        run: |
+          status=0
+          for s in check-template-tokens gen-mode-excludes docs-pairing line-cap scrub \
+                   dev-isolation shipped-seeds skill-conformance; do
+            echo "::group::$s"
+            bash ".github/scripts/$s.sh" --self-test \
+              || { echo "::error::$s — the self-test no longer separates good input from bad"; status=1; }
+            if [ "$s" = gen-mode-excludes ]; then
+              bash ".github/scripts/$s.sh" --check || { echo "::error::$s — copier.yml's mode-file block has drifted from the files on disk"; status=1; }
+            else
+              bash ".github/scripts/$s.sh" || { echo "::error::$s — findings in the template source"; status=1; }
+            fi
+            echo "::endgroup::"
+          done
+          exit $status
+
+  renders:
+    name: "[2/3] Renders"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Copier reads the template over git
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # ffmpeg is a short apt install and runs the toolkit end to end on every render, so
+      # toolkit-smoke.sh gets --require-ffmpeg: a missing ffmpeg is an error here, never a skip.
+      # Playwright's Chromium is not installed (slow, and the card renders are proved locally);
+      # toolkit-smoke.sh names the thumbnail and card checks it skipped, never passes them.
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          ffmpeg -hide_banner -version | head -n 1
+
+      - name: Fetch syntek-author, or warn
+        run: |
+          if git clone --quiet --depth 1 https://github.com/Syntek-Dev/syntek-author "$RUNNER_TEMP/syntek-author"; then
+            echo "SYNTEK_AUTHOR_DIR=$RUNNER_TEMP/syntek-author" >> "$GITHUB_ENV"
+            echo "syntek-author at $(git -C "$RUNNER_TEMP/syntek-author" rev-parse --short HEAD)"
+          else
+            echo "::warning::syntek-author could not be cloned — the renders over it will report SKIP, which is never a pass"
+          fi
+
+      - name: Prove the renderer
+        run: bash .github/scripts/generate-all.sh --self-test
+
+      # Every BRAND_KIND × profile: defaults, all (every platform and media kind) and minimal
+      # (one of each, SEED_EXAMPLES=false), plus each kind over its syntek-author variant when
+      # SYNTEK_AUTHOR_DIR is set. The negative paths are the ones that rot silently.
+      - name: Render every brand kind and profile
+        run: |
+          status=0
+          bash .github/scripts/generate-all.sh "$RUNNER_TEMP/renders" > "$RUNNER_TEMP/trees.txt" \
+            || { echo "::error::generate-all — at least one render failed, or a check on the renders found something (its log is beside it)"; status=1; }
+          echo "rendered:"; cat "$RUNNER_TEMP/trees.txt"
+          [ -s "$RUNNER_TEMP/trees.txt" ] || { echo "::error::generate-all — nothing rendered at all"; exit 1; }
+          exit $status
+
+      # byte-identity.sh compares standalone renders only: a tree over syntek-author holds
+      # syntek-author's shared files by design. Every other audit reads each over-author tree's
+      # <render>.owned and checks only the paths media added (DESIGN.md Section 7).
+      - name: Prove each detector, then run it on every render
+        if: always()
+        run: |
+          [ -s "$RUNNER_TEMP/trees.txt" ] || { echo "::error::no renders to audit"; exit 1; }
+          mapfile -t trees < "$RUNNER_TEMP/trees.txt"
+          standalone=()
+          for t in "${trees[@]}"; do
+            case "$t" in
+              *--over-author) ;;
+              *) standalone+=("$t") ;;
+            esac
+          done
+          status=0
+          for s in shipped-brands byte-identity doc-references docs-pairing shipped-seeds \
+                   skill-conformance line-cap toolkit-smoke; do
+            echo "::group::$s"
+            bash ".github/scripts/$s.sh" --self-test \
+              || { echo "::error::$s — the self-test no longer separates good input from bad"; status=1; }
+            case "$s" in
+              byte-identity) set -- "${standalone[@]}" ;;
+              toolkit-smoke) set -- --require-ffmpeg "${trees[@]}" ;;
+              *)             set -- "${trees[@]}" ;;
+            esac
+            bash ".github/scripts/$s.sh" "$@" \
+              || { echo "::error::$s — findings in the renders"; status=1; }
+            echo "::endgroup::"
+          done
+          exit $status
+
+  lifecycle:
+    name: "[3/3] Update and coexistence"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Fetch syntek-author, or warn
+        run: |
+          if git clone --quiet --depth 1 https://github.com/Syntek-Dev/syntek-author "$RUNNER_TEMP/syntek-author"; then
+            echo "SYNTEK_AUTHOR_DIR=$RUNNER_TEMP/syntek-author" >> "$GITHUB_ENV"
+            echo "syntek-author at $(git -C "$RUNNER_TEMP/syntek-author" rev-parse --short HEAD)"
+          else
+            echo "::warning::syntek-author could not be cloned — coexist-test.sh will report SKIP, which is never a pass and never grounds for a release"
+          fi
+
+      # Each test renders its own scratch project from a snapshot of this checkout, acts as an
+      # author (or as the second template), and asserts what an update or a second template left
+      # behind. coexist-test.sh needs SYNTEK_AUTHOR_DIR; without it, it prints a named SKIP.
+      - name: Prove each test, then run it
+        run: |
+          uvx copier --version
+          status=0
+          for s in update-test coexist-test; do
+            echo "::group::$s"
+            bash ".github/scripts/$s.sh" --self-test \
+              || { echo "::error::$s — the self-test no longer separates good input from bad"; status=1; }
+            bash ".github/scripts/$s.sh" \
+              || { echo "::error::$s — an ownership promise was broken"; status=1; }
+            echo "::endgroup::"
+          done
+          exit $status

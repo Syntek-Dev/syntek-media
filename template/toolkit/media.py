@@ -1,0 +1,1819 @@
+#!/usr/bin/env python3
+"""media.py: the media toolkit's one command: masters, deliverables, captions, audio and checks.
+
+Usage:
+    python3 toolkit/media.py probe FILE [--json] [--output-format pcm_RATE]
+    python3 toolkit/media.py presets [KEY] [--stale-after DAYS --today DD/MM/YYYY]
+    python3 toolkit/media.py script time PATH [--wpm N] [--write]
+    python3 toolkit/media.py assemble EDL [-o OUT]
+    python3 toolkit/media.py cut SRC --deliverable KEY --in TC --out TC [--cut cNN] [--frame crop|pad]
+                                 [--x PX] [--captions SRT] [-o OUT]
+    python3 toolkit/media.py encode SRC --deliverable KEY [--frame crop|pad] [-o OUT]
+    python3 toolkit/media.py frame SRC --at TC [-o OUT]
+    python3 toolkit/media.py still-video IMAGE AUDIO --deliverable KEY [-o OUT]
+    python3 toolkit/media.py extract-audio SRC [--in TC --out TC] [--rate HZ] [-o OUT]
+    python3 toolkit/media.py captions check SRT [--deliverable KEY] [--script SCRIPT]
+    python3 toolkit/media.py captions from-segments REGISTER --deliverable KEY [--offset TC] [-o SRT]
+    python3 toolkit/media.py captions align TEXT AUDIO [--lines B.L-B.L] [--anchors] [--noise DB]
+                                            [--min-silence S] [-o SRT]
+    python3 toolkit/media.py captions retime SRT (--in TC --out TC | --edl EDL --source FID) [-o SRT]
+    python3 toolkit/media.py captions rewrap SRT --deliverable KEY [-o SRT]
+    python3 toolkit/media.py captions vtt SRT [-o VTT]
+    python3 toolkit/media.py captions burn SRC SRT --deliverable KEY [-o OUT]
+    python3 toolkit/media.py loudness measure FILE
+    python3 toolkit/media.py loudness normalise FILE --target social|podcast|acx [-o OUT]
+    python3 toolkit/media.py audiobook text SOURCE --piece PIECE --chapter chNN
+                                            [--footnotes drop|inline] [--limit CHARS]
+    python3 toolkit/media.py audiobook master CHUNKS... --piece PIECE --chapter chNN [--head S]
+                                              [--tail S] [--room-tone FILE] [-o OUT]
+    python3 toolkit/media.py audiobook check FILE...
+    python3 toolkit/media.py take add FILE --piece PIECE (--segment sNN | --chapter chNN --part pNN)
+    python3 toolkit/media.py footage add FILE --kind KIND --location LABEL [--rights RRNNNN]
+    python3 toolkit/media.py footage verify [--manifest PATH]
+    python3 toolkit/media.py tokens [--tokens PATH]
+    python3 toolkit/media.py flags [PATH...] [--piece PIECE] [--strict]
+    python3 toolkit/media.py check [--strict] [--setup]
+    python3 toolkit/media.py --self-test
+
+KEY is a deliverable of toolkit/data/platforms.toml, written <platform>.<format> (youtube.short,
+podcast.apple_rss_audio) or audiobook.<store> (audiobook.acx); the brand's confirmed corrections
+in brand/src/platforms/overrides.toml are applied and printed. TC is a timecode, HH:MM:SS.mmm.
+Every path is relative to the working folder; defaults are relative to the repository root.
+
+Outputs go to a renders/ or generated/ folder by default (production/src/renders/ for masters,
+cards and extracts; publishing/src/renders/ for deliverables, burned captions, timed captions
+from segments and stills), named as the house names them; nothing is written elsewhere unless
+-o names a path, and nothing outside those folders is ever overwritten. captions align,
+retime, rewrap and vtt write to -o or, without it, to stdout (report lines go to stderr).
+Every render is probed before it is reported.
+
+The modules beside this file do the work and have no command of their own: media_common.py
+(TOML, timecodes, presets and overrides, paths, the ffmpeg runner), media_video.py (assemble,
+cut, encode, frame, still-video), media_audio.py (extract-audio, loudness, audiobook, take),
+media_captions.py (captions, script time) and media_repo.py (footage, tokens, flags, check).
+card.py renders HTML and CSS to PNG and runs through uv: uv run toolkit/card.py --help.
+
+Standard library only; Python 3.11+; ffmpeg and ffprobe for every command that touches media,
+run from argument lists, never a shell string. No command calls ElevenLabs or any network
+service. Exit codes: 0 = done and verified, or clean; 1 = a finding (a check failed, or an
+output failed its verification); 2 = could not run (bad arguments, a missing input, a missing
+tool, named with its install hint, or the tool itself failed).
+"""
+from __future__ import annotations
+
+import argparse
+import contextlib
+import io
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import media_common as C  # noqa: E402
+import media_audio as A  # noqa: E402
+import media_captions as K  # noqa: E402
+import media_repo as R  # noqa: E402
+import media_video as V  # noqa: E402
+
+
+# ── probe and presets ───────────────────────────────────────────────────────────────────
+
+def cmd_probe(args) -> int:
+    p = Path(args.file)
+    info = C.probe(p, args.output_format)
+    fmt = info.get("format", {})
+    image = None   # for an image file: (frames, what an edit decision list does with it)
+    if p.suffix.lower() in C.IMAGE_EXT:
+        frames = C.image_frames(p, info)
+        image = (frames, "a still: a [[clip]] holds it for seconds" if frames <= 1 else
+                 "moving: a [[clip]] cuts it by in and out, and cut and encode take it like a video")
+    if args.json:
+        keep = ("index", "codec_type", "codec_name", "width", "height", "r_frame_rate", "sample_rate",
+                "channels", "pix_fmt", "bit_rate", "duration")
+        record = {"file": C.shown(p), "duration": C.duration(info), "size": int(fmt.get("size") or
+                  p.stat().st_size), "bit_rate": fmt.get("bit_rate"),
+                  "streams": [{k: s.get(k) for k in keep if k in s} for s in info.get("streams", [])]}
+        if image:
+            record.update(frames=image[0], still=image[0] <= 1)
+        print(json.dumps(record, indent=2))
+        return 0
+    print(f"{C.shown(p)}: {V.describe(p, args.output_format)}")
+    if image:
+        print(f"  image: {image[0]} frame{'s' if image[0] != 1 else ''}, {image[1]}")
+    for s in info.get("streams", []):
+        if s.get("codec_type") == "video":
+            print(f"  stream {s.get('index')}: video {s.get('codec_name')} {s.get('width')}x{s.get('height')} "
+                  f"{s.get('pix_fmt')} {s.get('r_frame_rate')}")
+        elif s.get("codec_type") == "audio":
+            print(f"  stream {s.get('index')}: audio {s.get('codec_name')} {s.get('sample_rate')} Hz "
+                  f"{s.get('channels')} ch")
+        else:
+            print(f"  stream {s.get('index')}: {s.get('codec_type')} {s.get('codec_name')}")
+    return 0
+
+
+HIDDEN = ("checked", "source", "extra_sources", "verify", "chosen", "notes")
+
+
+def print_table(label: str, table: dict, marks: dict) -> None:
+    scalars = {k: v for k, v in table.items() if not (isinstance(v, dict) and "kind" in v)}
+    print(f"[{label}]  checked {scalars.get('checked', '?')}")
+    verify = set(scalars.get("verify", []) or [])
+    chosen = set(scalars.get("chosen", []) or [])
+    for key, value in scalars.items():
+        if key in HIDDEN:
+            continue
+        note = []
+        if key in verify:
+            note.append("verify: unconfirmed")
+        if key in chosen:
+            note.append("chosen: a house choice")
+        if (label, key) in marks:
+            note.append(marks[(label, key)])
+        print(f"  {key} = {value!r}" + (f"   ({'; '.join(note)})" if note else ""))
+    print(f"  source: {scalars.get('source', '?')}")
+    if scalars.get("notes"):
+        print(f"  notes: {scalars['notes']}")
+
+
+def cmd_presets(args) -> int:
+    data, applied, problems = C.load_presets(quiet=True)
+    for p in problems:
+        print(f"warning: {p}; ignored", file=sys.stderr)
+    marks = {}
+    for a in applied:
+        field = a["key"].split(".")[-1] if a["table"] != "house" else a["key"].split(".")[1]
+        marks[(a["table"], field)] = f"brand override; platforms.toml says {a['was']!r}"
+    tables = []
+    key = args.key
+    if not key or key == "house":
+        tables.append(("house", data.get("house", {})))
+    for name, ptable in data.get("platform", {}).items():
+        if key and key not in (name, ) and not key.startswith(name + "."):
+            continue
+        tables.append((f"platform.{name}", ptable))
+        for fmt, t in ptable.items():
+            if isinstance(t, dict) and "kind" in t and (not key or key in (name, f"{name}.{fmt}")):
+                tables.append((f"{name}.{fmt}", t))
+    for store, t in data.get("audiobook", {}).items():
+        if not key or key in ("audiobook", f"audiobook.{store}"):
+            tables.append((f"audiobook.{store}", t))
+    if key and len(tables) == 0:
+        raise C.Fatal(f"{key!r} names no table of toolkit/data/platforms.toml")
+    if key and "." in key and not key.startswith("audiobook.") and key != "house":
+        tables = [t for t in tables if t[0] == key] or tables
+    if args.stale_after is None:
+        for label, t in tables:
+            print_table(label, t, marks)
+        for a in applied:
+            print(f"brand override {a['key']} = {a['value']!r} (platforms.toml: {a['was']!r}) — "
+                  f"{a['why'] or 'no reason given'}; {a['source'] or 'no source'}; checked {a['checked'] or '?'}")
+        return 0
+    if args.stale_after < 0:
+        raise C.Fatal("--stale-after takes a number of days, 0 or more")
+    today = C.parse_date(args.today) if args.today else C.parse_date(C.today())
+    stale = []
+    for label, t in tables:
+        checked = t.get("checked")
+        if not checked and all(isinstance(v, dict) for v in t.values()):
+            continue
+        if not checked:
+            stale.append(f"{label}: no checked date")
+            continue
+        age = (today - C.parse_date(str(checked))).days
+        if age > args.stale_after:
+            stale.append(f"{label}: checked {checked}, {age} days before {today.strftime('%d/%m/%Y')} "
+                         f"(source {t.get('source', '?')})")
+    for a in applied:
+        if a["checked"]:
+            age = (today - C.parse_date(a["checked"])).days
+            if age > args.stale_after:
+                stale.append(f"override {a['key']}: checked {a['checked']}, {age} days old")
+    for s in stale:
+        print(f"  STALE {s}")
+    dated = sum(1 for _, t in tables if t.get("checked"))
+    print(f"presets: {len(stale)} of {dated} dated table(s) older than {args.stale_after} days"
+          if stale else f"presets: every table checked within {args.stale_after} days")
+    return 1 if stale else 0
+
+
+# ── The command line ────────────────────────────────────────────────────────────────────
+
+STDOUT_HELP = ("the output path; without -o the captions go to stdout and every report line to "
+               "stderr (their home, publishing/src/captions/, is tracked, so the toolkit never "
+               "chooses a path there; an existing file there is never overwritten)")
+
+def build_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(prog="media.py", description=__doc__.split("\n\n")[0],
+                                 formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 epilog="Run 'media.py <command> --help' for one command's arguments.")
+    sub = ap.add_subparsers(dest="cmd", metavar="command")
+
+    def out(p, help_="the output path (default: a renders/ folder, named as the house names it)"):
+        p.add_argument("-o", metavar="OUT", help=help_)
+
+    p = sub.add_parser("probe", help="streams, sizes and durations of one file")
+    p.add_argument("file")
+    p.add_argument("--json", action="store_true")
+    p.add_argument("--output-format", help="a raw take's ElevenLabs format, pcm_RATE")
+    p.set_defaults(func=cmd_probe)
+
+    p = sub.add_parser("presets", help="deliverable tables with brand overrides; stale checked dates")
+    p.add_argument("key", nargs="?", help="a deliverable key, a platform, audiobook or house")
+    p.add_argument("--stale-after", type=int, metavar="DAYS")
+    p.add_argument("--today", metavar="DD/MM/YYYY")
+    p.set_defaults(func=cmd_presets)
+
+    p = sub.add_parser("script", help="script time")
+    ss = p.add_subparsers(dest="sub", metavar="time")
+    q = ss.add_parser("time", help="spoken words and seconds per beat against the brief",
+                      description="Counts spoken words (tags, braces and cue lines removed) and adds "
+                      "every {pause S}, per beat and in total. A beat heading's '(target MM:SS)' is that "
+                      "beat's own duration: each beat is compared with its own target, and the targets "
+                      "are summed. The total is judged against the brief's target_seconds (within 10%) "
+                      "and every deliverable's max_seconds.")
+    q.add_argument("path")
+    q.add_argument("--wpm", type=float, help="words a minute (default: the brief's words_per_minute, else 150)")
+    q.add_argument("--write", action="store_true", help="record words and estimated_seconds")
+    q.set_defaults(func=K.cmd_script_time)
+
+    p = sub.add_parser("assemble", help="build a master from an edit decision list")
+    p.add_argument("edl")
+    out(p)
+    p.set_defaults(func=V.cmd_assemble)
+
+    p = sub.add_parser("cut", help="trim, reframe and encode one deliverable")
+    p.add_argument("src")
+    p.add_argument("--deliverable", required=True, metavar="KEY")
+    p.add_argument("--in", dest="cut_in", required=True, metavar="TC")
+    p.add_argument("--out", dest="cut_out", required=True, metavar="TC")
+    p.add_argument("--cut", metavar="cNN")
+    p.add_argument("--frame", choices=("crop", "pad"), default="crop")
+    p.add_argument("--x", type=int, metavar="PX", help="crop's left edge in source pixels")
+    p.add_argument("--captions", metavar="SRT", help="burn these captions in the same pass")
+    out(p)
+    p.set_defaults(func=V.cmd_cut)
+
+    p = sub.add_parser("encode", help="encode a whole file to a deliverable, loudness included")
+    p.add_argument("src")
+    p.add_argument("--deliverable", required=True, metavar="KEY")
+    p.add_argument("--frame", choices=("crop", "pad"),
+                   help="how a picture of another shape fills the deliverable's frame; required when the "
+                        "shapes differ (encode never crops unasked)")
+    out(p)
+    p.set_defaults(func=V.cmd_encode)
+
+    p = sub.add_parser("frame", help="one PNG still")
+    p.add_argument("src")
+    p.add_argument("--at", required=True, metavar="TC")
+    out(p)
+    p.set_defaults(func=V.cmd_frame)
+
+    p = sub.add_parser("still-video", help="a still under audio, as video")
+    p.add_argument("image")
+    p.add_argument("audio")
+    p.add_argument("--deliverable", required=True, metavar="KEY")
+    out(p)
+    p.set_defaults(func=V.cmd_still_video)
+
+    p = sub.add_parser("extract-audio", help="mono 16-bit WAV for speech-to-text or alignment")
+    p.add_argument("src")
+    p.add_argument("--in", dest="cut_in", metavar="TC")
+    p.add_argument("--out", dest="cut_out", metavar="TC")
+    p.add_argument("--rate", type=int, default=16000, metavar="HZ")
+    out(p, "the output path (default: production/src/renders/<stem>[.<in>-<out>].wav)")
+    p.set_defaults(func=A.cmd_extract)
+
+    p = sub.add_parser("captions", help="check, from-segments, align, retime, rewrap, vtt, burn")
+    cs = p.add_subparsers(dest="sub", metavar="action")
+    q = cs.add_parser("check", help="limits, overlaps and gaps; the words against a script")
+    q.add_argument("srt")
+    q.add_argument("--deliverable", metavar="KEY")
+    q.add_argument("--script", metavar="SCRIPT", help="a script.md or a transcript.md")
+    q.set_defaults(func=K.cmd_check)
+    q = cs.add_parser("from-segments", help="captions timed by the approved voiceover segments")
+    q.add_argument("register")
+    q.add_argument("--deliverable", required=True, metavar="KEY")
+    q.add_argument("--offset", metavar="TC", help="where the voice track starts on the master")
+    out(q, "the output path (default: publishing/src/renders/<piece>.<platform>-<format>.en-GB.srt)")
+    q.set_defaults(func=K.cmd_from_segments)
+    q = cs.add_parser("align", help="captions spread over the speech silencedetect finds")
+    q.add_argument("text", help="a script.md or a transcript.md")
+    q.add_argument("audio")
+    q.add_argument("--lines", metavar="B.L-B.L", help="only these spoken lines (one cut's)")
+    q.add_argument("--anchors", action="store_true", help="hold each beat inside its anchored interval")
+    q.add_argument("--noise", type=float, default=-35.0, metavar="DB")
+    q.add_argument("--min-silence", type=float, default=0.3, metavar="S")
+    out(q, STDOUT_HELP)
+    q.set_defaults(func=K.cmd_align)
+    q = cs.add_parser("retime", help="master timing to a cut's, or recording timing to the master's")
+    q.add_argument("srt")
+    q.add_argument("--in", dest="cut_in", metavar="TC")
+    q.add_argument("--out", dest="cut_out", metavar="TC")
+    q.add_argument("--edl", metavar="EDL")
+    q.add_argument("--source", metavar="FID")
+    out(q, STDOUT_HELP)
+    q.set_defaults(func=K.cmd_retime)
+    q = cs.add_parser("rewrap", help="re-chunk to a deliverable's line width")
+    q.add_argument("srt")
+    q.add_argument("--deliverable", required=True, metavar="KEY")
+    out(q, STDOUT_HELP)
+    q.set_defaults(func=K.cmd_rewrap)
+    q = cs.add_parser("vtt", help="SRT to WebVTT")
+    q.add_argument("srt")
+    out(q, STDOUT_HELP)
+    q.set_defaults(func=K.cmd_vtt)
+    q = cs.add_parser("burn", help="burn captions in (ASS at the output size)")
+    q.add_argument("src")
+    q.add_argument("srt")
+    q.add_argument("--deliverable", required=True, metavar="KEY")
+    out(q)
+    q.set_defaults(func=K.cmd_burn)
+
+    p = sub.add_parser("loudness", help="measure, normalise")
+    ls = p.add_subparsers(dest="sub", metavar="action")
+    q = ls.add_parser("measure", help="integrated loudness, true peak and loudness range")
+    q.add_argument("file")
+    q.set_defaults(func=A.cmd_measure)
+    q = ls.add_parser("normalise", help="two-pass loudnorm to social, podcast or acx")
+    q.add_argument("file")
+    q.add_argument("--target", required=True, choices=("social", "podcast", "acx"))
+    out(q)
+    q.set_defaults(func=A.cmd_normalise)
+
+    p = sub.add_parser("audiobook", help="text, master, check")
+    bs = p.add_subparsers(dest="sub", metavar="action")
+    q = bs.add_parser("text", help="a chapter's spoken text, in chunks under the model's limit",
+                      description="Writes <piece>.chNN.pNN.txt chunks to the audiobook folder's generated/; "
+                      "a chunk ends at every {pause N} (a scene break is {pause 2}), and the pause after "
+                      "each chunk goes in the sidecar <piece>.chNN.chunks.toml, never in the text. Exit 1 "
+                      "lists what has no spoken form: constructed-language spans, Greek and Hebrew, "
+                      "scripture references, citation keys, abbreviations with no row in voice.md's "
+                      "Pronunciations, and every table and image, which are left out of the text. Exit 2 "
+                      "when the chapter register's channels name anything but an [audiobook.<store>] store "
+                      "of platforms.toml (acx, google_play, …).")
+    q.add_argument("source", help="the chapter's source; for ch00 and ch99 the credits' own file, "
+                   "<piece>.ch00.md or <piece>.ch99.md beside the chapter register (an audiobook has no script)")
+    q.add_argument("--piece", required=True)
+    q.add_argument("--chapter", required=True, metavar="chNN",
+                   help="the chapter; ch00 is the opening credits and ch99 the closing credits")
+    q.add_argument("--footnotes", choices=("drop", "inline"), default="drop")
+    q.add_argument("--limit", type=int, metavar="CHARS")
+    q.set_defaults(func=A.cmd_ab_text)
+    q = bs.add_parser("master", help="join takes, add room tone, master to ACX, MP3",
+                      description="Joins the takes (in the sidecar's chunk order, with exactly its room "
+                      "tone after each chunk, when they are named <piece>.chNN.pNN.tN), adds head and tail "
+                      "room tone, masters to the ACX profile and checks the result. Room tone is the room's "
+                      "own: --room-tone FILE, else the quietest stretch of the takes, looped; never digital "
+                      "silence where a room can be heard. The mastered chapter is what M4 needs approved "
+                      "and archived. Exit 2 when the chapter register's channels name anything but an "
+                      "[audiobook.<store>] store of platforms.toml.")
+    q.add_argument("chunks", nargs="+", metavar="CHUNKS", help="the approved take of each chunk, or a recording")
+    q.add_argument("--piece", required=True)
+    q.add_argument("--chapter", required=True, metavar="chNN")
+    q.add_argument("--head", type=float, default=A.ACX_HEAD, metavar="S")
+    q.add_argument("--tail", type=float, default=A.ACX_TAIL, metavar="S")
+    q.add_argument("--room-tone", metavar="FILE", help="a recording of the room, looped for the head, the "
+                   "tail and every pause (default: the quietest stretch of the takes themselves)")
+    out(q, "the output path (default: the audiobook folder's renders/<piece>.chNN.mp3)")
+    q.set_defaults(func=A.cmd_ab_master)
+    q = bs.add_parser("check", help="ACX: RMS, peak, noise floor, rate, CBR, channels, length, room tone")
+    q.add_argument("files", nargs="+")
+    q.set_defaults(func=A.cmd_ab_check)
+
+    p = sub.add_parser("take", help="take add")
+    ts = p.add_subparsers(dest="sub", metavar="add")
+    q = ts.add_parser("add", help="name a fresh ElevenLabs take; register and credits-log rows")
+    q.add_argument("file")
+    q.add_argument("--piece", required=True)
+    q.add_argument("--segment", metavar="sNN")
+    q.add_argument("--chapter", metavar="chNN")
+    q.add_argument("--part", metavar="pNN")
+    q.set_defaults(func=A.cmd_take_add)
+
+    p = sub.add_parser("footage", help="add, verify")
+    fs = p.add_subparsers(dest="sub", metavar="action")
+    q = fs.add_parser("add", help="copy into the mirror, hash, and log the next F ID")
+    q.add_argument("file")
+    q.add_argument("--kind", required=True, choices=R.KINDS)
+    q.add_argument("--location", required=True, metavar="LABEL")
+    q.add_argument("--rights", metavar="RRNNNN")
+    q.set_defaults(func=R.cmd_footage_add)
+    q = fs.add_parser("verify", help="the local mirror against the manifest")
+    q.add_argument("--manifest", metavar="PATH")
+    q.set_defaults(func=R.cmd_footage_verify)
+
+    p = sub.add_parser("tokens", help="every required custom property of tokens.css")
+    p.add_argument("--tokens", metavar="PATH")
+    p.set_defaults(func=R.cmd_tokens)
+
+    p = sub.add_parser("flags", help="AUTHOR TO CONFIRM and VERIFY across the media layers")
+    p.add_argument("paths", nargs="*", metavar="PATH")
+    p.add_argument("--piece", metavar="PIECE", help="only that piece's files: its folder under "
+                   "scripts/src/pieces/ and every file in scripts/, production/ and publishing/ (or "
+                   "under the PATHs given) named <piece>.… or <piece>--cNN.… (M7 needs zero)")
+    p.add_argument("--strict", action="store_true", help="exit 1 when any flag is open")
+    p.set_defaults(func=R.cmd_flags)
+
+    p = sub.add_parser("check", help="the repository guard; --setup adds the readiness report")
+    p.add_argument("--strict", action="store_true", help="warnings count as findings")
+    p.add_argument("--setup", action="store_true")
+    p.set_defaults(func=R.cmd_check)
+    return ap
+
+
+def main(argv=None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if argv[:1] == ["--self-test"]:
+        return self_test()
+    ap = build_parser()
+    args = ap.parse_args(argv)
+    if not getattr(args, "func", None):
+        ap.print_help()
+        return 2
+    try:
+        return args.func(args)
+    except C.Finding as err:
+        print(f"FAIL {err}")
+        return 1
+    except C.Fatal as err:
+        print(f"error: {err}", file=sys.stderr)
+        return 2
+    except (OSError, UnicodeDecodeError) as err:
+        print(f"error: {err}", file=sys.stderr)
+        return 2
+
+
+# ── Self-test ───────────────────────────────────────────────────────────────────────────
+
+TOKENS_CSS = """:root {
+  --color-bg: #101418; --color-surface: #1c232b; --color-text: #f4f1ea;
+  --color-text-muted: #b9b4aa; --color-accent: #d4a24c; --color-on-accent: #101418;
+  --font-display: "Fixture Display", sans-serif; --font-body: sans-serif;
+  --weight-display: 700; --weight-body: 400; --space-unit: 8px; --radius: 6px;
+  --caption-font: CAPTION_FONT; --caption-weight: 700; --caption-size: 4.5vh;
+  --caption-text: #FFFFFF; --caption-outline: #000000; --caption-outline-width: 0.4vh;
+}
+"""
+OVERRIDES_TOML = """# overrides.toml (self-test fixture)
+[[override]]
+key = "tiktok.video.max_seconds"
+value = 1
+why = "fixture"
+source = "fixture"
+checked = "01/09/2026"
+
+[[override]]
+key = "instagram.hashtags_max"
+value = 4
+why = "fixture"
+source = "fixture"
+checked = "01/09/2026"
+
+[[override]]
+key = "youtube.long.max_seconds"
+value = "long"
+why = "a wrong type, which is ignored"
+source = "fixture"
+checked = "01/09/2026"
+"""
+VOICE_MD = """# voice.md (self-test fixture)
+
+## Narrators
+
+| Use | Service | Voice | Voice ID | Model ID | Stability | Similarity | Style | Speed | Output format | Consent | Chosen |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| voiceover | ElevenLabs | Fixture Voice | fixture | eleven_v4 | 0.5 | 0.75 | 0 | 1.0 | mp3_44100_128 | — | 01/01/2026 |
+| narration | ElevenLabs | Fixture Narrator | fixture | eleven_v4 | 0.5 | 0.75 | 0 | 1.0 | pcm_44100 | — | 01/01/2026 |
+
+## Pronunciations
+
+| Word | IPA | Respelling | Source | Notes |
+|---|---|---|---|---|
+| Tharvel | ˈθɑːvəl | THAR-vel | fixture | |
+"""
+CREDITS_MD = """# credits-log.md (self-test fixture)
+
+| Date | Piece | Tool | Calls | Characters or minutes | Voice | Model | Output | Notes |
+|---|---|---|---|---|---|---|---|---|
+"""
+SCRIPT_MD = """---
+piece: 001-fixture
+version: 1
+approved: ""
+words: 0
+estimated_seconds: 0
+---
+
+# Fixture — script
+
+## 1. Hook (target 00:03)
+
+VO: {brisk} The ferry is late again.
+TEXT: Late again?
+
+## 2. The tide decides (target 00:10)
+
+ON: Every crossing waits for the tide, not the timetable.
+SFX: gulls, low
+ON: {pause 0.6} So the timetable is a promise the sea never signed.
+"""
+BRIEF_MD = """---
+piece: 001-fixture
+title: "Fixture"
+kind: short-video
+origin: scripted
+status: scripted
+deliverables: [youtube.short, instagram.reel]
+target_seconds: 10
+words_per_minute: 150
+verified: {}
+---
+"""
+TRANSCRIPT_MD = """---
+piece: 001-fixture
+source: F0003
+made: by hand
+approved: ""
+---
+
+# Fixture — transcript
+
+## 1. Opening (at 00:00:00.500)
+
+HOST: The harbour opens at dawn.
+HOST: Boats leave on the tide.
+
+## 2. Close (at 00:00:04.500)
+
+HOST: We wait for the light.
+HOST: Then we go out together.
+"""
+CHAPTER_MD = """<!-- EXAMPLE CHAPTER, a fixture. -->
+
+# The Ford
+
+<!-- section: opening -->
+
+::: epigraph
+'Count the stones, and the river lets you pass.'
+
+— a saying of the [hebori]{.conlang lang=example-tongue}
+:::
+
+The last window went dark [@doe2020, p. 4].
+[Tharvel]{.conlang lang=example-tongue} counted a hundred breaths.[^1] <!-- AUTHOR TO CONFIRM: a fixture flag -->
+
+* * *
+
+The river was louder in the dark, as John 3:16 was louder in the mind.
+
+::: scene-break
+:::
+
+She stepped down.
+
+[^1]: A breath is a count of four.
+"""
+CHAPTER_REG = """---
+piece: 002-fixture-book
+route: ai
+channels: [spotify_authors]
+voice_use: narration
+model_id: eleven_v4
+output_format: pcm_22050
+---
+
+| Ch | Title | Source | Route | Takes | Master | Duration | Check | Status |
+|---|---|---|---|---|---|---|---|---|
+| ch01 | The Ford | provided | ai |  |  |  |  | planned |
+"""
+
+
+CHAPTER_REG_NO_FORMAT = """---
+piece: 008-fixture-voice-format
+route: ai
+channels: [spotify_authors]
+voice_use: narration
+model_id: eleven_v4
+---
+
+| Ch | Title | Source | Route | Takes | Master | Duration | Check | Status |
+|---|---|---|---|---|---|---|---|---|
+| ch00 | Opening credits | 008-fixture-voice-format.ch00.md | ai |  |  |  |  | planned |
+| ch01 | The Ford | provided | ai |  |  |  |  | planned |
+"""
+CREDITS_CH00_MD = """The Ford, a fixture.
+Read by a fixture narrator.
+"""
+SCRIPT_SHAPED_MD = """# The Ford — script
+
+## Opening credits
+
+NARRATOR: The Ford, a fixture.
+
+## Chapters
+
+1. The Ford — manuscript/src/01-the-ford/01-the-ford.md
+"""
+BUSINESS_CHAPTER_MD = """# Running the studio
+
+HLS takes bookings by the week.
+
+| Step | What to do |
+|------|-----------------|
+| 1 | Pick a date |
+| 2 | Pay the deposit |
+
+: Booking checklist
+
+![Chart of bookings by month](chart.png)
+
+See [the guide][g] for the rest.
+
+[g]: https://example.org/guide
+"""
+
+
+def self_test() -> int:
+    """Prove each module does what its docstring says, on fixtures written at run time."""
+    failures = []
+
+    def verdict(label, passed, detail=""):
+        print(f"  {'ok  ' if passed else 'FAIL'} {label}")
+        if not passed:
+            failures.append(label)
+            print(f"         {str(detail)[-1500:]}")
+
+    def skip(label, why):
+        print(f"  skip {label}: {why}")
+
+    def cli(*argv):
+        code, out, err = cli_split(*argv)
+        return code, out + err
+
+    print("media.py --self-test")
+    saved_root, saved_preset = C.ROOT, C.X264_PRESET
+    C.X264_PRESET = "ultrafast"
+    have_ff = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
+    have_git = bool(shutil.which("git"))
+    with tempfile.TemporaryDirectory(prefix="media-self-test-") as tmp:
+        root = Path(tmp) / "project"
+        C.ROOT = root
+        try:
+            write_fixture(root)
+            groups = [("presets, timecodes and tokens", lambda: test_common(verdict, cli)),
+                      ("captions and script time", lambda: test_captions(verdict, cli, root)),
+                      ("footage, takes, audiobook text, flags and check",
+                       lambda: test_repo(verdict, skip, cli, root, have_git, have_ff))]
+            if have_ff:
+                groups.append(("cut, burn-in, loudness, assemble, align and the audiobook master",
+                               lambda: test_media(verdict, skip, cli, root)))
+            else:
+                skip("every ffmpeg probe (cut, burn-in, loudness, assemble, align, audiobook)",
+                     "ffmpeg or ffprobe is not installed")
+            for label, group in groups:
+                try:
+                    group()
+                except Exception as err:  # a broken probe is a failure, never a crash
+                    import traceback
+                    verdict(f"{label}: ran to the end", False,
+                            f"{type(err).__name__}: {err}\n{traceback.format_exc()}")
+        finally:
+            C.ROOT, C.X264_PRESET = saved_root, saved_preset
+    if failures:
+        print(f"self-test FAILED: {len(failures)} case(s)")
+        return 1
+    print("self-test passed")
+    return 0
+
+
+def cli_split(*argv):
+    """(exit code, stdout, stderr) of one media.py command run in this process."""
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = main([str(a) for a in argv])
+    return code, out.getvalue(), err.getvalue()
+
+
+def write(p: Path, text: str) -> Path:
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="utf-8")
+    return p
+
+
+def caption_family() -> str:
+    if shutil.which("fc-match"):
+        proc = subprocess.run(["fc-match", "-f", "%{family[0]}", "sans-serif"], capture_output=True, text=True)
+        if proc.returncode == 0 and proc.stdout.strip():
+            return f'"{proc.stdout.strip()}"'
+    return "sans-serif"
+
+
+def write_fixture(root: Path) -> None:
+    write(root / C.TOKENS, TOKENS_CSS.replace("CAPTION_FONT", caption_family()))
+    (root / C.FONTS).mkdir(parents=True)
+    write(root / C.OVERRIDES, OVERRIDES_TOML)
+    write(root / C.VOICE_MD, VOICE_MD)
+    write(root / C.MANIFEST, "# manifest.toml (self-test fixture): one [[file]] per source file\n")
+    write(root / C.RAW / "README.md", "# raw\n")
+    write(root / C.CREDITS_LOG, CREDITS_MD)
+    for d in (C.VO_GENERATED, C.AB_GENERATED, C.AB_RENDERS, C.PROD_RENDERS, C.PUB_RENDERS):
+        write(root / d / "README.md", "# generated output\n")
+    for rel, rules in R.IGNORE_RULES.items():
+        write(root / rel, "# fixture\n" + "\n".join(rules) + "\n")
+    for name in ("CONTEXT.md", "CLAUDE.md"):
+        write(root / "brand/src/exports/large" / name, "# pair\n")
+    piece = root / C.PIECES / "001-fixture"
+    write(piece / "script.md", SCRIPT_MD)
+    write(piece / "brief.md", BRIEF_MD)
+    write(piece / "transcript.md", TRANSCRIPT_MD)
+    write(root / C.AUDIOBOOK / "002-fixture-book.md", CHAPTER_REG)
+    write(root / C.AUDIOBOOK / "008-fixture-voice-format.md", CHAPTER_REG_NO_FORMAT)
+    write(root / C.AUDIOBOOK / "008-fixture-voice-format.ch00.md", CREDITS_CH00_MD)
+    write(root / "manuscript/src/01-the-ford/01-the-ford.md", CHAPTER_MD)
+    settings = {"permissions": {"allow": list(R.SETTINGS_ALLOW), "ask": list(R.SETTINGS_ASK[:-1]),
+                                "deny": ["AskUserQuestion"]}}
+    write(root / C.SETTINGS, json.dumps(settings, indent=2))
+
+
+def test_common(verdict, cli) -> None:
+    ok = all(abs(C.parse_tc(C.fmt_tc(t)) - t) < 5e-4 for t in (0, 1.25, 59.999, 3725.5))
+    verdict("timecodes round trip through HH:MM:SS.mmm", ok and C.fmt_tc(3725.5) == "01:02:05.500")
+    try:
+        C.parse_tc("00:61:00.000")
+        verdict("a bad timecode is refused", False, "no error")
+    except C.Fatal:
+        verdict("a bad timecode is refused", True)
+    data, applied, problems = C.load_presets(quiet=True)
+    keys = C.deliverable_keys(data)
+    missing = [k for k in keys if not (C.preset(k, data).get("checked") and C.preset(k, data).get("source"))]
+    verdict("every deliverable table keeps checked and source", keys and not missing, missing)
+    house = data.get("house", {})
+    verdict("[house] holds the social loudness decision (DESIGN D24)",
+            house.get("social_loudness_lufs") == -14.0 and house.get("social_true_peak_db") == -1.0
+            and house.get("source") == "DESIGN.md D24", house)
+    verdict("loudness targets: social, podcast, acx",
+            C.loudness_target("social", data) == (-14.0, -1.0) and C.loudness_target("podcast", data) == (-16.0, -1.0)
+            and C.loudness_target("acx", data) == (-20.0, -3.5))
+    verdict("a brand override is applied, a platform-wide one too",
+            C.preset("tiktok.video", data)["max_seconds"] == 1 and data["platform"]["instagram"]["hashtags_max"] == 4,
+            applied)
+    verdict("an override of the wrong type is reported and ignored",
+            any("youtube.long.max_seconds" in p for p in problems)
+            and C.preset("youtube.long", data)["max_seconds"] == 43200, problems)
+    code, out = cli("presets", "tiktok.video")
+    verdict("presets prints the table with its override marked", code == 0 and "brand override" in out, out)
+    code, out = cli("presets", "--stale-after", "183", "--today", "03/10/2026")
+    verdict("presets --stale-after passes on the checked date", code == 0, out)
+    code, out = cli("presets", "--stale-after", "183", "--today", "03/10/2027")
+    verdict("presets --stale-after finds every table stale a year on", code == 1 and "STALE" in out, out[-400:])
+    code, out = cli("presets", "nosuch.key.at.all")
+    verdict("an unknown preset key is exit 2", code == 2, out)
+    code, out = cli("tokens")
+    verdict("tokens: every required token present and parseable", code == 0, out)
+    good = C.read_text(C.path(C.TOKENS))
+    write(C.path(C.TOKENS), good.replace("--caption-size: 4.5vh;", "--caption-size: 40px;")
+          .replace("--radius: 6px;", ""))
+    code, out = cli("tokens")
+    verdict("tokens: a missing token and a caption size not in vh fail",
+            code == 1 and "--radius is missing" in out and "--caption-size" in out, out)
+    write(C.path(C.TOKENS), good)
+
+
+def test_captions(verdict, cli, root: Path) -> None:
+    cues = [K.Cue(1.0, 3.0, ["The ferry is late again."]), K.Cue(3.2, 6.0, ["Every crossing waits", "for the tide."])]
+    text = K.srt_text(cues)
+    back = K.parse_srt(text)
+    verdict("SRT round trip", [(c.start, c.end, c.lines) for c in back] == [(c.start, c.end, c.lines) for c in cues],
+            text)
+    verdict("WebVTT uses dots and a header", K.vtt_text(cues).startswith("WEBVTT") and "00:00:01.000 -->"
+            in K.vtt_text(cues))
+    srt = write(root / C.CAPTIONS / "001-fixture.en-GB.srt", text)
+    code, out = cli("captions", "check", srt, "--deliverable", "youtube.long")
+    verdict("a clean SRT passes captions check", code == 0, out)
+    long_line = "x" * 43
+    code, out = cli("captions", "check", write(root / "t1.srt", K.srt_text([K.Cue(0, 4, [long_line])])))
+    verdict("a 43-character landscape line fails", code == 1 and "43 characters" in out, out)
+    code, out = cli("captions", "check", write(root / "t2.srt", K.srt_text([K.Cue(0, 2, ["x" * 40])])))
+    verdict("20 characters a second fails", code == 1 and "20.0 characters a second" in out, out)
+    code, out = cli("captions", "check", write(root / "t3.srt", K.srt_text(
+        [K.Cue(0, 2, ["One two three."]), K.Cue(1.9, 4, ["Four five six."])])))
+    verdict("an overlap fails", code == 1 and "overlaps" in out, out)
+    code, out = cli("captions", "check", write(root / "t4.srt", K.srt_text([K.Cue(0, 3, ["x" * 33])])),
+                    "--deliverable", "youtube.short")
+    verdict("a 33-character line fails a 9:16 deliverable", code == 1 and "limit 32" in out, out)
+    code, out = cli("captions", "check", write(root / "t0.srt", ""))
+    verdict("an SRT with no cues fails captions check", code == 1 and "no cues" in out, out)
+    code, out = cli("captions", "check", write(root / "t0b.srt", "1\n00:00:00,000 --> 00:00:02,000\n\n"))
+    verdict("a cue with no text fails captions check", code == 1 and "has no text" in out, out)
+    tangled = write(root / "t3b.srt", K.srt_text([K.Cue(0.5, 2.0, ["One two three."]), K.Cue(1.8, 3.0, ["Four five."]),
+                                                  K.Cue(2.172, 2.9, ["Six."])]))
+    code, out, err = cli_split("captions", "rewrap", tangled, "--deliverable", "youtube.short")
+    rew = K.parse_srt(out) if code != 2 else []
+    verdict("rewrap of overlapping cues leaves no cue ending before it starts, and every word",
+            rew and all(c.end > c.start for c in rew) and "Six." in out and "Four five." in out, out + err)
+    code, out, err = cli_split("captions", "vtt", tangled)
+    verdict("captions vtt refuses overlapping cues (exit 1) and writes nothing",
+            code == 1 and "overlaps" in err and "WEBVTT" not in out, out + err)
+    script = root / C.PIECES / "001-fixture" / "script.md"
+    good = K.srt_text([K.Cue(0.0, 2.2, ["The ferry is late again."]),
+                       K.Cue(2.4, 5.6, ["Every crossing waits for the tide,", "not the timetable."]),
+                       K.Cue(5.8, 9.4, ["So the timetable is a promise", "the sea never signed."])])
+    code, out = cli("captions", "check", write(root / "t5.srt", good), "--script", script)
+    verdict("captions check --script: the same words pass", code == 0, out)
+    code, out = cli("captions", "check", write(root / "t6.srt", good.replace("tide", "tides")), "--script", script)
+    verdict("captions check --script: a changed word fails", code == 1 and "tides" in out, out)
+    code, out = cli("captions", "check", write(root / "t6b.srt", good.split("\n\n3\n")[0] + "\n"),
+                    "--script", script)
+    verdict("captions check --script: an uncaptioned ending fails a master", code == 1 and "closing" in out, out)
+    code, out = cli("captions", "check", write(root / "001-fixture--c01.en-GB.srt", good.split("\n\n3\n")[0] + "\n"),
+                    "--script", script)
+    verdict("captions check --script: a cut may stop inside the script", code == 0, out)
+    wide = K.srt_text([K.Cue(0.0, 6.0, ["Every crossing waits for the tide, and not", "for the timetable that the office prints."])])
+    code, out, err = cli_split("captions", "rewrap", write(root / "t7.srt", wide), "--deliverable", "youtube.short")
+    rew = K.parse_srt(out) if code != 2 else []
+    out += err
+    verdict("rewrap to 9:16 re-chunks within 32 characters, to stdout without -o", code == 0 and len(rew) >= 2
+            and all(len(line) <= 32 for c in rew for line in c.lines)
+            and not list((root / C.PUB_RENDERS).glob("t7*")), out)
+    code, out = cli("captions", "retime", srt, "--in", "00:00:02.000", "--out", "00:00:05.000",
+                    "-o", root / C.PUB_RENDERS / "cut.srt")
+    cut = K.read_srt(root / C.PUB_RENDERS / "cut.srt")
+    verdict("retime --in --out shifts, clips and drops", code == 0 and len(cut) == 2 and cut[0].start == 0.0
+            and abs(cut[1].start - 1.2) < 1e-6 and abs(cut[1].end - 3.0) < 1e-6, K.srt_text(cut))
+    code, out = cli("captions", "retime", srt, "--in", "0", "--out", "1", "--edl", root / "x.toml", "--source", "F0001")
+    verdict("retime refuses --in and --out together with --edl (exit 2)", code == 2 and "not both" in out, out)
+    code, out, err = cli_split("captions", "vtt", srt)
+    verdict("captions vtt prints WebVTT to stdout without -o, and writes no file",
+            code == 0 and out.startswith("WEBVTT") and not err and not list(root.rglob("*.vtt")), out + err)
+    vtt = root / C.CAPTIONS / "001-fixture.en-GB.vtt"
+    code, out = cli("captions", "vtt", srt, "-o", vtt)
+    verdict("captions vtt -o writes the named file", code == 0 and vtt.is_file(), out)
+    code, out = cli("captions", "vtt", srt, "-o", vtt)
+    verdict("captions vtt never overwrites a file outside renders/ and generated/", code == 2 and "never" in out, out)
+    code, out = cli("captions", "vtt", srt, "-o", srt)
+    verdict("an output that is its own input is refused", code == 2, out)
+    para = ("The harbour master, who had kept the light for forty years, said the tide was never late; "
+            "only the people waiting for it were early, and they blamed the boat.")
+    chunks = K.chunk_text(para, 32)
+    verdict("chunking keeps every cue inside two lines of 32", chunks and
+            all(K.break_lines(c, 32) for c in chunks) and " ".join(chunks) == para, chunks)
+    code, out = cli("script", "time", script)
+    verdict("script time counts spoken words only, with pauses", code == 0 and "  Total" in out and
+            " 24 " in out and "0.6" in out and "within" in out, out)
+    verdict("script time reads each beat's target as its own duration and sums them",
+            "target 00:03.0" in out and "target 00:10.0" in out and "beat targets sum to 00:13.0" in out
+            and "from the brief's words_per_minute" in out, out)
+    write(root / C.PIECES / "001-fixture" / "brief.md", BRIEF_MD.replace("words_per_minute: 150", "words_per_minute: 75"))
+    code, out = cli("script", "time", script)
+    verdict("script time takes the brief's words_per_minute (75: the beats run long)",
+            code == 1 and "75 words a minute" in out and "long by" in out, out)
+    code, out = cli("script", "time", script, "--wpm", "150")
+    verdict("--wpm overrides the brief's pace", code == 0 and "from --wpm" in out, out)
+    write(root / C.PIECES / "001-fixture" / "brief.md", BRIEF_MD)
+    code, out = cli("script", "time", script, "--wpm", "0")
+    verdict("--wpm 0 is refused (exit 2)", code == 2, out)
+    code, out = cli("script", "time", script, "--wpm", "5")
+    verdict("script time: an estimate past the target and max_seconds is a finding",
+            code == 1 and "OUTSIDE" in out and "youtube.short max_seconds 180: OVER" in out, out)
+    code, out = cli("script", "time", script, "--write")
+    meta = C.split_frontmatter(C.read_text(script))[0]
+    verdict("script time --write records words and estimated_seconds", meta.get("words") == 24
+            and isinstance(meta.get("estimated_seconds"), float), meta)
+
+
+def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> None:
+    src = write(Path(str(root) + "-outside") / "talk-cam-a.bin", "fixture footage bytes\n")
+    code, out = cli("footage", "add", src, "--kind", "stock", "--location", "Archive drive A")
+    rows = R.manifest_rows(C.path(C.MANIFEST))
+    verdict("footage add copies (never moves) and logs F0001", code == 0 and src.is_file() and
+            (C.path(C.RAW) / "talk-cam-a.bin").is_file() and rows and rows[0]["id"] == "F0001", out)
+    code, out = cli("footage", "add", src, "--kind", "stock", "--location", "Archive drive A")
+    verdict("footage add refuses a duplicate hash", code == 2 and "already logged as F0001" in out, out)
+    code, out = cli("footage", "verify")
+    verdict("footage verify passes on a true mirror", code == 0, out)
+    (C.path(C.RAW) / "talk-cam-a.bin").write_text("fixture footage bytez\n", encoding="utf-8")
+    code, out = cli("footage", "verify")
+    verdict("footage verify fails on a changed byte", code == 1 and "differ" in out, out)
+    (C.path(C.RAW) / "talk-cam-a.bin").write_text("fixture footage bytes\n", encoding="utf-8")
+    write(C.path(C.RAW) / "stray.bin", "x")
+    code, out = cli("footage", "verify")
+    verdict("footage verify fails on an unlisted file", code == 1 and "not in the manifest" in out, out)
+    (C.path(C.RAW) / "stray.bin").unlink()
+    for piece, fmt in (("003-fixture-mp3", "mp3_44100_128"), ("004-fixture-pcm", "pcm_22050")):
+        write(C.path(C.VOICEOVER) / f"{piece}.toml",
+              f'[voiceover]\npiece = "{piece}"\nvoice_use = "voiceover"\nmodel_id = "eleven_v4"\n'
+              f'output_format = "{fmt}"\nper_cue = false\n\n[[segment]]\nid = "s01"\nscript_lines = "1.1"\n'
+              'text = "The ferry is late again."\nrequest = "The ferry is late again."\ntake = 0\nfile = ""\n'
+              'characters = 24\npause_after = 0.3\nstatus = ""\narchived = ""\n')
+        fresh = write(C.path(C.VO_GENERATED) / "tts_The_f_20261003_101010.mp3", "fake take")
+        code, out = cli("take", "add", fresh, "--piece", piece, "--segment", "s01")
+        ext = ".pcm" if fmt.startswith("pcm") else ".mp3"
+        reg = C.load_toml(C.path(C.VOICEOVER) / f"{piece}.toml")["segment"][0]
+        verdict(f"take add names a {fmt.split('_')[0]} take {ext} and writes the register",
+                code == 0 and (C.path(C.VO_GENERATED) / f"{piece}.s01.t1{ext}").is_file() and not fresh.exists()
+                and reg["take"] == 1 and reg["file"] == f"generated/{piece}.s01.t1{ext}"
+                and reg["status"] == "generated", out)
+    log = C.read_text(C.path(C.CREDITS_LOG))
+    verdict("take add appends one credits-log row per take", log.count("| text_to_speech |") == 2
+            and "Fixture Voice" in log and "24 characters" in log, log)
+    fresh = write(C.path(C.AB_GENERATED) / "tts_Chapt_20261003_101010.mp3", "fake chapter take")
+    write(C.path(C.AB_GENERATED) / "002-fixture-book.ch01.p01.txt", "x" * 120)
+    code, out = cli("take", "add", fresh, "--piece", "002-fixture-book", "--chapter", "ch01", "--part", "p01")
+    reg = C.read_text(C.path(C.AUDIOBOOK) / "002-fixture-book.md")
+    verdict("take add names a chapter part's take and writes the chapter register",
+            code == 0 and (C.path(C.AB_GENERATED) / "002-fixture-book.ch01.p01.t1.pcm").is_file()
+            and "| p01.t1 |" in reg and "| generated |" in reg, out + reg)
+    code, out = cli("take", "add", write(root / "loose.mp3", "x"), "--piece", "003-fixture-mp3", "--segment", "s01")
+    verdict("take add refuses a file outside generated/", code == 2, out)
+    fresh = write(C.path(C.AB_GENERATED) / "tts_Credits_20261003_101011.mp3", "fake credits take")
+    code, out = cli("take", "add", fresh, "--piece", "008-fixture-voice-format", "--chapter", "ch00", "--part", "p01")
+    reg = C.read_text(C.path(C.AUDIOBOOK) / "008-fixture-voice-format.md")
+    verdict("take add reads the output format from voice.md when the chapter register has none, "
+            "and takes the opening credits as ch00",
+            code == 0 and (C.path(C.AB_GENERATED) / "008-fixture-voice-format.ch00.p01.t1.pcm").is_file()
+            and "Output format of the narration row" in out
+            and "| ch00 | Opening credits | 008-fixture-voice-format.ch00.md | ai | p01.t1 |" in reg,
+            out + reg)
+    chapter = root / "manuscript/src/01-the-ford/01-the-ford.md"
+    A.USE_PANDOC = False
+    try:
+        code, out = cli("audiobook", "text", chapter, "--piece", "002-fixture-book", "--chapter", "ch01")
+    finally:
+        A.USE_PANDOC = True
+    chunk = C.read_text(C.path(C.AB_GENERATED) / "002-fixture-book.ch01.p01.txt")
+    verdict("audiobook text strips markers, comments, citation keys, divs and spans",
+            "<!--" not in chunk and "@doe" not in chunk and ":::" not in chunk and "{.conlang" not in chunk
+            and "hebori" in chunk and "breath is" not in chunk, chunk)
+    parts = sorted(C.path(C.AB_GENERATED).glob("002-fixture-book.ch01.p*.txt"))
+    side = C.path(C.AB_GENERATED) / "002-fixture-book.ch01.chunks.toml"
+    chunks = C.load_toml(side).get("chunk", []) if side.is_file() else []
+    verdict("audiobook text ends a chunk at each scene break and records the pause in the sidecar, "
+            "never in the text",
+            len(parts) == 3 and not any("{pause" in C.read_text(x) for x in parts)
+            and [c["pause_after"] for c in chunks] == [2.0, 2.0, 0.0]
+            and [c["file"] for c in chunks] == [x.name for x in parts], [C.read_text(x) for x in parts] + chunks)
+    verdict("audiobook text applies voice.md's pronunciations", "/ˈθɑːvəl/" in chunk, chunk)
+    verdict("audiobook text lists the unpronounced word and the scripture reference (exit 1)",
+            code == 1 and "hebori" in out and "John 3:16" in out and "Tharvel" not in out.split("before any call")[-1], out)
+    code, out = cli("audiobook", "text", chapter, "--piece", "002-fixture-book", "--chapter", "ch01",
+                    "--footnotes", "inline", "--limit", "200")
+    parts = sorted(C.path(C.AB_GENERATED).glob("002-fixture-book.ch01.p*.txt"))
+    texts = [C.read_text(p).strip() for p in parts]
+    verdict("audiobook text inlines footnotes and chunks under --limit at paragraph boundaries",
+            len(parts) >= 2 and all(len(t) <= 200 for t in texts) and any("breath is a count" in t for t in texts),
+            texts)
+    credits = C.path(C.AUDIOBOOK) / "008-fixture-voice-format.ch00.md"
+    code, out = cli("audiobook", "text", credits, "--piece", "008-fixture-voice-format", "--chapter", "ch00")
+    credit = C.read_text(C.path(C.AB_GENERATED) / "008-fixture-voice-format.ch00.p01.txt") \
+        if (C.path(C.AB_GENERATED) / "008-fixture-voice-format.ch00.p01.txt").is_file() else ""
+    verdict("audiobook text reads ch00 from the credits' own file beside the chapter register",
+            code == 0 and "The Ford, a fixture." in credit and "Read by a fixture narrator." in credit
+            and "note:" not in out, out + credit)
+    code, out = cli("audiobook", "text", credits, "--piece", "008-fixture-voice-format", "--chapter", "ch01")
+    verdict("audiobook text refuses the opening credits' file as another chapter (exit 2)",
+            code == 2 and "--chapter ch00" in out, out)
+    write(root / C.AUDIOBOOK / "009-fixture-channels.md",
+          CHAPTER_REG.replace("002-fixture-book", "009-fixture-channels")
+          .replace("[spotify_authors]", "[acx, spotify-authors]"))
+    code, out = cli("audiobook", "text", chapter, "--piece", "009-fixture-channels", "--chapter", "ch01")
+    verdict("audiobook text refuses a channel that is not the store part of an [audiobook.<store>] key "
+            "(exit 2), and accepts one that is",
+            code == 2 and "'spotify-authors'" in out and "spotify_authors" in out and "'acx'" not in out
+            and not list(C.path(C.AB_GENERATED).glob("009-fixture-channels.*")), out)
+    shaped = write(root / "scratch-script.md", SCRIPT_SHAPED_MD)
+    code, out = cli("audiobook", "text", shaped, "--piece", "008-fixture-voice-format", "--chapter", "ch99")
+    verdict("audiobook text refuses a file shaped like an audiobook script: an audiobook has none (exit 2)",
+            code == 2 and "has no script" in out, out)
+    business = write(root / "manuscript/src/02-running/02-running.md", BUSINESS_CHAPTER_MD)
+    for pandoc in (False, True):
+        if pandoc and not shutil.which("pandoc"):
+            skip("audiobook text lists a table, an image and an abbreviation (through pandoc)",
+                 "pandoc is not installed")
+            continue
+        A.USE_PANDOC = pandoc
+        try:
+            code, out = cli("audiobook", "text", business, "--piece", "014-fixture-guide", "--chapter", "ch02")
+        finally:
+            A.USE_PANDOC = True
+        chunk = "".join(C.read_text(x) for x in sorted(C.path(C.AB_GENERATED).glob("014-fixture-guide.ch02.p*.txt")))
+        verdict("audiobook text lists a table, an image and an abbreviation, and leaves the table, the "
+                f"image and every square bracket out of the text ({'pandoc' if pandoc else 'plain'})",
+                code == 1 and "table" in out and "'Booking checklist'" in out and "image" in out
+                and "'Chart of bookings by month'" in out and "abbreviation  HLS" in out
+                and "Pick a date" not in chunk and "----" not in chunk and "Chart of bookings" not in chunk
+                and "[" not in chunk and "]" not in chunk and "the guide for the rest" in chunk
+                and "example.org" not in chunk, out + chunk)
+    if shutil.which("pandoc"):
+        code, out = cli("audiobook", "text", chapter, "--piece", "002-fixture-book", "--chapter", "ch01")
+        chunk = C.read_text(C.path(C.AB_GENERATED) / "002-fixture-book.ch01.p01.txt")
+        side = C.load_toml(C.path(C.AB_GENERATED) / "002-fixture-book.ch01.chunks.toml").get("chunk", [])
+        verdict("audiobook text through pandoc gives the same spoken text and pauses",
+                code == 1 and "{pause" not in chunk and "@doe" not in chunk and "/ˈθɑːvəl/" in chunk
+                and [c["pause_after"] for c in side] == [2.0, 2.0, 0.0], chunk + str(side))
+    else:
+        skip("audiobook text through pandoc", "pandoc is not installed")
+    if not have_git:
+        skip("flags, check and check --setup in a git repository", "git is not installed")
+        return
+    git = ["git", "-c", "user.name=media self-test", "-c", "user.email=toolkit@example.com"]
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    write(root / ".gitignore", "/manuscript/\nignored-notes.md\n")
+    write(root / "brand/src/notes.md", "<!-- AUTHOR TO CONFIRM: the handle -->\nAn example: `<!-- VERIFY: x -->`\n")
+    write(root / "brand/src/sample.css", "a { color: red; } /* VERIFY: the accent */\n")
+    write(root / "publishing/src/sample.toml", "# AUTHOR TO CONFIRM: the cadence\n")
+    write(root / "brand/src/ignored-notes.md", "<!-- VERIFY: never read -->\n")
+    code, out = cli("flags")
+    verdict("flags lists both flags in every form, never a backticked example or an ignored file",
+            code == 0 and "AUTHOR TO CONFIRM: 2" in out and "VERIFY: 1" in out and "never read" not in out, out)
+    code, out = cli("flags", "--strict")
+    verdict("flags --strict is exit 1 while any flag is open", code == 1, out)
+    write(root / "publishing/src/posts/001-fixture.md", "<!-- VERIFY: the hashtag limit -->\n")
+    write(root / C.CARDS / "001-fixture.title.html", "<!-- AUTHOR TO CONFIRM: the words -->\n")
+    write(root / "publishing/src/captions/001-fixture--c01.en-GB.srt", "1\n00:00:00,000 --> 00:00:01,000\nx\n")
+    write(root / "publishing/src/posts/002-other.md", "<!-- VERIFY: another piece's flag -->\n")
+    code, out = cli("flags", "--piece", "001-fixture", "--strict")
+    verdict("flags --piece gathers one piece's files across the layers by their names",
+            code == 1 and "AUTHOR TO CONFIRM: 1" in out and "VERIFY: 1" in out and "002-other" not in out
+            and "001-fixture.title.html" in out and "of 001-fixture" in out, out)
+    code, out = cli("flags", "--piece", "009-no-such-piece")
+    verdict("flags --piece names a piece that has no folder (exit 2)", code == 2, out)
+    code, out = cli("flags", root / "publishing", "--piece", "001-fixture")
+    verdict("flags PATH --piece keeps the piece's files under that path",
+            code == 0 and "VERIFY: 1" in out and "AUTHOR TO CONFIRM: 0" in out, out)
+    code, out = cli("check")
+    verdict("check is clean on a fresh repository", code == 0, out)
+    verdict("the project root is the toolkit's parent, never git's top level", C._find_root() == C.TOOLKIT.parent)
+    mono = Path(str(root) + "-mono")
+    (mono / "media-project").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(mono)], check=True)
+    _, warns = R.repository_guard(mono / "media-project")
+    verdict("check warns when the project sits inside a larger repository", any("top level" in w for w in warns), warns)
+    hero = write(root / "brand/src/exports/large/hero.bin", "not an lfs pointer\n" * 4)
+    subprocess.run(git + ["add", "-A"], cwd=root, check=True, capture_output=True)
+    subprocess.run(git + ["commit", "-qm", "fixture"], cwd=root, check=True, capture_output=True)
+    code, out = cli("check")
+    verdict("check finds an LFS-marked file stored as a plain blob", code == 1 and "plain blob" in out, out)
+    subprocess.run(git + ["rm", "-q", "--cached", str(hero)], cwd=root, check=True, capture_output=True)
+    fake = Path(str(root) + "-bin")
+    write(fake / "git-lfs", "#!/bin/sh\necho 'git-lfs/3.4.1 (fixture)'\n").chmod(0o755)
+    saved = os.environ["PATH"]
+    os.environ["PATH"] = f"{fake}{os.pathsep}{saved}"
+    try:
+        code, out = cli("check")
+    finally:
+        os.environ["PATH"] = saved
+    verdict("check finds an LFS-marked file while git-lfs prints a version but no filter is configured",
+            code == 1 and "no LFS filter is configured" in out and "plain blob" not in out, out)
+    hero.unlink()
+    big = root / "production/src/assets/huge.bin"
+    big.parent.mkdir(parents=True, exist_ok=True)
+    with open(big, "wb") as fh:
+        fh.truncate(R.LARGE + 1)
+    with open(root / C.PROD_RENDERS / "huge-render.bin", "wb") as fh:
+        fh.truncate(R.LARGE + 1)
+    code, out = cli("check")
+    verdict("check finds a file over 10 MB outside the ignored folders, and only that one",
+            code == 1 and "production/src/assets/huge.bin" in out and "huge-render" not in out, out)
+    big.unlink()
+    rules = root / "publishing/src/.gitignore"
+    write(rules, "/renders/*\n")
+    code, out = cli("check")
+    verdict("check finds a missing nested ignore rule", code == 1 and "!/renders/README.md" in out, out)
+    write(rules, "/renders/*\n!/renders/README.md\n")
+    home = Path(str(root) + "-home")
+    secret = "fixture-secret-value-never-printed"
+    claude = {"mcpServers": {"elevenlabs": {"type": "stdio", "command": "uvx", "args": ["elevenlabs-mcp"],
+                                            "env": {"ELEVENLABS_API_KEY": secret,
+                                                    "ELEVENLABS_MCP_BASE_PATH": str(home / "Desktop")}}},
+              "oauthAccount": {"emailAddress": "fixture@example.com"}}
+    write(home / ".claude.json", json.dumps(claude))
+    saved_home = os.environ.get("HOME")
+    os.environ["HOME"] = str(home)
+    try:
+        code, out = cli("check", "--setup")
+        verdict("check --setup reports a missing ask rule and a base path outside the repository",
+                code == 1 and "ask mcp__elevenlabs__create_voice_from_preview is not in" in out
+                and "does not contain this repository" in out, out)
+        verdict("check --setup prints no other value from ~/.claude.json",
+                secret not in out and "fixture@example.com" not in out and "uvx elevenlabs-mcp" in out, out)
+        verdict("check --setup requires D13's two deny entries, each with its fix, like the allows",
+                "FAIL  deny Edit(**/generated/**) is not in" in out and "FAIL  deny Edit(**/renders/**) is not in" in out
+                and 'fix: add "Edit(**/renders/**)" to permissions.deny by hand' in out, out)
+        claude["mcpServers"]["elevenlabs"]["env"]["ELEVENLABS_MCP_BASE_PATH"] = str(root.parent)
+        write(home / ".claude.json", json.dumps(claude))
+        settings = json.loads(C.read_text(root / C.SETTINGS))
+        settings["permissions"]["deny"] += list(R.SETTINGS_DENY)
+        write(root / C.SETTINGS, json.dumps(settings, indent=2))
+        code, out = cli("check", "--setup")
+        verdict("check --setup accepts a base path that contains the repository",
+                "contains this repository" in out and "does not contain" not in out, out)
+        verdict("check --setup passes the deny entries once they are present",
+                "ok    deny Edit(**/generated/**)" in out and "ok    deny Edit(**/renders/**)" in out
+                and "FAIL  deny" not in out, out)
+    finally:
+        if saved_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = saved_home
+
+
+def lavfi(*args) -> None:
+    subprocess.run(["ffmpeg", "-v", "error", "-y"] + [str(a) for a in args], check=True)
+
+
+def test_media(verdict, skip, cli, root: Path) -> None:
+    work = Path(str(root) + "-media")
+    work.mkdir()
+    src = work / "camera clip.mp4"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30:duration=3", "-f", "lavfi", "-i",
+          "sine=frequency=440:sample_rate=48000:duration=3", "-c:v", "libx264", "-preset", "ultrafast",
+          "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", src)
+    code, out = cli("footage", "add", src, "--kind", "video", "--location", "Camera card 1")
+    code2, out2 = cli("probe", C.path(C.RAW) / src.name, "--json")
+    info = json.loads(out2) if code2 == 0 else {}
+    verdict("footage add reads a video's duration; probe --json reports it", code == 0 and code2 == 0
+            and abs(info.get("duration", 0) - 3.0) < 0.1, out + out2)
+    master = C.path(C.PROD_RENDERS) / "001-fixture.master.mp4"
+    shutil.copy2(src, master)
+    code, out = cli("cut", master, "--deliverable", "youtube.short", "--in", "00:00:00.500", "--out",
+                    "00:00:02.500", "--cut", "c01")
+    made = C.path(C.PUB_RENDERS) / "001-fixture--c01.youtube-short.mp4"
+    verdict("cut makes youtube.short at 1080x1920, H.264, moov first, frame-accurate length",
+            code == 0 and made.is_file() and "verified" in out, out)
+    code, out = cli("cut", master, "--deliverable", "instagram.reel", "--in", "0", "--out", "3",
+                    "--frame", "pad", "--cut", "c02")
+    verdict("cut --frame pad fills 9:16 over a blurred copy", code == 0, out)
+    code, out = cli("cut", master, "--deliverable", "tiktok.video", "--in", "0", "--out", "2")
+    verdict("an over-long cut fails before it renders", code == 1 and "nothing rendered" in out, out)
+    code, out = cli("cut", master, "--deliverable", "instagram.reel", "--in", "0", "--out", "2", "--cut", "c08")
+    verdict("a cut under min_seconds fails before it renders", code == 1 and "min_seconds" in out
+            and "nothing rendered" in out and not (C.path(C.PUB_RENDERS) / "001-fixture--c08.instagram-reel.mp4").exists(), out)
+    with contextlib.redirect_stdout(io.StringIO()):
+        found = V.verify(master, C.preset("youtube.short", quiet=True))
+    verdict("a wrong aspect fails the deliverable's verification", any("640x360" in f for f in found), found)
+    srt = write(C.path(C.CAPTIONS) / "001-fixture.en-GB.srt",
+                K.srt_text([K.Cue(0.6, 1.9, ["The ferry is late again."]), K.Cue(2.0, 2.4, ["Late."])]))
+    code, out = cli("cut", master, "--deliverable", "youtube.short", "--in", "00:00:00.500", "--out",
+                    "00:00:02.500", "--cut", "c01", "--captions", srt)
+    burned = C.path(C.PUB_RENDERS) / "001-fixture--c01.youtube-short.burned.mp4"
+    verdict("cut --captions burns in the cutting pass (-copyts) with the caption font found",
+            code == 0 and burned.is_file(), out)
+    code, out = cli("captions", "burn", made, srt, "--deliverable", "youtube.short", "-o",
+                    C.path(C.PUB_RENDERS) / "burn-ok.mp4")
+    verdict("captions burn writes the ASS at the output size and keeps the font", code == 0, out)
+    good = C.read_text(C.path(C.TOKENS))
+    write(C.path(C.TOKENS), good.replace("--caption-font:", "--caption-font: NoSuchBrandFont, "))
+    code, out = cli("captions", "burn", made, srt, "--deliverable", "youtube.short", "-o",
+                    C.path(C.PUB_RENDERS) / "burn-missing.mp4")
+    write(C.path(C.TOKENS), good)
+    verdict("captions burn reports a missing caption font", code == 1 and "fell back" in out, out)
+    tangled = write(root / "tangled.srt", K.srt_text([K.Cue(0.2, 1.5, ["One."]), K.Cue(1.0, 1.8, ["Two."])]))
+    code, out = cli("captions", "burn", made, tangled, "--deliverable", "youtube.short", "-o",
+                    C.path(C.PUB_RENDERS) / "burn-tangled.mp4")
+    verdict("captions burn refuses overlapping cues (exit 1, nothing rendered)", code == 1 and "cannot be burned"
+            in out and not (C.path(C.PUB_RENDERS) / "burn-tangled.mp4").exists(), out)
+    for target, want in (("social", -14.0), ("podcast", -16.0)):
+        code, out = cli("loudness", "normalise", master, "--target", target)
+        got = A.ebur128(C.path(C.PROD_RENDERS) / f"001-fixture.master.{target}.mp4")["I"]
+        verdict(f"loudness normalise lands within 1 LU of {target} ({want:g})", code == 0 and abs(got - want) <= 1.0, out)
+    code, out = cli("extract-audio", master, "--in", "00:00:01.000", "--out", "00:00:02.500")
+    wav = C.path(C.PROD_RENDERS) / "001-fixture.master.00-00-01-000-00-00-02-500.wav"
+    info = C.probe(wav) if wav.is_file() else {}
+    a = C.streams(info, "audio")
+    verdict("extract-audio writes mono 16 kHz WAV of the range", code == 0 and a and a[0]["channels"] == 1
+            and a[0]["sample_rate"] == "16000" and abs(C.duration(info) - 1.5) < 0.05, out)
+    code, out = cli("frame", master, "--at", "00:00:01.000")
+    verdict("frame writes one PNG still", code == 0 and (C.path(C.PUB_RENDERS) /
+                                                          "001-fixture.master.00-00-01-000.png").is_file(), out)
+    still = work / "still.png"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=800x600:rate=1:duration=1", "-frames:v", "1", still)
+    tone = work / "episode.wav"
+    lavfi("-f", "lavfi", "-i", "sine=frequency=330:sample_rate=48000:duration=2", tone)
+    code, out = cli("still-video", still, tone, "--deliverable", "youtube.long")
+    verdict("still-video puts a still under audio at the deliverable's size", code == 0, out)
+    code, out = cli("encode", master, "--deliverable", "podcast.apple_rss_audio")
+    verdict("encode makes an audio deliverable at the podcast loudness", code == 0 and "podcast target" in out, out)
+    code, out = cli("cut", master, "--deliverable", "podcast.apple_rss_audio", "--in", "00:00:00.500",
+                    "--out", "00:00:02.000", "--cut", "c03")
+    clip = C.path(C.PUB_RENDERS) / "001-fixture--c03.podcast-apple-rss-audio.m4a"
+    info = C.probe(clip) if clip.is_file() else {}
+    verdict("cut makes an audio deliverable: trimmed, sound only, AAC",
+            code == 0 and not C.streams(info, "video") and abs(C.duration(info) - 1.5) < 0.1, out)
+    code, out = cli("cut", master, "--deliverable", "youtube.thumbnail", "--in", "0", "--out", "1")
+    verdict("cut refuses an image deliverable (exit 2)", code == 2 and "card.py" in out, out)
+    step = work / "step.wav"   # loud for 2 s, then 10 dB quieter for 3.6 s: a short programme ending low
+    lavfi("-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=2,volume=0.3", "-f", "lavfi", "-i",
+          "sine=frequency=440:sample_rate=48000:duration=3.6,volume=0.1", "-filter_complex",
+          "[0:a][1:a]concat=n=2:v=0:a=1", "-ac", "2", step)
+    code, out = cli("loudness", "normalise", step, "--target", "social", "-o", C.path(C.PROD_RENDERS) / "step.social.wav")
+    got = A.ebur128(C.path(C.PROD_RENDERS) / "step.social.wav")["I"] if code != 2 else float("nan")
+    verdict("loudness normalise of a short programme that ends quiet lands on the target (ebur128 measures "
+            "it, never loudnorm's end-weighted reading)", code == 0 and abs(got - (-14.0)) <= 0.5, f"{got}\n{out}")
+    # encode and still-video put a downmix before the meter, and ffmpeg then prints loudnorm's JSON
+    # before ebur128's Summary: both must still be read, or the end-weighted reading drives the pass.
+    for argv, made, want in (
+            (("encode", step, "--deliverable", "podcast.apple_rss_audio"), "step.encode.m4a", -16.0),
+            (("still-video", still, step, "--deliverable", "youtube.long"), "step.still.mp4", -14.0)):
+        dest = C.path(C.PUB_RENDERS) / made
+        code, out = cli(*argv, "-o", dest)
+        got = A.ebur128(dest)["I"] if dest.is_file() else float("nan")
+        verdict(f"{argv[0]} of a programme that ends quiet lands within 0.5 LU of {want:g} (a downmix before "
+                "the meter)", code == 0 and abs(got - want) <= 0.5, f"{got}\n{out}")
+    silent = work / "no sound.mp4"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25:duration=1", "-c:v", "libx264", "-preset",
+          "ultrafast", "-pix_fmt", "yuv420p", silent)
+    code, out = cli("loudness", "measure", silent)
+    verdict("loudness measure names a file with no sound (exit 2), never ffmpeg's raw log",
+            code == 2 and "has no audio stream" in out and "Stream map" not in out, out)
+    portrait = work / "portrait.mp4"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=360x640:rate=30:duration=1", "-f", "lavfi", "-i",
+          "sine=frequency=440:sample_rate=48000:duration=1", "-c:v", "libx264", "-preset", "ultrafast",
+          "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", portrait)
+    code, out = cli("encode", portrait, "--deliverable", "youtube.long", "-o", C.path(C.PUB_RENDERS) / "p.mp4")
+    verdict("encode refuses a picture of another shape without --frame (exit 2), naming crop and pad",
+            code == 2 and "--frame crop" in out and "--frame pad" in out
+            and not (C.path(C.PUB_RENDERS) / "p.mp4").exists(), out)
+    code, out = cli("encode", portrait, "--deliverable", "youtube.long", "--frame", "pad", "-o",
+                    C.path(C.PUB_RENDERS) / "p.mp4")
+    verdict("encode --frame pad fills the other shape", code == 0 and "1920x1080" in out, out)
+    test_assemble(verdict, skip, cli, root, work)
+    test_align(verdict, cli, root, work)
+    test_audiobook(verdict, cli, root, work)
+    test_screen(verdict, skip, cli, work)
+
+
+def test_assemble(verdict, skip, cli, root: Path, work: Path) -> None:
+    music = work / "bed.wav"
+    lavfi("-f", "lavfi", "-i", "sine=frequency=660:sample_rate=48000:duration=8", "-af", "volume=0.3", music)
+    code, out = cli("footage", "add", music, "--kind", "music", "--location", "Library A", "--rights", "RR0001")
+    verdict("a music bed is logged as footage", code == 0 and f"logged {kind_id('music')}" in out, out)
+    talk = work / "talk.wav"
+    lavfi("-f", "lavfi", "-i", "sine=frequency=200:sample_rate=48000:duration=3", talk)
+    cli("footage", "add", talk, "--kind", "audio", "--location", "Recorder B")
+    gen = C.path(C.VO_GENERATED)
+    lavfi("-f", "lavfi", "-i", "sine=frequency=250:sample_rate=44100:duration=4", "-c:a", "libmp3lame",
+          "-b:a", "128k", gen / "005-assembly.s01.t1.mp3")
+    lavfi("-f", "lavfi", "-i", "sine=frequency=300:sample_rate=22050:duration=5", "-f", "s16le", "-ac", "1",
+          gen / "005-assembly.s02.t1.pcm")
+    write(C.path(C.VOICEOVER) / "005-assembly.toml", """[voiceover]
+piece = "005-assembly"
+voice_use = "voiceover"
+model_id = "eleven_v4"
+output_format = "pcm_22050"
+per_cue = false
+
+[[segment]]
+id = "s01"
+script_lines = "1.1-1.2"
+text = "The ferry is late again. Every crossing waits for the tide."
+request = "The ferry is late again. Every crossing waits for the tide."
+take = 1
+file = "generated/005-assembly.s01.t1.mp3"
+characters = 59
+pause_after = 0.4
+status = "approved"
+archived = "F0009"
+
+[[segment]]
+id = "s02"
+script_lines = "2.1-2.2"
+text = "So the timetable is a promise. The sea never signed it, and nobody asked."
+request = "So the timetable is a promise. The sea never signed it, and nobody asked."
+take = 1
+file = "generated/005-assembly.s02.t1.pcm"
+characters = 73
+pause_after = 0.3
+status = "approved"
+archived = ""
+""")
+    w, h = 640, 360
+    html = write(C.path(C.CARDS) / "005-assembly.title.html", "<!doctype html><html lang=\"en-GB\"></html>\n")
+    endcard = write(C.path(C.CARDS) / "005-assembly.end.html", "<!doctype html><html lang=\"en-GB\"></html>\n")
+    lavfi("-f", "lavfi", "-i", f"color=c=0x1c232b:s={w}x{h}", "-frames:v", "1",
+          C.path(C.PROD_RENDERS) / f"005-assembly.title.{w}x{h}.png")
+    lavfi("-f", "lavfi", "-i", f"color=c=white@0.5:s={w}x{h},format=rgba", "-frames:v", "1",
+          C.path(C.PROD_RENDERS) / f"005-assembly.end.{w}x{h}.png")
+    C.path(C.ASSETS).mkdir(parents=True, exist_ok=True)
+    shutil.copy2(work / "still.png", C.path(C.ASSETS) / "harbour.png")
+    video, bed = kind_id("video"), kind_id("music")
+    edl = write(C.path(C.EDITS) / "005-assembly.toml", f"""[edit]
+piece = "005-assembly"
+version = 1
+size = "{w}x{h}"
+audio_rate = 48000
+loudness = "social"
+
+[[clip]]
+id = "c01"
+source = "{video}"
+in = "00:00:00.500"
+out = "00:00:02.500"
+frame = "crop"
+
+[[clip]]
+id = "c02"
+source = "production/src/assets/harbour.png"
+seconds = 3.0
+motion = "push-in"
+transition = "fade"
+transition_seconds = 0.5
+
+[[clip]]
+id = "c03"
+colour = "#101418"
+seconds = 1.0
+
+[[clip]]
+id = "c04"
+source = "production/src/cards/005-assembly.title.html"
+seconds = 1.5
+transition = "fade"
+transition_seconds = 0.4
+
+[[overlay]]
+source = "production/src/cards/005-assembly.end.html"
+at = "00:00:01.000"
+until = "00:00:02.000"
+
+[[audio]]
+source = "vo:005-assembly"
+at = "00:00:00.200"
+role = "voice"
+
+[[audio]]
+source = "{bed}"
+at = "00:00:00.000"
+in = "00:00:01.000"
+out = "00:00:07.000"
+gain_db = -6.0
+fade_in = 0.5
+fade_out = 1.0
+role = "music"
+duck = true
+""")
+    total = 2.0 + 3.0 - 0.5 + 1.0 + 1.5 - 0.4
+    code, out = cli("assemble", edl)
+    master = C.path(C.PROD_RENDERS) / "005-assembly.master.mp4"
+    info = C.probe(master) if master.is_file() else {}
+    verdict("assemble: a clip, a push-in still with a fade, a colour clip, a card, an overlay, a voice "
+            "register and a ducked, trimmed, faded bed", code == 0 and abs(C.duration(info) - total) < 0.1, out)
+    if master.is_file():
+        got = A.ebur128(master)["I"]
+        verdict("assemble lands the master within 1 LU of the social target", abs(got - (-14.0)) <= 1.0, got)
+    code, out = cli("captions", "from-segments", C.path(C.VOICEOVER) / "005-assembly.toml", "--deliverable",
+                    "youtube.long", "--offset", "00:00:00.200")
+    cues = K.read_srt(C.path(C.PUB_RENDERS) / "005-assembly.youtube-long.en-GB.srt")
+    d1 = K.segment_duration(C.path(C.VO_GENERATED) / "005-assembly.s01.t1.mp3")
+    starts = [round(c.start, 3) for c in cues]
+    join = round(0.2 + d1 + 0.4, 3)
+    verdict("from-segments: several cues per segment, each segment's first cue exactly on its join",
+            code == 0 and len(cues) >= 4 and starts[0] == 0.2 and join in starts
+            and abs(cues[-1].end - (join + K.segment_duration(C.path(C.VO_GENERATED) / "005-assembly.s02.t1.pcm"))) < 0.002,
+            out + str(starts))
+    rec = write(C.path(C.CAPTIONS) / "005-assembly.F0001.en-GB.srt",
+                K.srt_text([K.Cue(0.6, 1.8, ["On the recording."]), K.Cue(3.0, 3.8, ["Outside the clip."])]))
+    code, out = cli("captions", "retime", rec, "--edl", edl, "--source", video,
+                    "-o", C.path(C.PUB_RENDERS) / "005-retimed.srt")
+    moved = K.read_srt(C.path(C.PUB_RENDERS) / "005-retimed.srt")
+    verdict("retime --edl maps recording time through the clip and drops the rest",
+            code == 0 and len(moved) == 1 and abs(moved[0].start - 0.1) < 1e-6, K.srt_text(moved))
+    register = C.path(C.VOICEOVER) / "005-assembly.toml"
+    held = C.read_text(register)
+    code, out = cli("footage", "add", C.path(C.VO_GENERATED) / "005-assembly.s02.t1.pcm", "--kind", "generated",
+                    "--location", "Archive drive A")
+    seg = C.load_toml(register)["segment"][1]
+    verdict("footage add --kind generated writes the take's F ID into its segment's archived",
+            code == 0 and re.fullmatch(r"F\d{4}", seg.get("archived", "")) is not None
+            and f'wrote archived = "{seg.get("archived")}"' in out, out + C.read_text(register))
+    write(register, held.replace('status = "approved"\narchived = ""', 'status = "generated"\narchived = ""'))
+    code, out = cli("assemble", edl, "-o", C.path(C.PROD_RENDERS) / "005-unapproved.mp4")
+    write(register, held)
+    verdict("assemble refuses a voice track that would skip a segment not approved (exit 1, nothing rendered)",
+            code == 1 and "s02 (generated: line 2.1-2.2)" in out
+            and not (C.path(C.PROD_RENDERS) / "005-unapproved.mp4").exists(), out)
+    for body, label in (('out = "00:00:02.500"', 'out = "00:00:09.500"'), ('role = "music"\nduck = true', 'role = "effect"\nduck = true')):
+        bad = write(C.path(C.EDITS) / "005-bad.toml", C.read_text(edl).replace(body, label))
+        code, out = cli("assemble", bad, "-o", C.path(C.PROD_RENDERS) / "005-bad.mp4")
+        what = "a clip whose out is past its source's end" if "out" in body else "duck on a track that is not music"
+        verdict(f"assemble refuses {what} (exit 2)", code == 2 and ("past the end" in out if "out" in body
+                                                                   else "duck = true" in out), out)
+    # A recording cut at an edit: a cue across the cut is placed once (or dropped), never doubled,
+    # and captions check against the transcript names what the edit left out as a note.
+    talk_id = kind_id("video")
+    split = write(C.path(C.EDITS) / "012-talk.toml", f"""[edit]
+piece = "012-talk"
+size = "640x360"
+loudness = "none"
+
+[[clip]]
+id = "c01"
+source = "{talk_id}"
+in = "00:00:00.000"
+out = "00:00:01.200"
+
+[[clip]]
+id = "c02"
+source = "{talk_id}"
+in = "00:00:02.000"
+out = "00:00:03.000"
+transition = "fade"
+transition_seconds = 0.2
+""")
+    write(root / C.PIECES / "012-talk" / "transcript.md", f"""---
+piece: 012-talk
+source: {talk_id}
+made: by hand
+approved: ""
+---
+
+# Talk — transcript
+
+## 1. Opening (at 00:00:00.000)
+
+HOST: The ferry is late.
+
+## 2. A tangent (at 00:00:01.100)
+
+HOST: Rope pier cargo quay.
+
+## 3. Close (at 00:00:02.000)
+
+HOST: We go out.
+""")
+    rec = write(C.path(C.CAPTIONS) / f"012-talk.{talk_id}.en-GB.srt",
+                K.srt_text([K.Cue(0.0, 1.0, ["The ferry is late."]), K.Cue(1.1, 2.3, ["Rope pier cargo quay."]),
+                            K.Cue(2.2, 3.0, ["We go out."])]))
+    code, out, err = cli_split("captions", "retime", rec, "--edl", split, "--source", talk_id)
+    placed = K.parse_srt(out) if code == 0 else []
+    verdict("retime --edl places a cue across an edit once at most, never doubled, and reports the counts",
+            code == 0 and [c.text for c in placed].count("Rope pier cargo quay.") <= 1
+            and "written from 3" in err and "dropped" in err, out + err)
+    master = write(C.path(C.CAPTIONS) / "012-talk.en-GB.srt",
+                   K.srt_text([K.Cue(0.0, 1.5, ["The ferry is late."]), K.Cue(1.6, 2.7, ["We go out."])]))
+    code, out = cli("captions", "check", master, "--script", root / C.PIECES / "012-talk" / "transcript.md")
+    verdict("captions check of an edited recorded master notes the words the edit removed, and passes",
+            code == 0 and "note: words of the transcript the edit leaves out" in out and "rope pier" in out, out)
+    phone = work / "phone.mp4"   # a variable-rate recording: five frames of every seven kept
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30:duration=2", "-vf", "select='lt(mod(n\\,7)\\,5)'",
+          "-fps_mode", "vfr", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", phone)
+    code, out = cli("footage", "add", phone, "--kind", "video", "--location", "Phone")
+    vfr = write(C.path(C.EDITS) / "013-vfr.toml", f"""[edit]
+piece = "013-vfr"
+size = "640x360"
+loudness = "none"
+
+[[clip]]
+id = "c01"
+source = "{logged_id(out)}"
+in = "00:00:00.000"
+out = "00:00:01.500"
+
+[[clip]]
+id = "c02"
+source = "{talk_id}"
+in = "00:00:00.000"
+out = "00:00:01.000"
+""")
+    code, out = cli("assemble", vfr)
+    made = C.path(C.PROD_RENDERS) / "013-vfr.master.mp4"
+    v = C.streams(C.probe(made), "video") if made.is_file() else []
+    verdict("assemble snaps a variable-rate first clip to a standard rate, and says so",
+            code == 0 and v and V.is_standard(C.rate(v[0].get("avg_frame_rate"))) and "not a standard rate" in out,
+            out + str(v[0].get("avg_frame_rate") if v else ""))
+    with contextlib.redirect_stdout(io.StringIO()):
+        found = V.verify(phone, C.preset("youtube.long", quiet=True))
+    verdict("a rate outside the deliverable's fps_allowed fails its verification",
+            any("fps_allowed" in f for f in found), found)
+    lost = write(C.path(C.CAPTIONS) / "012-talk.lost.en-GB.srt", K.srt_text([K.Cue(1.1, 2.1, ["We go out."])]))
+    code, out = cli("captions", "check", lost, "--script", root / C.PIECES / "012-talk" / "transcript.md")
+    verdict("captions check still fails words missing from a stretch the edit keeps",
+            code == 1 and "the ferry is late" in out, out)
+    if shutil.which("uv") and any(R.playwright_cache().glob(f"chromium*-{R.PLAYWRIGHT_REVISION}")):
+        real = write(C.path(C.CARDS) / "005-assembly.title.html", CARD_HTML)
+        write(C.path(C.TOKENS), C.read_text(C.path(C.TOKENS)))
+        os.utime(real, None)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                png = V.card_png(real, w, h, transparent=False)
+            verdict("a stale card is rendered again with card.py", png.is_file() and
+                    png.stat().st_mtime >= real.stat().st_mtime)
+        except (C.Fatal, C.Finding) as err:
+            verdict("a stale card is rendered again with card.py", False, err)
+    else:
+        skip("a stale card is rendered again with card.py", "uv or Playwright's Chromium is not installed")
+    audio_edl = write(C.path(C.EDITS) / "006-podcast.toml", f"""[edit]
+piece = "006-podcast"
+size = ""
+audio_rate = 48000
+loudness = "podcast"
+
+[[clip]]
+id = "c01"
+source = "{kind_id('audio')}"
+in = "00:00:00.500"
+out = "00:00:01.500"
+
+[[clip]]
+id = "c02"
+source = "{kind_id('audio')}"
+in = "00:00:02.000"
+out = "00:00:03.000"
+transition = "fade"
+transition_seconds = 0.3
+
+[[audio]]
+source = "{bed}"
+at = "00:00:00.000"
+gain_db = -12.0
+fade_in = 0.5
+fade_out = 0.5
+role = "music"
+""")
+    code, out = cli("assemble", audio_edl)
+    wav = C.path(C.PROD_RENDERS) / "006-podcast.master.wav"
+    info = C.probe(wav) if wav.is_file() else {}
+    verdict("an audio master (size = \"\") is sound only, cut from clips under a faded bed",
+            code == 0 and not C.streams(info, "video") and abs(C.duration(info) - (1.0 + 1.0 - 0.3)) < 0.05, out)
+    bad = write(C.path(C.EDITS) / "007-missing.toml", '[edit]\npiece = "007-missing"\nsize = "640x360"\n\n'
+                '[[clip]]\nid = "c01"\nsource = "F0099"\nin = "0"\nout = "2"\n')
+    code, out = cli("assemble", bad)
+    verdict("assemble names footage the project does not have (exit 2)", code == 2 and "F0099" in out, out)
+
+
+def kind_id(kind: str) -> str:
+    """The footage ID the fixture logged for a kind."""
+    return next((r["id"] for r in R.manifest_rows(C.path(C.MANIFEST)) if r["kind"] == kind), "F9999")
+
+
+CARD_HTML = """<!doctype html>
+<html lang="en-GB">
+<head><meta charset="utf-8"><link rel="stylesheet" href="../../../brand/src/design-system/tokens.css">
+<style>html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background: var(--color-bg); }</style>
+</head><body></body></html>
+"""
+
+
+def test_align(verdict, cli, root: Path, work: Path) -> None:
+    speech = work / "recording.wav"
+    lavfi("-f", "lavfi", "-i", "sine=frequency=300:sample_rate=48000:duration=8.5", "-af",
+          "volume='between(t,1,2)+between(t,2.5,3.5)+between(t,5,6)+between(t,6.5,7.5)':eval=frame", speech)
+    transcript = root / C.PIECES / "001-fixture" / "transcript.md"
+    code, out = cli("captions", "align", transcript, speech, "--anchors", "-o",
+                    C.path(C.CAPTIONS) / "001-fixture.F0003.en-GB.srt")
+    cues = K.read_srt(C.path(C.CAPTIONS) / "001-fixture.F0003.en-GB.srt")
+    beat1 = [c for c in cues if c.text.startswith(("The harbour", "Boats"))]
+    beat2 = [c for c in cues if c.text.startswith(("We wait", "Then"))]
+    verdict("captions align --anchors keeps every cue of a beat inside its beat",
+            code == 0 and len(beat1) == 2 and len(beat2) == 2 and all(0.5 <= c.start and c.end <= 4.5 for c in beat1)
+            and all(4.5 <= c.start and c.end <= 8.5 for c in beat2), out + K.srt_text(cues))
+    verdict("captions align snaps line starts to speech", abs(beat1[0].start - 1.0) < 0.15 and
+            abs(beat1[1].start - 2.5) < 0.15 if len(beat1) == 2 else False, K.srt_text(cues))
+    cut = work / "cut.wav"
+    lavfi("-ss", "4.5", "-to", "8.5", "-i", speech, cut)
+    code, out, err = cli_split("captions", "align", transcript, cut, "--lines", "2.1-2.2")
+    cues = K.parse_srt(out) if code != 2 else []
+    verdict("captions align --lines places every cue of one cut (to stdout without -o)", code == 0 and len(cues) == 2
+            and abs(cues[0].start - 0.5) < 0.15 and abs(cues[1].start - 2.0) < 0.15 and "cue(s) placed" in err,
+            out + err)
+
+
+def test_audiobook(verdict, cli, root: Path, work: Path) -> None:
+    gen = C.path(C.AB_GENERATED)
+    takes = []
+    for k, dur in ((1, 9), (2, 7)):
+        t = gen / f"002-fixture-book.ch01.p{k:02d}.t1.mp3"
+        # speech at about -21 dB RMS (sine's own amplitude is 1/8) over a room at about -72 dB: a
+        # recording ACX would take, its room tone heard between the phrases
+        lavfi("-f", "lavfi", "-i", f"sine=frequency=220:sample_rate=44100:duration={dur}", "-f", "lavfi", "-i",
+              f"anoisesrc=color=white:amplitude=0.0005:sample_rate=44100:duration={dur}", "-filter_complex",
+              "[0:a]volume='lt(mod(t,4),3.2)':eval=frame[s];[s][1:a]amix=inputs=2:normalize=0",
+              "-ac", "1", "-c:a", "libmp3lame", "-b:a", "128k", t)
+        takes.append(t)
+    side = write(gen / "002-fixture-book.ch01.chunks.toml",
+                 'piece = "002-fixture-book"\nchapter = "ch01"\nsource = "fixture"\n\n'
+                 '[[chunk]]\npart = "p01"\nfile = "002-fixture-book.ch01.p01.txt"\ncharacters = 9\npause_after = 1.5\n\n'
+                 '[[chunk]]\npart = "p02"\nfile = "002-fixture-book.ch01.p02.txt"\ncharacters = 7\npause_after = 0.0\n')
+    code, out = cli("audiobook", "master", takes[0], "--piece", "002-fixture-book", "--chapter", "ch01")
+    verdict("audiobook master refuses a chapter with a chunk the sidecar lists but no take (exit 2)",
+            code == 2 and "no take given for p02" in out, out)
+    code, out = cli("audiobook", "master", takes[1], takes[0], "--piece", "002-fixture-book", "--chapter", "ch01")
+    mp3 = C.path(C.AB_RENDERS) / "002-fixture-book.ch01.mp3"
+    got = C.duration(C.probe(mp3)) if mp3.is_file() else 0.0
+    verdict("audiobook master joins takes in chunk order with the sidecar's room tone between them, "
+            "built from the takes' own quietest stretch, and passes the ACX check",
+            code == 0 and abs(got - (A.ACX_HEAD + 9 + 1.5 + 7 + A.ACX_TAIL)) < 0.1 and "chunk order" in out
+            and "1.5 s after" in out and "archive this master" in out and "room tone: the quietest" in out,
+            f"{got}\n{out}")
+    side.unlink()
+    code, out = cli("audiobook", "master", *takes, "--piece", "002-fixture-book", "--chapter", "ch01",
+                    "-o", C.path(C.AB_RENDERS) / "no-sidecar.mp3")
+    got = C.duration(C.probe(C.path(C.AB_RENDERS) / "no-sidecar.mp3")) if code != 2 else 0.0
+    verdict("audiobook master without a sidecar joins the takes with no pause", code == 0
+            and abs(got - (A.ACX_HEAD + 9 + 7 + A.ACX_TAIL)) < 0.1, f"{got}\n{out}")
+    code, out = cli("audiobook", "check", mp3)
+    verdict("audiobook check passes the master", code == 0, out)
+    hot = C.path(C.AB_RENDERS) / "hot.mp3"
+    lavfi("-i", mp3, "-af", "volume=16dB", "-ac", "1", "-ar", "44100", "-c:a", "libmp3lame", "-b:a", "192k", hot)
+    code, out = cli("audiobook", "check", hot)
+    verdict("audiobook check fails a hot-peak mutation", code == 1 and "FAIL  peak" in out, out)
+    padded = C.path(C.AB_RENDERS) / "padded.mp3"   # the master with digital silence added at both ends
+    lavfi("-i", mp3, "-af", "adelay=1500:all=1,apad=pad_dur=2", "-ac", "1", "-ar", "44100", "-c:a", "libmp3lame",
+          "-b:a", "192k", padded)
+    code, out = cli("audiobook", "check", padded)
+    verdict("audiobook check fails a head and a tail of digital silence, and leaves it out of the noise floor",
+            code == 1 and "digital silence, not room tone" in out and "of digital silence left out" in out, out)
+    noisy = work / "noisy-ch02.wav"   # a recording whose own floor is far above -60 dB
+    lavfi("-f", "lavfi", "-i", "sine=frequency=220:sample_rate=44100:duration=8", "-f", "lavfi", "-i",
+          "anoisesrc=color=pink:amplitude=0.006:sample_rate=44100:duration=8", "-filter_complex",
+          "[0:a]volume=0.2,volume='lt(mod(t,4),3.2)':eval=frame[s];[s][1:a]amix=inputs=2:normalize=0", "-ac", "1",
+          noisy)
+    code, out = cli("audiobook", "master", noisy, "--piece", "002-fixture-book", "--chapter", "ch02")
+    verdict("audiobook master of a noisy recording fails the noise floor: the head, the tail and the pauses are "
+            "its own room tone, never digital silence that hides it",
+            code == 1 and "FAIL  noise floor" in out and "room tone: the quietest" in out, out)
+    tone = work / "tone-ch03.wav"   # a take with no quiet stretch at all
+    lavfi("-f", "lavfi", "-i", "sine=frequency=220:sample_rate=44100:duration=6", "-ac", "1", tone)
+    room = work / "room.wav"
+    lavfi("-f", "lavfi", "-i", "anoisesrc=color=pink:amplitude=0.0005:sample_rate=44100:duration=3", "-ac", "1", room)
+    code, out = cli("audiobook", "master", tone, "--piece", "002-fixture-book", "--chapter", "ch03")
+    verdict("audiobook master with no room tone to be found says so, and the ACX check fails it",
+            code == 1 and "none found" in out and "--room-tone FILE" in out, out)
+    code, out = cli("audiobook", "master", tone, "--piece", "002-fixture-book", "--chapter", "ch03", "--room-tone",
+                    room, "-o", C.path(C.AB_RENDERS) / "with-room.mp3")
+    verdict("audiobook master --room-tone FILE loops a recording of the room for the gaps, and passes",
+            code == 0 and "room tone: --room-tone" in out and "passes the ACX check" in out, out)
+    code, out = cli("cut", mp3, "--deliverable", "audiobook.acx", "--in", "00:00:01.000", "--out", "00:00:06.000")
+    sample = C.path(C.PUB_RENDERS) / "002-fixture-book.audiobook-acx.mp3"
+    a = C.streams(C.probe(sample), "audio") if sample.is_file() else []
+    verdict("cut makes an audiobook retail sample: sound only, MP3, 44.1 kHz, mono, held to sample_max_seconds",
+            code == 0 and a and a[0]["codec_name"] == "mp3" and a[0]["sample_rate"] == "44100"
+            and a[0]["channels"] == 1 and "sample_max_seconds 300" in out, out)
+    overrides = C.path(C.OVERRIDES)
+    saved = C.read_text(overrides)
+    write(overrides, saved + '\n[[override]]\nkey = "audiobook.acx.sample_max_seconds"\nvalue = 3\n'
+                             'why = "fixture"\nsource = "fixture"\nchecked = "01/09/2026"\n')
+    try:
+        code, out = cli("cut", mp3, "--deliverable", "audiobook.acx", "--in", "00:00:01.000", "--out",
+                        "00:00:06.000", "-o", C.path(C.PUB_RENDERS) / "too-long-sample.mp3")
+    finally:
+        write(overrides, saved)
+    verdict("an audiobook sample over sample_max_seconds fails before it renders",
+            code == 1 and "nothing rendered" in out and not (C.path(C.PUB_RENDERS) / "too-long-sample.mp3").exists(), out)
+
+
+def encoders() -> str:
+    proc = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], capture_output=True, text=True)
+    return proc.stdout
+
+
+def logged_id(out: str) -> str:
+    m = re.search(r"logged (F\d{4,})", out)
+    return m.group(1) if m else "F9999"
+
+
+def test_screen(verdict, skip, cli, work: Path) -> None:
+    """Screen recordings as sources: Playwright's VP8 WebM (1920x1080, 25 fps), VHS's H.264 MP4,
+    VP9 WebM and animated GIF (1200x600), none with sound, and a one-frame GIF held as a still."""
+    rec = work / "screen"
+    rec.mkdir()
+    have = encoders()
+    shots = [("browser.webm", "1920x1080", 25, "libvpx",
+              ["-c:v", "libvpx", "-deadline", "realtime", "-cpu-used", "16", "-b:v", "400k"]),
+             ("terminal.mp4", "1200x600", 50, "libx264",
+              ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"]),
+             ("terminal.webm", "1200x600", 50, "libvpx-vp9",
+              ["-c:v", "libvpx-vp9", "-deadline", "realtime", "-cpu-used", "8", "-b:v", "400k"]),
+             ("terminal.gif", "1200x600", 25, "gif",
+              ["-vf", "split[a][b];[a]palettegen=max_colors=32[p];[b][p]paletteuse"])]
+    made = []
+    for name, size, fps, encoder, codec in shots:
+        if f" {encoder} " not in have:
+            skip(f"the {name} screen recording", f"this ffmpeg has no {encoder} encoder")
+            continue
+        lavfi("-f", "lavfi", "-i", f"testsrc2=size={size}:rate={fps}:duration=1.2", "-an", *codec, rec / name)
+        made.append(name)
+    slide = rec / "slide.gif"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=1200x600:rate=1:duration=1", "-frames:v", "1", slide)
+    gif = rec / "terminal.gif"
+    code, out = cli("probe", gif, "--json")
+    info = json.loads(out) if code == 0 else {}
+    code2, out2 = cli("probe", slide, "--json")
+    info2 = json.loads(out2) if code2 == 0 else {}
+    verdict("probe counts an animated GIF's frames (moving) and a one-frame GIF's (a still)",
+            info.get("frames") == 30 and info.get("still") is False and info2.get("frames") == 1
+            and info2.get("still") is True, out + out2)
+    ids, lengths = {}, {}
+    for name in made + ["slide.gif"]:
+        code, out = cli("footage", "add", rec / name, "--kind", "video", "--location", "Screen recordings")
+        ids[name] = logged_id(out) if code == 0 else "F9999"
+    for row in R.manifest_rows(C.path(C.MANIFEST)):
+        lengths[str(row.get("id"))] = float(row.get("duration") or 0)
+    verdict("footage add logs each screen recording with its length, and a one-frame GIF with 0.0",
+            all(abs(lengths.get(ids[n], 0) - 1.2) < 0.05 for n in made)
+            and lengths.get(ids["slide.gif"]) == 0.0, f"{ids} {lengths}")
+    raw = C.path(C.RAW)
+    code, out = cli("cut", raw / "terminal.gif", "--deliverable", "youtube.short", "--in", "00:00:00.200",
+                    "--out", "00:00:01.000", "--frame", "crop", "-o", C.path(C.PUB_RENDERS) / "gif.short.mp4")
+    verdict("cut takes an animated GIF as its source", code == 0 and "verified" in out, out)
+    code, out = cli("encode", raw / "terminal.gif", "--deliverable", "youtube.long", "--frame", "crop",
+                    "-o", C.path(C.PUB_RENDERS) / "gif.long.mp4")
+    verdict("encode takes an animated GIF as its source (it has no sound: none is made)",
+            code == 0 and "verified" in out, out)
+    code, out = cli("cut", raw / "slide.gif", "--deliverable", "youtube.short", "--in", "0", "--out", "1")
+    verdict("cut refuses a one-frame GIF, naming it a still (exit 2)", code == 2 and "still image" in out, out)
+    if " libwebp_anim " in have:
+        anim = rec / "moving.webp"
+        lavfi("-f", "lavfi", "-i", "testsrc2=size=320x160:rate=10:duration=0.5", "-c:v", "libwebp_anim", anim)
+        code, out = cli("probe", anim, "--json")
+        moving = code == 0 and json.loads(out).get("still") is False
+        verdict("an animated WebP is moving where ffmpeg decodes it, and refused by name where it cannot",
+                moving or (code == 2 and "animated WebP" in out), out)
+    else:
+        skip("an animated WebP is moving or refused by name", "this ffmpeg has no libwebp_anim encoder")
+    # (a) and (b) alone: a GIF cut by in and out, a one-frame GIF held for seconds; the master's
+    # rate is the GIF's, a whole number, as no other clip has one.
+    only = write(C.path(C.EDITS) / "010-gif.toml", f"""[edit]
+piece = "010-gif"
+size = "640x360"
+loudness = "none"
+
+[[clip]]
+id = "c01"
+source = "{ids.get('terminal.gif', 'F9999')}"
+in = "00:00:00.200"
+out = "00:00:01.000"
+
+[[clip]]
+id = "c02"
+source = "{ids['slide.gif']}"
+seconds = 0.5
+""")
+    code, out = cli("assemble", only)
+    master = C.path(C.PROD_RENDERS) / "010-gif.master.mp4"
+    info = C.probe(master) if master.is_file() else {}
+    v = C.streams(info, "video")
+    verdict("assemble cuts an animated GIF by in and out and holds a one-frame GIF (never -loop on the gif "
+            "demuxer), at the GIF's own whole-number rate",
+            code == 0 and abs(C.duration(info) - 1.3) < 0.1 and bool(v)
+            and C.rate(v[0].get("avg_frame_rate")) == 25, out)
+    bed = rec / "screen-bed.wav"
+    lavfi("-f", "lavfi", "-i", "sine=frequency=330:sample_rate=48000:duration=8", "-af", "volume=0.3", bed)
+    code, out = cli("footage", "add", bed, "--kind", "music", "--location", "Library C")
+    music = logged_id(out)
+    clips, total = [], 0.0
+    plan = [("browser.webm", 'in = "00:00:00.100"\nout = "00:00:01.100"\nframe = "fit"\n', 1.0, 0.0),
+            ("terminal.mp4", 'in = "00:00:00.000"\nout = "00:00:01.000"\nframe = "pad"\n', 1.0, 0.3),
+            ("terminal.webm", 'in = "00:00:00.200"\nout = "00:00:01.200"\nframe = "fit"\n', 1.0, 0.0),
+            ("terminal.gif", 'in = "00:00:00.100"\nout = "00:00:01.100"\nframe = "crop"\n', 1.0, 0.3),
+            ("slide.gif", 'seconds = 1.0\nmotion = "push-in"\n', 1.0, 0.0)]
+    for n, (name, body, dur, fade) in enumerate([p for p in plan if p[0] in ids], start=1):
+        enter = f'transition = "fade"\ntransition_seconds = {fade}\n' if fade and clips else ""
+        clips.append(f'[[clip]]\nid = "c{n:02d}"\nsource = "{ids[name]}"\n{body}{enter}')
+        total += dur - (fade if enter else 0.0)
+    edl = write(C.path(C.EDITS) / "011-screen.toml", '[edit]\npiece = "011-screen"\nsize = "1280x720"\n'
+                'audio_rate = 48000\nloudness = "social"\n\n' + "\n".join(clips) + f"""
+[[audio]]
+source = "{music}"
+at = "00:00:00.000"
+in = "00:00:00.500"
+out = "00:00:07.500"
+gain_db = -6.0
+fade_in = 0.3
+fade_out = 0.5
+role = "music"
+""")
+    code, out = cli("assemble", edl)
+    master = C.path(C.PROD_RENDERS) / "011-screen.master.mp4"
+    info = C.probe(master) if master.is_file() else {}
+    verdict("assemble: screen recordings with no sound (WebM VP8 and VP9, MP4, GIF) and a one-frame GIF, "
+            "with fades, under a music bed, to the social loudness",
+            code == 0 and "verified" in out and abs(C.duration(info) - total) < 0.1
+            and bool(C.streams(info, "audio")), f"{total}\n{out}")
+    if not master.is_file():
+        return
+    srt = write(C.path(C.CAPTIONS) / "011-screen.en-GB.srt",
+                K.srt_text([K.Cue(0.3, 1.6, ["The browser opens the page."]),
+                            K.Cue(2.0, 3.4, ["The terminal runs the check."])]))
+    for frame in ("pad", "crop"):
+        code, out = cli("cut", master, "--deliverable", "youtube.short", "--in", "00:00:00.000", "--out",
+                        "00:00:03.500", "--frame", frame, "--captions", srt,
+                        "-o", C.path(C.PUB_RENDERS) / f"011-screen.short-{frame}.mp4")
+        verdict(f"cut of the screen-recording master to youtube.short, --frame {frame}, captions burned",
+                code == 0 and "verified" in out and "1080x1920" in out, out)
+    code, out = cli("encode", master, "--deliverable", "youtube.long", "-o", C.path(C.PUB_RENDERS) / "011-screen.long.mp4")
+    verdict("encode of the screen-recording master to youtube.long, at its loudness",
+            code == 0 and "verified" in out and "1920x1080" in out, out)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

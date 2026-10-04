@@ -1,0 +1,4 @@
+* filter=lfs diff=lfs merge=lfs -text
+.gitattributes !filter !diff !merge text
+CONTEXT.md !filter !diff !merge text
+CLAUDE.md !filter !diff !merge text
