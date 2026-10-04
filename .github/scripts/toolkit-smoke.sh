@@ -246,6 +246,12 @@ said() { # $1 = log name, $2 = an extended regex → yes | no
 }
 
 tail_of() { grep -v '^[[:space:]]*$' "$OUT/$1.log" 2>/dev/null | tail -1 | cut -c1-110 || true; }
+# A self-test's failing cases (its FAIL lines, up to three) before its last line, so a failure that
+# happens only on a CI runner, whose scratch folder is gone when the job ends, can be read in the log.
+selftest_tail() {
+  local f; f="$(grep -E '(^|[[:space:]])FAIL[[:space:]]' "$OUT/$1.log" 2>/dev/null | head -3 | sed 's/^[[:space:]]*//' | tr '\n' ' ' | cut -c1-400 || true)"
+  printf '%s%s' "${f:+$f— }" "$(tail_of "$1")"
+}
 
 printed() { # $1 = name (tko), $2 = an extended regex, case-sensitive, on standard output only → yes | no
   if grep -qE -- "$2" "$OUT/$1.out" 2>/dev/null; then echo yes; else echo no; fi
@@ -415,8 +421,8 @@ smoke() { # $1 = tree — fills $RESULTS
       else
         tk "selftest.$k" --self-test || st=$?
       fi
-      rec "selftest.$k" "$st"; rec "selftest.$k.tail" "$(tail_of "selftest.$k")"
-      cache+="$k=$st;"; SELFTEST_TAIL["$hash/$k"]="$(tail_of "selftest.$k")"
+      rec "selftest.$k" "$st"; rec "selftest.$k.tail" "$(selftest_tail "selftest.$k")"
+      cache+="$k=$st;"; SELFTEST_TAIL["$hash/$k"]="$(selftest_tail "selftest.$k")"
     done
     SELFTEST_CACHE[$hash]="$cache"
   fi

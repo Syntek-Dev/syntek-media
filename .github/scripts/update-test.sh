@@ -417,7 +417,7 @@ for kind in $KINDS; do
   run_checks
   if [[ ${#FINDINGS[@]} -eq 0 ]]; then
     log "  ✓ $kind — edits kept, examples still gone, publish-log.md recreated, own piece untouched, $TARGET_REL updated; shared files left alone; BRAND_KIND change refused untouched; warning printed; $REMOVE_PLATFORM taken away with exactly its $(wc -w <<< "$REMOVE_WANT") file(s)${FIXTURE_SUMS[*]:+, the show register and saved feed kept}; a second update a no-op"
-    rm -rf "$work"
+    sm_rmtree "$work"
   else
     bold "✗ $kind — ${#FINDINGS[@]} finding(s) (work kept in $work; Copier's output in $work/flow.log):"
     print_findings

@@ -129,6 +129,23 @@ st_finish() { # $1 = what the detector separates
 
 sm_mktemp() { mktemp -d "${TMPDIR:-/tmp}/syntek-media-audit.XXXXXX" || die "could not create a temporary directory"; }
 
+# Scratch repositories must stay still once a script is done with them. After a commit, Git may
+# start `gc --auto` or `maintenance run --auto` in the background, detached (GitHub runners do),
+# and it can still be writing into .git while the cleanup removes the folder: "rm: cannot remove
+# '…/.git': Directory not empty" ended update-test on a runner. Turning both off for every Git
+# command an audit starts, Copier's included (it inherits the environment), keeps the race away;
+# appended to any GIT_CONFIG_* pairs already set, never replacing them.
+sm_git_quiet() {
+  local n="${GIT_CONFIG_COUNT:-0}"
+  export "GIT_CONFIG_KEY_$n=gc.auto" "GIT_CONFIG_VALUE_$n=0"
+  export "GIT_CONFIG_KEY_$((n + 1))=maintenance.auto" "GIT_CONFIG_VALUE_$((n + 1))=false"
+  export GIT_CONFIG_COUNT=$((n + 2))
+}
+sm_git_quiet
+
+# Remove a scratch tree; one retry after a second covers a straggler that outlived its parent.
+sm_rmtree() { rm -rf "$1" 2>/dev/null || { sleep 1; rm -rf "$1"; }; }
+
 # ── copier.yml readers ───────────────────────────────────────────────────────
 
 # Every list item under a top-level key, unquoted, one per line. Comments and blank lines are

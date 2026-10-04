@@ -566,7 +566,7 @@ for kind in $KINDS; do
   GLOBAL=false
   if [[ ${#FINDINGS[@]} -eq 0 ]]; then
     log "  ✓ $kind (over $(author_doc_for_kind "$kind")) — both applied, both updated twice, $(grep -c . "$work/b-added.txt") media path(s) and ${#A_OWNED[@]} syntek-author-owned path(s) disjoint; $R_WHAT; the other order applies"
-    rm -rf "$work"
+    sm_rmtree "$work"
   else
     bold "✗ $kind — ${#FINDINGS[@]} finding(s) (work kept in $work; Copier's output in $work/flow.log):"
     print_findings

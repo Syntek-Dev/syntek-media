@@ -13,6 +13,11 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Fixed
+
+- **The audits are steady on a CI runner** (`.github/scripts/` only; nothing a project receives changes). Every Git command an audit starts, Copier's included, now runs with `gc.auto=0` and `maintenance.auto=false` (`sm_git_quiet` in `_common.sh`), because a background `git gc --auto` or `git maintenance` left running after a commit wrote into a scratch repository while it was being removed: `update-test.sh` stopped on a GitHub runner with "rm: cannot remove '…/proj/.git': Directory not empty". Per-kind cleanup in `update-test.sh` and `coexist-test.sh` retries once (`sm_rmtree`).
+- **A failed toolkit self-test names its failing cases.** `toolkit-smoke.sh` check 1 now carries the self-test's `FAIL` lines (up to three) before its last line, so a failure that happens only on a runner, whose scratch folder is gone when the job ends, can be read in the CI log.
+
 ## [0.2.0] - 04/10/2026
 
 Three platforms for the brand's own channels, and a podcast served from the brand's own website or websites, delivered to Apple Podcasts and Spotify through its feed and uploaded to YouTube as video (D53–D63, approved by the maintainer on 04/10/2026). No 0.1.0 project needs a migration (D63).
