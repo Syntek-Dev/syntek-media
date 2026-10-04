@@ -1,6 +1,6 @@
 # Changelog
 
-**Last Updated**: 04/10/2026 **Version**: 0.2.0 **Maintained By**: Syntek Studio
+**Last Updated**: 04/10/2026 **Version**: 0.2.1 **Maintained By**: Syntek Studio
 **Language**: British English (en_GB)
 
 All notable changes to syntek-media are documented here.
@@ -12,6 +12,12 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 ---
 
 ## [Unreleased]
+
+## [0.2.1] - 04/10/2026
+
+A fix release for the template's own audits: nothing a generated project receives changes, so a 0.2.0 project needs no update and no migration.
+
+**syntek-author baseline.** Released against syntek-author `9a65902` (its v0.3.0 release), read on 04/10/2026 with a clean working tree: `coexist-test.sh` passed against it with this release's scripts, and `.github/scripts/syntek-author-names.txt` is unchanged since 0.2.0.
 
 ### Fixed
 
