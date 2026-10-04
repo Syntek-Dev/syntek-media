@@ -1,17 +1,16 @@
 ---
 name: prepare-post
 description: >-
-  Package one piece for posting, one section per deliverable: title, description and hashtags
-  inside each platform's limits (warning above platform.instagram.hashtags_max), the AI-disclosure
-  plan (each platform's own rule for its toggle, a disclosure line in every description, and for a
-  podcast the audio and the metadata), the captions, thumbnail, render and rights check, then the
-  schedule row, citing the content calendar entry where syntek-author's is present (M7). Never
-  posts: the author posts, and the publish log records only what the author reports. Use when the
-  author says 'prepare the post', 'write the description and hashtags', 'get this ready to
-  publish', 'schedule the clips', 'what disclosure does this need?' or 'it's up, here's the link'.
-  Not text-only posts, bios or a content calendar (the social-media-documents skill
-  (syntek-author), where present). Not the captions (`captions`). Not the thumbnail
-  (`thumbnail-brief`).
+  Package one piece for posting, one section per deliverable or placement: title, description and
+  hashtags inside each platform's limits, the AI-disclosure plan, captions, thumbnail, render and
+  rights, then the schedule row, citing syntek-author's calendar entry, where present (M7); for the
+  brand's own sites and newsletters, alt text, links and agreements; for a self-hosted podcast, the
+  episode's register words and feed check. Never posts: the publish log records only what the author
+  reports. Use when the author says 'prepare the post', 'write the description and hashtags', 'get
+  this ready to publish', 'what disclosure does this need?', 'publish the podcast feed' or 'it's up,
+  here's the link'. Not text-only posts, bios or a blog post's or newsletter's own words (the
+  social-media-documents skill or the writing router of syntek-author, where present). Not the
+  captions (`captions`). Not the thumbnail (`thumbnail-brief`).
 ---
 
 # Skill: Prepare Post (<%BRAND_NAME%>)
@@ -72,12 +71,12 @@ the people they may show.
    gate named.
 
 2. **Read the plan the posts belong to.** Check whether the social-media-documents skill
-   (syntek-author) is present, by its `.claude/skills/<skill>/SKILL.md`. Where it is, and
-   syntek-author's social media plan and content calendar are present (in its library layer's
-   social-media folder), they own cadence, tone, the call to action and hashtags: find the
-   calendar entry each deliverable fills and read it, and never edit that calendar; an entry
-   missing there is the author's to add through that skill. Otherwise the platform profile,
-   `brand/src/platforms/<platform>.md`, holds all of it.
+   (syntek-author) is present, by its `.claude/skills/<skill>/SKILL.md`. Where it is, each of
+   syntek-author's social-media documents (the plan, the content calendar, an operating
+   procedure, in its library layer's social-media folder) owns what it sets for a platform,
+   platform by platform: find the calendar entry each deliverable fills and read it, and never
+   edit those documents; an entry missing there is the author's to add through that skill. The
+   platform profile, `brand/src/platforms/<platform>.md`, holds what none sets.
    *Complete when:* every deliverable names its calendar entry or its profile as the source of its
    tone, call to action and hashtags, and every missing entry is listed.
 
@@ -100,28 +99,51 @@ the people they may show.
    *Complete when:* every deliverable has its three fields drafted, and every report is with the
    author.
 
-5. **Plan the disclosure.** Where the brief records a synthetic voice (the owner's own clone
+5. **Package each placement on the brand's own channels.** A piece placed on a site of the
+   website or blog profile, or in an issue of a list in the newsletter profile, gets one section
+   per placement: the one file that page or issue plays or shows first (the video, the embed of
+   the YouTube upload, the GIF, or a still where there is no GIF), headed
+   `## <platform>.<format>[ — cNN] — <platform>:<slug>`, with the bullets its channel's guide
+   gives, where the project has that platform. Media writes only the words outside the written
+   body (an embed's or figure's title, alt text, Links to, the structured-data values, the
+   agreement); the post's, page's or issue's own words, standfirst, link text and date are the
+   written side's. Read the written piece, never edit it, never record its status; take the
+   placement's date from it. A site or list the brand does not own needs its profile row's dated
+   agreement. An embed or player snippet goes to the author in chat, on request, never to a file.
+   *Complete when:* every placement has its section, its written piece read and its date cited,
+   and its agreement named or listed as blocking.
+
+6. **Package a feed episode.** Where the brief lists `podcast.feed_audio`, the episode's title,
+   description and chapters are written with the author in its show register (the podcast folder
+   of `publishing/src/`, where the project has the podcast platform), never in the package: its
+   `## podcast.feed_audio` section cites them, and adds Episode page, Feed and On YouTube. The
+   register's part of M7 (`feed add`, the words approved, `feed tag`, `feed chapters`,
+   `feed check`, the upload copy) runs through the podcast-feed workflow and guide. An episode
+   page on another site is a placement (step 5); a `youtube.long` carrying it adds Playlist.
+   *Complete when:* the section cites its register row, and `feed check` is clean.
+
+7. **Plan the disclosure.** Where the brief records a synthetic voice (the owner's own clone
    included), AI visuals or generated music, plan three things for every deliverable: the
    platform's AI label or toggle, set exactly when that platform's current rule requires it, with
    the rule and its checked date; a disclosure line in the description, on every platform, always;
    and the spoken or on-screen line, where the piece carries one. A podcast discloses in the audio
    itself and in the episode and show metadata too: a master without the spoken line goes back to
    production before it is scheduled. Where a platform's rule is unclear or its checked date is
-   old, flag `VERIFY` and ask. A piece whose brief records none of these says so in its
-   **Disclosure**, and nothing is set.
+   old, flag `VERIFY` and ask. On the brand's own channels there is no label: the house line goes
+   beside the media. A piece whose brief records none of these says so in its **Disclosure**.
    *Complete when:* every deliverable's **Disclosure** names the toggle decision and its rule, the
    description line and the spoken or on-screen line, or records that none is needed.
 
-6. **Attach the render, captions and thumbnail.** For each deliverable, name its render in
+8. **Attach the render, captions and thumbnail.** For each deliverable, name its render in
    `publishing/src/renders/` and confirm it with `python3 toolkit/media.py probe`; name its
    captions file in `publishing/src/captions/` and whether it is burned or a sidecar (a deliverable
-   whose `caption_formats` is empty takes burned captions); and, where the platform takes one, its
-   approved thumbnail render. Anything missing goes back to its owner: `cut-for-platform`,
-   `captions` or `thumbnail-brief`.
+   whose `caption_formats` is empty takes burned captions; a placement names its `.vtt` and its
+   published transcript); and, where the platform takes one, its approved thumbnail or images.
+   Anything missing goes back to its owner: `cut-for-platform`, `captions` or `thumbnail-brief`.
    *Complete when:* every deliverable names an existing render, its captions and any thumbnail its
    platform takes, or the missing item and its owner are listed.
 
-7. **Check every limit and every right.** Count each field's characters exactly, never by eye, and
+9. **Check every limit and every right.** Count each field's characters exactly, never by eye, and
    record each count against its key in **Limits**. A count over a hard limit is cut, never posted.
    Above `platform.instagram.hashtags_max`, a `verify` key, warn by that key with the value
    `presets` printed and let the author decide; warn the same way at any other hashtag key. Check
@@ -132,32 +154,34 @@ the people they may show.
    *Complete when:* every count is recorded against its key, every row is `cleared` or listed as
    blocking, and the flags run is clean or its flags are listed.
 
-8. **Write the package and the schedule rows.** Present the package and wait. Then write what the
-   author agreed to `publishing/src/posts/<piece>.md` in the format its folder's `CLAUDE.md`
-   gives, one H2 per deliverable. Add one row per deliverable to `publishing/src/schedule.md`, at
-   the date and time the author chose (<%TIMEZONE%>), status `planned`, its Notes citing the
-   calendar entry where syntek-author's is present.
-   *Complete when:* the package holds exactly what the author agreed, and every deliverable has
-   its schedule row.
+10. **Write the package and the schedule rows.** Present the package and wait. Then write what
+    the author agreed to `publishing/src/posts/<piece>.md` in the format its folder's `CLAUDE.md`
+    gives, one H2 per deliverable or placement. Add one row per deliverable and per placement
+    (`<platform>:<slug>`) to `publishing/src/schedule.md`, at the date and time the author chose,
+    or the written piece's own (<%TIMEZONE%>), status `planned`, its Notes citing the calendar
+    entry where syntek-author's is present.
+    *Complete when:* the package holds exactly what the author agreed, and every deliverable and
+    placement has its schedule row.
 
-9. **Record M7, and hand over.** When the author approves the package and every check of step 7
-   passes, date `approved` in the package, set each schedule row to `ready`, and in the brief date
-   M7 in `verified`, set `status: scheduled` and set `last_updated`, as
-   `scripts/docs/reference/the-piece-ladder.md` gives it. Report what is ready, when each post is
-   due, and what the author sets by hand at upload, platform by platform. When the author is ready
-   to post a deliverable, give its title and its description in chat as paste-ready text: the
-   fenced lines joined into paragraphs, one sentence per line being only how the file keeps them;
-   never write that joined text to a file. The author posts.
-   *Complete when:* the author has the hand-over, and the brief's status moved only on the author's
-   approval.
+11. **Record M7, and hand over.** When the author approves the package and every check of step 9
+    passes, date `approved` in the package, set each schedule row to `ready`, and in the brief date
+    M7 in `verified`, set `status: scheduled` and set `last_updated`, as
+    `scripts/docs/reference/the-piece-ladder.md` gives it. Report what is ready, when each post is
+    due, and what the author sets by hand at upload, platform by platform. When the author is ready
+    to post a deliverable, give its title and its description in chat as paste-ready text: the
+    fenced lines joined into paragraphs, one sentence per line being only how the file keeps them;
+    never write that joined text to a file. The author posts.
+    *Complete when:* the author has the hand-over, and the brief's status moved only on the author's
+    approval.
 
-10. **Log each post the author reports.** Only when the author says a deliverable is up, add its
+12. **Log each post the author reports.** Only when the author says a deliverable is up, add its
     row to `publishing/src/publish-log.md` with the URL the author gives and the disclosure and
     captions as the author reports them set, and mark its schedule row `posted`; a post that will
     not go out is `dropped`, on the author's word. Where the report differs from the package (a
     toggle left off, another time), record it as reported and point out the difference. When every
     schedule row for the piece is `posted` or `dropped`, and each posted row has its log row, set
-    the brief's `status: published`, as `publishing/workflows/06-record-a-publication/` gives it.
+    the brief's `status: published`, as `publishing/workflows/06-record-a-publication/` gives it;
+    for a feed episode it also sets the register row `published` and writes the tracked feed.
     *Complete when:* every reported upload has exactly one log row, and the brief reads `published`
     only when every row is settled.
 
@@ -174,6 +198,8 @@ the people they may show.
   one the piece's sources support.
 - **Duplicating the social plan.** Where syntek-author's social-media family is present, its
   calendar plans the posts; the media schedule lists media deliverables only, and cites it.
+- **Writing the written side's words.** A placement never drafts a post's, page's or issue's
+  body, standfirst or link text, and media never edits a website or sends an email.
 - **Scheduling past an open gate.** No schedule row is `ready` until M6 is recorded, every rights
   row is `cleared` and the flags run is clean.
 - **Rewriting the log.** A publish-log row is never deleted or edited over; a correction is a

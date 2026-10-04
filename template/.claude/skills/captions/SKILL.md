@@ -1,17 +1,16 @@
 ---
 name: captions
 description: >-
-  Make a piece's captions, and a recorded piece's transcript: timed from the voiceover's approved
-  segments, aligned to recorded speech beat by beat with 'python3 toolkit/media.py captions
-  align' and checked by eye, or made by hand. Speech-to-text through the user-scope ElevenLabs MCP
-  server runs only when the author asks, after the audio minutes are stated, and returns text
-  without timings; on its base-path error this skill prints the exact fix. Writes SRT and VTT for
-  the master and each cut, runs 'captions check' against the script or transcript, and burns
-  them in or leaves a sidecar as each platform takes them. Use when the author says 'caption the
-  short', 'transcribe the talk', 'time the captions to the voiceover', 'captions for each cut',
-  'burn the captions in' or 'the captions drift'. Not the voiceover (`voiceover`). Not the cut
-  (`cut-for-platform`). Not proofreading (the spelling and grammar skills of syntek-author, where
-  present).
+  Make a piece's captions and transcripts: timed from the voiceover's approved segments, aligned to
+  recorded speech beat by beat with 'python3 toolkit/media.py captions align' and checked by eye, or
+  made by hand. Speech-to-text through the user-scope ElevenLabs MCP server runs only when the
+  author asks, after the audio minutes are stated; on its base-path error this skill prints the
+  exact fix. Writes SRT and VTT for the master and each cut, runs 'captions check' against the
+  script or transcript, burns them in or leaves a sidecar, and makes the published transcript for a
+  web page or podcast episode. Use when the author says 'caption the short', 'transcribe the talk',
+  'time the captions to the voiceover', 'burn the captions in', 'the transcript for the website' or
+  'the captions drift'. Not the voiceover (`voiceover`). Not the cut (`cut-for-platform`). Not
+  proofreading (the spelling and grammar skills of syntek-author, where present).
 ---
 
 # Skill: Captions (<%BRAND_NAME%>)
@@ -42,8 +41,9 @@ are the procedure of record — do not restate them at length here.
 - If a layer's `workflows/local/` holds a folder with the same `NN-name` as a procedure named here,
   follow that procedure instead: the author's local procedure replaces the template's
   (`run-media-workflow`, step 2).
-- `publishing/docs/reference/captions.md` — the house limits, the names, the three routes, and
-  captions made before the cut.
+- `publishing/docs/reference/captions.md` — the house limits, the names, the three routes,
+  captions made before the cut, and the published transcript on a profile site or for a feed
+  episode (its page detail in the website, blog and podcast-feed guides, where they ship).
 - `production/docs/reference/recorded-pieces.md` — the transcript, its anchors, and the chain from
   recording to master to cut.
 - `production/docs/reference/elevenlabs.md` — the server's setup, its base path and cost
@@ -185,17 +185,29 @@ are the procedure of record — do not restate them at length here.
     `python3 toolkit/media.py captions burn SRC SRT --deliverable KEY`, which writes the `.burned`
     render to `publishing/src/renders/`. A caption font that fell back to another is a failure:
     report it, and never accept the substitute. Otherwise the file goes up beside the video as a
-    sidecar, and `prepare-post` names it in the post package.
+    sidecar, and `prepare-post` names it in the post package. A video on a site of the website or
+    blog profile, whoever owns it, always takes its `.vtt` as a sidecar, loaded by `<track>`, never
+    burned; a feed episode's `.vtt` is the master-timed one, named in its show register.
     *Complete when:* every deliverable with speech and picture has burned captions or a sidecar,
     and every burn passed.
 
-11. **Hand back.** Report every file made, with its path and what it is timed to; the route used;
+11. **Make the published transcripts.** For every piece or cut with speech placed on a profile
+    site, and for a feed episode, write the transcript of exactly what that page plays:
+    `python3 toolkit/media.py captions transcript SCRIPT -o OUT`, adding `--lines` with the cut's
+    Lines for a cut (one transcript per distinct cut placed), OUT being
+    `publishing/src/captions/<piece>[--cNN].transcript.en-GB.md`. Then, with the author, add in
+    words what the picture carries and the words leave out; fix only a mis-transcription. The
+    author approves each one.
+    *Complete when:* every placement and feed episode that needs one has its approved transcript.
+
+12. **Hand back.** Report every file made, with its path and what it is timed to; the route used;
     any speech-to-text minutes and credits spent; each check's result; every burned render; and
     every `[unclear]` word and open flag. The procedure records the gate in the brief, on the
     author's word: M6 (cut → captioned) once every deliverable with speech and picture has passed
-    captions (with M5 when they were burned in the cutting pass). M6 does not apply to an
-    audiobook, to a podcast unless its brief asks for a transcript, or to a deliverable without
-    speech: say so rather than making files nobody needs.
+    captions, and every published transcript step 11 owed is approved (with M5 when captions were
+    burned in the cutting pass). M6's `n/a` list in the ladder guide (an audiobook, a podcast with
+    no feed audio and no placement on a profile site unless its brief asks for a transcript, a
+    deliverable without speech) is said so, rather than making files nobody needs.
     *Complete when:* the author has the report, and no script, transcript or render was edited to
     make a caption pass.
 
@@ -211,6 +223,8 @@ are the procedure of record — do not restate them at length here.
 - **Publishing aligned captions nobody watched.** Alignment is a heuristic; the burned preview is
   the check.
 - **Changing the script or the transcript to fit a caption.** The caption follows the record.
+- **A published transcript of the whole talk under a 90-second cut.** It is the transcript of
+  exactly what that page plays.
 - **An audio tag or a direction in a caption.** Only spoken words, and sounds that matter.
 - **A file named for the wrong timing.** A cut's captions on the master's clock are wrong from the
   first cue.
@@ -219,7 +233,8 @@ are the procedure of record — do not restate them at length here.
 
 ## Cross-references
 
-- `publishing/src/captions/` — every SRT and VTT, named for its timing and line width.
+- `publishing/src/captions/` — every SRT and VTT, named for its timing and line width, and the
+  published transcripts.
 - `scripts/src/pieces/` — each piece's script or transcript, the words every caption follows.
 - `production/src/voiceover/` — the segment registers the first route reads.
 - `production/src/edits/` — the edit decision lists that carry recording time to the master.

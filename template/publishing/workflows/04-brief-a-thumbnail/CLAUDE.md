@@ -46,7 +46,8 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
 ## Output & naming
 
 - **Produces:** `publishing/src/thumbnails/<piece>[--cNN].md` and `.html`; PNGs in
-  `publishing/src/renders/`, `<html-stem>.<platform>-<format>.png`.
+  `publishing/src/renders/`, `<html-stem>.<platform>-<format>.png`; the encodes `media.py image`
+  writes (`<stem>.<platform>-<format>.<ext>`) and a GIF (`<piece>[--cNN].newsletter-preview-gif.gif`).
 - **Also writes:** a still taken from the master, where the image is a frame, as a small
   committed file in `production/src/assets/`.
 - **Does not touch:** the brand's layout component, `tokens.css` or any other render.

@@ -21,7 +21,8 @@ Run, read and maintain the audits that prove the template keeps every promise `D
 - **Concrete steps:**
   1. Everything: `bash .github/scripts/run-all.sh --author ../syntek-author`
      (`--no-self-test`, `--skip-integration` and `--skip-thumbnails` shorten a local loop;
-     `--keep --out DIR` keeps the renders to inspect). Invoke every script with `bash` and pass
+     `--keep --out DIR` keeps the renders to inspect; `SM_RENDER_JOBS=1` in the environment
+     renders one tree at a time, for a machine that is already loaded). Invoke every script with `bash` and pass
      each argument as its own word: an interactive zsh does not split a quoted pair.
   2. One audit on the source: `bash .github/scripts/<script>.sh`. One audit on renders:
      `bash .github/scripts/generate-all.sh DIR > trees.txt`, then
@@ -37,7 +38,9 @@ Run, read and maintain the audits that prove the template keeps every promise `D
      `bash .github/scripts/coexist-test.sh --brand-kind author-fiction --author DIR`. The toolkit
      on one render: `bash .github/scripts/toolkit-smoke.sh DIR/business--all` (about a minute a
      render; `--skip-thumbnails` drops the Chromium steps by name, `--require-ffmpeg` is CI's).
-     A failed run keeps its scratch folder and names it: read the step's log there.
+     A failed run keeps its scratch folder and names it: read the step's log there. The podcast
+     feed (check 18) runs only where the render ships `publishing/src/podcast/`: use
+     `author-nonfiction--defaults` or any `--all` render; elsewhere only `feed new`'s refusal runs.
   6. Adding a check: give it the next number, say in the header why it exists and what it cannot
      check, add ONE mutation to the `--self-test` that produces exactly ONE finding from it, and
      run the self-test before and after.

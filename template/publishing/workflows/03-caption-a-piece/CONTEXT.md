@@ -34,6 +34,9 @@ deliverables themselves (`publishing/workflows/02-cut-for-a-platform/`).
 - **Caption files** in `publishing/src/captions/`, named for what each is timed to, each passing
   its check against the script or transcript.
 - **Burned deliverables** in `publishing/src/renders/`, where a platform takes no sidecar.
+- **Published transcripts** `publishing/src/captions/<piece>[--cNN].transcript.en-GB.md`, one for
+  each piece or distinct cut placed on a site of the website or blog profile, and for a feed
+  episode, approved by the author.
 - **The gate** in the brief: `status: captioned` and M6 dated in `verified`, or M6 recorded
   `n/a` with its reason.
 

@@ -21,19 +21,19 @@ Removing linkedin from the project's platforms deletes this file, filled in or n
 
 ## The social plan
 
-Where syntek-author's social media plan is present, it owns cadence, tone, call to action, hashtags and bios, and the four sections below hold only what it lacks.
+Where syntek-author's social-media documents are present, whichever of them sets a value for this platform (the social media plan, the content calendar or an operating procedure) owns it, and the four sections below hold only what none sets.
 
 ## Cadence
 
-<!-- AUTHOR TO CONFIRM: how often the brand posts video on LinkedIn, on which days and at what time (<%TIMEZONE%>), unless the social media plan sets it. -->
+<!-- AUTHOR TO CONFIRM: how often the brand posts video on LinkedIn, on which days and at what time (<%TIMEZONE%>), unless a social-media document sets it. -->
 
 ## Tone on this platform
 
-<!-- AUTHOR TO CONFIRM: how the brand's spoken and written voice shifts on LinkedIn (shorter, warmer, plainer or more formal), unless the social media plan sets it. -->
+<!-- AUTHOR TO CONFIRM: how the brand's spoken and written voice shifts on LinkedIn (shorter, warmer, plainer or more formal), unless a social-media document sets it. -->
 
 ## Call to action
 
-<!-- AUTHOR TO CONFIRM: what a viewer is asked to do after a LinkedIn video post, in the brand's words, unless the social media plan sets it. -->
+<!-- AUTHOR TO CONFIRM: what a viewer is asked to do after a LinkedIn video post, in the brand's words, unless a social-media document sets it. -->
 
 ## Hashtag sets
 

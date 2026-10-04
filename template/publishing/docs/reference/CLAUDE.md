@@ -27,7 +27,11 @@ same way until its author decides otherwise in `publishing/docs/project/`.
 <: endif :><: if 'instagram' in PLATFORMS :>  - anything posted to Instagram → `instagram.md`;
 <: endif :><: if 'linkedin' in PLATFORMS :>  - anything posted to LinkedIn → `linkedin.md`;
 <: endif :><: if 'facebook' in PLATFORMS :>  - anything posted to Facebook → `facebook.md`;
-<: endif :><: if 'podcast' in PLATFORMS :>  - anything sent to Apple Podcasts or Spotify → `podcast.md`;
+<: endif :><: if 'podcast' in PLATFORMS :>  - anything sent to Apple Podcasts or Spotify → `podcast.md`, and a show the brand serves
+    itself, its register and its feed → `podcast-feed.md`;
+<: endif :><: if 'website' in PLATFORMS :>  - anything placed on one of the brand's sites → `website.md`;
+<: endif :><: if 'blog' in PLATFORMS :>  - anything placed in a blog post → `blog.md`;
+<: endif :><: if 'newsletter' in PLATFORMS :>  - anything shown in a newsletter issue → `newsletter.md`;
 <: endif :>  - reading or correcting a platform limit → `platform-specs.md`.
 - **Model:** **Opus** for reading a guide into a judgement; nothing here is written
   (`.claude/rules/syntek-media/05-model-allocation.md`).

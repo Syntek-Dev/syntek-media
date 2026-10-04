@@ -2,7 +2,7 @@
 #
 # shipped-brands.sh — Verify a rendered project carries exactly what its brand should.
 #
-#                     One tree ships three brand kinds, six platforms and six media kinds,
+#                     One tree ships three brand kinds, nine platforms and six media kinds,
 #                     and the only mechanism that separates them is a templated _exclude line
 #                     per gated path (DESIGN.md Section 3.5). Nothing fails when a line is
 #                     missing or wrong: a podcast-free project that receives the podcast

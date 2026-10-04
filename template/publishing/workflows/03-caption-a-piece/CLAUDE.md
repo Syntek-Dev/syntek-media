@@ -47,7 +47,8 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
 ## Output & naming
 
 - **Produces:** `publishing/src/captions/<piece>[--cNN|.<FID>][.<platform>-<format>].en-GB.srt`,
-  with `.vtt` beside it where a platform takes one.
+  with `.vtt` beside it where a platform takes one; published transcripts
+  `publishing/src/captions/<piece>[--cNN].transcript.en-GB.md`.
 - **Also writes:** burned renders in `publishing/src/renders/`; the brief's `status` and
   `verified`.
 - **Does not touch:** the script, the transcript's words without the author's agreement, or any

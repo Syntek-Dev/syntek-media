@@ -50,6 +50,11 @@ The edit decision list's clips name the recording's footage ID, with `in` and `o
 the transcript's anchors. An audio-only episode is the same list with `size = ""`, under a faded
 music bed; a long talk's cut-downs come later, in the publishing layer.
 
+**An episode cut from another piece's recording** is a piece of its own, its `parent` the talk and
+its `source_media` the talk's footage IDs, logged once: its transcript copies the parent's
+approved beats it keeps, anchors included, and is approved as its own M2; a later correction to
+either reopens both. A talk published whole as an episode stays one piece.
+
 ## How we apply it here
 
 - Log the recording first, with a rights row if it shows other people

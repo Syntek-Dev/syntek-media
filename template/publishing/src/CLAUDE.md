@@ -23,7 +23,9 @@ log) current, consistent with each other and true to what the author did.
 | `thumbnails/` | `thumbnail-brief`, with the author | `publishing/workflows/04-brief-a-thumbnail/` |
 | `posts/`, `schedule.md` | `prepare-post`, with the author | `publishing/workflows/05-prepare-a-post/` |
 | `schedule.md`, `publish-log.md` (after a post) | `prepare-post`, from the author's report | `publishing/workflows/06-record-a-publication/` |
-
+<: if 'podcast' in PLATFORMS :>| `podcast/` (registers; the upload copy in `renders/`) | `prepare-post` and `cut-for-platform`, with the author | `publishing/workflows/08-publish-the-podcast-feed/` |
+| `podcast/<show>.feed.xml` (after the feed is live) | `prepare-post`, from the author's report | `publishing/workflows/06-record-a-publication/` |
+<: endif :>
 - **Model:** **Opus** for any plan, caption, brief, package or judgement; the mechanical tier for
   renders, a row the author has dictated, renames and ticks
   (`.claude/rules/syntek-media/05-model-allocation.md`).
@@ -53,7 +55,12 @@ log) current, consistent with each other and true to what the author did.
   for one cut, `<piece>--cNN`.
 - **Written by skills:** captions; schedule and log rows.
 - **Generated (never hand-edit):** everything in `renders/`, named
-  `<piece>[--cNN].<platform>-<format>[.burned].<ext>` for a deliverable and
-  `<html-stem>.<platform>-<format>.png` for a thumbnail.
+  `<piece>[--cNN].<platform>-<format>[.burned].<ext>` for a deliverable,
+  `<html-stem>.<platform>-<format>.png` for a thumbnail, `<stem>.<platform>-<format>.<ext>` for
+  an image `media.py image` encoded, `<piece>[--cNN].newsletter-preview-gif.gif` for a GIF,
+  `<piece>.chapters.json` for an episode's chapters and `<show>.feed.xml` for a feed's upload
+  copy.
+- **Placements** on the brand's own channels are written `<platform>:<slug>` in the schedule, the
+  log and a package's H2.
 - **Template-owned:** this pair, `.gitignore` and `renders/README.md`.
 - Files kebab-case; dates DD/MM/YYYY in prose and DD-MM-YYYY in filenames.

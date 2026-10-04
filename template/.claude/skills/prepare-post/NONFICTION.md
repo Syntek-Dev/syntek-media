@@ -20,17 +20,18 @@ disclosure in the audio as well as the notes.
 
 ## Additions to the steps
 
-- **Step 1 — also** for a podcast episode, the deliverables are the feed's audio and any video
-  platform's still-video or clips; the show's own description is not the piece's, but it must
-  carry the disclosure too.
+- **Step 1 — also** for a podcast episode, the deliverables are the feed's audio
+  (`podcast.feed_audio` for a show served from the brand's own feed) and any video platform's
+  still-video, the talk's own video or clips; the show's own description is not the piece's, but
+  it must carry the disclosure too.
 - **Step 4 — also** a quotation in a description keeps its author and source; a scripture
   reference keeps its translation, credited as that translation's permission requires
   (`<!-- VERIFY: … -->` until the row says how). A guest is named and linked only as the guest
   agreed, and the episode notes say what the episode claims, never more.
-- **Step 5 — also** for a podcast, check the master carries the spoken disclosure at the point the
+- **Step 7 — also** for a podcast, check the master carries the spoken disclosure at the point the
   synthetic voice begins, and that the show description carries it; where the show description
   does not, the hand-over asks the author to add it before the episode is `ready`.
-- **Step 7 — also** every guest heard or shown has a `cleared` row that covers this platform, and
+- **Step 9 — also** every guest heard or shown has a `cleared` row that covers this platform, and
   every quotation or scripture reading heard in the piece has its row.
 
 ## Domain rules

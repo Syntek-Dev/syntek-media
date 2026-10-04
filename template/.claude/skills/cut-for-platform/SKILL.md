@@ -1,17 +1,16 @@
 ---
 name: cut-for-platform
 description: >-
-  Render every master, cut and deliverable through the toolkit and nothing else: write the
-  piece's edit decision list with the author from its storyboard and shot list, or a recorded
-  piece's transcript (clips, stills, cards, colour, fades, push-ins, a music bed ducked under the
-  voice); copy the brand's card layout for each card; assemble the master with 'python3
+  Render every master, cut and deliverable through the toolkit and nothing else: write the piece's
+  edit decision list with the author from its storyboard and shot list, or a recorded piece's
+  transcript; copy the brand's card layout for each card; assemble the master with 'python3
   toolkit/media.py assemble'; then cut, reframe and encode each deliverable of the brief and the
-  cut-down plan, burning captions in the same pass where they exist, and probe every output
-  against its preset before calling it done. Renders are git-ignored, never hand-edited. Use when
-  the author says 'assemble the master', 'cut the shorts', 'make the vertical version', 'encode it
-  for YouTube', 'master the episode' or 'why did the cut fail?'. Not choosing which moments to cut
-  (`repurpose`). Not making or checking the captions (`captions`). Not the thumbnail
-  (`thumbnail-brief`).
+  cut-down plan, web video, silent loops and a podcast feed's audio among them, burning captions in
+  the same pass where they exist, and probe every output against its preset. Renders are
+  git-ignored, never hand-edited. Use when the author says 'assemble the master', 'cut the shorts',
+  'encode it for YouTube', 'master the episode', 'the website version' or 'why did the cut fail?'.
+  Not choosing which moments to cut (`repurpose`). Not making or checking the captions (`captions`).
+  Not a thumbnail, poster or GIF preview (`thumbnail-brief`).
 ---
 
 # Skill: Cut for Platform (<%BRAND_NAME%>)
@@ -41,6 +40,9 @@ are the procedure of record — do not restate them at length here.
 - The podcast-mastering workflow in `production/workflows/`, where the project makes podcasts, uses
   this skill for an audio master cut from a recording; an audiobook is mastered by the
   narrate-audiobook skill, where the project makes audiobooks, never here.
+- The podcast-feed workflow in `publishing/workflows/`, where the project serves its own podcast
+  feed, uses this skill once, at M7, for `media.py feed tag`: it tags the M5 render in place
+  without re-encoding, from the show register's row.
 - If a layer's `workflows/local/` holds a folder with the same `NN-name` as a procedure named here,
   follow that procedure instead: the author's local procedure replaces the template's
   (`run-media-workflow`, step 2).
@@ -127,7 +129,14 @@ are the procedure of record — do not restate them at length here.
    hyphens), otherwise the cut's own file if `captions check --deliverable KEY` passes. An audio
    deliverable (its table has no width or height) is cut and encoded as audio only, by the same
    commands. For audio meant for a video platform, run
-   `still-video IMAGE AUDIO --deliverable KEY`. Outputs land in
+   `still-video IMAGE AUDIO --deliverable KEY`. **Web video** for the brand's own sites and blogs
+   (`website.*`, `blog.*`) is encoded or cut like any video, its captions always a sidecar; a
+   **silent loop** (a table with `audio_tracks = 0`) is cut from its plan row and comes out with no
+   sound track. **A feed episode's `podcast.feed_audio`** is encoded at M5 like any audio
+   deliverable, untagged and needing no register: from the audio master, or, for a talk published
+   whole as an episode, from the picture master, whose sound alone it takes; its tags and chapters
+   are written at M7 by `feed tag`, never here. A poster, a share, featured or preview image and a
+   GIF preview are `thumbnail-brief`'s, never made at M5. Outputs land in
    `publishing/src/renders/`, named `<piece>[--cNN].<platform>-<format>[.burned].<ext>`. Never call
    ffmpeg or ffprobe directly to make a deliverable, and never cut with `-c copy`.
    *Complete when:* every deliverable in hand has one output, or a named failure.
@@ -163,6 +172,9 @@ are the procedure of record — do not restate them at length here.
 - Adding a render to Git, or forcing it past the ignore rule.
 - Mastering an audiobook here: its targets and checks belong to the narrate-audiobook skill,
   where the project makes audiobooks.
+- Tagging a feed episode at M5, or re-encoding it to retag it: its words are not approved until
+  M7, and `feed tag` re-muxes without re-encoding.
+- A sound track on a silent loop, or a GIF preview cut before its overlay exists.
 
 ## Cross-references
 
@@ -176,4 +188,5 @@ are the procedure of record — do not restate them at length here.
 - `repurpose` — decides each cut's lines, In, Out and frame in the cut-down plan.
 - `captions` — makes the caption files a cut burns in.
 - `voiceover` — the approved, archived segments the master's voice is joined from.
-- `thumbnail-brief` — the thumbnails, which this skill never renders.
+- `thumbnail-brief` — the thumbnails, posters, other images and the GIF preview, which this
+  skill never makes.

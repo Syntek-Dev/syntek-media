@@ -15,6 +15,7 @@ A piece is published when every schedule row for it is `posted` or `dropped` and
 ## Writing rules
 
 1. **One row per upload the author reports**, never for one that is only scheduled or drafted.
+   A placement on the brand's own sites, blogs or newsletters is written `<platform>:<slug>` in Platform, its URL the page or issue it went into; a podcast episode served from the brand's own feed has its episode page as its URL.
 2. **The URL is the one the author gives.**
    Never guess it, build it from a handle or copy it from another row.
 3. **Disclosure set is what the author actually set:** the platform's AI label on or off, and whether the description line went in.

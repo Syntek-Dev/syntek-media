@@ -52,7 +52,10 @@
 #                        syntek-author's update recreates its own seeds by design.
 #                    18. A media update that removes one platform and one media kind succeeds,
 #                        changes only paths in B_OWNED (and media's answers file), and leaves
-#                        every syntek-author file byte-identical.
+#                        every syntek-author file byte-identical. Each is the project's value
+#                        with the most catalogue paths (_common.sh removable_value; DESIGN.md
+#                        Section 7): podcast and audiobook for author-nonfiction, so the
+#                        removal that deletes a whole gated folder is the one proved.
 #                    19. Media's copy output (without --quiet) carries every _message_after_copy
 #                        line of _common.sh's lists: the shared files and the skip rule, each
 #                        D13 allow, ask and Edit deny, the ELEVENLABS_MCP_BASE_PATH line, the

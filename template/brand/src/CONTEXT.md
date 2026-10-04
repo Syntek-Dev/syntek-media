@@ -26,7 +26,10 @@ brand/src/
 <: endif :><: if 'instagram' in PLATFORMS :>    ├── instagram.md            ← seed: the brand on Instagram
 <: endif :><: if 'linkedin' in PLATFORMS :>    ├── linkedin.md             ← seed: the brand on LinkedIn
 <: endif :><: if 'facebook' in PLATFORMS :>    ├── facebook.md             ← seed: the brand on Facebook
-<: endif :><: if 'podcast' in PLATFORMS :>    ├── podcast.md              ← seed: the brand's podcast feeds
+<: endif :><: if 'podcast' in PLATFORMS :>    ├── podcast.md              ← seed: the brand's podcast shows and where each feed is served
+<: endif :><: if 'website' in PLATFORMS :>    ├── website.md              ← seed: the sites the brand publishes media to
+<: endif :><: if 'blog' in PLATFORMS :>    ├── blog.md                 ← seed: the blogs that carry the brand's media
+<: endif :><: if 'newsletter' in PLATFORMS :>    ├── newsletter.md           ← seed: the lists whose issues carry the brand's media
 <: endif :>    └── overrides.toml          ← seed: confirmed corrections to platforms.toml
 ```
 

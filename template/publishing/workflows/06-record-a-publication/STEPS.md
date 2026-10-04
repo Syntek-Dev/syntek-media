@@ -49,11 +49,25 @@ row. _Mechanical._
 > **Skill:** `prepare-post` · **Guide:** `publishing/docs/reference/posting-and-the-log.md`
 
 For a post only, add a row to `publishing/src/publish-log.md`: the date the author posted it, the
-platform, the deliverable's key, the piece, the URL exactly as the author gave it, the disclosure
-the author reports setting, and the captions (the file uploaded, `burned`, or `none` with the
-reason). _Mechanical._
+platform (`<platform>:<slug>` for a placement), the deliverable's key, the piece, the URL exactly
+as the author gave it (a placement's page or issue; a feed episode's page on the feed's site), the
+disclosure the author reports setting, and the captions (the file uploaded, `burned`, or `none`
+with the reason). _Mechanical._
 
-## 5. Compare what was set with the package
+## 5. Record a feed episode's live feed
+
+> **Skill:** `prepare-post` · **Guide:** `publishing/docs/reference/posting-and-the-log.md`
+
+Only where the post is a feed episode of a show the project serves itself, and only once the
+author reports the feed live: set the episode's row in the show register to `published`, then run
+`python3 toolkit/media.py feed write SHOW --as-of '<the upload's time>' -o` with the show's
+tracked feed (the `<show>.feed.xml` beside its register, in the podcast folder) as its target.
+Compare the result with the upload copy in `publishing/src/renders/`: they must match byte for
+byte, and any difference (the register changed after the upload) is reported to the author at
+once. A refusal is fixed in the register, never in a feed. The podcast-feed guide, where the
+project has it, gives the detail. _Mechanical._
+
+## 6. Compare what was set with the package
 
 > **Skill:** `prepare-post` · **Guide:** `publishing/docs/reference/ai-disclosure.md`
 
@@ -62,14 +76,14 @@ author at once**, with the rule the package rested on. The log keeps what was ac
 author corrects it on the platform, that correction is a dated note, not a rewritten row.
 _Substantive._
 
-## 6. Append corrections; never overwrite
+## 7. Append corrections; never overwrite
 
 > **Skill:** `prepare-post` · **Guide:** `publishing/src/CONTEXT.md`
 
 An earlier schedule or log entry that turns out to be wrong gets a dated note under that file's
 `## Corrections`, saying what was wrong and what is true. History is never edited. _Mechanical._
 
-## 7. Close the piece when all of it is out
+## 8. Close the piece when all of it is out
 
 > **Skill:** `prepare-post` · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
@@ -77,7 +91,7 @@ When every schedule row for the piece is `posted` or `dropped`, and every `poste
 row, set the brief's `status` to `published`. Published is not a gate, so nothing is dated in
 `verified`. A piece with any row still to go stays `scheduled`. _Mechanical._
 
-## 8. Hand back
+## 9. Hand back
 
 > **Skill:** `prepare-post` · **Guide:** `publishing/docs/reference/posting-and-the-log.md`
 

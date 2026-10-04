@@ -17,7 +17,7 @@ Keep one invented, valid answers file per brand kind, so a user has a `--data-fi
   2. A choice added to `PLATFORMS` or `MEDIA_KINDS` is turned on in at least one file, by its value.
   3. Render each file once from a snapshot of the working tree, with `--data-file`, and read the answers file it writes.
   4. Run `bash .github/scripts/generate-all.sh`, and its `--self-test`.
-- **Definition of done:** every file renders, records exactly the questions `copier.yml` asks for its kind, and the three together still turn on all six platforms and all six media kinds.
+- **Definition of done:** every file renders, records exactly the questions `copier.yml` asks for its kind, and the three together still turn on every platform and every media kind of `copier.yml`'s choices.
 
 ## Guardrails
 

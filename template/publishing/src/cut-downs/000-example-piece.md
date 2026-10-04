@@ -100,11 +100,14 @@ No story cuts: no platform this project uses takes one.
 - No on-screen title: the title card ends at 00:00:04.000 on the master, before this cut's In.
 - 19.0 seconds, inside `platform.facebook.story.max_seconds`; captions 32 characters a line, burned, from `000-example-piece--c02.en-GB.srt` retimed from the master's.
 - No thumbnail of its own: `toolkit/data/platforms.toml` has no thumbnail table for a story.
-<: endif :><: endif :><: if 'youtube' in PLATFORMS or 'tiktok' in PLATFORMS or 'linkedin' in PLATFORMS or 'podcast' in PLATFORMS :>
+<: endif :><: endif :><: if 'youtube' in PLATFORMS or 'tiktok' in PLATFORMS or 'linkedin' in PLATFORMS or 'podcast' in PLATFORMS or 'website' in PLATFORMS or 'blog' in PLATFORMS or 'newsletter' in PLATFORMS :>
 ## Platforms with no cut
 
 <: if 'youtube' in PLATFORMS :>- **youtube:** none, because the whole piece is already its Short, and a shorter Short of the same lines on the same channel would be a near-identical upload.
 <: endif :><: if 'tiktok' in PLATFORMS :>- **tiktok:** none, because the whole piece is already its video, and a second, shorter upload of the same lines would be a near-identical batch.
 <: endif :><: if 'linkedin' in PLATFORMS :>- **linkedin:** none, because the whole piece goes to the feed as its vertical video, and thirty seconds needs no shorter version there.
 <: endif :><: if 'podcast' in PLATFORMS :>- **podcast:** none, because the feed carries episodes, and a 30-second clip with no episode around it is not one.
+<: endif :><: if 'website' in PLATFORMS :>- **website:** none, because no page places this piece, and a silent loop for a page would need a landscape master.
+<: endif :><: if 'blog' in PLATFORMS :>- **blog:** none, because no post carries this piece.
+<: endif :><: if 'newsletter' in PLATFORMS :>- **newsletter:** none, because an issue shows a preview image or GIF, which a thumbnail brief makes, never a cut.
 <: endif :><: endif :>

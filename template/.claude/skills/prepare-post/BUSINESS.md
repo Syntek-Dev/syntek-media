@@ -10,9 +10,9 @@ belongs to, the claims a post may make, and the people it may show.
 - **Procedures:** `publishing/workflows/05-prepare-a-post/` and
   `publishing/workflows/06-record-a-publication/`.
 - **The social plan:** syntek-author's social-media family, on by default in a business project.
-  Where present, its social media plan and its content calendars (in its library layer's
-  social-media folder) own cadence, tone, the call to action, hashtags, bios and text-only posts;
-  read the calendar, and never edit it.
+  Where present, its plan, content calendars and operating procedure (its library layer's
+  social-media folder) own what each sets per platform, bios and text-only posts included, and
+  often a blog's cadence; read the calendar, and never edit any of them.
 - **Profiles:** `brand/src/platforms/<platform>.md`, holding only delivery facts while the social
   plan is present, and all of it otherwise.
 - **Written voice:** syntek-author's brand voice, where present (by default
@@ -30,9 +30,12 @@ belongs to, the claims a post may make, and the people it may show.
   its evidence; a paid partnership, gifted product or affiliate link is labelled as one; a
   testimonial is genuine, attributed and used with the customer's recorded permission. The copy
   follows the brand voice's mechanics, so no em dash goes out where it forbids them.
-- **Step 7 — also** a client named, tagged or shown, and a client's logo, needs its row `cleared`
+- **Step 5 — also** a placement on a second site the business writes for, owned by a partner,
+  cites the dated agreement in that site's website-profile row (invented: `website:second-site`,
+  'partner agreement, approved 02/10/2026'); without one, the placement waits.
+- **Step 9 — also** a client named, tagged or shown, and a client's logo, needs its row `cleared`
   for promotional use before the post is `ready`.
-- **Step 9 — also** name, in the hand-over, who approves posts, where the social media plan's
+- **Step 11 — also** name, in the hand-over, who approves posts, where the social media plan's
   governance names someone other than the author.
 
 ## Domain rules

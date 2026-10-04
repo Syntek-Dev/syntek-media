@@ -30,13 +30,20 @@ pattern and are not files in this project.
 | `<piece>.ch00.md` / `<piece>.ch99.md` | 012-….ch00.md | an audiobook's opening / closing credits, beside its chapter register (`ch00` and `ch99` are the credit rows) |
 | `<piece>.sNN.scratch.wav` / `<piece>.chNN.pNN.scratch.wav` | 003-….s04.scratch.wav | an espeak-ng scratch track (approximate; never a take), in its generated folder |
 | `<stem>[.<in>-<out>].wav` | talk-cam-a.wav | audio extracted for speech-to-text or alignment, in `production/src/renders/` |
+| `<stem>.<platform>-<format>.<ext>` | 003-….blog-featured-image.avif | an image `media.py image` encoded or framed (`jpg`, `png`, `webp`, `avif`), in `publishing/src/renders/`; `<stem>` is the source's name up to its first `.` |
+| `<piece>[--cNN].newsletter-preview-gif.gif` | 003-…--c03.newsletter-preview-gif.gif | a GIF preview, made by `cut` from its thumbnail brief, in `publishing/src/renders/` |
+| `<piece>[--cNN].transcript.en-GB.md` | 003-…--c01.transcript.en-GB.md | a published transcript of the whole piece or one cut, in `publishing/src/captions/` |
+| `<show>` / `<show>.toml` / `<show>.feed.xml` | harbour-lane-talks.feed.xml | a podcast show's frozen slug / its register / its feed as last published, both tracked in the podcast folder of `publishing/src/`; the same `<show>.feed.xml` in `publishing/src/renders/` is the upload copy |
+| `<piece>.podcast-feed-audio.mp3` / `<piece>.chapters.json` | 003-….chapters.json | a feed episode's audio (encoded at M5, tagged at M7) / its JSON chapters, in `publishing/src/renders/` |
+| `<platform>:<slug>` | website:studio | a placement on the brand's own channels: the schedule's and the log's Platform cell, and a package H2's qualifier; a slug is frozen once a row uses it |
 | `transcript.md` | — | a recorded piece's transcript, in its piece folder |
 | `F0001` · `RR0001` · `cNN` · `sNN` · `chNN` · `pNN` | — | footage, rights, cut, segment, chapter and part IDs: permanent |
 | `workflows/NN-verb-first-name/`, `workflows/local/NN-verb-first-name/` | 02-make-a-voiceover/ | a template procedure (numbers frozen) / the author's own |
 | `kebab-case.md` in `docs/`; `SCREAMING-SNAKE-CASE.md` | writing-for-the-ear.md; STEPS.md | a guide, named for its question; structural files and sub-documents |
 
 Dates in filenames are DD-MM-YYYY. A name other files cite (a piece, a skill, a workflow number,
-an ID) is never changed without a migration. No tracked media file ends in `.log`, `.out`, `.aux`,
+an ID, a show's slug) is never changed without a migration; a corrected episode file is published
+under a new name (`-v2` before its extension) while its render name stays. No tracked media file ends in `.log`, `.out`, `.aux`,
 `.toc`, `.tmp`, `.bak` or `.orig`: syntek-author's root ignore rules, where present, would hide it.
 
 ---

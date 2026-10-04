@@ -4,7 +4,7 @@
 #
 #                   A template defect is invisible until somebody generates, and whoever
 #                   generates is not whoever broke it (SB rules 42–43). syntek-media renders
-#                   three brand kinds from one tree, each with six platforms and six media kinds
+#                   three brand kinds from one tree, each with nine platforms and six media kinds
 #                   to choose from, so a mistake in one gate shows only in the render that opens
 #                   it — and the render nobody makes is the one that rots. So every audit that
 #                   reads a render reads ALL of them, and the intended path — media applied over
@@ -14,8 +14,11 @@
 #                     defaults     only the answers that have no default
 #                     all          every platform and every media kind
 #                     minimal      one platform, one media kind, SEED_EXAMPLES=false
-#                                  (business [linkedin]/[long-video], author-fiction
-#                                  [tiktok]/[trailer], author-nonfiction [podcast]/[audiobook])
+#                                  (business [blog]/[long-video], author-fiction
+#                                  [tiktok]/[trailer], author-nonfiction [podcast]/[audiobook]).
+#                                  business ships blog WITHOUT website (DESIGN.md Section 7,
+#                                  D53), so doc-references.sh check 1 catches a file of that
+#                                  render backticking a path only website opens.
 #                     over-author  syntek-author's matching variant (business → business,
 #                                  author-fiction → fiction, author-nonfiction → theology)
 #                                  rendered and committed, then media copied in WITHOUT
@@ -87,7 +90,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 
 OUT="${TMPDIR:-/tmp}/syntek-media-render"
 ONLY=""
-JOBS=4
+JOBS="${SM_RENDER_JOBS:-4}"   # SM_RENDER_JOBS=1 renders one at a time (a loaded machine; run-all.sh passes it through)
 LIST=false
 SELF_TEST=false
 AUTHOR_ARG=""
@@ -104,7 +107,7 @@ Usage: generate-all.sh [OUTDIR] [--root DIR] [--author DIR] [--only NAME[,NAME�
   --author DIR  The syntek-author repository for the over-author renders
                 (default: $SYNTEK_AUTHOR_DIR, else ../syntek-author; none = a named SKIP)
   --only LIST   Render only these, e.g. business--defaults,author-fiction--over-author
-  --jobs N      Renders to run at once (default 4)
+  --jobs N      Renders to run at once (default 4, or $SM_RENDER_JOBS)
   --list        Print the render names and exit
   --quiet       Print findings only (SKIP lines are always printed)
   --self-test   Prove the checks still fire against fixture templates
@@ -139,7 +142,7 @@ ALL_KINDS="[${SM_MEDIA_KINDS// /,}]"
 RENDERS=$(cat <<EOF
 business--defaults
 business--all                   PLATFORMS=$ALL_PLATFORMS MEDIA_KINDS=$ALL_KINDS
-business--minimal               PLATFORMS=[linkedin] MEDIA_KINDS=[long-video] SEED_EXAMPLES=false
+business--minimal               PLATFORMS=[blog] MEDIA_KINDS=[long-video] SEED_EXAMPLES=false
 author-fiction--defaults
 author-fiction--all             PLATFORMS=$ALL_PLATFORMS MEDIA_KINDS=$ALL_KINDS
 author-fiction--minimal         PLATFORMS=[tiktok] MEDIA_KINDS=[trailer] SEED_EXAMPLES=false

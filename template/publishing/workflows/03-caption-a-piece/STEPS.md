@@ -23,10 +23,14 @@ the ordering is load-bearing — and tick `CHECKLIST.md` as you go.
 > **Skill:** `captions` · **Guide:** `publishing/docs/reference/captions.md`
 
 From the brief and the cut-down plan, list every deliverable with its key. Each one with speech
-and picture needs captions. An audiobook, a podcast whose brief asks for no transcript, and a
-deliverable without speech are `n/a`: note the reason now. Note which deliverables are burned
-(their table's `caption_formats` is empty, or the brief asks) and which take a sidecar.
-_Substantive._
+and picture needs captions. A feed episode (`podcast.feed_audio`) needs its master-timed `.vtt`
+and its published transcript. Every piece or cut with speech placed on a site of the website or
+blog profile, whoever owns it, needs its published transcript, and every self-hosted video there
+its `.vtt` sidecar, never burned: read the package or the brief for where each goes. What M6's
+`n/a` list in the ladder guide names (an audiobook, a podcast with neither, a deliverable without
+speech, such as a silent loop, an image or a GIF) is `n/a`: note the reason now. Note which
+deliverables are burned (their table's `caption_formats` is empty, or the brief asks) and which
+take a sidecar. _Substantive._
 
 ## 2. Choose the timing route
 
@@ -100,10 +104,27 @@ inside a name. _Substantive._
 A burned deliverable is burned with
 `python3 toolkit/media.py captions burn <render> <srt> --deliverable KEY`, or re-cut with its
 captions through `publishing/workflows/02-cut-for-a-platform/`. A sidecar deliverable keeps its
-SRT, with `python3 toolkit/media.py captions vtt <srt> -o <vtt>` where its platform takes WebVTT. A
+SRT, with `python3 toolkit/media.py captions vtt <srt> -o <vtt>` where its platform takes WebVTT:
+every self-hosted video on a profile site, and a feed episode, whose `.vtt` is the master's. A
 burn that fails on the caption font is fixed at the font, never accepted. _Mechanical._
 
-## 8. Watch a burned preview
+## 8. Make the published transcripts
+
+> **Skill:** `captions` · **Guide:** `publishing/docs/reference/captions.md`
+
+For the whole piece, and for each distinct cut placed on a profile site, write the transcript of
+exactly what that page plays from the script or the recorded transcript, with `-o`:
+
+```bash
+python3 toolkit/media.py captions transcript <script or transcript> -o publishing/src/captions/<piece>.transcript.en-GB.md
+python3 toolkit/media.py captions transcript <script or transcript> --lines <beat.line-beat.line> -o publishing/src/captions/<piece>--cNN.transcript.en-GB.md
+```
+
+Then, with the author, describe in words what the picture carries and the words do not (on-screen
+text is kept by the command), and fix only a mis-transcription. The author approves each one.
+_Substantive._
+
+## 9. Watch a burned preview
 
 > **Skill:** `captions` · **Guide:** `publishing/docs/reference/captions.md`
 
@@ -111,19 +132,21 @@ With the author, watch every burned deliverable, and one burned preview of each 
 in time with the speech, inside the safe zone, readable at the size it will be seen. Alignment is
 a heuristic; this is where its misses are caught. _Substantive._
 
-## 9. Record the gate
+## 10. Record the gate
 
 > **Skill:** `captions` · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
-When every deliverable that needs captions has a checked file, burned where it must be, and the
-author has seen them, set the brief's `status` to `captioned` and date M6 in `verified`; where
-nothing needed captions, record M6 as `n/a` with the reason from step 1. _Mechanical._
+When every deliverable that needs captions has a checked file, burned where it must be, every
+published transcript step 1 listed is approved, and the author has seen them, set the brief's
+`status` to `captioned` and date M6 in `verified`; where nothing needed captions, record M6 as
+`n/a` with the reason from step 1. _Mechanical._
 
-## 10. Hand back
+## 11. Hand back
 
 > **Skill:** `captions` · **Guide:** `publishing/docs/reference/captions.md`
 
 Report each caption file and what it is timed to, which deliverables are burned and which carry a
-sidecar, every finding and how it was decided, and any `verify` key relied on. Point at
+sidecar, each published transcript and the page it serves, every finding and how it was decided,
+and any `verify` key relied on. Point at
 `publishing/workflows/04-brief-a-thumbnail/` and `publishing/workflows/05-prepare-a-post/`.
 _Substantive._

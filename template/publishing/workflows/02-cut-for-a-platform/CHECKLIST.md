@@ -27,13 +27,13 @@ model: opus
 
 **Before rendering**
 
-- [ ] Every deliverable listed: each full-length key of the brief and each key of each `approved` cut. · _sonnet_
+- [ ] Every deliverable listed: each full-length key of the brief and each key of each `approved` cut, a silent loop included; no poster, image or GIF preview (they are the thumbnail brief's). · _sonnet_
 - [ ] Every preset read with `media.py presets`; overrides, `verify` keys and the platform guide's traps noted. · _sonnet_
 - [ ] **Burned or sidecar decided per deliverable;** only caption files that pass `captions check --script` passed to the cut. · _opus_
 
 **Rendering**
 
-- [ ] Full-length deliverables encoded with `media.py encode` (or `still-video` for an audio piece on a video platform). · _sonnet_
+- [ ] Full-length deliverables encoded with `media.py encode` (or `still-video` for an audio piece on a video platform); a feed episode's `podcast.feed_audio` encoded untagged, from the audio master or a talk's picture master. · _sonnet_
 - [ ] Each approved cut cut in one pass with `media.py cut`, In, Out and Frame from the plan. · _sonnet_
 - [ ] **Every output exited 0;** each exit 1 diagnosed and fixed at its source, each exit 2 named with what it blocks. · _opus_
 - [ ] Every output probed with `media.py probe`; nothing hand-edited, nothing stream-copied. · _sonnet_

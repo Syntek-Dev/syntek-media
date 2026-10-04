@@ -10,6 +10,12 @@ approved: ""
      The brief's synthetic_voice, ai_visuals and music are all none, so every Disclosure bullet records that no label is set and no line is needed. -->
 <: if 'podcast' in PLATFORMS :>
 The podcast feed takes nothing from this piece: it has no episode, and a 30-second clip is not one.
+<: endif :><: if 'website' in PLATFORMS :>
+No page of the brand's websites places this piece: a 30-second vertical video is made for feeds, not for a page.
+<: endif :><: if 'blog' in PLATFORMS :>
+No blog post carries this piece: the brief places it in none.
+<: endif :><: if 'newsletter' in PLATFORMS :>
+No newsletter issue shows this piece: an issue's preview links to a page that plays the piece, and this one has none.
 <: endif :><: if 'youtube' in PLATFORMS :>
 ## youtube.short
 
@@ -148,6 +154,12 @@ The podcast feed takes nothing from this piece: it has no episode, and a 30-seco
      The brief's synthetic_voice, ai_visuals and music are all none, so every Disclosure bullet records that no label is set and no line is needed. -->
 <: if 'podcast' in PLATFORMS :>
 The podcast feed takes nothing from this piece: it has no episode, and a 30-second clip is not one.
+<: endif :><: if 'website' in PLATFORMS :>
+No page of the brand's websites places this piece: a 30-second vertical video is made for feeds, not for a page.
+<: endif :><: if 'blog' in PLATFORMS :>
+No blog post carries this piece: the brief places it in none.
+<: endif :><: if 'newsletter' in PLATFORMS :>
+No newsletter issue shows this piece: an issue's preview links to a page that plays the piece, and this one has none.
 <: endif :><: if 'youtube' in PLATFORMS :>
 ## youtube.short
 
@@ -286,6 +298,12 @@ The podcast feed takes nothing from this piece: it has no episode, and a 30-seco
      The brief's synthetic_voice, ai_visuals and music are all none, so every Disclosure bullet records that no label is set and no line is needed. -->
 <: if 'podcast' in PLATFORMS :>
 The podcast feed takes nothing from this piece: it has no episode, and a 30-second clip is not one.
+<: endif :><: if 'website' in PLATFORMS :>
+No page of the brand's websites places this piece: a 30-second vertical video is made for feeds, not for a page.
+<: endif :><: if 'blog' in PLATFORMS :>
+No blog post carries this piece: the brief places it in none.
+<: endif :><: if 'newsletter' in PLATFORMS :>
+No newsletter issue shows this piece: an issue's preview links to a page that plays the piece, and this one has none.
 <: endif :><: if 'youtube' in PLATFORMS :>
 ## youtube.short
 

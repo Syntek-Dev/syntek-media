@@ -26,7 +26,9 @@ standing in for the brand's look once it has them.
   2. Fix the copy's stylesheet link: from either folder it climbs three folders,
      ../../../brand/src/design-system/tokens.css.
   3. Write the copy's words with the author and remove its `AUTHOR TO CONFIRM` flag.
-  4. Run `uv run toolkit/card.py check` on the copy, then render it at the deliverable's size.
+  4. Run `uv run toolkit/card.py check` on the copy, then render it at the deliverable's size
+     (`--deliverable KEY`, so `:root` carries `data-deliverable`); a newsletter GIF's overlay
+     renders with `--transparent`.
 - **Definition of done:** the copy passes `card.py check`, and its PNG renders at the size asked
   with nothing fetched over the network.
 
@@ -40,6 +42,10 @@ standing in for the brand's look once it has them.
   `card.py` aborts every outside request and reports it.
 - **Keep the brand's classes.** These layouts use the same structure and classes as the brand's
   seeded components, so a piece moves from one to the other without rewriting its words.
+- **Keep the play-button hook.** The element carrying `data-play-button` and its rules (hidden
+  unless `:root[data-deliverable^="newsletter."]`; under `data-transparent` only it and the words
+  show) are what a newsletter's preview image and GIF overlay need; a piece's copy of a brand
+  layout that lacks them gets them from `thumbnail.html`, unchanged.
 
 ## Output & naming
 

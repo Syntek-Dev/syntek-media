@@ -40,5 +40,10 @@ approved transcript.
 - **Written by `captions`:** `<piece>[--cNN|.<FID>][.<platform>-<format>].en-GB.srt`, with a
   `.vtt` of the same stem where a platform needs one; `en-GB` always; timecodes in SRT's comma
   form inside the file only.
+- **Written by `captions`, with the author:** `<piece>[--cNN].transcript.en-GB.md`, a published
+  transcript of exactly what a page plays (the whole piece, or one cut placed on a site of the
+  website or blog profile), or of a feed episode: one sentence per line, a paragraph per beat,
+  speaker names only where two or more people speak, and a recorded piece's 'As recorded on
+  DD/MM/YYYY' line; what the picture carries and the words leave out is described by hand.
 - **Generated:** burned deliverables go to `publishing/src/renders/`, never here.
 - **Not here:** the script or transcript the words come from (`scripts/src/pieces/`).

@@ -1,10 +1,13 @@
 # CONTEXT.md — publishing/src/thumbnails/
 
-The thumbnails and covers of every piece, as tracked source: a brief in words, and an HTML layout
-copied from the brand's own thumbnail component and filled for this piece, or for one cut. The
-PNGs a platform receives are rendered from these files by `uv run toolkit/card.py` into
-`publishing/src/renders/`, so a thumbnail can always be remade, and a change to the brand's tokens
-reaches it on the next render.
+The thumbnails, covers and other images of every piece, as tracked source: a brief in words, and
+an HTML layout copied from the brand's own thumbnail component and filled for this piece, or for
+one cut. Every image deliverable is briefed here: a thumbnail or cover, a podcast episode's art, a
+web page's poster and share image, a blog's featured image, a newsletter's preview image and its
+GIF preview. The files a platform or page receives are rendered from these by
+`uv run toolkit/card.py`, encoded or framed by `python3 toolkit/media.py image`, and, for the GIF,
+cut by `media.py cut` under the layout's overlay, all into `publishing/src/renders/`, so every
+image can be remade, and a change to the brand's tokens reaches it on the next render.
 
 ## Directory Tree
 
@@ -22,11 +25,14 @@ publishing/src/thumbnails/
 - `<piece>[--cNN].md` — a brief, written by `thumbnail-brief` with the author. **The shape is
   fixed by `publishing/docs/reference/thumbnails.md`**: frontmatter `piece`, `cut`, `deliverables`,
   `html`, `approved`; then `## Promise` · `## Words on the image` · `## Image` · `## Variants` ·
-  `## Checks`. The skeleton is fenced in this folder's `CLAUDE.md`.
+  `## Checks`. `## Image` records every moment taken from a render: each poster's `--at` on its
+  video's render, and the GIF's In and Out on the master and what its first frame shows. The
+  skeleton is fenced in this folder's `CLAUDE.md`.
 - `<piece>[--cNN].html` — the layout, a copy of `brand/src/design-system/previews/thumbnail.html`
   (or of `toolkit/templates/thumbnail.html` where the brand has none), with its stylesheet link
   fixed to reach `brand/src/design-system/tokens.css` from this folder, by relative path. It loads
-  nothing over the network.
+  nothing over the network. For a newsletter image it carries the play-button hook, an element
+  with `data-play-button`, added to the copy where the brand's layout lacks it.
 - A generated project may hold one worked example brief and layout, where they were kept; delete
   them, with the other example files, once you no longer need them, and none of them will come
   back.

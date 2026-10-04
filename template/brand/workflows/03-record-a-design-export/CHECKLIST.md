@@ -29,6 +29,7 @@ model: opus
 - [ ] Any replaced export's row marked superseded with the date and the new file's name. · _sonnet_
 - [ ] For a large file, `git check-attr filter` reports `lfs`. · _sonnet_
 - [ ] `python3 toolkit/media.py check` reports nothing about the file. · _sonnet_
+- [ ] A show's cover encoded with `media.py image` to `podcast.cover` and `podcast.id3_cover`, and a partner-branded image to its site's key; never by hand. · _sonnet_
 - [ ] Handed back: path, storage, row, anything superseded, rights still needed. · _opus_
 
 ## Done When

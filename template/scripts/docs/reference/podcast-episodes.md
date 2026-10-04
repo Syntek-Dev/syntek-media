@@ -11,9 +11,10 @@ model: opus
 
 **What it is.** An episode is a piece made to be heard, usually through earphones and often while
 the listener does something else. It is `kind: podcast` with `picture: false`, so its M3 is
-`n/a — no picture`, and it needs captions only where its brief asks for a transcript. It is
-either scripted (a solo episode, a narrated feature) or recorded (a conversation, an interview,
-a talk), and either way it is cut to an audio master.
+`n/a — no picture`. It needs captions only where its brief lists `podcast.feed_audio`, the
+brand's own feed (its published transcript and master-timed WebVTT, at M6), or asks for a
+transcript. It is either scripted (a solo episode, a narrated feature) or recorded (a
+conversation, an interview, a talk), and either way it is cut to an audio master.
 
 ## The shape of an episode
 
@@ -47,7 +48,9 @@ The master is audio only: an edit decision list with `size = ""`, cut from the r
 or the voiceover segments, under a music bed that is trimmed and faded. Its loudness target is
 read from the podcast audio table in `toolkit/data/platforms.toml`, never written here. An
 episode that also goes to a video platform goes as a still under the audio, made with
-`python3 toolkit/media.py still-video`.
+`python3 toolkit/media.py still-video` at `youtube.long`'s size, or, cut from a talk another piece
+recorded, as that talk's upload. A talk published whole as an episode needs no episode piece: its
+own master serves, and the podcast-feed workflow takes it into the feed, where the project has it.
 
 ## How we apply it here
 

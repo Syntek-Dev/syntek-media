@@ -44,24 +44,30 @@ Grouped by what each script reads:
   `scrub.sh`, `dev-isolation.sh`, `shipped-seeds.sh`, `skill-conformance.sh`.
 - **The renders** that `generate-all.sh` produces (twelve, named `<kind>--<profile>` because the
   kinds carry a hyphen: business, author-fiction and author-nonfiction × defaults, all, minimal,
-  and over-author): `shipped-brands.sh`, `byte-identity.sh` (standalone trees only),
-  `doc-references.sh`, `toolkit-smoke.sh`, and `docs-pairing.sh`, `shipped-seeds.sh`,
-  `skill-conformance.sh`, `line-cap.sh` again. On an over-author tree each reads
-  `<render>.owned`, the files media's copy added, and checks only those.
+  and over-author; `business--minimal` ships `blog` without `website`, so a file that backticks a
+  path only `website` opens fails there): `shipped-brands.sh`, `byte-identity.sh` (standalone
+  trees only), `doc-references.sh`, `toolkit-smoke.sh`, and `docs-pairing.sh`, `shipped-seeds.sh`,
+  `skill-conformance.sh`, `line-cap.sh` again. On an over-author tree each reads `<render>.owned`,
+  the files media's copy added, and checks only those.
 - **Their own scratch projects**: `update-test.sh` (fifteen checks per brand kind: author work
-  kept, template work delivered, a `BRAND_KIND` change refused, a removed platform taking its two
-  files) and `coexist-test.sh` (twenty-one checks: the real syntek-author first, then media, both
-  updated twice, the other order, a removed platform and media kind, syntek-author's own
+  kept, template work delivered, a `BRAND_KIND` change refused, a removed platform taking exactly
+  the files it generated — the one with the most catalogue paths, so `podcast` where a project has
+  it, with a fixture show register and saved feed that must survive in its folder) and
+  `coexist-test.sh` (twenty-one checks: the real syntek-author first, then media, both updated
+  twice, the other order, a removed platform and media kind, syntek-author's own
   `doc-references.sh` on the composite). Their self-tests run the whole flow against the two
   fixture templates in `_common.sh` (a minimal syntek-media and a minimal syntek-author), so they
   prove the harness even while the real template is incomplete. `coexist-test.sh` and the
   over-author renders need a syntek-author checkout (`--author DIR`, `SYNTEK_AUTHOR_DIR`, or
   `../syntek-author`) and SKIP, named, without one.
 - **`toolkit-smoke.sh`** copies each render into a scratch Git repository and runs its toolkit for
-  real on clips, tones and stills made with `ffmpeg -f lavfi` — never an ElevenLabs call. It
-  records what each step did in a results file and judges that; its self-test writes a clean
-  results file at run time and mutates one fact per probe, so it needs no ffmpeg or Chromium. A
-  missing tool is a named SKIP; a step a render does not need (no audiobook folder) is n/a.
+  real on clips, tones and stills made with `ffmpeg -f lavfi` — never an ElevenLabs call; since
+  0.2.0 that includes `image` in every format, the newsletter GIF read from its own loop
+  extension, the silent loop and web video, the podcast feed end to end offline on a fixture show,
+  and the published transcript (checks 15–19). It records what each step did in a results file and
+  judges that; its self-test writes a clean results file at run time and mutates one fact per
+  probe, so it needs no ffmpeg or Chromium. A missing tool is a named SKIP; a step a render does
+  not need (no audiobook folder) is n/a.
 - **`_common.sh`** is the single reader of `copier.yml` (list items, registered keys, question
   choices, gated paths, gate negation with list membership) and the single transcription of
   `DESIGN.md` (the skill catalogue, every gated path, the seeds, the examples, the ten shared

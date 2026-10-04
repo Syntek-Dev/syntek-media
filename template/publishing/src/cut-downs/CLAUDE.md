@@ -56,5 +56,8 @@ approved: ""                            # DD/MM/YYYY once the author agrees the 
 <Opening words, on-screen title, caption width, its own thumbnail or not, and why this moment stands alone; one sentence per line.>
 ```
 
+- **A silent loop** (`website.hero_loop`) is a row like any cut, its Lines `—` and its note naming
+  any cut it shares frames with; the rules that a cut stands alone in whole sentences and differs
+  from every other cut do not bind it.
 - **Kept current by skills:** each row's Status (`planned · approved · rendered · checked`).
 - **Generated:** nothing here; the cuts are renders in `publishing/src/renders/`.

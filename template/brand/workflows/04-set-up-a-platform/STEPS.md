@@ -27,23 +27,31 @@ project's questions through Copier (`.claude/rules/syntek-media/06-global-rules.
 which brings its profile and its publishing guide; never make a profile by hand. Read the profile
 as it stands. _Substantive._
 
-## 2. Look for the social media plan
+## 2. Look for the written side's documents
 
 > **Skill:** none · **Guide:** `brand/docs/reference/platform-profiles.md`
 
 Where syntek-author's social-media family is present (check the companion's
-`.claude/skills/<skill>/SKILL.md` for social-media-documents, and ask the author where the plan
-is kept), read its social media plan and content calendar for this platform. Where the plan
-covers cadence, tone, call to action, hashtags and bios, the profile records only the account and
-the deliverables used, and its other sections say the plan owns them. Where no plan is present,
-say so: the profile holds all of it. _Substantive._
+`.claude/skills/<skill>/SKILL.md` for social-media-documents, and ask the author where its
+documents are kept), read its social media plan, content calendar and any operating procedure for
+this platform, document by document. A document covers the platform when it names it with a
+cadence; whatever any of them sets (cadence, tone, call to action, hashtags, bios) it owns, and
+the profile's section cites it in prose. The profile holds the account (or the sites or lists)
+and the deliverables used, and only what no document sets. Where none is present, say so: the
+profile holds all of it. _Substantive._
 
 ## 3. Record the account
 
 > **Skill:** none · **Guide:** `brand/docs/reference/platform-profiles.md`
 
-Write the handle and URL (for a podcast, the show's name, its feed and its listings) exactly as
-the author gives them, and remove the section's flag. Never guess one. _Mechanical._
+Write the handle and URL exactly as the author gives them, and remove the section's flag; never
+guess one. For a podcast, one row per show: its register's slug, its name, where its feed is
+served and its listings. For the website and blog profiles, one row per site under `## Sites`, and
+for the newsletter profile one row per list under `## Lists`: a kebab slug the author agrees
+(frozen once a schedule row uses it), the domain or sender as given, the owner, and for a site or
+list the brand does not own, the dated record of its agreement in Agreement, recorded once (a blog
+row reads 'see website' where the website profile lists the site). No subscriber, count, password
+or account ID goes in a row. _Mechanical._
 
 ## 4. Choose the deliverables used
 
@@ -58,7 +66,7 @@ relies on it. _Substantive._
 
 > **Skill:** none · **Guide:** `brand/docs/reference/platform-profiles.md`
 
-Only where no social media plan owns them: offer options with a recommendation for how often and
+Only where no written-side document sets them: offer options with a recommendation for how often and
 when the brand posts here (times in the project's time zone, <%TIMEZONE%>), how its voice shifts
 here, and what a viewer or listener is asked to do. Keep the tone consistent with
 `brand/src/voice/voice.md` and the written voice. Write what the author decides, and remove each
@@ -68,7 +76,8 @@ flag. _Substantive._
 
 > **Skill:** none · **Guide:** `brand/docs/reference/platform-profiles.md`
 
-Only where no social media plan owns them: agree named sets with the author, each for a kind of
+Only where no written-side document sets them, and only on a platform that takes hashtags (the
+brand's own sites, blogs and newsletters take none): agree named sets with the author, each for a kind of
 piece. Count each set against the platform's hashtag keys in `toolkit/data/platforms.toml`, cited
 by key, never by number; `prepare-post` warns above them. _Substantive._
 
@@ -95,6 +104,7 @@ syntek-author's 00-project.md Memory headings map it to, where present. _Mechani
 
 > **Skill:** none · **Guide:** `brand/docs/reference/platform-profiles.md`
 
-Report what the profile now holds, what it cites from the social media plan, any override added
+Report what the profile now holds, what it cites from the written side's documents, each site's
+or list's agreement still to come, any override added
 and its source, any `verify` key a deliverable relies on, and anything still flagged.
 _Substantive._

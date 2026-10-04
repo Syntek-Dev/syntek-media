@@ -1,6 +1,6 @@
 # syntek-author-names.txt — the names syntek-media never takes (DESIGN.md D27).
 #
-# Baseline: syntek-author af7467c plus working tree, read 04/10/2026.
+# Baseline: syntek-author 9a65902 plus working tree, read 04/10/2026.
 # Written only by: bash .github/scripts/coexist-test.sh --refresh-names --author DIR
 # Never edit by hand. shipped-brands.sh check 11 and skill-conformance.sh check 20 read it
 # on every run; coexist-test.sh check 20 fails when syntek-author moves past it.

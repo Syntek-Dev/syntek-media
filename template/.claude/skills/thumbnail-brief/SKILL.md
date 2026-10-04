@@ -1,16 +1,16 @@
 ---
 name: thumbnail-brief
 description: >-
-  Brief, lay out and render the thumbnails and covers of one piece, one per cut where a cut needs
-  its own: agree the promise and the few words on the image, copy the brand's thumbnail layout (the
-  toolkit's fallback where the brand has none), set the words and a tracked image, and check and
-  render it with card.py at each thumbnail deliverable's size, or at the video's size, flagged
-  VERIFY, where a platform publishes none. Checks legibility at small size, the safe zone and the
-  grid crop of platform.instagram.grid_aspect. Never promises what the piece does not deliver, and
-  never edits the brand's layout or tokens. Use when the author says 'make a thumbnail for the
-  explainer', 'brief the cover for this reel', 'we need episode art', 'a thumbnail for each clip'
-  or 'will the title survive the grid?'. Not the title, description or hashtags (`prepare-post`).
-  Not a title or end card inside the video (`cut-for-platform`).
+  Brief, lay out and render the thumbnails, covers and other images of one piece, one per cut where
+  a cut needs its own: agree the promise and the few words on the image, copy the brand's thumbnail
+  layout, set the words and a tracked image, render it with card.py at each deliverable's size (the
+  video's, flagged VERIFY, where a platform publishes none), and encode posters, share, featured and
+  newsletter images and the GIF preview with media.py. Checks legibility at small size, the safe
+  zone and the grid crop of platform.instagram.grid_aspect. Never edits the brand's layout or
+  tokens. Use when the author says 'make a thumbnail for the explainer', 'brief the cover for this
+  reel', 'we need episode art', 'a poster for the website video', 'make the newsletter GIF' or 'will
+  the title survive the grid?'. Not the title, description or hashtags (`prepare-post`). Not a card
+  inside the video (`cut-for-platform`).
 ---
 
 # Skill: Thumbnail Brief (<%BRAND_NAME%>)
@@ -37,7 +37,8 @@ thumbnail before it is used.
   follow that procedure instead: the author's local procedure replaces the template's
   (`run-media-workflow`, step 2).
 - `publishing/docs/reference/thumbnails.md` — what a thumbnail and a cover must do, thumbnails per
-  cut, and platforms with no thumbnail table.
+  cut, platforms with no thumbnail table, and a piece's other images: posters, share, featured and
+  preview images and the GIF preview (each channel's keys in its own guide, where it ships).
 - `brand/docs/reference/the-brand-kit.md` — the tokens, the required tokens, the fonts, and the
   two layout components the pieces copy.
 - `publishing/src/thumbnails/CLAUDE.md` — the brief's format, and the names of a brief and its
@@ -62,8 +63,12 @@ it never puts on one.
    thumbnail gets its own brief, `<piece>--cNN`; the rest share the piece's. For each brief, list
    the thumbnail or cover deliverables it serves from the platforms' tables in
    `toolkit/data/platforms.toml`; a platform with no thumbnail table takes its video deliverable's
-   key, and that render is flagged `VERIFY`. Where a brief or layout already exists, this is a
-   revision: never overwrite it without the author's word.
+   key, and that render is flagged `VERIFY`. **Every other image of the piece is this skill's
+   too**: a poster for each self-hosted video, a share image, a blog's featured image, a
+   newsletter's preview image or GIF preview, for each placement the brief or the post package
+   names on the brand's own sites, blogs and newsletters. A show's cover is never a piece's: it is
+   a design export (`brand/workflows/03-record-a-design-export/`). Where a brief or layout already
+   exists, this is a revision: never overwrite it without the author's word.
    *Complete when:* every brief to write is named with its deliverables, and every existing file
    is named.
 
@@ -89,9 +94,11 @@ it never puts on one.
 4. **Agree the brief.** Propose, for each brief, the five parts its format gives:
    `## Promise` (what the viewer gets, in one sentence the piece keeps), `## Words on the image`
    (the fewest words that carry the promise, adding to the title rather than repeating it),
-   `## Image` (what is shown and where it comes from), `## Variants` (only those the author asks
-   for) and `## Checks` (filled at step 8). Wait for the author's answer, then write
-   `publishing/src/thumbnails/<piece>[--cNN].md` with its frontmatter, `approved` left empty.
+   `## Image` (what is shown and where it comes from, with every moment taken from a render: each
+   poster's `--at` on its video's render, the GIF's In and Out on the master and what its first
+   frame shows), `## Variants` (only those the author asks for) and `## Checks` (filled at
+   step 8). Wait for the author's answer, then write `publishing/src/thumbnails/<piece>[--cNN].md`
+   with its frontmatter, `approved` left empty.
    *Complete when:* each brief is written as the author agreed it, one sentence per line.
 
 5. **Choose and place the image.** Take a still from the master where the brief asks for one
@@ -112,7 +119,10 @@ it never puts on one.
    brand layout's own `AUTHOR TO CONFIRM` line from the copy: the brand file keeps it, and
    `media.py flags` reports it there rather than against the piece. Set the words and the image
    the brief agreed, keep every word inside the `--safe-*` variables, and load nothing over the
-   network. Change the copy only.
+   network. For a `newsletter.*` key, the copy needs the play-button hook (an element carrying
+   `data-play-button`): where the brand's layout predates it, add the element and its rules from
+   `toolkit/templates/thumbnail.html` to the copy, and tell the author the brand's layout lacks it.
+   Change the copy only.
    *Complete when:* the copy links the brand's tokens, uses only tracked images, carries the
    brief's words, and nothing outside the copy changed.
 
@@ -122,17 +132,25 @@ it never puts on one.
    name in `publishing/src/renders/`, `<html-stem>.<platform>-<format>.png`. A deliverable whose
    table has no `width` and `height` renders with `--size` at a size the author agrees, flagged
    `VERIFY`. If `card.py` exits 2 (no uv, or no Chromium), report the install line it prints and
-   stop: never report a thumbnail as rendered when it could not run.
-   *Complete when:* every deliverable has a render, or the run has stopped and named what is
+   stop: never report a thumbnail as rendered when it could not run. Then make every other file
+   through the toolkit, never ffmpeg by hand: each format a table lists beyond PNG with
+   `python3 toolkit/media.py image <png> --deliverable KEY [--format FMT]`; each poster with
+   `media.py image <video render> --deliverable KEY --at TC`, no layout needed; the GIF preview by
+   rendering the layout's overlay with
+   `card.py render <html> --deliverable newsletter.preview_gif --transparent -o <png>`, then
+   `media.py cut <master> --deliverable newsletter.preview_gif --in TC --out TC --overlay <png>`,
+   towards M7 and never at M5. An exit 1 names what failed (a size, `max_size`, a range over
+   `max_seconds`): fix it at its source.
+   *Complete when:* every deliverable has its files, or the run has stopped and named what is
    missing.
 
 8. **Look at every render.** Open each PNG and judge it as a viewer will: scaled down to the size
    the platform shows it in a feed or a search list, the words still read; every word and face
    sits inside the safe zone; on a reel cover, the title sits inside the centre crop of
-   `platform.instagram.grid_aspect`; the file meets the deliverable's `formats` and `max_size`.
-   Where PNG is not among the `formats`, convert beside it on the author's word
-   (`ffmpeg -i <png> <same-stem>.jpg`). Write each result, each `VERIFY` flag and each rights row
-   into the brief's `## Checks`.
+   `platform.instagram.grid_aspect`; the file meets the deliverable's `formats` and `max_size`,
+   which `media.py image` verified. A newsletter preview's first frame carries the play button
+   and the words, and survives a dark background; a GIF plays within its `max_seconds`. Write each
+   result, each `VERIFY` flag and each rights row into the brief's `## Checks`.
    *Complete when:* `## Checks` records every check for every render, with its result.
 
 9. **Approve and hand back.** Show the author every render and apply only the edits they agree,
@@ -159,6 +177,9 @@ it never puts on one.
 - **Words on art that takes none.** Where a deliverable's `notes` ask for no text, the image
   carries none.
 - **Hand-editing a render.** A PNG is made again from its layout; every fix goes in the HTML.
+- **Running ffmpeg by hand** for a JPEG, WebP, AVIF, poster or GIF: `media.py image` and
+  `media.py cut` verify what they write.
+- **A GIF whose message is not on its first frame.** Some email clients show nothing else.
 
 ## Cross-references
 

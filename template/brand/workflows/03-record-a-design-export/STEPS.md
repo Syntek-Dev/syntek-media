@@ -77,9 +77,26 @@ For a large file, run `git check-attr filter -- <path>` and confirm it reports `
 author has added the file to Git, run `python3 toolkit/media.py check` and confirm it reports
 neither a large file outside the LFS folder nor a plain blob inside it. _Mechanical._
 
-## 8. Hand back
+## 8. Encode it for its deliverables, where it is one
 
 > **Skill:** none · **Guide:** `brand/docs/reference/design-exports.md`
 
-Report the file's path and storage, its register row, any export it superseded, and any rights
-row still `needed`. _Substantive._
+Some exports are delivered as they are: a podcast show's cover (it belongs to the show, not to a
+piece) and an image a partner site wants in its own branding. Encode each with the toolkit, never
+by hand: a show's cover to both of its keys, and a partner image to the key the site uses.
+
+```bash
+python3 toolkit/media.py image <export> --deliverable podcast.cover
+python3 toolkit/media.py image <export> --deliverable podcast.id3_cover
+```
+
+Exit 1 names what failed (a size, a shape, transparency): the export is remade in Claude Design,
+never stretched. Give the author the renders' names for the show register or the placement.
+_Mechanical._
+
+## 9. Hand back
+
+> **Skill:** none · **Guide:** `brand/docs/reference/design-exports.md`
+
+Report the file's path and storage, its register row, any export it superseded, any encode and
+its render, and any rights row still `needed`. _Substantive._

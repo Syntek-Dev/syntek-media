@@ -10,10 +10,9 @@ model: opus
 **Language**: British English (en_GB)
 
 **What it is.** A thumbnail or cover is the still that sells a deliverable before it plays: one
-promise, in a few words and one image, read at the size of a fingertip. Each is briefed in words
-first, then laid out in HTML from the brand's own layout and rendered to PNG by the toolkit, so a
-thumbnail is always remade from tracked files and the brand's tokens. A piece has one brief, or
-one per cut where a cut needs its own (`--cNN`).
+promise, in a few words and one image, read at the size of a fingertip. Each is briefed in words,
+laid out in HTML from the brand's own layout and rendered by the toolkit, so it is always remade
+from tracked files and the brand's tokens; a piece has one brief, or one per cut (`--cNN`).
 
 ## The brief
 
@@ -48,6 +47,9 @@ a small committed still, never pointed at a render, because renders are ignored 
   a size the author confirms, flagged `VERIFY`.
 - A platform with no thumbnail table at all (LinkedIn, Facebook and TikTok on 03/10/2026) renders
   at its video deliverable's size, flagged `VERIFY` in the brief and the platform's guide.
+- **A piece's other images are briefed here too** (posters; share, featured and preview images;
+  the GIF): a poster is `media.py image <render> --at TC`, other formats `media.py image`, the GIF
+  `card.py render --transparent` then `media.py cut … --overlay`; `## Image` records each moment.
 
 ## Checks at thumbnail size
 
@@ -62,8 +64,9 @@ a small committed still, never pointed at a render, because renders are ignored 
 ## How we apply it here
 
 - Brief before layout; layout before render; the author approves the PNG, not the HTML.
-- Renders land in `publishing/src/renders/` as `<html-stem>.<platform>-<format>.png`.
 - A thumbnail promises nothing the deliverable does not deliver.
+- A newsletter image needs the layout's play-button hook (`data-play-button`): a copy whose brand
+  layout lacks it gets it from `toolkit/templates/thumbnail.html`, and the author is told.
 
 ## Who implements it
 

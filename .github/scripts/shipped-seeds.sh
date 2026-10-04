@@ -28,7 +28,10 @@
 #                         Status · Open questions · Sensitivities.
 #                      6. .claude/MEMORY.md carries no entry (a "- **" bullet).
 #                      7. A seed carries an entry: in Markdown a filled table row or a dated
-#                         bullet; in TOML a table ([…] or [[…]]) or a key outside a comment.
+#                         bullet; in TOML a table ([…] or [[…]]) or a key outside a comment. A
+#                         table header with no rows is empty: the website and blog profiles'
+#                         `## Sites` and the newsletter profile's `## Lists` ship that way
+#                         (DESIGN.md D61, Section 6.15).
 #                      8. Each of the ten shared files has its update-gated _exclude line
 #                         ("_copier_operation == 'update'"), and nothing else carries that gate.
 #                      9. A Markdown register or brand seed lacks the seeded-stub banner. Index
@@ -37,7 +40,9 @@
 #                     11. A pair-only folder holds something other than its pair, a nested
 #                         .gitignore or .gitattributes, a declared seed or a seed-once example;
 #                         or a sub-folder that is not itself pair-only, an example, or a
-#                         README-only generated/, renders/ or raw/ folder.
+#                         README-only generated/, renders/ or raw/ folder. The show registers'
+#                         folder, publishing/src/podcast/ (D59), is one: a register or a feed
+#                         that a toolkit run inside template/ left there would ship.
 #                     12. .claude/settings.json breaks DESIGN.md D13: model opus,
 #                         autoCompactEnabled false, no hooks key, exactly the three denies, the
 #                         six allows and the nine ElevenLabs asks of _common.sh's lists, and no
@@ -398,6 +403,12 @@ write_fixture() { # $1 = repo root
   for s in $SM_PLATFORM_SEEDS; do
     printf '# %s\n\n%s\n\n## Account\n\n<!-- AUTHOR TO CONFIRM: the handle -->\n\n- **Handle:** —\n' "${s##*/}" "$banner" > "$t/$s"
   done
+  # The own-channel profiles hold a table of sites or lists in place of ## Account (D61): a
+  # header and no rows.
+  for s in website blog; do
+    printf '# %s.md\n\n%s\n\n## Sites\n\n<!-- AUTHOR TO CONFIRM: one row per site -->\n\n| Site | Domain | Owner | CMS or hosting | Player | Captions | Carries | Agreement | Notes |\n|---|---|---|---|---|---|---|---|---|\n' "$s" "$banner" > "$t/brand/src/platforms/$s.md"
+  done
+  printf '# newsletter.md\n\n%s\n\n## Lists\n\n<!-- AUTHOR TO CONFIRM: one row per list -->\n\n| List | Sender | Service | Owner | Images hosted at | Agreement | Notes |\n|---|---|---|---|---|---|---|\n' "$banner" > "$t/brand/src/platforms/newsletter.md"
   printf '/* tokens.css */\n:root {\n  --color-bg: #ffffff; /* AUTHOR TO CONFIRM: the background */\n}\n' > "$t/brand/src/design-system/tokens.css"
   for s in thumbnail card; do
     printf '<!-- @dsCard group="Components" -->\n<!doctype html>\n<!-- AUTHOR TO CONFIRM: the layout -->\n' > "$t/brand/src/design-system/previews/$s.html"
@@ -429,7 +440,7 @@ write_fixture() { # $1 = repo root
   printf '* filter=lfs diff=lfs merge=lfs -text\n' > "$t/brand/src/exports/large/.gitattributes"
   printf '# raw/\n' > "$t/production/src/footage/raw/README.md"
   printf '# generated/\n' > "$t/production/src/voiceover/generated/README.md"
-  for d in brand/src/exports brand/src/exports/large production/src/footage production/src/voiceover publishing/src/posts; do
+  for d in brand/src/exports brand/src/exports/large production/src/footage production/src/voiceover publishing/src/posts publishing/src/podcast; do
     mkdir -p "$t/$d"
     printf '# CONTEXT.md — %s/\n' "$d" > "$t/$d/CONTEXT.md"
     printf '@./CONTEXT.md\n' > "$t/$d/CLAUDE.md"
@@ -473,6 +484,13 @@ self_test() {
   f=production/src/footage/manifest.toml; cp "$t/$f" "$tmp/h"
   printf '[[file]]\nid = "F0001"\n' >> "$t/$f"; probe "check 7 fires on a [[file]] table in the manifest seed" "check 7 — $f carries a [[file]] table"; cp "$tmp/h" "$t/$f"
   probe_clean "a TOML seed whose example table sits in comments is empty"
+  f=brand/src/platforms/website.md; cp "$t/$f" "$tmp/h"
+  printf '| harbour-lane | example.com | own | static | self-hosted | vtt | video | own | — |\n' >> "$t/$f"
+  probe "check 7 fires on a site row in the website profile seed" "check 7 — $f"; cp "$tmp/h" "$t/$f"
+  f=brand/src/platforms/newsletter.md; cp "$t/$f" "$tmp/h"
+  printf '| harbour-notes | news@example.com | a sending service | own | example.com | own | — |\n' >> "$t/$f"
+  probe "check 7 fires on a list row in the newsletter profile seed" "check 7 — $f"; cp "$tmp/h" "$t/$f"
+  probe_clean "a profile whose ## Sites or ## Lists table has a header and no rows is empty"
 
   cp "$COPIER" "$tmp/c"
   grep -vF "/.claude/MEMORY.md<: endif" "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
@@ -488,6 +506,8 @@ self_test() {
   printf '{"mcpServers": {"elevenlabs": {}}}\n' > "$t/.mcp.json";  probe "check 10 fires on a server in .mcp.json" "check 10"; printf '{"mcpServers": {}}\n' > "$t/.mcp.json"
   printf 'take\n' > "$t/production/src/voiceover/003-ferry.s01.t1.mp3"
   probe "check 11 fires on a file in a pair-only folder" "check 11 — production/src/voiceover/003-ferry.s01.t1.mp3"; rm -f "$t/production/src/voiceover/003-ferry.s01.t1.mp3"
+  printf '[show]\nshow = "harbour-lane-talks"\n' > "$t/publishing/src/podcast/harbour-lane-talks.toml"
+  probe "check 11 fires on a show register left in the podcast folder" "check 11 — publishing/src/podcast/harbour-lane-talks.toml"; rm -f "$t/publishing/src/podcast/harbour-lane-talks.toml"
   mkdir -p "$t/publishing/src/posts/drafts"
   probe "check 11 fires on a sub-folder in a pair-only folder" "check 11 — publishing/src/posts/drafts/"; rmdir "$t/publishing/src/posts/drafts"
   probe_clean "the LFS attributes file and the README-only raw/ and generated/ folders are declared extras"

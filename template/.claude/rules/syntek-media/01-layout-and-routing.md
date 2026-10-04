@@ -42,7 +42,7 @@ The written voice and brand guide stay syntek-author's, where present, cited and
 | `brand/` | production | Design tokens and preview cards (the thumbnail and card layouts among them), design exports and their register, the spoken voice, one profile per platform |
 | `scripts/` | production | One folder per piece: brief, script or transcript, storyboard, shot list; the piece register |
 | `production/` | production | Source media and its manifest, voiceover segments, edit decision lists, cards, rights and credits<: if 'audiobook' in MEDIA_KINDS :>, audiobook chapter registers<: endif :> |
-| `publishing/` | production | Cut-down plans, captions, thumbnails, post packages, the schedule and the publish log |
+| `publishing/` | production | Cut-down plans, captions and published transcripts, thumbnails and other images, post packages, the schedule and the publish log<: if 'podcast' in PLATFORMS :>, and the show registers and feeds of a self-hosted podcast (`publishing/src/podcast/`)<: endif :> |
 | `toolkit/` | supporting | `media.py` and `card.py`, the platform data and the fallback layouts; every render runs through it |
 
 `run-media-workflow` reads the workflow indexes of these four production layers and no others.

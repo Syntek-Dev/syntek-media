@@ -1,16 +1,16 @@
 ---
 name: repurpose
 description: >-
-  Plan the cut-downs of one long piece: read its script or approved transcript and its master,
-  find the moments that stand alone, and write one cut-down plan for the platforms this project
-  posts to, each cut with the lines it carries, its In and Out on the master (for a recorded
-  piece, from the master-timed captions of its transcript), the hook in its opening line, its
-  framing and its caption width. Refuses a batch of near-identical cuts, proposes first, and
-  writes only the cuts the author agrees. Use when the author says 'cut this talk into shorts',
-  'what clips can we get out of the episode?', 'plan the cut-downs', 'make reels from the
-  explainer' or 'turn the trailer into teasers'. Not rendering the cuts (`cut-for-platform`). Not
-  timing or burning captions (`captions`). Not a social media plan or a content calendar (the
-  social-media-documents skill (syntek-author), where present).
+  Plan the cut-downs of one long piece: read its script or approved transcript and its master, find
+  the moments that stand alone, and write one cut-down plan for the platforms this project posts to,
+  each cut with the lines it carries, its In and Out on the master, the hook in its opening line,
+  its framing and its caption width; a silent loop for a web page is a cut too. Refuses a batch of
+  near-identical cuts, proposes first, and writes only the cuts the author agrees. Use when the
+  author says 'cut this talk into shorts', 'what clips can we get out of the episode?', 'plan the
+  cut-downs', 'make reels from the explainer', 'a loop for the homepage' or 'turn the trailer into
+  teasers'. Not rendering the cuts (`cut-for-platform`). Not timing or burning captions
+  (`captions`). Not a social media plan or a content calendar (the social-media-documents skill
+  (syntek-author), where present).
 ---
 
 # Skill: Repurpose (<%BRAND_NAME%>)
@@ -95,15 +95,19 @@ cuts this kind never makes.
    complete thought that needs no setup and leaves no promise unpaid, a hook in its opening line,
    and a length inside the deliverable's `max_seconds`. Each candidate names its lines
    (`3.2–3.9`), why it stands alone, and its hook in the speaker's own words. A cut starts and ends
-   on a whole sentence, and never cuts a claim off from its condition or its source. Apply the
-   mode file's additions.
+   on a whole sentence, and never cuts a claim off from its condition or its source. **A silent
+   loop** for a web page (`website.hero_loop`, where the project has the website platform) is a
+   cut with no words: a moment of picture within its `max_seconds`, its Lines `—`, so the rule of
+   whole sentences does not bind it. Apply the mode file's additions.
    *Complete when:* every candidate has its lines, its reason and its hook.
 
 5. **Refuse near-identical batches.** Compare the candidates with each other. Two cuts that share
    most of their lines, or the same lines reframed, are one cut: keep the stronger and say why.
    One cut may serve every deliverable of its aspect; several near-identical cuts for one platform
    are what `publishing/docs/reference/cut-downs.md` warns against. When the author asks for more
-   cuts than the piece has distinct moments, say so plainly and offer the distinct ones.
+   cuts than the piece has distinct moments, say so plainly and offer the distinct ones. A silent
+   loop is outside this rule: it may share frames with a cut it was taken from, which its note
+   names. A GIF preview is never a cut: it is `thumbnail-brief`'s.
    *Complete when:* no two candidates are near-identical, and every merge or drop has its reason.
 
 6. **Set In, Out and the frame.** Take each cut's In and Out from the master-timed cues of its

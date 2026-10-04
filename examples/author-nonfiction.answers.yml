@@ -18,6 +18,7 @@ PLATFORMS:
   - youtube
   - podcast
   - facebook
+  - website
 MEDIA_KINDS:
   - long-video
   - podcast

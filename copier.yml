@@ -125,6 +125,16 @@ _exclude:
   - /production/src/renders/*.jpg
   - /publishing/src/renders/*.png
   - /publishing/src/renders/*.jpg
+  # Since 0.2.0 the publishing renders folder also takes `media.py image` output (WebP, AVIF),
+  # the GIF preview `cut` makes, an episode's JSON chapters and a podcast feed's upload copy
+  # (DESIGN.md D57, D59, Section 6.16). Anchored for the same reason: a show's tracked feed is
+  # an .xml too, but it lives in publishing/src/podcast/, which is pair-only, so one left
+  # there by a toolkit run inside template/ is shipped-seeds.sh check 11's to catch.
+  - /publishing/src/renders/*.gif
+  - /publishing/src/renders/*.webp
+  - /publishing/src/renders/*.avif
+  - /publishing/src/renders/*.json
+  - /publishing/src/renders/*.xml
   #
   # ── Shared root files: copy only, never on update (DESIGN.md D11, Section 3.6) ──
   #
@@ -189,13 +199,18 @@ _exclude:
   #
   # ── brand/: one platform profile per platform (DESIGN.md Section 3.5) ──
   # Each profile is also a seed (Section 3.1), so it has a second line in _skip_if_exists.
-  # Removing the platform deletes it, filled in or not (D16).
+  # Removing the platform deletes it, filled in or not (D16). The website and blog profiles
+  # hold `## Sites` and the newsletter profile `## Lists`, one row per site or list (D53, D61):
+  # one `website` platform covers every site the brand publishes to, so no site is a gate.
   - "<: if not ('youtube' in PLATFORMS) :>/brand/src/platforms/youtube.md<: endif :>"
   - "<: if not ('tiktok' in PLATFORMS) :>/brand/src/platforms/tiktok.md<: endif :>"
   - "<: if not ('instagram' in PLATFORMS) :>/brand/src/platforms/instagram.md<: endif :>"
   - "<: if not ('linkedin' in PLATFORMS) :>/brand/src/platforms/linkedin.md<: endif :>"
   - "<: if not ('facebook' in PLATFORMS) :>/brand/src/platforms/facebook.md<: endif :>"
   - "<: if not ('podcast' in PLATFORMS) :>/brand/src/platforms/podcast.md<: endif :>"
+  - "<: if not ('website' in PLATFORMS) :>/brand/src/platforms/website.md<: endif :>"
+  - "<: if not ('blog' in PLATFORMS) :>/brand/src/platforms/blog.md<: endif :>"
+  - "<: if not ('newsletter' in PLATFORMS) :>/brand/src/platforms/newsletter.md<: endif :>"
   #
   # ── scripts/: one guide per media kind (DESIGN.md Section 4.3, guide table) ──
   - "<: if not ('short-video' in MEDIA_KINDS) :>/scripts/docs/reference/short-video.md<: endif :>"
@@ -217,12 +232,28 @@ _exclude:
   - "<: if not ('audiobook' in MEDIA_KINDS) :>/production/docs/reference/audiobook-narration.md<: endif :>"
   #
   # ── publishing/: one platform guide per platform ──
+  # The podcast platform has a second guide, to its self-hosted feed (D58), which travels with
+  # it: a project that keeps its show on a podcast host delivers to the host and never opens it.
   - "<: if not ('youtube' in PLATFORMS) :>/publishing/docs/reference/youtube.md<: endif :>"
   - "<: if not ('tiktok' in PLATFORMS) :>/publishing/docs/reference/tiktok.md<: endif :>"
   - "<: if not ('instagram' in PLATFORMS) :>/publishing/docs/reference/instagram.md<: endif :>"
   - "<: if not ('linkedin' in PLATFORMS) :>/publishing/docs/reference/linkedin.md<: endif :>"
   - "<: if not ('facebook' in PLATFORMS) :>/publishing/docs/reference/facebook.md<: endif :>"
   - "<: if not ('podcast' in PLATFORMS) :>/publishing/docs/reference/podcast.md<: endif :>"
+  - "<: if not ('podcast' in PLATFORMS) :>/publishing/docs/reference/podcast-feed.md<: endif :>"
+  - "<: if not ('website' in PLATFORMS) :>/publishing/docs/reference/website.md<: endif :>"
+  - "<: if not ('blog' in PLATFORMS) :>/publishing/docs/reference/blog.md<: endif :>"
+  - "<: if not ('newsletter' in PLATFORMS) :>/publishing/docs/reference/newsletter.md<: endif :>"
+  #
+  # ── publishing/: the self-hosted podcast feed (DESIGN.md D58, D59) ──
+  # A platform travels with everything that serves only it, as a media kind does.
+  # publishing/src/podcast/ is author-owned and pair-only (Section 3.3): the folder goes whole —
+  # its pair — and the show registers and the feeds as last published, which the author's
+  # project wrote there and the template never shipped, stay (D16). The feed workflow is M7
+  # only (D59): the feed audio is encoded at M5 and its transcript made at M6 in the workflows
+  # every platform uses.
+  - "<: if not ('podcast' in PLATFORMS) :>/publishing/src/podcast<: endif :>"
+  - "<: if not ('podcast' in PLATFORMS) :>/publishing/workflows/08-publish-the-podcast-feed<: endif :>"
   #
   # ── Media-kind skills (DESIGN.md Section 5.1) ──
   #
@@ -358,6 +389,9 @@ _skip_if_exists:
   - /brand/src/platforms/linkedin.md
   - /brand/src/platforms/facebook.md
   - /brand/src/platforms/podcast.md
+  - /brand/src/platforms/website.md
+  - /brand/src/platforms/blog.md
+  - /brand/src/platforms/newsletter.md
   # ── scripts/, production/ and publishing/: the registers and logs ──
   - /scripts/src/piece-register.md
   - /production/src/rights-register.md
@@ -541,8 +575,24 @@ OWNER_FIRST_NAME:
 #
 # Two lists, each a multiple choice (`multiselect: true`; DESIGN.md Section 2). Each value
 # opens its own gated files (Section 3.5): a platform its profile seed in brand/src/platforms/
-# and its guide in publishing/docs/reference/; a media kind its guide in
-# scripts/docs/reference/ and, for podcast and audiobook, its workflows, folder and skill.
+# and its guide in publishing/docs/reference/, and podcast also the self-hosted feed's folder,
+# workflow and guide (D58, D59); a media kind its guide in scripts/docs/reference/ and, for
+# podcast and audiobook, its workflows, folder and skill.
+#
+# Since 0.2.0 three platforms are the brand's own channels (DESIGN.md D53): `website` (every
+# site the brand publishes media to, its own and any it writes for, each a row of the profile,
+# never a value of its own), `blog` (dated posts on those sites) and `newsletter` (email
+# issues: a linked still or GIF, never video). They stay three values so that each gates its
+# own profile, guide and tables: a project may choose `blog` without `website`.
+#
+# THE DEFAULTS DID NOT CHANGE (D54): a value joins a kind's default only where every project of
+# that kind should have it, and none of the three qualifies — a podcast may be served from any
+# web server the brand controls or kept on a host, and over syntek-author the written side's
+# documents decide which channels carry media (D56). The help recommends `website` beside
+# `podcast` instead. A self-hosted podcast needs PLATFORMS `podcast` (and `website` for its
+# episode pages), and MEDIA_KINDS `podcast` only for an episode of its own (D58 route 2): a
+# talk published as an episode needs only the talk's own kind.
+#
 # The labels are what the person answering reads, in syntek-author's `"label": value` form
 # (its BUSINESS_FAMILIES); the answers file, every gate, every default and `--data` take the
 # VALUES: `--data 'PLATFORMS=[youtube, podcast]'`. Both are always asked and refuse an empty
@@ -563,15 +613,22 @@ PLATFORMS:
   help: >-
     Where will this brand publish? Choose every platform: each adds its profile in
     brand/src/platforms/, which you fill in, and its guide in publishing/docs/reference/.
-    Removing one later deletes every file it generated, including the platform profile you
-    filled in.
+    podcast also adds a guide to its self-hosted feed, the folder for your show registers,
+    publishing/src/podcast/, and the feed workflow,
+    publishing/workflows/08-publish-the-podcast-feed/; choose website beside it when your
+    own site serves the feed and its episode pages. One website covers every site you
+    publish to. Removing one later deletes every file it generated, including the
+    platform profile you filled in.
   choices:
     "youtube — long videos, Shorts and thumbnails": youtube
     "tiktok — vertical video": tiktok
     "instagram — reels, stories and covers": instagram
     "linkedin — landscape and vertical video posts": linkedin
     "facebook — reels and feed video": facebook
-    "podcast — Apple Podcasts and Spotify feeds": podcast
+    "podcast — Apple Podcasts and Spotify, from your own feed or a podcast host": podcast
+    "website — sites you publish to: self-hosted or embedded video, posters and share images": website
+    "blog — posts on those sites: video, transcripts, featured and share images": blog
+    "newsletter — email issues: a linked preview image or GIF, never video": newsletter
   default: "<% {'business': ['youtube', 'linkedin', 'instagram'], 'author-fiction': ['youtube', 'tiktok', 'instagram', 'facebook'], 'author-nonfiction': ['youtube', 'podcast', 'instagram', 'facebook']}[BRAND_KIND] | tojson %>"
   validator: >-
     <: if not PLATFORMS :>
@@ -678,6 +735,12 @@ DATE:
 # can hold author work ships a version-keyed migration IN THE SAME COMMIT, or it silently
 # strands that work.
 #
+# NONE FOR THE 0.2.0 WORK EITHER (D63): the website, blog and newsletter profiles are new
+# seeds, the show registers' folder and the feed workflow are new paths, and nothing an author
+# wrote is renamed or moved; no existing seed's required content changes (the reworded social
+# plan line and the play-button hook reach new projects only, and thumbnail-brief patches a
+# piece's copy of an older layout).
+#
 # Seeds are the second case. The seeds of DESIGN.md Section 3.1 are never re-rendered once
 # they exist, so a release that changes what a seed must contain ships that change as a
 # migration too. And a release that stops shipping a seed ships a migration that preserves it
@@ -713,7 +776,11 @@ _migrations: []
 # and an _external_data read here aborts the update (probe c3). So it is static text naming
 # what removing each platform and each media kind deletes, workflows by full folder name
 # (D32), and the author reads the lines for theirs. update-test.sh check 12 proves it is
-# printed, naming every platform and media kind; a quiet run (--quiet) suppresses it.
+# printed, naming every platform and media kind; a quiet run (--quiet) suppresses it. The
+# text is DESIGN.md Section 3.5's, verbatim; since 0.2.0 it names the three own-channel
+# platforms (D53) and what taking podcast away also deletes — the feed's folder pair,
+# workflow and guide, never the show registers and saved feeds the author's project wrote
+# there (D59), which update-test.sh check 13 proves.
 _message_before_update: |
 
   Before you answer: removing a platform or a media kind deletes EVERY file it generated,
@@ -722,7 +789,12 @@ _message_before_update: |
 
     PLATFORMS without <platform>     brand/src/platforms/<platform>.md (your profile) and
                                      publishing/docs/reference/<platform>.md — for each of
-                                     youtube, tiktok, instagram, linkedin, facebook, podcast
+                                     youtube, tiktok, instagram, linkedin, facebook, podcast,
+                                     website, blog, newsletter
+    PLATFORMS without podcast        also publishing/src/podcast/ (its pair; your show
+                                     registers and saved feeds stay),
+                                     publishing/workflows/08-publish-the-podcast-feed/ and
+                                     publishing/docs/reference/podcast-feed.md
     MEDIA_KINDS without audiobook    the narrate-audiobook skill; production/src/audiobook/ (its
                                      pair and the generated/ and renders/ READMEs; your chapter
                                      registers stay); production/workflows/05-narrate-an-audiobook/,

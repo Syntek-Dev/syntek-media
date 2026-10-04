@@ -20,7 +20,13 @@ render  Opens HTML in headless Chromium through Playwright 1.62.0 (pinned: an un
         a CSS background such as --picture, any local file the page asked for: a missing still
         is a finding), then takes the screenshot. --transparent
         keeps the page's transparent background as alpha (an overlay card) and marks :root
-        with data-transparent, so one layout can drop its own backdrop. The PNG is read back
+        with data-transparent, so one layout can drop its own backdrop. With --deliverable,
+        :root also carries data-deliverable="<platform>.<format>" and data-platform="<platform>"
+        (DESIGN D57), so one layout can vary by deliverable: the toolkit's thumbnail.html shows
+        its play button (an element carrying data-play-button) only for a newsletter.* key, and
+        under data-transparent keeps only that button and its words, which is a newsletter GIF's
+        overlay (media.py cut --overlay). A PNG to deliver in another format (JPEG, WebP, AVIF) is
+        encoded from this render with media.py image. The PNG is read back
         and must be exactly the size asked for, and within the deliverable's max_size (over its
         max_size_mobile is a warning). Default output: production/src/renders/ for a
         card under production/src/cards/, publishing/src/renders/ otherwise, named
@@ -56,12 +62,17 @@ DSCARD_RE = re.compile(r'^<!--\s*@dsCard\s+group="(Colors|Type|Spacing|Brand|Com
 SET_VARS = """(vars) => {
   const root = document.documentElement;
   for (const [name, value] of Object.entries(vars)) {
-    if (name === 'data-transparent') { root.setAttribute('data-transparent', ''); continue; }
+    if (name.startsWith('data-')) { root.setAttribute(name, value); continue; }
     root.style.setProperty(name, value);
   }
   const style = getComputedStyle(root);
-  return Object.fromEntries(Object.keys(vars).map(n => [n, style.getPropertyValue(n).trim()]));
+  return Object.fromEntries(Object.keys(vars).map(n => [n, n.startsWith('data-')
+    ? root.getAttribute(n) : style.getPropertyValue(n).trim()]));
 }"""
+PLAY_BUTTON = """() => Array.from(document.querySelectorAll('[data-play-button]')).map(el => {
+  const box = el.getBoundingClientRect();
+  return getComputedStyle(el).display !== 'none' && box.width > 0 && box.height > 0;
+})"""
 LOAD_FONTS = """() => Promise.all(Array.from(document.fonts).map(f =>
   f.load().then(() => [f.family, 'loaded'], () => [f.family, 'error'])))"""
 IMAGES = """async () => {
@@ -223,17 +234,21 @@ def default_png(html: Path, suffix: str) -> Path:
 
 
 def render(html: Path, w: int, h: int, table, transparent: bool, out: Path) -> tuple:
-    """(findings, the variables as the page read them back)."""
+    """(findings, the variables and attributes as the page read them back)."""
     found = []
     variables = safe_vars(table, w, h)
     if transparent:
         variables["data-transparent"] = ""
+    if table and table.get("key"):
+        variables["data-deliverable"] = table["key"]
+        variables["data-platform"] = table.get("platform") or table["key"].split(".")[0]
     with Browser() as b:
         page, blocked, failed = b.page(html, w, h)
         got = page.evaluate(SET_VARS, variables)
         page.evaluate("document.fonts.ready.then(() => true)")
         fonts = page.evaluate(LOAD_FONTS)
         found += image_findings(page, failed)
+        got["play-button"] = page.evaluate(PLAY_BUTTON)
         page.screenshot(path=str(out), omit_background=transparent, full_page=False)
         page.close()
     for url in blocked:
@@ -495,6 +510,30 @@ def self_test() -> int:
                     code, text = cli("render", copy, "--deliverable", "youtube.short", "-o",
                                      root / "renders" / f"{name}.png")
                     verdict(f"the toolkit's {name} renders at 1080x1920 with nothing fetched", code == 0, text)
+                thumb_copy = root / "toolkit/templates" / "thumbnail.html"
+                shown_for = {}
+                for key, alpha in (("newsletter.preview_image", False), ("website.og_image", False),
+                                   ("newsletter.preview_gif", True)):
+                    table = C.preset(key, quiet=True)
+                    w, h = C.size_of(table)
+                    out = root / "renders" / f"thumb.{C.file_form(key)}.png"
+                    found, got = render(thumb_copy, w, h, table, alpha, out)
+                    shown_for[key] = (found, got, png_info(out) if out.is_file() else {})
+                found, got, info = shown_for["newsletter.preview_image"]
+                verdict("render --deliverable marks :root with data-deliverable and data-platform, and the "
+                        "thumbnail's play button shows for a newsletter key",
+                        not found and got.get("data-deliverable") == "newsletter.preview_image"
+                        and got.get("data-platform") == "newsletter" and got.get("play-button") == [True],
+                        str(found) + str(got))
+                found, got, info = shown_for["website.og_image"]
+                verdict("the play button stays hidden for any other key (a 1.91:1 share image)",
+                        not found and got.get("play-button") == [False] and info.get("width") == 1200, str(got))
+                found, got, info = shown_for["newsletter.preview_gif"]
+                verdict("--transparent for a newsletter GIF keeps only the play button and the words over alpha "
+                        "(the GIF's overlay, at the GIF's size)",
+                        not found and got.get("play-button") == [True] and info.get("colour") == 6
+                        and info.get("alpha0") == 0 and (info.get("width"), info.get("height")) == (600, 338),
+                        str(found) + str(got) + str(info))
                 (ds / "tokens.css").write_text(faces.replace("fixture", "missing") +
                                                FIXTURE_TOKENS.replace("FONT", family).replace("--radius: 6px;", ""),
                                                encoding="utf-8")

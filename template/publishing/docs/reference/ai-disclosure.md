@@ -36,6 +36,7 @@ description on every platform, always, because the house is more open than any o
 | LinkedIn | no toggle documented: disclose in the post text | synthetic or manipulated media that depicts a person saying or doing something they did not, without clear disclosure; Content Credentials show an icon by themselves | https://www.linkedin.com/legal/professional-community-policies |
 | Apple Podcasts | no toggle documented: disclose in the audio and in the metadata | guideline 1.11: audio or video generated with AI, synthetic voices included, disclosed prominently in the content and the metadata of each episode and of the show | https://podcasters.apple.com/support/content-and-subscription-guidelines |
 | Spotify podcasts | no toggle documented | no disclosure rule found; Spotify removes shows that impersonate another creator's or host's likeness without permission, AI voice cloning included | https://newsroom.spotify.com/2026-05-19/podcast-verification-trust-creators-listeners/ |
+| The brand's own sites, blogs and newsletters | no platform label: the house line sits beside the media, in the placement's Disclosure bullet (the website, blog and newsletter guides, where the project has them) | the house rule above, always; a self-hosted feed follows Apple's row | house decision |
 
 ## Cases the sources leave open
 

@@ -24,13 +24,13 @@ model: opus
 
 **The recording**
 
-- [ ] Logged with `footage add` (copied, never moved), with its rights ID where it shows other people. · _sonnet_
+- [ ] Logged with `footage add` (copied, never moved), with its rights ID where it shows other people; a recording already in the manifest not logged again. · _sonnet_
 - [ ] Its footage ID added to the brief's `source_media`. · _sonnet_
 - [ ] Its audio extracted with `extract-audio` to `production/src/renders/<stem>.wav`. · _sonnet_
 
 **The words**
 
-- [ ] The author chose speech-to-text or their own words. · _opus_
+- [ ] The author chose speech-to-text or their own words; or, for an episode cut from its parent's recording, the parent's approved beats it keeps copied with their anchors. · _opus_
 - [ ] For speech-to-text: `check --setup` clean on its ElevenLabs lines; minutes, calls and credits stated; the author said yes. · _sonnet_
 - [ ] One call, with `save_transcript_to_file: false` and `return_transcript_to_client_directly: true`; its credits-log row written. · _sonnet_
 - [ ] On 'outside of allowed directory', the re-add command given with a base path containing the project; no audio copied elsewhere. · _sonnet_

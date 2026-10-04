@@ -65,6 +65,8 @@ every clone.
   `production/src/rights-register.md` before a piece using it is scheduled.
 - A still or logo an edit uses directly may be copied into `production/src/assets/`; the export
   and its row stay the record.
+- A podcast show's cover, and an image a partner site wants in its own branding, are exports,
+  encoded with `media.py image` (`podcast.cover` and `podcast.id3_cover`; the site's own key).
 
 ## Who implements it
 

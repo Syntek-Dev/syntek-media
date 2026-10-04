@@ -22,7 +22,8 @@ model: opus
 
 - [ ] **Posted, moved or dropped taken from the author's report only;** nothing filled in from the package. · _opus_
 - [ ] The schedule row's status moved on; a moved row's old date kept in Notes; a dropped row's reason given; no row deleted. · _sonnet_
-- [ ] For a post, a log row written: date, platform, key, piece, the URL exactly as given, the disclosure set, the captions. · _sonnet_
+- [ ] For a post, a log row written: date, platform (`<platform>:<slug>` for a placement), key, piece, the URL exactly as given, the disclosure set, the captions. · _sonnet_
+- [ ] For a feed episode reported live: its register row `published`, the show's tracked feed written with the upload's `--as-of`, and compared byte for byte with the upload copy; any difference reported. · _sonnet_
 - [ ] **What was set compared with the package;** any difference reported to the author at once. · _opus_
 - [ ] Corrections appended under `## Corrections` with a date; no history overwritten. · _sonnet_
 - [ ] The piece set to `published` only when every row is `posted` or `dropped` and every `posted` row has its log row. · _opus_

@@ -20,17 +20,18 @@ model: opus
 
 ## Execution Checklist
 
-**The social media plan**
+**The written side's documents**
 
-- [ ] syntek-author's social media plan and calendar read for this platform, where present, or their absence said. · _opus_
-- [ ] Where the plan is present, the profile cites it for cadence, tone, call to action, hashtags and bios, and restates none of them. · _opus_
+- [ ] syntek-author's social media plan, calendar and any operating procedure read for this platform, document by document, where present, or their absence said. · _opus_
+- [ ] Every value a document sets (cadence, tone, call to action, hashtags, bios) cited in the profile, never restated; only what none sets written here. · _opus_
 
 **The profile**
 
 - [ ] Account written exactly as the author gave it; nothing guessed. · _sonnet_
+- [ ] For the brand's own channels, one row per site or list with a frozen slug, its owner and its agreement (`own`, or a dated record, once per site; 'see website' in a blog row the website profile covers); no subscriber, count or account ID. · _opus_
 - [ ] Deliverables chosen from `python3 toolkit/media.py presets`, by key; any `verify` key they rely on noted. · _opus_
-- [ ] Cadence, tone and call to action decided by the author, only where no plan owns them; times in the project's time zone. · _opus_
-- [ ] Hashtag sets agreed, only where no plan owns them, counted against the platform's keys and cited by key. · _opus_
+- [ ] Cadence, tone and call to action decided by the author, only where no document sets them; times in the project's time zone. · _opus_
+- [ ] Hashtag sets agreed, only where no document sets them and the platform takes any, counted against the platform's keys and cited by key. · _opus_
 - [ ] No platform number written anywhere in the profile. · _sonnet_
 
 **Overrides**
@@ -46,6 +47,6 @@ model: opus
 
 ## Done When
 
-- [ ] **The profile holds what the brand decides on this platform, and nothing the plan or the platform data owns.** · _opus_
+- [ ] **The profile holds what the brand decides on this platform, and nothing a written-side document or the platform data owns.** · _opus_
 - [ ] Every override is sourced and dated. · _sonnet_
 - [ ] Handed back: the profile's contents, what it cites, overrides, `verify` keys relied on, flags left. · _opus_

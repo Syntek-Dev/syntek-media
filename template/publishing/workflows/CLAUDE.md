@@ -25,7 +25,8 @@ packaged and logged the same way every time, whoever runs it.
 | Write the post package, decide the disclosure and schedule it | `publishing/workflows/05-prepare-a-post/` |
 | Log what the author posted, moved or dropped | `publishing/workflows/06-record-a-publication/` |
 | Re-check the platform limits and record corrections | `publishing/workflows/07-refresh-the-platform-specs/` |
-
+<: if 'podcast' in PLATFORMS :>| Open a self-hosted show, or take an episode into its feed | `publishing/workflows/08-publish-the-podcast-feed/` |
+<: endif :>
 - **Model:** the `_opus_` / `_sonnet_` tags in each `CHECKLIST.md` are authoritative: Opus for
   every judgement; the mechanical tier only for renders, file creation, table edits and ticks
   (`.claude/rules/syntek-media/05-model-allocation.md`).

@@ -20,24 +20,29 @@ every post package starts from the brand's own account, deliverables and choices
 - **Model:** **Opus** for every choice the brand makes on a platform and for judging whether a
   platform's change is confirmed; the mechanical tier for writing a value the author has given
   (`.claude/rules/syntek-media/05-model-allocation.md`).
-- **Concrete steps:** check for syntek-author's social media plan, where present → the account,
-  from the author → the deliverables used, chosen from `python3 toolkit/media.py presets` →
-  cadence, tone, call to action and hashtag sets, only where no plan owns them → an override
-  only for a confirmed difference → clear each flag as its decision is made.
-- **Definition of done:** the profile's account and deliverables are filled; every other section
-  is either filled or cites the social media plan; no flag remains in a section `prepare-post`
-  reads; every override carries its why, source and date.
+- **Concrete steps:** check syntek-author's social-media documents, where present, for what each
+  sets for this platform → the account, or the sites or lists with their agreements, from the
+  author → the deliverables used, chosen from `python3 toolkit/media.py presets` → cadence, tone,
+  call to action and hashtag sets, only where no document sets them → an override only for a
+  confirmed difference → clear each flag as its decision is made.
+- **Definition of done:** the profile's account (or sites or lists) and deliverables are filled;
+  every other section is either filled or cites the document that sets it; no flag remains in a
+  section `prepare-post` reads; every override carries its why, source and date.
 
 ## Guardrails
 
-- **Never guess a handle or a URL.** They come from the author, exactly as the platform shows
-  them; until then the flag stays.
+- **Never guess a handle, a domain, a sender or a URL.** They come from the author, exactly as
+  the platform or the site shows them; until then the flag stays. A site's or list's slug is
+  frozen once a schedule row uses it, and a site's agreement is recorded once, in the website
+  profile where the project has one.
+- **No subscriber, count, password or account ID** in a row, on any channel.
 - **Never write a platform number in a profile.** Limits are cited by their key in
   `toolkit/data/platforms.toml`; an unconfirmed value is cited by its key, never by a figure.
 - **Never edit `toolkit/data/platforms.toml`.** It is template-owned; a confirmed difference is
   an `[[override]]` here, with the platform's own words, where it says them and the date checked.
-- **The social media plan wins where it is present.** Never restate its cadence, tone, call to
-  action, hashtags or bios in a profile; cite it (`.claude/rules/syntek-media/02-skills.md`
+- **The written side's documents win where they set a value.** Never restate a cadence, tone,
+  call to action, hashtags or bios that syntek-author's social media plan, content calendar or
+  operating procedure sets for a platform; cite it (`.claude/rules/syntek-media/02-skills.md`
   Section 4).
 - **Removing a platform deletes its profile.** Copy out anything the author wants to keep before
   the answers change.
@@ -46,7 +51,7 @@ every post package starts from the brand's own account, deliverables and choices
 ## Output & naming
 
 - **Hand-written (with the author):** `<platform>.md`, one per selected platform, its sections
-  fixed; `overrides.toml`, one table per confirmed correction:
+  fixed (`## Sites` or `## Lists` in place of `## Account` for the brand's own channels); `overrides.toml`, one table per confirmed correction:
 
 ```toml
 [[override]]

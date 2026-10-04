@@ -20,6 +20,8 @@ brand/workflows/03-record-a-design-export/
 
 - The author has exported a design and wants it in the repository.
 - A revised version of an earlier export replaces it.
+- A podcast show's cover is ready, or a partner site wants an image in its own branding: both are
+  exports, encoded here for their deliverables.
 - `python3 toolkit/media.py check` reports a large file outside the LFS folder, or a file in it
   stored as a plain blob.
 

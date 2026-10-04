@@ -60,6 +60,8 @@ voiceover is exempt. The description line goes in either way.
 - A long video's captions go up as its SRT sidecar; a Short's are burned in until its
   `caption_formats` is confirmed.
 - An audio piece goes to YouTube as a still under its audio, with its own thumbnail.
+- A podcast episode's upload, a talk's video or a still under the episode, goes into the show's
+  podcast playlist by hand, and its package section adds **Playlist** (the podcast guides).
 
 ## Who implements it
 

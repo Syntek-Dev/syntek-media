@@ -35,9 +35,12 @@ _Mechanical._
 
 Where syntek-author's content calendar is present, read this piece's entries: the dates, the
 slots and the text-only posts around them are the calendar's, and a change to them belongs to the
-social-media-documents skill (syntek-author), where present. Otherwise the brand's profiles,
-`brand/src/platforms/<platform>.md`, hold the cadence, tone, call to action and hashtag sets.
-Read the guide for each platform the package goes to. _Substantive._
+social-media-documents skill (syntek-author), where present. Any other social-media document of
+syntek-author that sets a value for a platform (the plan, an operating procedure) owns that value;
+the brand's profiles, `brand/src/platforms/<platform>.md`, hold only what none sets. Read the
+guide for each platform the package goes to. For a placement on the brand's own sites, blogs or
+newsletters, read the profile's row for its site or list, and the written piece it sits in (a
+post, a page or an issue: read, never edited); its words are the written side's. _Substantive._
 
 ## 3. Check the rights
 
@@ -66,7 +69,14 @@ Write `publishing/src/posts/<piece>.md` in its skeleton (`publishing/src/posts/C
 Description, Hashtags, Disclosure, Captions, Thumbnail, Render, Calendar and Scheduled bullets.
 The Description's fence holds one sentence per line, as every `src/` file does. The words follow
 the mode file and the platform's guide, and promise only what the deliverable delivers.
-_Substantive._
+
+**A placement** on the brand's own channels (the one file a page or an issue plays or shows first)
+has its own section, `## <platform>.<format>[ — cNN] — <platform>:<slug>`, with the bullets its
+channel's guide gives in place of Title, Description and Hashtags; its other images are bullets of
+it, its date the written piece's own, cited. **A feed episode** has `## podcast.feed_audio`, whose
+title, description and chapters are cited from its show register, never repeated; its register
+part of M7 runs through the podcast-feed workflow, where the project serves its own feed, and each
+episode page on a site other than the feed's is a placement here. _Substantive._
 
 ## 6. Count every limit against its key
 
@@ -110,17 +120,21 @@ the step it touches. _Substantive._
 
 > **Skill:** `prepare-post` · **Guide:** `publishing/docs/reference/posting-and-the-log.md`
 
-Add one row per deliverable to `publishing/src/schedule.md`, with its date, its time in
-<%TIMEZONE%>, its platform, key, piece and package, status `planned`, and, where syntek-author's
-content calendar is present, its calendar entry in Notes. Never delete or reuse a row. A row
-becomes `ready` only at step 11, once M7 passes. _Mechanical._
+Add one row per deliverable and per placement to `publishing/src/schedule.md`, with its date,
+its time in <%TIMEZONE%>, its platform (`<platform>:<slug>` for a placement), key, piece and
+package, status `planned`, and, where syntek-author's content calendar is present, its calendar
+entry in Notes. A placement takes its date and time from its written piece, cited in Notes; a
+feed episode is one row, `podcast` · `podcast.feed_audio`, at the register's `pub_date`. Never
+delete or reuse a row. A row becomes `ready` only at step 11, once M7 passes. _Mechanical._
 
 ## 11. Record the gate
 
 > **Skill:** `prepare-post` · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
-Read M7 in the ladder guide and confirm each of its checks against this run. When every one
-passes, set each of the piece's `planned` schedule rows to `ready`, set the brief's `status` to
+Read M7 in the ladder guide and confirm each of its checks against this run: for a placement, a
+dated agreement where the brand does not own the site or list, its Links to, and its written
+piece's status read (a piece not `final` is a warning to report, never a gate); for a feed
+episode, its register row `ready` and `feed check` clean. When every one passes, set each of the piece's `planned` schedule rows to `ready`, set the brief's `status` to
 `scheduled` and date M7 in `verified`; a check the author waives is recorded there with the date
 and the reason. While a check fails, the rows stay `planned`. _Mechanical._
 

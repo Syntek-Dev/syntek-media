@@ -2,8 +2,9 @@
 
 The template's publishing guides, one per question. Six cover the work every piece meets on its
 way out: cut-downs, captions, thumbnails, AI disclosure, posting and the log, and how the platform
-data is read. One more covers each platform the project posts to, citing its limits by key. Each
-names the skill and workflow that carry it out and the media rules file that owns the requirement.
+data is read. One more covers each platform the project posts to, citing its limits by key, and a
+podcast the brand serves itself has a second, on its feed. Each names the skill and workflow that
+carry it out and the media rules file that owns the requirement.
 These files are template-owned: `copier update` keeps them current, and a same-named guide in
 `publishing/docs/project/` overrides any of them.
 
@@ -24,6 +25,10 @@ publishing/docs/reference/
 <: endif :><: if 'linkedin' in PLATFORMS :>├── linkedin.md               ← landscape and vertical video, no thumbnail table
 <: endif :><: if 'facebook' in PLATFORMS :>├── facebook.md               ← every video a reel; feed and story values from the ads guide
 <: endif :><: if 'podcast' in PLATFORMS :>├── podcast.md                ← Apple Podcasts and Spotify: audio, artwork, disclosure in the audio
+├── podcast-feed.md           ← a self-hosted show: its register, its feed, the order of upload
+<: endif :><: if 'website' in PLATFORMS :>├── website.md                ← the brand's sites: self-hosted or embedded video, posters, share images
+<: endif :><: if 'blog' in PLATFORMS :>├── blog.md                   ← posts: video, transcripts, featured and share images
+<: endif :><: if 'newsletter' in PLATFORMS :>├── newsletter.md             ← email issues: a linked preview image or GIF, never video
 <: endif :>└── platform-specs.md         ← how platforms.toml is read: verify, chosen, overrides, staleness
 ```
 
@@ -54,6 +59,14 @@ publishing/docs/reference/
   info label.
 <: endif :><: if 'podcast' in PLATFORMS :>- `podcast.md` — the podcast deliverables and their keys, cover and episode art, and
   disclosure in the audio and in the metadata.
+- `podcast-feed.md` — **read before opening a self-hosted show.** The show register and its
+  feed, the two routes to an episode, the order and time of upload, and the hand steps.
+<: endif :><: if 'website' in PLATFORMS :>- `website.md` — the website keys, placements and agreements on each site, captions and the
+  published transcript, a loop's motion, and the hosting tests.
+<: endif :><: if 'blog' in PLATFORMS :>- `blog.md` — the blog keys, a post's placement, the transcript under the player, and the
+  featured image.
+<: endif :><: if 'newsletter' in PLATFORMS :>- `newsletter.md` — the preview image and the GIF, what email clients show, and an issue's
+  placement.
 <: endif :>
 ## Cross-references
 

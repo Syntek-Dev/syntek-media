@@ -8,8 +8,9 @@
 #                  the author edited is kept, and one they deleted comes back; a seed-once
 #                  example they deleted stays deleted; a copy-only shared file is never touched
 #                  again, deleted or edited; their own pieces are never touched; a
-#                  template-owned file takes the new version; a platform taken away takes its
-#                  two files and nothing else. Every one of those promises rests on a line in
+#                  template-owned file takes the new version; a platform taken away takes the
+#                  files it generated and nothing else, and leaves what the author wrote in a
+#                  folder it gates. Every one of those promises rests on a line in
 #                  copier.yml, and none of them fails loudly when the line is wrong — the
 #                  update reports success either way. So this test performs real updates, the
 #                  way an author meets them, per brand kind:
@@ -22,7 +23,10 @@
 #                    4. `copier update -a` (the answers file is not Copier's default); commit;
 #                    5. update again with nothing changed;
 #                    6. in a clone, try an update that changes BRAND_KIND (D14 refuses it);
-#                    7. update with one platform taken away;
+#                    7. update with one platform taken away — the one with the most catalogue
+#                       paths (podcast, where the project has it: DESIGN.md Section 7), after
+#                       writing and committing a show register and its saved feed, as the
+#                       author's project would, in the folder that platform gates;
 #                    8. assert.
 #
 #                  Fifteen checks per brand kind:
@@ -43,9 +47,16 @@
 #                   12. The update printed _message_before_update ("Before you answer: removing
 #                       a platform or a media kind deletes …"), naming every platform and every
 #                       media kind — the only warning before a removal deletes filled-in seeds.
-#                   13. An update that takes one platform away succeeds, deletes exactly that
-#                       platform's two files (its profile and its guide) and nothing else, and
-#                       leaves no conflict (D16).
+#                   13. An update that takes one platform away succeeds, deletes exactly the
+#                       files the project held under that platform's catalogue paths and
+#                       nothing else, and leaves no conflict (D16). The platform is the one
+#                       with the most catalogue paths (_common.sh removable_value): two files
+#                       for most; for podcast also the feed folder's pair, the feed workflow's
+#                       four files and the feed guide. Where it is podcast, a fixture show
+#                       register publishing/src/podcast/harbour-lane-talks.toml and its saved
+#                       feed harbour-lane-talks.feed.xml, written and committed before the
+#                       removal, are still there and byte-identical after it (D59: the
+#                       author's registers and feeds stay).
 #                   14. A copy-only shared file the author deleted stays deleted, and one they
 #                       edited stays as edited (D11: copy only, never on update).
 #                   15. A second update with no template change leaves `git status
@@ -63,8 +74,10 @@
 #                  coexist-test.sh's.
 #
 # SELF-TEST. --self-test runs the whole flow against the fixture media template of _common.sh,
-#            proves the result clean, then mutates the result once per check and asserts
-#            exactly one finding each.
+#            as an author-nonfiction project, so the platform taken away is podcast and the
+#            fixture show register and saved feed are written; proves the result clean, then
+#            mutates the result once per check and asserts exactly one finding each — the
+#            register deleted by the removal among them.
 #
 # Requirements: bash 4.3+, git, rsync, uvx (or COPIER_CMD). Network on the first uvx run only.
 #
@@ -125,7 +138,66 @@ EDITED_SHARED=CONTEXT.md
 KIND=""; PROJ=""; W=""; COPY_STATUS=0; UPDATE_STATUS=0; OWN_SUM=""; TARGET_REL=""
 UPDATE_LOG=""; SWITCH_STATUS=0; SWITCH_LOG=""; SWITCH_DIRTY=""; SWITCH_RECORDED=""
 AGAIN_STATUS=0; AGAIN_DIRTY=""; REMOVE_STATUS=0; REMOVE_PLATFORM=""; REMOVED=""; REMOVE_CONFLICTS=""
+REMOVE_WANT=""
 DELETED=()
+declare -A FIXTURE_SUMS=()
+
+# The author's own files in the folder the podcast platform gates (DESIGN.md D59, Section 6.17):
+# a show register and the feed as last published. Invented (Harbour Lane Studio, example.com),
+# written at run time, never in the repository.
+FEED_DIR=publishing/src/podcast
+FEED_FIXTURES="$FEED_DIR/harbour-lane-talks.toml $FEED_DIR/harbour-lane-talks.feed.xml"
+
+write_feed_fixtures() { # $1 = project — writes both fixtures and records their hashes
+  local f
+  mkdir -p "$1/$FEED_DIR"
+  cat > "$1/$FEED_DIR/harbour-lane-talks.toml" <<'TOML'
+# Show register: harbour-lane-talks (update-test fixture; the author's own file).
+[show]
+show = "harbour-lane-talks"
+title = "Harbour Lane Talks"
+author = "Harbour Lane Studio"
+feed_url = "https://example.com/podcast/harbour-lane-talks.xml"
+podcast_guid = "00000000-0000-5000-8000-000000000000"
+
+[[episode]]
+piece = "101-update-test-piece"
+guid = "00000000-0000-5000-8000-000000000001"
+title = "The tide decides"
+status = "published"
+TOML
+  cat > "$1/$FEED_DIR/harbour-lane-talks.feed.xml" <<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+  <channel>
+    <title>Harbour Lane Talks</title>
+    <podcast:guid>00000000-0000-5000-8000-000000000000</podcast:guid>
+    <item>
+      <title>The tide decides</title>
+      <guid isPermaLink="false">00000000-0000-5000-8000-000000000001</guid>
+    </item>
+  </channel>
+</rss>
+XML
+  FIXTURE_SUMS=()
+  for f in $FEED_FIXTURES; do FIXTURE_SUMS["$f"]="$(sha1sum < "$1/$f")"; done
+}
+
+# The files a tree list holds under one value's catalogue paths, the feed fixtures excepted, in
+# the list's (sorted) order.
+files_under_catalogue() { # $1 = tree list file, $2 = gate atom
+  local kind path
+  local -a pats=()
+  while read -r kind path; do
+    [[ -n "$path" ]] || continue
+    if [[ "$kind" == d ]]; then pats+=("$path/"); else pats+=("$path"); fi
+  done < <(catalogue_paths "$2")
+  awk -v fx=" $FEED_FIXTURES " -v pats="${pats[*]}" '
+    BEGIN { n = split(pats, p, " ") }
+    index(fx, " " $0 " ") { next }
+    { for (i = 1; i <= n; i++) if ((substr(p[i], length(p[i])) == "/" && index($0, p[i]) == 1) || $0 == p[i]) { print; next } }
+  ' "$1"
+}
 
 other_kind() { # the kind a BRAND_KIND change is attempted to
   case "$1" in business) echo author-fiction ;; author-fiction) echo author-nonfiction ;; *) echo business ;; esac
@@ -136,6 +208,7 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   KIND="$2"; W="$3"; PROJ="$3/proj"; COPY_STATUS=0; UPDATE_STATUS=0; DELETED=()
   UPDATE_LOG="$3/update.log"; SWITCH_STATUS=0; SWITCH_LOG="$3/switch.log"; SWITCH_DIRTY=""; SWITCH_RECORDED=""
   AGAIN_STATUS=0; AGAIN_DIRTY=""; REMOVE_STATUS=0; REMOVE_PLATFORM=""; REMOVED=""; REMOVE_CONFLICTS=""
+  REMOVE_WANT=""; FIXTURE_SUMS=()
   : > "$UPDATE_LOG"; : > "$SWITCH_LOG"
   sm_snapshot "$src" "$tpl" >>"$log" 2>&1 || die "could not snapshot $src"
 
@@ -182,13 +255,19 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   SWITCH_DIRTY="$(git -C "$clone" status --porcelain 2>/dev/null)"
   SWITCH_RECORDED="$(answer_value BRAND_KIND "$clone/$SM_ANSWERS_FILE")"
 
-  # One platform taken away (D16): its two files go, nothing else does.
+  # One platform taken away (D16): the files it generated go, nothing else does — the author's
+  # show register and saved feed in the podcast folder included (D59).
   REMOVE_PLATFORM="$(removable_value PLATFORMS "$PROJ/$SM_ANSWERS_FILE" "$tpl/copier.yml")"
   if [[ -n "$REMOVE_PLATFORM" ]]; then
+    if [[ "$REMOVE_PLATFORM" == podcast ]]; then
+      write_feed_fixtures "$PROJ"
+      sm_commit_all "$PROJ" "the author's show register and saved feed"
+    fi
     before="$(mktemp)"; tree_files "$PROJ" > "$before"
+    REMOVE_WANT="$(files_under_catalogue "$before" "p:$REMOVE_PLATFORM" | paste -sd' ' -)"
     sm_update "$PROJ" --data "PLATFORMS=$(list_without PLATFORMS "$PROJ/$SM_ANSWERS_FILE" "$REMOVE_PLATFORM")" >"$3/remove.log" 2>&1 || REMOVE_STATUS=$?
     cat "$3/remove.log" >>"$log"
-    REMOVED="$(tree_files "$PROJ" | LC_ALL=C comm -23 "$before" - | paste -sd' ' -)"
+    REMOVED="$(tree_files "$PROJ" | LC_ALL=C comm -23 "$before" - | awk -v fx=" $FEED_FIXTURES " '!index(fx, " " $0 " ")' | paste -sd' ' -)"
     REMOVE_CONFLICTS="$(conflicts_in "$PROJ" | paste -sd' ' -)"
     rm -f "$before"
     sm_commit_all "$PROJ" 'a platform taken away'
@@ -245,11 +324,21 @@ run_checks() {
   elif [[ "$REMOVE_STATUS" -ne 0 ]]; then
     finding "check 13 — $L the update taking $REMOVE_PLATFORM away failed (exit $REMOVE_STATUS) — see $W/remove.log"
   else
-    want="brand/src/platforms/$REMOVE_PLATFORM.md publishing/docs/reference/$REMOVE_PLATFORM.md"
-    [[ "$REMOVED" == "$want" ]] \
-      || finding "check 13 — $L taking $REMOVE_PLATFORM away deleted '${REMOVED:-nothing}', not exactly its two files ($want)"
+    want="$REMOVE_WANT"
+    if [[ -z "$want" ]]; then
+      finding "check 13 — $L the project held no file under $REMOVE_PLATFORM's catalogue paths, so taking it away proved nothing"
+    elif [[ "$REMOVED" != "$want" ]]; then
+      finding "check 13 — $L taking $REMOVE_PLATFORM away deleted '${REMOVED:-nothing}', not exactly the files it generated ($want)"
+    fi
     [[ -z "$REMOVE_CONFLICTS" ]] \
       || finding "check 13 — $L taking $REMOVE_PLATFORM away left a conflict: $REMOVE_CONFLICTS"
+    for f in "${!FIXTURE_SUMS[@]}"; do
+      if [[ ! -f "$PROJ/$f" ]]; then
+        finding "check 13 — $L taking $REMOVE_PLATFORM away deleted the author's $f (DESIGN.md D59: show registers and saved feeds stay)"
+      elif [[ "$(sha1sum < "$PROJ/$f")" != "${FIXTURE_SUMS[$f]}" ]]; then
+        finding "check 13 — $L taking $REMOVE_PLATFORM away changed the author's $f"
+      fi
+    done
   fi
   [[ -e "$PROJ/$DELETED_SHARED" ]] \
     && finding "check 14 — $L the shared $DELETED_SHARED, deleted by the author, came back on update (D11: copy only)"
@@ -270,7 +359,7 @@ self_test() {
   h="$tmp/held"
   sm_fixture_template "$tmp/fixture" >/dev/null
   mkdir -p "$tmp/w"
-  run_flow "$tmp/fixture" author-fiction "$tmp/w"
+  run_flow "$tmp/fixture" author-nonfiction "$tmp/w"
   st_baseline "real updates of the fixture template"
 
   COPY_STATUS=1;   probe "check 1 fires when the render fails" "check 1"; COPY_STATUS=0
@@ -287,20 +376,26 @@ self_test() {
   printf 'x\n' > "$PROJ/README.md.rej"; probe "check 9 fires on a rejected hunk" "check 9"; rm -f "$PROJ/README.md.rej"
   SWITCH_STATUS=0; probe "check 10 fires when a BRAND_KIND change is accepted" "check 10"; SWITCH_STATUS=1
   cp "$SWITCH_LOG" "$h"; grep -vF "$SM_KIND_REFUSAL" "$h" > "$SWITCH_LOG" || true
-  probe "check 10 fires when the update failed for another reason" "check 10 — [author-fiction] the BRAND_KIND change failed"; cp "$h" "$SWITCH_LOG"
+  probe "check 10 fires when the update failed for another reason" "check 10 — [author-nonfiction] the BRAND_KIND change failed"; cp "$h" "$SWITCH_LOG"
   SWITCH_DIRTY=" M README.md"; probe "check 11 fires when the refused update touched a file" "check 11"; SWITCH_DIRTY=""
-  SWITCH_RECORDED=business; probe "check 11 fires when the answers record the new BRAND_KIND" "check 11"; SWITCH_RECORDED=author-fiction
+  SWITCH_RECORDED=business; probe "check 11 fires when the answers record the new BRAND_KIND" "check 11"; SWITCH_RECORDED=author-nonfiction
   cp "$UPDATE_LOG" "$h"; grep -vF "Before you answer" "$h" > "$UPDATE_LOG" || true
-  probe "check 12 fires when the removal warning is not printed" "check 12 — [author-fiction] copier update printed no removal warning"; cp "$h" "$UPDATE_LOG"
+  probe "check 12 fires when the removal warning is not printed" "check 12 — [author-nonfiction] copier update printed no removal warning"; cp "$h" "$UPDATE_LOG"
   sed -i 's/facebook/f-book/g' "$UPDATE_LOG"
-  probe "check 12 fires when the warning leaves a platform out" "check 12 — [author-fiction] the removal warning does not name facebook"; cp "$h" "$UPDATE_LOG"
-  REMOVE_STATUS=1; probe "check 13 fires when taking a platform away fails" "check 13 — [author-fiction] the update taking"; REMOVE_STATUS=0
+  probe "check 12 fires when the warning leaves a platform out" "check 12 — [author-nonfiction] the removal warning does not name facebook"; cp "$h" "$UPDATE_LOG"
+  REMOVE_STATUS=1; probe "check 13 fires when taking a platform away fails" "check 13 — [author-nonfiction] the update taking"; REMOVE_STATUS=0
   REMOVED="$REMOVED production/src/audiobook/CONTEXT.md"
-  probe "check 13 fires when taking a platform away deletes something else" "check 13 — [author-fiction] taking youtube away deleted"; REMOVED="${REMOVED% *}"
+  probe "check 13 fires when taking a platform away deletes something else" "check 13 — [author-nonfiction] taking podcast away deleted"; REMOVED="${REMOVED% *}"
   REMOVE_CONFLICTS="README.md.rej"; probe "check 13 fires when taking a platform away leaves a conflict" "check 13"; REMOVE_CONFLICTS=""
-  printf 'x\n' > "$PROJ/$DELETED_SHARED"; probe "check 14 fires when a deleted shared file comes back" "check 14 — [author-fiction] the shared $DELETED_SHARED"; rm -f "$PROJ/$DELETED_SHARED"
+  mv "$PROJ/$FEED_DIR/harbour-lane-talks.toml" "$h"
+  probe "check 13 fires when taking podcast away also deletes the author's show register" "check 13 — [author-nonfiction] taking podcast away deleted the author's $FEED_DIR/harbour-lane-talks.toml"
+  mv "$h" "$PROJ/$FEED_DIR/harbour-lane-talks.toml"
+  cp "$PROJ/$FEED_DIR/harbour-lane-talks.feed.xml" "$h"; printf '<!-- rewritten -->\n' >> "$PROJ/$FEED_DIR/harbour-lane-talks.feed.xml"
+  probe "check 13 fires when taking podcast away changes the author's saved feed" "check 13 — [author-nonfiction] taking podcast away changed the author's $FEED_DIR/harbour-lane-talks.feed.xml"
+  cp "$h" "$PROJ/$FEED_DIR/harbour-lane-talks.feed.xml"
+  printf 'x\n' > "$PROJ/$DELETED_SHARED"; probe "check 14 fires when a deleted shared file comes back" "check 14 — [author-nonfiction] the shared $DELETED_SHARED"; rm -f "$PROJ/$DELETED_SHARED"
   cp "$PROJ/$EDITED_SHARED" "$h"; grep -vF "$SHARED_MARK" "$h" > "$PROJ/$EDITED_SHARED"
-  probe "check 14 fires when the edit to a shared file is lost" "check 14 — [author-fiction] the author's edit"; cp "$h" "$PROJ/$EDITED_SHARED"
+  probe "check 14 fires when the edit to a shared file is lost" "check 14 — [author-nonfiction] the author's edit"; cp "$h" "$PROJ/$EDITED_SHARED"
   AGAIN_DIRTY=" M README.md"; probe "check 15 fires when a second update changes a file" "check 15"; AGAIN_DIRTY=""
   probe_clean "the fixture's updates keep every promise again once every mutation is undone"
   st_finish "an update that keeps its promises from one that breaks them"
@@ -321,7 +416,7 @@ for kind in $KINDS; do
   run_flow "$SM_ROOT" "$kind" "$work"
   run_checks
   if [[ ${#FINDINGS[@]} -eq 0 ]]; then
-    log "  ✓ $kind — edits kept, examples still gone, publish-log.md recreated, own piece untouched, $TARGET_REL updated; shared files left alone; BRAND_KIND change refused untouched; warning printed; $REMOVE_PLATFORM taken away with its two files; a second update a no-op"
+    log "  ✓ $kind — edits kept, examples still gone, publish-log.md recreated, own piece untouched, $TARGET_REL updated; shared files left alone; BRAND_KIND change refused untouched; warning printed; $REMOVE_PLATFORM taken away with exactly its $(wc -w <<< "$REMOVE_WANT") file(s)${FIXTURE_SUMS[*]:+, the show register and saved feed kept}; a second update a no-op"
     rm -rf "$work"
   else
     bold "✗ $kind — ${#FINDINGS[@]} finding(s) (work kept in $work; Copier's output in $work/flow.log):"

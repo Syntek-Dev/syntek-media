@@ -19,6 +19,8 @@ PLATFORMS:
   - instagram
   - youtube
   - facebook
+  - blog
+  - newsletter
 MEDIA_KINDS:
   - trailer
   - short-video

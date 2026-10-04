@@ -33,8 +33,11 @@ _Mechanical._
 > **Skill:** `cut-for-platform` · **Guide:** `publishing/docs/reference/cut-downs.md`
 
 Write out every deliverable to make: each full-length key in the brief's `deliverables`, and each
-key of each `approved` cut in the plan, with the cut's In, Out and Frame beside it. That list is
-what M5 is checked against. _Mechanical._
+key of each `approved` cut in the plan, with the cut's In, Out and Frame beside it. A silent loop
+(`website.hero_loop`) is listed like any cut. A poster, a share, featured or preview image and a
+GIF preview are not: they are the thumbnail brief's, made in
+`publishing/workflows/04-brief-a-thumbnail/`. That list is what M5 is checked against.
+_Mechanical._
 
 ## 3. Read each preset
 
@@ -49,7 +52,8 @@ Run `python3 toolkit/media.py presets KEY` for every deliverable on the list. No
 > **Skill:** `cut-for-platform` · **Guide:** `publishing/docs/reference/captions.md`
 
 A deliverable whose table has `caption_formats = []`, or whose brief asks for burned captions, is
-burned; the rest take a sidecar. Where a deliverable is to be burned and its caption file already
+burned; the rest take a sidecar, video for a site of the website or blog profile always so. A
+table with `audio_tracks = 0` (a silent loop) takes none, and neither does an audio deliverable. Where a deliverable is to be burned and its caption file already
 exists and passes `captions check --script`, it goes into this pass. Where it does not exist yet,
 render without it and leave captions to `publishing/workflows/03-caption-a-piece/`.
 _Substantive._
@@ -61,7 +65,11 @@ _Substantive._
 For each full-length key, run `python3 toolkit/media.py encode <master> --deliverable KEY`, adding
 `--frame crop` or `--frame pad` where its aspect differs from the master's. An audio piece bound
 for a video platform is a still under its audio:
-`python3 toolkit/media.py still-video <image> <audio> --deliverable KEY`. _Mechanical._
+`python3 toolkit/media.py still-video <image> <audio> --deliverable KEY`. **A feed episode's
+`podcast.feed_audio`** is encoded the same way, untagged and needing no register, from the audio
+master or, for a talk published as an episode, from the picture master, whose sound alone it
+takes; its tags and chapters are written at M7, through the podcast-feed workflow where the
+project has it. _Mechanical._
 
 ## 6. Cut each approved cut
 

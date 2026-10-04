@@ -17,11 +17,12 @@ The guard (DESIGN D19): Git LFS is used only for brand/src/exports/large/. 'chec
 LFS-marked file stored as a plain blob, an LFS-marked file present while no LFS filter is
 configured, a file over 10 MB outside the ignored and LFS folders, and a missing nested ignore
 rule. 'check --setup' adds the readiness report of DESIGN D49: ffmpeg and ffprobe with libass,
-x264 and mp3lame, Python, uv, the pinned Playwright's Chromium, git-lfs where large exports
-exist, the allow, ask and deny entries of .claude/settings.json (D13's two deny entries keep
-hand edits out of renders/ and generated/), and whether the user-scope ElevenLabs server's base
-path contains this repository. It reads only that one key of ~/.claude.json and prints no other
-value from it.
+x264 and mp3lame, the optional encoders 'image' needs (libwebp for WebP; an AV1 encoder and the
+avif muxer for AVIF), each named with the formats its absence blocks and never a finding,
+Python, uv, the pinned Playwright's Chromium, git-lfs where large exports exist, the allow, ask
+and deny entries of .claude/settings.json (D13's two deny entries keep hand edits out of
+renders/ and generated/), and whether the user-scope ElevenLabs server's base path contains this
+repository. It reads only that one key of ~/.claude.json and prints no other value from it.
 
 'flags' lists both flags (DESIGN D37) across the media layers or the paths given; --piece keeps
 one piece's files: its folder under scripts/src/pieces/ and every file in scripts/, production/
@@ -475,6 +476,10 @@ def setup_report(root: Path) -> tuple:
         item(None, "git-lfs: not needed until brand/src/exports/large/ holds a file")
     item(None, "espeak-ng (optional scratch track): " + ("present" if shutil.which("espeak-ng") else "absent"))
     item(None, "pandoc (optional, for audiobook text): " + ("present" if shutil.which("pandoc") else "absent"))
+    if ff:
+        import media_image as I
+        for ok, label in I.optional_encoders():   # a note, never a finding (DESIGN D57)
+            item(ok, label)
     settings = root / C.SETTINGS
     try:
         perms = json.loads(settings.read_text(encoding="utf-8")).get("permissions", {}) if settings.is_file() else None

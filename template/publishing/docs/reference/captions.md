@@ -11,9 +11,8 @@ model: opus
 
 **What it is.** Most short video is watched with the sound off, so for most viewers the captions
 are the piece. A caption file holds the spoken words of one deliverable, timed to its picture, in
-SRT (WebVTT is generated from it). The words are the script's, or a recorded piece's approved
-transcript's, never retyped; only the timing is made here, and `captions check --script` compares
-the words with their source, which is how M6 is passed.
+SRT (WebVTT is generated from it). The words are the script's or a recorded piece's approved
+transcript's, never retyped; `captions check --script` compares them with their source (M6).
 
 ## House limits
 
@@ -24,18 +23,17 @@ the words with their source, which is how M6 is passed.
 | Reading speed | at most 17 characters a second |
 | Cue length | 1.0 to 7.0 seconds, with at least 0.08 seconds between cues |
 
-These are house values, not platform rules; `python3 toolkit/media.py captions check` enforces
-them. Break at a sentence or clause, never inside a name. A speaker change inside one cue opens
-each line with `- `. Non-speech sounds go in square brackets, lower case, only when they matter.
-No braced direction or audio tag ever reaches a caption, and words are spelt as the script spells
-them, in en_GB.
+House values, not platform rules; `media.py captions check` enforces them. Break at a sentence or
+clause, never inside a name. A speaker change inside one cue opens each line with `- `. Sounds go
+in square brackets, lower case, only when they matter; no braced direction or audio tag ever
+reaches a caption, and words are spelt as the script spells them, in en_GB.
 
 ## Names
 
-In `publishing/src/captions/`: `<piece>.en-GB.srt` is timed to the master,
-`<piece>--cNN.en-GB.srt` to one cut and `<piece>.<FID>.en-GB.srt` to a recording. A deliverable
-with its own line width adds `.<platform>-<format>` before `.en-GB`, the key's dot and underscores
-as hyphens (`.linkedin-video-vertical`); a `.vtt` sits beside an `.srt` that needs one.
+In `publishing/src/captions/`: `<piece>.en-GB.srt` is timed to the master, `<piece>--cNN.en-GB.srt`
+to one cut and `<piece>.<FID>.en-GB.srt` to a recording; a deliverable with its own line width adds
+`.<platform>-<format>` before `.en-GB` (`.linkedin-video-vertical`); a `.vtt` sits beside an `.srt`
+that needs one; a published transcript is `<piece>[--cNN].transcript.en-GB.md`.
 
 ## Three timing routes
 
@@ -47,9 +45,8 @@ as hyphens (`.linkedin-video-vertical`); a `.vtt` sits beside an `.srt` that nee
    (`--anchors`, so drift never crosses a beat); one cut is aligned on its own audio and lines
    (`extract-audio --in --out`, then `--lines`). `captions retime` carries recording timing to the
    master, and master timing to each cut. It is a heuristic: check it by eye in a burned preview.
-   `align`, `retime`, `rewrap` and `vtt` write to the terminal unless `-o` names the caption file.
-3. **By hand**, when neither fits. Speech-to-text is never a default step: it spends credits, so
-   it runs only when the author asks (`production/docs/reference/elevenlabs.md`).
+3. **By hand.** Speech-to-text spends credits: only when the author asks
+   (`production/docs/reference/elevenlabs.md`).
 
 ## Burned or sidecar
 
@@ -59,15 +56,18 @@ as hyphens (`.linkedin-video-vertical`); a `.vtt` sits beside an `.srt` that nee
 - Captions made before the cut let `media.py cut --captions` burn them in the cutting pass, so M5
   and M6 pass together; both dates are recorded.
 - A burn writes an ASS file sized to the output, styled from the `--caption-*` tokens of
-  `brand/src/design-system/tokens.css`, its bottom margin the preset's `safe_zone`, or 8% of the
-  height (a house value) where none is published. It fails when the caption font falls back.
+  `brand/src/design-system/tokens.css`; it fails when the caption font falls back.
+- **On a profile site** (of the website or blog profile, whoever owns it) a video's `.vtt` loads
+  by `<track>`, never burned; each piece or cut with speech placed there has its published
+  transcript of exactly what the page plays (`captions transcript`, `--lines` for a cut), described
+  by hand where the picture says more. A feed episode's `.vtt` is master-timed. Page detail: the
+  website, blog and podcast-feed guides, where the project has them.
 
 ## How we apply it here
 
-- Every deliverable with speech and picture is captioned; an audiobook, a podcast (unless the
-  brief asks for a transcript) and a deliverable without speech are `n/a`, with the reason.
-- Fix a mis-transcription only; a caption never improves on what was said. Watch a burned
-  preview before M6 is recorded.
+- Every deliverable with speech and picture is captioned; M6's `n/a` list in the ladder guide says
+  what is not, and the reason is recorded.
+- Fix a mis-transcription only, never improve on what was said; watch a burned preview first.
 
 ## Who implements it
 

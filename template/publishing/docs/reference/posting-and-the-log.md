@@ -34,32 +34,34 @@ deliverable, `## <platform>.<format>` (with ` — cNN` for a cut), each with the
 | **Scheduled** | DD/MM/YYYY HH:MM, <%TIMEZONE%> |
 | **Limits** | each count against its `toolkit/data/platforms.toml` key |
 
+**A placement** is the one file a page of a profile site or an issue of a list plays or shows
+first, under its own H2 qualified `— <platform>:<slug>`; its other images are bullets of it, and
+it holds only the words outside its written piece. Its bullets are in the website, blog and
+newsletter guides, and a feed episode's in the podcast-feed guide, where the project has them.
+
 ## The schedule
 
 `publishing/src/schedule.md` holds one row per deliverable to go out, under the columns
 `Date · Time · Platform · Deliverable · Piece · Package · Status · Notes`. Status is `planned`
 when the package is written, `ready` once the piece passes M7 (captioned → scheduled), `moved`
 when the author changes the date (the row takes the new date; Notes keep the old one), `posted`
-once the author reports it, or `dropped`, with the reason. Rows are never deleted.
+once the author reports it, or `dropped`, with the reason. Rows are never deleted. A placement's
+Platform is `<platform>:<slug>` and its Deliverable the key of its one file; inside a written piece
+it takes its Date and Time from that piece, cited in Notes, and is `moved` when that piece moves.
 
-Where syntek-author's content calendar is present (a business project with its social-media
-documents), it owns the plan: cadence, text-only posts and bios are its, and the schedule lists
-only media deliverables, each row's Notes citing its calendar entry. Standalone, or in a book
-project, the schedule holds the whole plan for media.
+Where syntek-author's social-media documents are present, whichever sets a value (the plan, the
+calendar or an operating procedure) owns it: text-only posts and bios are theirs, and the schedule
+lists only media deliverables, each row's Notes citing its calendar entry. Standalone, or in a book
+project, the schedule holds the whole plan for media. A piece is `published` once every row for
+it is `posted` or `dropped`, each posted row with its log row (the ladder guide's last row).
 
 ## The publish log
 
-`publishing/src/publish-log.md` has one row per upload the author reports, under the columns
-`Date · Platform · Deliverable · Piece · URL · Disclosure set · Captions · Notes`, and is never
-pruned. The URL is the one the author gives, never guessed or built from a handle. Disclosure set
-is what the author actually set; where it differs from the package, the difference is reported,
-never smoothed over. A mistake is corrected by a dated note under the log's `## Corrections`.
-
-## When a piece is published
-
-Published is not a gate. A piece is `published` when every schedule row for it is `posted` or
-`dropped` and every `posted` row has its log row; until then it stays `scheduled`, however many
-of its deliverables are already out.
+`publishing/src/publish-log.md` has one row per upload or placement the author reports, under the
+columns `Date · Platform · Deliverable · Piece · URL · Disclosure set · Captions · Notes`, never
+pruned. The URL is the author's, never guessed or built from a handle. Disclosure set is what the
+author set: a difference from the package is reported, and a mistake gets a dated note under the
+log's `## Corrections`.
 
 ## How we apply it here
 
@@ -70,8 +72,7 @@ of its deliverables are already out.
 ## Who implements it
 
 - **Workflows:** `publishing/workflows/05-prepare-a-post/` writes the package and the schedule
-  rows; `publishing/workflows/06-record-a-publication/` records the author's post and closes the
-  piece.
+  rows; `publishing/workflows/06-record-a-publication/` logs the author's post and closes the piece.
 - **Skill:** `prepare-post` does both, and never posts.
 
 ## Governing standard

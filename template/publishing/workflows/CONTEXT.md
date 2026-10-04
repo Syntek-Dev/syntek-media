@@ -20,7 +20,8 @@ publishing/workflows/
 ├── 05-prepare-a-post/                ← the post package, the disclosure and the schedule rows
 ├── 06-record-a-publication/          ← log what the author posted; close the piece when all is out
 ├── 07-refresh-the-platform-specs/    ← re-read stale platform data; record corrections as overrides
-└── local/                            ← your own procedures; same slug overrides a template one
+<: if 'podcast' in PLATFORMS :>├── 08-publish-the-podcast-feed/     ← a self-hosted show's register, tagged audio, checked feed and upload copy
+<: endif :>└── local/                            ← your own procedures; same slug overrides a template one
 ```
 
 ## What's here
@@ -31,8 +32,10 @@ publishing/workflows/
 - **Gates** (of `scripts/docs/reference/the-piece-ladder.md`):
   `publishing/workflows/02-cut-for-a-platform/` serves M5,
   `publishing/workflows/03-caption-a-piece/` M6, and `publishing/workflows/04-brief-a-thumbnail/`
-  and `publishing/workflows/05-prepare-a-post/` M7. `publishing/workflows/06-record-a-publication/`
-  closes a piece as published, which is not a gate; the other two move no piece.
+  and `publishing/workflows/05-prepare-a-post/` M7<: if 'podcast' in PLATFORMS :>, with
+  `publishing/workflows/08-publish-the-podcast-feed/` for a feed episode<: endif :>.
+  `publishing/workflows/06-record-a-publication/` closes a piece as published, which is not a
+  gate; the other two move no piece.
 - **Numbers are frozen and append-only**, unique within this layer across every brand kind,
   platform and media kind.
 - `local/` — procedures written for this project, in their own numbering.

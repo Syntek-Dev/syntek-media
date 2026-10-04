@@ -26,6 +26,7 @@ model: opus
 **Choosing**
 
 - [ ] Every deliverable listed; each with speech and picture marked for captions, each other one `n/a` with its reason. · _opus_
+- [ ] **Every profile-site placement and feed episode found:** a `.vtt` for each self-hosted video, a published transcript for each piece or cut placed and for a feed episode. · _opus_
 - [ ] Burned or sidecar noted per deliverable, from its table's `caption_formats` and the brief. · _sonnet_
 - [ ] A timing route chosen per file; no speech-to-text run in this procedure. · _opus_
 
@@ -39,7 +40,8 @@ model: opus
 
 - [ ] **Every file passes `captions check --script`;** each finding decided, and a mis-transcription fixed in the transcript first, with the author. · _opus_
 - [ ] Line breaks at clauses, never inside a name; no braced direction or audio tag in any cue. · _opus_
-- [ ] Burned deliverables burned (or re-cut with their captions); sidecars kept, with a VTT where a platform takes one. · _sonnet_
+- [ ] Burned deliverables burned (or re-cut with their captions); sidecars kept, with a VTT where a platform takes one, a profile site's video and a feed episode included. · _sonnet_
+- [ ] Each published transcript written with `captions transcript` (`--lines` for a cut), described where the picture says more, and approved by the author. · _opus_
 - [ ] No caption-font fallback accepted. · _sonnet_
 - [ ] A burned preview watched with the author: in time, inside the safe zone, readable. · _opus_
 - [ ] The brief's `status` and `verified` set: M6 dated, or `n/a` with its reason. · _sonnet_

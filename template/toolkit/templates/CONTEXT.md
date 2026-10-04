@@ -13,7 +13,7 @@ it copies one.
 toolkit/templates/
 ├── CONTEXT.md          ← this file
 ├── CLAUDE.md           ← operating rules
-├── thumbnail.html      ← one thumbnail and cover layout for every aspect: 16:9, 1:1, 4:5 and 9:16
+├── thumbnail.html      ← one thumbnail, image and cover layout for every aspect: 1.91:1, 16:9, 1:1, 4:5 and 9:16
 └── card.html           ← title and end cards: a lower-third title or a centred end card
 ```
 
@@ -22,8 +22,21 @@ toolkit/templates/
 - `thumbnail.html` — **the fallback for the brand's thumbnail.** `thumbnail-brief` copies it to
   `publishing/src/thumbnails/<piece>[--cNN].html` and changes only the copy: the words, and the
   picture, set on the frame as `style="--picture: url('../renders/<still>.png')"`. The title sits
-  low on a 16:9 frame, full width on a square or 4:5 cover, and in the middle band of a 9:16 cover,
-  inside the profile grid's crop.
+  low on a 16:9 frame (smaller on a 1.91:1 share image), full width on a square or 4:5 cover, and
+  in the middle band of a 9:16 cover, inside the profile grid's crop. The same layout serves the
+  brand's own channels' images (share, featured and preview images), which `media.py image`
+  then encodes into their formats.
+- **The play button** (DESIGN D57): an element carrying `data-play-button`, shown only under
+  `:root[data-deliverable^="newsletter."]`, which `card.py render --deliverable` sets with
+  `data-platform`. It is a solid disc in `--color-accent` with an outline in `--color-on-accent`
+  and a ring of `--color-accent` around that, so it survives an email client's dark-mode
+  inversion, with a triangle in `--color-on-accent`; it sits centred in the space above the words.
+  Rendered with `--transparent` for a newsletter key, the layout keeps only the play button and
+  the words, outlined with `--color-bg`, over a transparent background: that PNG is a newsletter
+  GIF's overlay (`media.py cut … --overlay`). The brand's own
+  `brand/src/design-system/previews/thumbnail.html` carries the same element and rules; a
+  layout without them (a brand kit made before 0.2.0) gets them added to the piece's copy by
+  `thumbnail-brief`, copied from this file.
 - `card.html` — **the fallback for the brand's card.** `cut-for-platform` copies it to
   `production/src/cards/<piece>.<card>.html` and changes only the copy: the words and the body's
   class. `title` is a lower-third title; `end` is a centred end card with its call to action. The

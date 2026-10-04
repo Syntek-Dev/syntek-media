@@ -29,9 +29,9 @@ image said plainly.
   the author confirms it. Retailer links are only those the author gives. A review or an
   endorsement is quoted only when it was received and its writer agreed to be quoted. Nothing goes
   past the spoiler line, in the title, the description or the hashtags.
-- **Step 5 — also** a designed or AI character voice, AI-generated art and a generated music bed
+- **Step 7 — also** a designed or AI character voice, AI-generated art and a generated music bed
   are each disclosed; an audiobook sample follows the disclosure its own channel's rules give.
-- **Step 7 — also** the cover art's and any commissioned art's rows cover social posting, and
+- **Step 9 — also** the cover art's and any commissioned art's rows cover social posting, and
   every font in the thumbnail its licence for it.
 
 ## Domain rules

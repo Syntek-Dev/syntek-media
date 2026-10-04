@@ -32,7 +32,9 @@ with the author which recording, or recordings, the piece is made from. _Substan
 Run `python3 toolkit/media.py footage add FILE --kind video --location LABEL` (or `--kind audio`),
 with `--rights RRNNNN` where it shows other people and their release has a row. It copies the
 recording into the mirror and gives it a footage ID; add that ID to the brief's `source_media`.
-A recording already logged keeps its ID. _Mechanical._
+**A recording already in `production/src/footage/manifest.toml` is not logged again** (the
+command refuses a duplicate): skip this step and copy its existing ID into `source_media`, as an
+episode cut from a talk another piece recorded does. _Mechanical._
 
 ## 3. Extract its audio
 
@@ -47,7 +49,9 @@ speech-to-text accepts and `captions align` reads, and prints that path. _Mechan
 > **Skill:** `captions` · **Guide:** `production/docs/reference/elevenlabs.md`
 
 Ask the author: speech-to-text, which spends credits, or the author's own words (an existing
-transcript, the talk's notes as delivered, or typed by hand). For speech-to-text, load the
+transcript, the talk's notes as delivered, or typed by hand). **An episode cut from a recording
+another piece already transcribed** (its brief's `parent`) takes neither: step 6 copies the
+parent's approved beats it keeps, and steps 4 and 5 are skipped and said so. For speech-to-text, load the
 `elevenlabs` tools with ToolSearch (searching 'elevenlabs'), run
 `python3 toolkit/media.py check --setup` and stop on any ElevenLabs finding, then state the audio
 minutes, the number of calls and the estimated credits, and wait for a yes. _Substantive._
@@ -71,7 +75,10 @@ Write `scripts/src/pieces/<piece>/transcript.md` in the script's format: frontma
 `source` (the footage ID), `made` (`speech-to-text DD/MM/YYYY` or `by hand`) and `approved`
 (empty); one H2 per beat, agreed with the author, each carrying its start on the recording,
 `(at HH:MM:SS.mmm)`; spoken lines only, as said, one sentence per line, each opening with its
-speaker tag. A word nobody can settle is `[unclear]` and flagged `VERIFY`. _Substantive._
+speaker tag. A word nobody can settle is `[unclear]` and flagged `VERIFY`. For an episode cut
+from its parent's recording, copy only the parent's approved beats it keeps, their anchors on the
+same recording unchanged, and name the parent in Notes; the copy is approved below as this piece's
+own M2, and a later correction to either transcript reopens both. _Substantive._
 
 ## 7. Run the companions as reports
 

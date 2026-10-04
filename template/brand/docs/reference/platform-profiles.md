@@ -10,18 +10,19 @@ model: opus
 **Language**: British English (en_GB)
 
 **What it is.** A profile, `brand/src/platforms/<platform>.md`, holds what the brand decides for
-one platform: the account, the deliverables it uses there and, where no social media plan covers
-them, its cadence, tone, call to action and hashtag sets. One ships for each platform chosen when
-the project was generated. The platform's own facts (sizes, lengths, limits, codecs, its AI
-label) are not the brand's to decide: they live, dated and sourced, in
-`toolkit/data/platforms.toml`, read as `publishing/docs/reference/platform-specs.md` explains.
+one platform: the account (or its sites or lists), the deliverables it uses there and, where no
+written-side document sets them, its cadence, tone, call to action and hashtag sets. One ships for
+each platform chosen. The platform's own facts (sizes, lengths, limits, codecs, its AI label) live,
+dated and sourced, in `toolkit/data/platforms.toml`, read as `platform-specs.md` explains.
 
 ## What a profile holds
 
 | Section | Holds |
 |---|---|
 | `## Account` | the handle and URL, exactly as the platform shows them; flagged until the author gives them |
-| `## The social plan` | one line: whether a social media plan owns cadence, tone, call to action, hashtags and bios |
+| `## Sites` (website, blog) | one row per site, its own or one it writes for: slug, domain, owner, CMS, player, captions, what it carries, agreement |
+| `## Lists` (newsletter) | one row per list: slug, sender, service, owner, where its images are hosted, agreement; never a subscriber or a count |
+| `## The social plan` | one line: the written-side documents own what they set for this platform |
 | `## Cadence` | how often, on which days and at what time the brand posts there |
 | `## Tone on this platform` | how the brand's voice shifts there |
 | `## Call to action` | what a viewer or listener is asked to do, in the brand's words |
@@ -29,14 +30,21 @@ label) are not the brand's to decide: they live, dated and sourced, in
 | `## Deliverables used` | the `<platform>.<format>` keys the brand uses there, from `python3 toolkit/media.py presets` |
 | `## Overrides` | one line pointing to `brand/src/platforms/overrides.toml` |
 
+- **One agreement per site:** a site or list the brand does not own needs its row's Agreement to
+  name a dated record before any placement there is `ready`; where the project has both the
+  website and the blog platforms, the website row holds it once and the blog row reads 'see
+  website'. A slug is frozen once a schedule row uses it.
+
 ## The social-media family
 
 - Where syntek-author's social-media family is present (a business project, by default), its
-  social media plan owns cadence, tone, call to action, hashtags and bios, and its content
-  calendar owns when each post goes out.
-- The profile then holds only delivery facts, the account and the deliverables used, and cites
-  the plan in prose for the rest; `publishing/src/schedule.md` lists only media deliverables, each
-  citing its calendar entry; `prepare-post` reads that entry and packages media deliverables only.
+  documents own what they set, platform by platform and document by document: the social media
+  plan, the content calendar or an operating procedure. A document **covers** a platform when it
+  names the platform with a cadence; whichever sets cadence, tone, call to action or hashtags owns
+  that value, and the calendar owns when each post goes out.
+- The profile always holds its delivery facts (the account, sites or lists, the deliverables
+  used), cites each such document in prose, and holds a value itself only where none sets it;
+  `publishing/src/schedule.md` lists only media deliverables, each citing its calendar entry.
 - Text-only posts, bios and the channel voice belong to the social-media-documents skill
   (syntek-author), where present. Standalone, or in a book project, the profile holds all of it.
 
@@ -49,12 +57,11 @@ label) are not the brand's to decide: they live, dated and sourced, in
 - Never edit `platforms.toml` itself: it is template-owned, and `copier update` refreshes it.
 - A value not yet confirmed is cited by its key, never by a number; `prepare-post` warns above
   `platform.instagram.hashtags_max`, for example, without the profile stating it.
-- `publishing/workflows/07-refresh-the-platform-specs/` re-checks old values and is where most
-  overrides come from.
+- Most overrides come from `publishing/workflows/07-refresh-the-platform-specs/`.
 
 ## How we apply it here
 
-- A handle or URL comes from the author, exactly as written; Claude never guesses one.
+- A handle, domain, sender or URL comes from the author, exactly as written; never guessed.
 - A profile is a seed: `copier update` never overwrites it, and restores it empty if it is
   deleted. Removing its platform from the answers deletes it, filled in or not; `overrides.toml`
   always ships, so a confirmed correction survives and is removed by hand.

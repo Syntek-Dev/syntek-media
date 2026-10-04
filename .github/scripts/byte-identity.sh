@@ -3,7 +3,7 @@
 # byte-identity.sh — Verify shared files are byte-identical in every render that ships them.
 #
 #                    DESIGN.md Section 2 ("Token discipline") makes one promise that holds the
-#                    three brand kinds, six platforms and six media kinds together: outside the
+#                    three brand kinds, nine platforms and six media kinds together: outside the
 #                    spine set, a file that ships in two renders is the SAME file in both. That
 #                    is what lets a skill be fixed once, reviewed once and updated everywhere,
 #                    and it is what makes "brand differences live in gated files and mode files"

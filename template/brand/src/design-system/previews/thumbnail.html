@@ -14,8 +14,12 @@
   in production/src/assets/ (a frame is extracted there with media.py frame -o), never a
   git-ignored render, so the layout rebuilds from tracked files. One file serves every aspect
   ratio; the renderer sets --safe-top, --safe-right, --safe-bottom and --safe-left (px) and
-  --frame-width and --frame-height from the deliverable's preset. Every colour, face, weight
-  and space comes from tokens.css.
+  --frame-width and --frame-height from the deliverable's preset, and marks :root with
+  data-deliverable and data-platform. Every colour, face, weight and space comes from tokens.css.
+  The play button (the element carrying data-play-button) shows only on a newsletter
+  deliverable: a solid disc with its own outline, so it survives an email client's dark-mode
+  inversion. Rendered with --transparent for a newsletter deliverable, the layout keeps only the
+  play button and the words: that PNG is the newsletter GIF's overlay (media.py cut … --overlay).
 -->
 <!-- AUTHOR TO CONFIRM: the brand's thumbnail layout: where the picture, the title, the kicker and the name sit, how large the title is, and how much of the picture the scrim darkens. Remove this flag once the layout is the brand's own. -->
 <style>
@@ -81,6 +85,50 @@
     .scrim { background: linear-gradient(to top, transparent 0%, var(--color-bg) 50%, transparent 100%); opacity: 0.75; }
     .title { font-size: 13vmin; }
   }
+
+  /* Wide share images (1.91:1 and wider): a smaller title, so two lines stay clear of a 2:1
+     centre crop. */
+  @media (min-aspect-ratio: 185/100) {
+    .title { font-size: 10vmin; max-width: 70%; }
+  }
+
+  /* The play button: hidden unless the deliverable is a newsletter's (a preview image or a
+     GIF's overlay). It sits centred in the space above the words, so it never covers them. */
+  [data-play-button] { display: none; }
+  :root[data-deliverable^="newsletter."] [data-play-button] {
+    display: block;
+    position: relative;
+    align-self: center;
+    margin: auto 0;
+    flex: none;
+    width: 24vmin;
+    height: 24vmin;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: var(--color-accent);
+    border: 1.2vmin solid var(--color-on-accent);
+    box-shadow: 0 0 0 0.8vmin var(--color-accent);
+  }
+  :root[data-deliverable^="newsletter."] [data-play-button]::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 54%;
+    width: 9vmin;
+    height: 10vmin;
+    transform: translate(-50%, -50%);
+    background: var(--color-on-accent);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+  }
+  /* A newsletter GIF's overlay (card.py render --transparent): only the play button and the
+     words, over a transparent background, the words outlined so they read over any frame. */
+  :root[data-transparent][data-deliverable^="newsletter."] body { background: transparent; }
+  :root[data-transparent][data-deliverable^="newsletter."] .picture,
+  :root[data-transparent][data-deliverable^="newsletter."] .scrim { display: none; }
+  :root[data-transparent][data-deliverable^="newsletter."] .title,
+  :root[data-transparent][data-deliverable^="newsletter."] .name {
+    text-shadow: 0 0 0.6vmin var(--color-bg), 0 0 1.2vmin var(--color-bg);
+  }
 </style>
 </head>
 <body>
@@ -88,6 +136,7 @@
   <div class="picture"></div>
   <div class="scrim"></div>
   <div class="safe">
+    <div class="play" data-play-button aria-hidden="true"></div>
     <p class="kicker">Kicker</p>
     <h1 class="title">The promise, in a few words</h1>
     <p class="name"><%BRAND_NAME%></p>

@@ -26,10 +26,19 @@ missing from the captions are a note, not a finding, where every beat they belon
 into a removed stretch (by the beats' anchors). An SRT with no cue, an empty cue or overlapping
 cues is refused by burn, cut --captions and vtt.
 
+transcript writes the published transcript of a piece, or with --lines of one cut's lines (the
+same lines align --lines takes), for <piece>[--cNN].transcript.en-GB.md (DESIGN D60): the
+spoken words as the script or transcript spells them, one sentence per line, a paragraph per
+beat; speaker names, bold, only where two or more people speak (VO, ON and NARRATOR are the
+piece's one voice); a TEXT cue as [On screen: …], an SFX or MUSIC cue as a bracketed sound in
+lower case; NOTE cues and braced directions dropped; and 'As recorded on DD/MM/YYYY' from
+--date or, for a recorded piece's transcript.md, its recording's recorded date in the
+manifest. What the picture shows and the words leave out is added by hand.
+
 Where the output goes: from-segments writes to publishing/src/renders/ unless -o names a path;
-align, retime, rewrap and vtt write to the path -o names, or else to stdout, with every report
-line on stderr, because their files belong in the tracked publishing/src/captions/, where the
-toolkit never chooses a path itself. burn writes its render to publishing/src/renders/.
+align, retime, rewrap, vtt and transcript write to the path -o names, or else to stdout, with
+every report line on stderr, because their files belong in the tracked publishing/src/captions/,
+where the toolkit never chooses a path itself. burn writes its render to publishing/src/renders/.
 
 script time reads each beat heading's '(target MM:SS)' as that beat's own duration, never a
 running time: it compares every beat with its own target, sums the beat targets for the piece,
@@ -879,6 +888,137 @@ def cmd_vtt(args) -> int:
         note(f"captions vtt: {len(hard)} finding(s) in {C.shown(args.srt)}; nothing written (fix the SRT first)")
         return 1
     emit(vtt_text(cues), args.o, inputs=[args.srt])
+    return 0
+
+
+# ── The published transcript (DESIGN D60, Section 6.9) ──────────────────────────────────
+
+ONE_VOICE = {"VO", "ON", "NARRATOR"}   # delivery tags of the piece's own voice: one speaker, not three
+
+
+@dataclass
+class Element:
+    beat: int
+    kind: str          # 'line' (spoken, numbered as read_script numbers it) or 'cue'
+    tag: str
+    text: str
+    n: int = 0
+
+
+def script_elements(p) -> tuple:
+    """(H1 title, beats, elements) of a script or transcript, in reading order: spoken lines
+    numbered exactly as read_script numbers them (so --lines names the same lines as captions
+    align --lines), and the TEXT, SFX and MUSIC cues between them; NOTE cues and braced
+    directions dropped."""
+    _, body, _ = C.split_frontmatter(C.read_text(p))
+    title, beats, out, beat, n = "", [], [], 0, 0
+    for raw in body.splitlines():
+        stripped = raw.strip()
+        if not title and stripped.startswith("# "):
+            title = re.sub(r"\s+—\s+(script|transcript)\s*$", "", stripped[2:]).strip()
+            continue
+        m = BEAT_RE.match(stripped)
+        if m:
+            beat, n = int(m.group(1)), 0
+            beats.append(beat)
+            continue
+        if stripped.startswith("## "):
+            beat, n = 0, 0
+            continue
+        s = SPEAKER_RE.match(stripped)
+        if not s:
+            continue
+        tag = s.group(1)
+        if tag == "NOTE":
+            continue
+        text = re.sub(r"\s+", " ", BRACE_RE.sub(" ", s.group(2))).strip()
+        if tag in CUE_TAGS:
+            if text:
+                out.append(Element(beat, "cue", tag, text))
+            continue
+        pause = PAUSE_RE.findall(s.group(2))
+        if not text and not pause:
+            continue
+        n += 1
+        out.append(Element(beat, "line", tag, text, n))
+    return title, beats, out
+
+
+def speaker_name(tag: str) -> str:
+    return "Narrator" if tag in ONE_VOICE else " ".join(w.capitalize() for w in tag.split())
+
+
+def recorded_date(p: Path, meta: dict) -> str:
+    """For a recorded piece's transcript.md: its recording's recorded date in the manifest."""
+    fid = str(meta.get("source", "") or "").strip()
+    manifest = C.path(C.MANIFEST)
+    if not fid or not manifest.is_file():
+        return ""
+    for row in C.load_toml(manifest).get("file", []):
+        if str(row.get("id", "")) == fid:
+            return str(row.get("recorded", "") or "").strip()
+    return ""
+
+
+def cmd_transcript(args) -> int:
+    src = Path(args.text)
+    script = read_script(src)
+    chosen = {(ln.beat, ln.n) for ln in select_lines(script, args.lines)}
+    title, _, elements = script_elements(src)
+    spoken = [i for i, e in enumerate(elements) if e.kind == "line" and (e.beat, e.n) in chosen]
+    if not spoken:
+        raise C.Fatal(f"{C.shown(src)} has no spoken line to transcribe")
+    # The whole piece keeps every cue; one cut's lines keep the cues between its first and last line.
+    first, last = (spoken[0], spoken[-1]) if args.lines else (0, len(elements) - 1)
+    keep = [e for i, e in enumerate(elements) if first <= i <= last
+            and (e.kind == "cue" or (e.beat, e.n) in chosen) and (e.kind == "cue" or e.text)]
+    voices = {speaker_name(e.tag) for e in keep if e.kind == "line"}
+    labelled = len(voices) > 1
+    meta = script.meta
+    date = ""
+    if args.date:
+        date = C.parse_date(args.date).strftime("%d/%m/%Y")
+    elif meta.get("source"):
+        date = recorded_date(src, meta)
+        try:
+            date = C.parse_date(date).strftime("%d/%m/%Y") if date else ""
+        except C.Fatal:
+            date = ""
+        if not date:
+            note(f"  note: the manifest gives no recorded date for {meta.get('source')}: pass --date DD/MM/YYYY "
+                 "for the 'As recorded on' line")
+    head = f"# {title or script.meta.get('piece', src.stem)} — transcript"
+    if args.lines:
+        head += f" (lines {args.lines.strip()})"
+    out = [head, ""]
+    if date:
+        out += [f"As recorded on {date}.", ""]
+    para, beat, speaker = [], None, None
+    for e in keep:
+        if e.beat != beat and para:
+            out += para + [""]
+            para, speaker = [], None
+        beat = e.beat
+        if e.kind == "cue":
+            para.append(f"[On screen: {e.text}]" if e.tag == "TEXT" else f"[{e.text.lower()}]")
+            continue
+        who = speaker_name(e.tag)
+        if labelled and who != speaker:
+            if para:
+                out += para + [""]
+                para = []
+            para.append(f"**{who}:** {e.text}")
+        else:
+            para.append(e.text)
+        speaker = who
+    if para:
+        out += para
+    text = "\n".join(out).rstrip("\n") + "\n"
+    emit(text, args.o, inputs=[src])
+    words = sum(count_words(e.text) for e in keep if e.kind == "line")
+    note(f"captions transcript {C.shown(src)}: {sum(1 for e in keep if e.kind == 'line')} spoken line(s), {words} "
+         f"words{', ' + str(len(voices)) + ' speakers named' if labelled else ''}; describe by hand what the "
+         "picture shows that the words leave out")
     return 0
 
 

@@ -10,8 +10,9 @@ model: opus
 **Last Updated**: <%DATE%> **Version**: 0.1.0 **Maintained By**: <%OWNER_NAME%>
 **Language**: British English (en_GB)
 
-The ordered procedure for a piece's thumbnails and covers, from the promise in words to a PNG the
-author has approved. Each step names the skill and guide it uses, and the command it runs. **Run
+The ordered procedure for a piece's thumbnails, covers and other images (posters, share,
+featured and preview images, and a GIF preview), from the promise in words to files the author
+has approved. Each step names the skill and guide it uses, and the command it runs. **Run
 in order** — the ordering is load-bearing — and tick `CHECKLIST.md` as you go.
 
 > Read the read-order files first (this folder's `CONTEXT.md` and `CLAUDE.md`), then
@@ -23,17 +24,20 @@ in order** — the ordering is load-bearing — and tick `CHECKLIST.md` as you g
 > **Skill:** `thumbnail-brief` · **Guide:** `publishing/docs/reference/thumbnails.md`
 
 Read the brief's deliverables and the cut-down plan's notes, which say which cuts need their own
-thumbnail. Read an existing brief in `publishing/src/thumbnails/` before starting another; a
-second brief for the same piece and cut is a revision, never a new file. _Mechanical._
+thumbnail, and the post package or the brief for each placement on the brand's own sites,
+blogs and newsletters: each needs its poster, share, featured or preview image, or its GIF. Read
+an existing brief in `publishing/src/thumbnails/` before starting another; a second brief for the
+same piece and cut is a revision, never a new file. _Mechanical._
 
 ## 2. Decide which deliverables take a thumbnail
 
 > **Skill:** `thumbnail-brief` · **Guide:** `publishing/docs/reference/platform-specs.md`
 
-For each platform, run `python3 toolkit/media.py presets` and find its thumbnail or cover tables.
-A table with no pixel size (its `verify` names `width` and `height`) needs a size the author
-confirms; a platform with no thumbnail table takes its video deliverable's size. Both are flagged
-`VERIFY` in the brief. _Substantive._
+For each platform, run `python3 toolkit/media.py presets` and find its thumbnail, cover and
+other image tables (`kind = "image"`), and each table's `formats`. A table with no pixel size (its
+`verify` names `width` and `height`) needs a size the author confirms; a platform with no
+thumbnail table takes its video deliverable's size. Both are flagged `VERIFY` in the brief. A
+poster needs no layout: it is a frame of its own video's render. _Substantive._
 
 ## 3. Brief it in words
 
@@ -52,8 +56,11 @@ Copy `brand/src/design-system/previews/thumbnail.html` (or `toolkit/templates/th
 where the brand has none) to `publishing/src/thumbnails/<piece>[--cNN].html`, and fix its
 stylesheet link so it reaches the brand's `tokens.css` by relative path. Delete from the copy the
 brand layout's own `AUTHOR TO CONFIRM` line about the brand's layout: the brand file keeps it and
-`media.py flags` reports it there, so it never counts against the piece at M7. Never edit the
-brand's file. _Mechanical._
+`media.py flags` reports it there, so it never counts against the piece at M7. For a
+`newsletter.*` key, check the copy for the play-button hook (an element carrying
+`data-play-button`); where the brand's layout predates it, add the element and its rules from
+`toolkit/templates/thumbnail.html` to the copy and tell the author the brand's layout lacks it.
+Never edit the brand's file. _Mechanical._
 
 ## 5. Fill the layout
 
@@ -82,7 +89,25 @@ For each deliverable, run `uv run toolkit/card.py render <html> --deliverable KE
 `publishing/src/renders/<html-stem>.<platform>-<format>.png`. Exit 2 names a missing uv or
 Chromium, with its install command: report it, and stop. _Mechanical._
 
-## 8. Check it at thumbnail size
+## 8. Make the posters, the other formats and the GIF
+
+> **Skill:** `thumbnail-brief` · **Guide:** `publishing/docs/reference/thumbnails.md`
+
+Every format a table lists beyond PNG, and every poster, goes through the toolkit, never ffmpeg by
+hand:
+
+```bash
+python3 toolkit/media.py image <png> --deliverable KEY [--format webp]
+python3 toolkit/media.py image <video render> --deliverable KEY --at HH:MM:SS.mmm
+uv run toolkit/card.py render <html> --deliverable newsletter.preview_gif --transparent -o <overlay png>
+python3 toolkit/media.py cut <master> --deliverable newsletter.preview_gif --in <In> --out <Out> --overlay <overlay png>
+```
+
+Record each poster's `--at`, and the GIF's In and Out on the master with what its first frame
+shows, under `## Image`, so a remade file equals the approved one. Exit 1 names what failed (a
+size, `max_size`, a range over `max_seconds`): fix it at its source. _Mechanical._
+
+## 9. Check it at thumbnail size
 
 > **Skill:** `thumbnail-brief` · **Guide:** `publishing/docs/reference/thumbnails.md`
 
@@ -91,15 +116,15 @@ controls; where Instagram shows it, the title sits inside `platform.instagram.gr
 table's `notes` are met; and every face, stock image or font that needs one has a `cleared` row in
 `production/src/rights-register.md`. Record each result under `## Checks`. _Substantive._
 
-## 9. Have the author approve it
+## 10. Have the author approve it
 
 > **Skill:** `thumbnail-brief` · **Guide:** `publishing/docs/reference/thumbnails.md`
 
-Show the author the PNGs at the size they will be seen, with the checks. On approval, date
+Show the author every image at the size it will be seen, the GIF playing, with the checks. On approval, date
 `approved` in the brief; on a change, go back to the step it touches. A variant the author does
 not choose is recorded as declined under `## Variants`. _Substantive._
 
-## 10. Hand back
+## 11. Hand back
 
 > **Skill:** `thumbnail-brief` · **Guide:** `publishing/docs/reference/thumbnails.md`
 

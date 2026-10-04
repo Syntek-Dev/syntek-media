@@ -41,9 +41,9 @@ remade from the brand's tokens and an agreed brief.
 ---
 piece: NNN-kebab-title             # equals the piece's folder name
 cut: ""                            # cNN for one cut's thumbnail; empty for the full-length deliverables
-deliverables: []                   # keys: youtube.thumbnail, instagram.reel_cover, podcast.episode_art, …
+deliverables: []                   # keys: youtube.thumbnail, podcast.episode_art, website.poster, newsletter.preview_gif, …
 html: NNN-kebab-title.html         # the layout beside this brief
-approved: ""                       # DD/MM/YYYY once the author approves the rendered PNGs
+approved: ""                       # DD/MM/YYYY once the author approves every rendered image
 ---
 
 # <Title> — thumbnail brief
@@ -55,5 +55,6 @@ approved: ""                       # DD/MM/YYYY once the author approves the ren
 ## Checks
 ```
 
-- **Generated (never hand-edit):** `<html-stem>.<platform>-<format>.png`, in
-  `publishing/src/renders/`.
+- **Generated (never hand-edit):** `<html-stem>.<platform>-<format>.png`; each image
+  `media.py image` encodes or frames, `<stem>.<platform>-<format>.<ext>`; and a GIF preview,
+  `<piece>[--cNN].newsletter-preview-gif.gif`, all in `publishing/src/renders/`.

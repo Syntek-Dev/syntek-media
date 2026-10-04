@@ -7,9 +7,11 @@ Usage:
     python3 toolkit/media.py script time PATH [--wpm N] [--write]
     python3 toolkit/media.py assemble EDL [-o OUT]
     python3 toolkit/media.py cut SRC --deliverable KEY --in TC --out TC [--cut cNN] [--frame crop|pad]
-                                 [--x PX] [--captions SRT] [-o OUT]
+                                 [--x PX] [--captions SRT] [--overlay PNG] [-o OUT]
     python3 toolkit/media.py encode SRC --deliverable KEY [--frame crop|pad] [-o OUT]
     python3 toolkit/media.py frame SRC --at TC [-o OUT]
+    python3 toolkit/media.py image SRC --deliverable KEY [--at TC] [--format jpg|png|webp|avif]
+                                   [--frame crop|pad] [-o OUT]
     python3 toolkit/media.py still-video IMAGE AUDIO --deliverable KEY [-o OUT]
     python3 toolkit/media.py extract-audio SRC [--in TC --out TC] [--rate HZ] [-o OUT]
     python3 toolkit/media.py captions check SRT [--deliverable KEY] [--script SCRIPT]
@@ -19,6 +21,7 @@ Usage:
     python3 toolkit/media.py captions retime SRT (--in TC --out TC | --edl EDL --source FID) [-o SRT]
     python3 toolkit/media.py captions rewrap SRT --deliverable KEY [-o SRT]
     python3 toolkit/media.py captions vtt SRT [-o VTT]
+    python3 toolkit/media.py captions transcript TEXT [--lines B.L-B.L] [--date DD/MM/YYYY] [-o MD]
     python3 toolkit/media.py captions burn SRC SRT --deliverable KEY [-o OUT]
     python3 toolkit/media.py loudness measure FILE
     python3 toolkit/media.py loudness normalise FILE --target social|podcast|acx [-o OUT]
@@ -28,6 +31,12 @@ Usage:
                                               [--tail S] [--room-tone FILE] [-o OUT]
     python3 toolkit/media.py audiobook check FILE...
     python3 toolkit/media.py take add FILE --piece PIECE (--segment sNN | --chapter chNN --part pNN)
+    python3 toolkit/media.py feed new SHOW --feed-url URL [--site SLUG] [--rekey]
+    python3 toolkit/media.py feed add SHOW --piece PIECE
+    python3 toolkit/media.py feed tag SHOW --piece PIECE
+    python3 toolkit/media.py feed write SHOW --as-of 'DD/MM/YYYY HH:MM' [-o FILE]
+    python3 toolkit/media.py feed chapters SHOW --piece PIECE [-o FILE]
+    python3 toolkit/media.py feed check SHOW [--feed FILE] [--previous FILE]
     python3 toolkit/media.py footage add FILE --kind KIND --location LABEL [--rights RRNNNN]
     python3 toolkit/media.py footage verify [--manifest PATH]
     python3 toolkit/media.py tokens [--tokens PATH]
@@ -41,17 +50,25 @@ in brand/src/platforms/overrides.toml are applied and printed. TC is a timecode,
 Every path is relative to the working folder; defaults are relative to the repository root.
 
 Outputs go to a renders/ or generated/ folder by default (production/src/renders/ for masters,
-cards and extracts; publishing/src/renders/ for deliverables, burned captions, timed captions
-from segments and stills), named as the house names them; nothing is written elsewhere unless
--o names a path, and nothing outside those folders is ever overwritten. captions align,
-retime, rewrap and vtt write to -o or, without it, to stdout (report lines go to stderr).
-Every render is probed before it is reported.
+cards and extracts; publishing/src/renders/ for deliverables, images, GIFs, burned captions,
+timed captions from segments, stills, a feed episode's audio and JSON chapters), named as the
+house names them; nothing is written elsewhere unless -o names a path, and nothing outside
+those folders is ever overwritten. captions align, retime, rewrap, vtt and transcript, and feed
+write, write to -o or, without it, to stdout (report lines go to stderr): their files belong in
+tracked folders, where the toolkit never chooses a path. The exceptions, each written only by
+the commands named for it: the registers and the manifest (take add, footage add, and a
+podcast show's register: feed new, feed add and feed tag, none of which rewrites a value the
+author set), and a show's tracked feed, publishing/src/podcast/<show>.feed.xml, which only
+feed write -o replaces, after its GUID comparison passes, through a temporary file renamed over
+it. Every render is probed before it is reported.
 
 The modules beside this file do the work and have no command of their own: media_common.py
 (TOML, timecodes, presets and overrides, paths, the ffmpeg runner), media_video.py (assemble,
 cut, encode, frame, still-video), media_audio.py (extract-audio, loudness, audiobook, take),
-media_captions.py (captions, script time) and media_repo.py (footage, tokens, flags, check).
-card.py renders HTML and CSS to PNG and runs through uv: uv run toolkit/card.py --help.
+media_captions.py (captions, script time), media_repo.py (footage, tokens, flags, check),
+media_image.py (image, and the GIF pass of cut) and media_feed.py (a self-hosted podcast's
+register, feed, chapters and file tags). card.py renders HTML and CSS to PNG and runs through
+uv: uv run toolkit/card.py --help.
 
 Standard library only; Python 3.11+; ffmpeg and ffprobe for every command that touches media,
 run from argument lists, never a shell string. No command calls ElevenLabs or any network
@@ -71,12 +88,15 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import media_common as C  # noqa: E402
 import media_audio as A  # noqa: E402
 import media_captions as K  # noqa: E402
+import media_feed as F  # noqa: E402
+import media_image as I  # noqa: E402
 import media_repo as R  # noqa: E402
 import media_video as V  # noqa: E402
 
@@ -207,6 +227,12 @@ def cmd_presets(args) -> int:
 STDOUT_HELP = ("the output path; without -o the captions go to stdout and every report line to "
                "stderr (their home, publishing/src/captions/, is tracked, so the toolkit never "
                "chooses a path there; an existing file there is never overwritten)")
+FEED_HELP = ("the output path; without -o the feed goes to stdout and every report line to stderr. "
+             "-o publishing/src/renders/<show>.feed.xml is the upload copy (M7); -o "
+             "publishing/src/podcast/<show>.feed.xml replaces the tracked feed through a temporary file, "
+             "the one tracked file the toolkit overwrites, once the author reports the feed live "
+             "(publishing/workflows/06-record-a-publication/); any other existing file outside a "
+             "renders/ or generated/ folder is never overwritten")
 
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="media.py", description=__doc__.split("\n\n")[0],
@@ -256,6 +282,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--frame", choices=("crop", "pad"), default="crop")
     p.add_argument("--x", type=int, metavar="PX", help="crop's left edge in source pixels")
     p.add_argument("--captions", metavar="SRT", help="burn these captions in the same pass")
+    p.add_argument("--overlay", metavar="PNG", help="lay this transparent PNG (card.py render --transparent, at "
+                   "the deliverable's own size; any other size is refused) over every frame, the first included")
     out(p)
     p.set_defaults(func=V.cmd_cut)
 
@@ -274,6 +302,28 @@ def build_parser() -> argparse.ArgumentParser:
     out(p)
     p.set_defaults(func=V.cmd_frame)
 
+    p = sub.add_parser("image", help="encode one image deliverable from a still or a frame of a video",
+                       description="Scales a PNG or other still (a card.py render, a frame, an asset or a design "
+                       "export), or a video's frame at --at (a poster: the deliverable's own render), to the table's "
+                       "width and height, and writes it in the table's first format, or in --format where that is "
+                       "another of the table's formats; transparency is flattened where the table sets alpha = false "
+                       "(and always for jpg and avif). Size, codec, alpha, min_width and max_size are verified; over "
+                       "max_size_mobile is a warning. A source of another shape needs --frame; a GIF is cut's; a table "
+                       "with no width and height renders with card.py --size. A PNG already at the size, asked for as "
+                       "png with no -o, is verified where it stands and nothing is written. Default output: "
+                       "publishing/src/renders/<stem>.<platform>-<format>.<ext>, <stem> the source's name up to its "
+                       "first '.'.")
+    p.add_argument("src")
+    p.add_argument("--deliverable", required=True, metavar="KEY")
+    p.add_argument("--at", metavar="TC", help="the frame of a video source (required for a video)")
+    p.add_argument("--format", choices=("jpg", "png", "webp", "avif"), metavar="jpg|png|webp|avif",
+                   help="one of the table's formats (default: its first)")
+    p.add_argument("--frame", choices=("crop", "pad"), metavar="crop|pad",
+                   help="how a picture of another shape fills the deliverable's frame; required when the shapes "
+                        "differ (image never crops unasked)")
+    out(p)
+    p.set_defaults(func=I.cmd_image)
+
     p = sub.add_parser("still-video", help="a still under audio, as video")
     p.add_argument("image")
     p.add_argument("audio")
@@ -289,7 +339,7 @@ def build_parser() -> argparse.ArgumentParser:
     out(p, "the output path (default: production/src/renders/<stem>[.<in>-<out>].wav)")
     p.set_defaults(func=A.cmd_extract)
 
-    p = sub.add_parser("captions", help="check, from-segments, align, retime, rewrap, vtt, burn")
+    p = sub.add_parser("captions", help="check, from-segments, align, retime, rewrap, vtt, transcript, burn")
     cs = p.add_subparsers(dest="sub", metavar="action")
     q = cs.add_parser("check", help="limits, overlaps and gaps; the words against a script")
     q.add_argument("srt")
@@ -328,6 +378,21 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("srt")
     out(q, STDOUT_HELP)
     q.set_defaults(func=K.cmd_vtt)
+    q = cs.add_parser("transcript", help="the published transcript of a piece or of one cut's lines",
+                      description="The published transcript, <piece>[--cNN].transcript.en-GB.md, from a script.md "
+                      "or a transcript.md: the spoken words as the record spells them, one sentence per line, a "
+                      "paragraph per beat; speaker names only where two or more people speak; a TEXT cue as "
+                      "[On screen: …], an SFX or MUSIC cue as a bracketed sound; NOTE cues and braced directions "
+                      "dropped; 'As recorded on DD/MM/YYYY' from --date or, for a transcript.md, its recording's "
+                      "recorded date in the manifest. What the picture shows is described by hand.")
+    q.add_argument("text", help="a script.md or a transcript.md")
+    q.add_argument("--lines", metavar="B.L-B.L", help="only these spoken lines (one cut's, as captions align --lines)")
+    q.add_argument("--date", metavar="DD/MM/YYYY", help="the recording's date, for the 'As recorded on' line")
+    p_md = ("the output path; without -o the transcript goes to stdout and every report line to stderr (its "
+            "home, publishing/src/captions/, is tracked, so the toolkit never chooses a path there; an existing "
+            "file there is never overwritten)")
+    q.add_argument("-o", metavar="MD", help=p_md)
+    q.set_defaults(func=K.cmd_transcript)
     q = cs.add_parser("burn", help="burn captions in (ASS at the output size)")
     q.add_argument("src")
     q.add_argument("srt")
@@ -395,6 +460,76 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--chapter", metavar="chNN")
     q.add_argument("--part", metavar="pNN")
     q.set_defaults(func=A.cmd_take_add)
+
+    p = sub.add_parser("feed", help="a self-hosted podcast: new, add, tag, write, chapters, check",
+                       description="A self-hosted show's register, publishing/src/podcast/<show>.toml (where the "
+                       "project self-hosts a podcast), and the RSS feed, chapters and file tags made from it. "
+                       "Offline: nothing is fetched or posted; the author uploads.")
+    fe = p.add_subparsers(dest="sub", metavar="action")
+    q = fe.add_parser("new", help="open a show's register, with its podcast:guid",
+                      description="Writes publishing/src/podcast/<SHOW>.toml from the register's skeleton, with the "
+                      "feed URL, the site and the show's podcast:guid (the UUIDv5 of the feed URL without its scheme "
+                      "and trailing slashes, written once), and flags owner_email for the author. Refuses a show that "
+                      "exists, and a project without the podcast folder (exit 2: copier update -a "
+                      ".copier-answers.syntek-media.yml adds it). --rekey rewrites the feed URL, the podcast:guid and "
+                      "every episode's guid of an existing show, only while no row is published and no tracked feed "
+                      "exists.")
+    q.add_argument("show", metavar="SHOW", help="the show's kebab slug, frozen")
+    q.add_argument("--feed-url", required=True, metavar="URL", help="the feed's permanent https URL")
+    q.add_argument("--site", metavar="SLUG", help="the website profile's slug of the site serving the feed")
+    q.add_argument("--rekey", action="store_true", help="correct a provisional feed URL before anything is published")
+    q.set_defaults(func=F.cmd_new)
+    q = fe.add_parser("add", help="append an episode's row, with its guid",
+                      description="Appends the piece's [[episode]] row, status planned, with its guid (the UUIDv5 of "
+                      "the piece under the show's podcast:guid), written once; refuses a piece already in the "
+                      "register, and one with no folder under scripts/src/pieces/.")
+    q.add_argument("show", metavar="SHOW")
+    q.add_argument("--piece", required=True, metavar="PIECE")
+    q.set_defaults(func=F.cmd_add)
+    q = fe.add_parser("tag", help="write the episode's ID3 tags, chapters and cover into its M5 render",
+                      description="Re-muxes publishing/src/renders/<PIECE>.podcast-feed-audio.mp3 without re-encoding "
+                      "(-c:a copy), old tags and chapters dropped: ID3v2.3 title, the show's author and title, the "
+                      "number, the chapters (CTOC and CHAP) and the show's id3_cover; verifies the audio stream "
+                      "unchanged and the tags present, then writes render, bytes and seconds into the row. Exit 1, "
+                      "changing nothing, while the row's title or description is empty, its chapters break the "
+                      "[platform.podcast] rules, or the show has no title or author; exit 2 for a withdrawn row or "
+                      "a missing render (encode it at M5: publishing/workflows/02-cut-for-a-platform/).")
+    q.add_argument("show", metavar="SHOW")
+    q.add_argument("--piece", required=True, metavar="PIECE")
+    q.set_defaults(func=F.cmd_tag)
+    q = fe.add_parser("write", help="the show's RSS feed as of a time",
+                      description="The RSS 2.0 feed of every ready or published episode whose pub_date is not after "
+                      "--as-of (required: a static feed has no clock, and none is read), newest first, in the "
+                      "project's timezone; the same register and --as-of always give the same bytes. Before writing "
+                      "anything it compares the feed with the tracked publishing/src/podcast/<SHOW>.feed.xml where "
+                      "one exists, and exits 1, writing nothing, when the show's podcast:guid differs, a GUID of the "
+                      "tracked copy has vanished while its row is not withdrawn, or an enclosure's length changed "
+                      "under the same URL.")
+    q.add_argument("show", metavar="SHOW")
+    q.add_argument("--as-of", required=True, metavar="'DD/MM/YYYY HH:MM'",
+                   help="the moment the feed describes: the episode's pub_date, the time it is uploaded")
+    q.add_argument("-o", metavar="FILE", help=FEED_HELP)
+    q.set_defaults(func=F.cmd_write)
+    q = fe.add_parser("chapters", help="the episode's Podcasting 2.0 JSON chapters",
+                      description="JSON chapters (version 1.2, startTime in float seconds) from the row's "
+                      "[[episode.chapter]] tables; default publishing/src/renders/<PIECE>.chapters.json.")
+    q.add_argument("show", metavar="SHOW")
+    q.add_argument("--piece", required=True, metavar="PIECE")
+    q.add_argument("-o", metavar="FILE", help="the output path (default: publishing/src/renders/<piece>.chapters.json)")
+    q.set_defaults(func=F.cmd_chapters)
+    q = fe.add_parser("check", help="the register, or a saved feed, offline",
+                      description="Offline, never fetching: the register (or, with --feed, a saved or CMS-made feed) "
+                      "against the register's rules and the [platform.podcast] keys: every required value set and no "
+                      "AUTHOR TO CONFIRM flag left; GUIDs and enclosure URLs unique; the comparison feed write makes, "
+                      "against the tracked feed or --previous; bytes and seconds against the render where it is "
+                      "local; the cover and episode art against podcast.cover and podcast.episode_art; the chapter "
+                      "rules (a chapter under chapter_min_seconds warns); no '<' or '>' in a title or description; "
+                      "ASCII URLs; a warning where site is empty while the website profile exists, and where the "
+                      "owner address looks like a person's own.")
+    q.add_argument("show", metavar="SHOW")
+    q.add_argument("--feed", metavar="FILE", help="check this saved feed instead of the register")
+    q.add_argument("--previous", metavar="FILE", help="compare with this feed instead of the tracked copy")
+    q.set_defaults(func=F.cmd_check)
 
     p = sub.add_parser("footage", help="add, verify")
     fs = p.add_subparsers(dest="sub", metavar="action")
@@ -661,8 +796,10 @@ def self_test() -> int:
         return code, out + err
 
     print("media.py --self-test")
-    saved_root, saved_preset = C.ROOT, C.X264_PRESET
+    saved_root, saved_preset, saved_zone = C.ROOT, C.X264_PRESET, C.TIMEZONE
+    rendered_zone = not C.TIMEZONE.startswith("<")
     C.X264_PRESET = "ultrafast"
+    C.TIMEZONE = "Europe/London"   # the fixtures' feed dates are written for this zone
     have_ff = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
     have_git = bool(shutil.which("git"))
     with tempfile.TemporaryDirectory(prefix="media-self-test-") as tmp:
@@ -677,9 +814,13 @@ def self_test() -> int:
             if have_ff:
                 groups.append(("cut, burn-in, loudness, assemble, align and the audiobook master",
                                lambda: test_media(verdict, skip, cli, root)))
+                groups.append(("image, the GIF preview, the silent loop and web video",
+                               lambda: test_web(verdict, skip, cli, root)))
+                groups.append(("the podcast feed: register, tags, feed, chapters and checks",
+                               lambda: test_feed(verdict, skip, cli, root, saved_zone if rendered_zone else None)))
             else:
-                skip("every ffmpeg probe (cut, burn-in, loudness, assemble, align, audiobook)",
-                     "ffmpeg or ffprobe is not installed")
+                skip("every ffmpeg probe (cut, burn-in, loudness, assemble, align, audiobook, image, GIF, "
+                     "the podcast feed)", "ffmpeg or ffprobe is not installed")
             for label, group in groups:
                 try:
                     group()
@@ -688,7 +829,7 @@ def self_test() -> int:
                     verdict(f"{label}: ran to the end", False,
                             f"{type(err).__name__}: {err}\n{traceback.format_exc()}")
         finally:
-            C.ROOT, C.X264_PRESET = saved_root, saved_preset
+            C.ROOT, C.X264_PRESET, C.TIMEZONE = saved_root, saved_preset, saved_zone
     if failures:
         print(f"self-test FAILED: {len(failures)} case(s)")
         return 1
@@ -697,10 +838,14 @@ def self_test() -> int:
 
 
 def cli_split(*argv):
-    """(exit code, stdout, stderr) of one media.py command run in this process."""
+    """(exit code, stdout, stderr) of one media.py command run in this process; argparse's own
+    refusal (a missing required argument) is its exit 2, as on the command line."""
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-        code = main([str(a) for a in argv])
+        try:
+            code = main([str(a) for a in argv])
+        except SystemExit as stop:
+            code = stop.code if isinstance(stop.code, int) else 2
     return code, out.getvalue(), err.getvalue()
 
 
@@ -778,6 +923,17 @@ def test_common(verdict, cli) -> None:
     verdict("presets --stale-after finds every table stale a year on", code == 1 and "STALE" in out, out[-400:])
     code, out = cli("presets", "nosuch.key.at.all")
     verdict("an unknown preset key is exit 2", code == 2, out)
+    loop, gif = C.preset("website.hero_loop", data), C.preset("newsletter.preview_gif", data)
+    verdict("the own channels' tables: a silent loop (audio_tracks = 0) and a GIF (formats = [\"gif\"]) take no "
+            "caption_formats; the feed audio is untagged MP3 at the podcast target",
+            C.silent(loop) and "caption_formats" not in loop and C.is_gif(gif) and "caption_formats" not in gif
+            and not C.silent(C.preset("website.video", data)) and C.target_for(C.preset("podcast.feed_audio", data))
+            == "podcast" and C.preset("podcast.feed_audio", data).get("id3_version") == 3
+            and C.preset("podcast.episode_art", data).get("alpha") is False
+            and C.target_for(C.preset("website.video", data)) == "social", (loop, gif))
+    code, out = cli("presets", "website.hero_loop")
+    verdict("presets prints website.hero_loop with audio_tracks a house choice",
+            code == 0 and "audio_tracks = 0" in out and "chosen: a house choice" in out, out)
     code, out = cli("tokens")
     verdict("tokens: every required token present and parseable", code == 0, out)
     good = C.read_text(C.path(C.TOKENS))
@@ -889,6 +1045,38 @@ def test_captions(verdict, cli, root: Path) -> None:
     meta = C.split_frontmatter(C.read_text(script))[0]
     verdict("script time --write records words and estimated_seconds", meta.get("words") == 24
             and isinstance(meta.get("estimated_seconds"), float), meta)
+    test_transcript(verdict, root, script)
+
+
+def test_transcript(verdict, root: Path, script: Path) -> None:
+    code, out, err = cli_split("captions", "transcript", script)
+    verdict("captions transcript: spoken words a sentence a line, TEXT as [On screen: …], SFX in lower case, "
+            "NOTE cues, braces and one voice's tags dropped, to stdout without -o",
+            code == 0 and "The ferry is late again.\n[On screen: Late again?]" in out and "[gulls, low]" in out
+            and "{" not in out and "VO:" not in out and "ON:" not in out and "**" not in out
+            and "So the timetable is a promise the sea never signed." in out
+            and not list(C.path(C.CAPTIONS).glob("*.transcript.*")), out + err)
+    verdict("captions transcript: a paragraph per beat", "Late again?]\n\nEvery crossing" in out, out)
+    code, out, err = cli_split("captions", "transcript", script, "--lines", "2.1-2.2")
+    verdict("captions transcript --lines takes only one cut's lines (the lines captions align --lines takes)",
+            code == 0 and "The ferry is late again." not in out and "Every crossing waits" in out
+            and "So the timetable" in out and "(lines 2.1-2.2)" in out, out + err)
+    two = write(root / C.PIECES / "001-fixture" / "two-voices.md", TRANSCRIPT_MD.replace(
+        "HOST: Boats leave on the tide.", "GUEST: Boats leave on the tide.").replace("piece: 001-fixture", "piece: 001-fixture"))
+    code, out, err = cli_split("captions", "transcript", two, "--date", "03/10/2026")
+    verdict("captions transcript names two speakers in bold, and says when it was recorded",
+            code == 0 and "**Host:** The harbour opens at dawn." in out and "**Guest:** Boats leave on the tide." in out
+            and "As recorded on 03/10/2026." in out, out + err)
+    transcript = root / C.PIECES / "001-fixture" / "transcript.md"
+    code, out, err = cli_split("captions", "transcript", transcript)
+    verdict("captions transcript of one speaker's transcript names nobody", code == 0 and "**" not in out
+            and "HOST" not in out and "The harbour opens at dawn." in out, out + err)
+    dest = C.path(C.CAPTIONS) / "001-fixture.transcript.en-GB.md"
+    code, out, err = cli_split("captions", "transcript", script, "-o", dest)
+    code2, out2, err2 = cli_split("captions", "transcript", script, "-o", dest)
+    verdict("captions transcript writes only with -o, and never over the tracked file",
+            code == 0 and dest.is_file() and code2 == 2 and "never overwrites" in err2, err + err2)
+    dest.unlink()
 
 
 def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> None:
@@ -1106,6 +1294,8 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
                 and "does not contain this repository" in out, out)
         verdict("check --setup prints no other value from ~/.claude.json",
                 secret not in out and "fixture@example.com" not in out and "uvx elevenlabs-mcp" in out, out)
+        verdict("check --setup names the optional encoders image needs, as notes, never findings",
+                ("libwebp (optional" in out and "avif muxer (optional" in out) or not shutil.which("ffmpeg"), out)
         verdict("check --setup requires D13's two deny entries, each with its fix, like the allows",
                 "FAIL  deny Edit(**/generated/**) is not in" in out and "FAIL  deny Edit(**/renders/**) is not in" in out
                 and 'fix: add "Edit(**/renders/**)" to permissions.deny by hand' in out, out)
@@ -1813,6 +2003,391 @@ role = "music"
     code, out = cli("encode", master, "--deliverable", "youtube.long", "-o", C.path(C.PUB_RENDERS) / "011-screen.long.mp4")
     verdict("encode of the screen-recording master to youtube.long, at its loudness",
             code == 0 and "verified" in out and "1920x1080" in out, out)
+
+
+
+def pixel(p: Path, x: int, y: int) -> tuple:
+    """The (r, g, b) of one pixel of an image's first frame."""
+    proc = subprocess.run(["ffmpeg", "-v", "error", "-i", str(p), "-frames:v", "1", "-vf",
+                           f"format=rgb24,crop=1:1:{x}:{y}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                          capture_output=True, check=True)
+    return tuple(proc.stdout[:3])
+
+
+def with_override(key: str, value: str):
+    """A context in which overrides.toml carries one more override, restored after."""
+    @contextlib.contextmanager
+    def held():
+        p = C.path(C.OVERRIDES)
+        saved = C.read_text(p)
+        write(p, saved + f'\n[[override]]\nkey = "{key}"\nvalue = {value}\nwhy = "fixture"\nsource = "fixture"\n'
+                         'checked = "01/09/2026"\n')
+        try:
+            yield
+        finally:
+            write(p, saved)
+    return held()
+
+
+def test_web(verdict, skip, cli, root: Path) -> None:
+    """image, the GIF pass of cut, --overlay, the silent loop and web video (DESIGN D57)."""
+    work = Path(str(root) + "-web")
+    work.mkdir()
+    renders = C.path(C.PUB_RENDERS)
+    master = C.path(C.PROD_RENDERS) / "021-web.master.mp4"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30:duration=3", "-f", "lavfi", "-i",
+          "sine=frequency=440:sample_rate=48000:duration=3", "-c:v", "libx264", "-preset", "ultrafast",
+          "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", master)
+    card = renders / "021-web.blog-featured-image.png"   # what card.py render writes for the key
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=1920x1080:rate=1:duration=1", "-frames:v", "1", card)
+    have = {fmt: C.image_encoder(fmt) for fmt in ("webp", "avif")}
+    code, out = cli("image", card, "--deliverable", "blog.featured_image")
+    got = C.streams(C.probe(renders / "021-web.blog-featured-image.jpg"), "video") if code == 0 else []
+    verdict("image encodes a PNG into the table's first format (jpg) at its size, named <stem>.<platform>-<format>",
+            code == 0 and got and got[0]["codec_name"] == "mjpeg" and (got[0]["width"], got[0]["height"]) == (1920, 1080),
+            out)
+    for fmt, codec in (("webp", "webp"), ("avif", "av1")):
+        if not have[fmt]:
+            skip(f"image --format {fmt}", f"this ffmpeg lacks {'libwebp' if fmt == 'webp' else 'an AV1 encoder or the avif muxer'}")
+            continue
+        code, out = cli("image", card, "--deliverable", "blog.featured_image", "--format", fmt)
+        made = renders / f"021-web.blog-featured-image.{fmt}"
+        got = C.streams(C.probe(made), "video") if made.is_file() else []
+        verdict(f"image --format {fmt} writes {codec} at the table's size", code == 0 and got
+                and got[0]["codec_name"] == codec and int(got[0]["width"]) == 1920, out)
+    code, out = cli("image", card, "--deliverable", "website.poster", "--format", "png")
+    verdict("image refuses a format the table does not list (exit 2)", code == 2 and "not one of" in out, out)
+    share = renders / "021-web.website-og-image.png"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=1200x630:rate=1:duration=1", "-frames:v", "1", share)
+    held = share.read_bytes()
+    code, out = cli("image", share, "--deliverable", "website.og_image", "--format", "png")
+    verdict("image of a PNG already at the size, asked for as png, verifies it where it stands and writes nothing",
+            code == 0 and "nothing written" in out and share.read_bytes() == held
+            and len(list(renders.glob("021-web.website-og-image*"))) == 1, out)
+    clear = work / "cover-export.png"   # a design export with transparency
+    lavfi("-f", "lavfi", "-i", "color=c=0x204060@0.5:s=3000x3000,format=rgba", "-frames:v", "1", clear)
+    code, out = cli("image", clear, "--deliverable", "podcast.id3_cover", "-o", renders / "fixture-show.podcast-id3-cover.jpg")
+    got = C.streams(C.probe(renders / "fixture-show.podcast-id3-cover.jpg"), "video") if code == 0 else []
+    verdict("image flattens a transparent export where alpha = false (podcast.id3_cover, 1400x1400 JPEG)",
+            code == 0 and "flattened" in out and got and (got[0]["width"], got[0]["height"]) == (1400, 1400), out)
+    code, out = cli("image", clear, "--deliverable", "podcast.cover")
+    got = C.streams(C.probe(renders / "cover-export.podcast-cover.png"), "video") if code == 0 else []
+    verdict("image keeps a PNG cover opaque where alpha = false (no alpha channel)",
+            code == 0 and got and not C.has_alpha(got[0].get("pix_fmt")), out)
+    code, out = cli("image", card, "--deliverable", "podcast.cover")
+    verdict("image refuses a source of another shape without --frame (exit 2), naming crop and pad",
+            code == 2 and "--frame crop" in out and "--frame pad" in out, out)
+    code, out = cli("image", card, "--deliverable", "podcast.cover", "--frame", "crop", "--format", "jpg")
+    verdict("image --frame crop fills another shape", code == 0 and "3000x3000" in out, out)
+    code, out = cli("image", master, "--deliverable", "website.poster", "--at", "00:00:01.000")
+    poster = renders / "021-web.website-poster.jpg"
+    got = C.streams(C.probe(poster), "video") if poster.is_file() else []
+    verdict("image takes a poster from a video at --at, at the poster's size",
+            code == 0 and got and (got[0]["width"], got[0]["height"]) == (1920, 1080), out)
+    code, out = cli("image", master, "--deliverable", "website.poster")
+    verdict("image of a video without --at is refused (exit 2)", code == 2 and "--at" in out, out)
+    code, out = cli("image", card, "--deliverable", "youtube.podcast_thumbnail")
+    verdict("image refuses a table with no width and height, naming card.py --size (exit 2)",
+            code == 2 and "--size" in out, out)
+    with with_override("newsletter.preview_image.max_size", '"1 KB"'):
+        code, out = cli("image", card, "--deliverable", "newsletter.preview_image", "--frame", "crop", "-o",
+                        renders / "too-heavy.jpg")
+    verdict("image fails an output over max_size (a max_size mutation, exit 1)",
+            code == 1 and "over newsletter.preview_image max_size" in out, out)
+    # The GIF preview: an overlay rendered at the deliverable's size, a red square at its centre.
+    overlay = renders / "021-web.newsletter-preview-gif.png"
+    lavfi("-f", "lavfi", "-i", "color=c=black@0.0:s=600x338,format=rgba", "-vf",
+          "drawbox=x=280:y=149:w=40:h=40:color=red@1.0:t=fill:replace=1", "-frames:v", "1", overlay)
+    code, out = cli("cut", master, "--deliverable", "newsletter.preview_gif", "--in", "0", "--out", "3",
+                    "--overlay", overlay)
+    gif = renders / "021-web.newsletter-preview-gif.gif"
+    facts = I.gif_facts(gif) if gif.is_file() else {}
+    red = pixel(gif, 300, 169) if gif.is_file() else (0, 0, 0)
+    verdict("cut to newsletter.preview_gif: a GIF at 600x338 within fps_max, the overlay on its first frame",
+            code == 0 and facts.get("width") == 600 and facts.get("height") == 338
+            and facts["frames"] / facts["seconds"] <= 15.0 and red[0] > 180 and red[1] < 80 and red[2] < 80,
+            f"{out}\n{facts}\n{red}")
+    verdict("a 3-second GIF plays once (no loop extension), within max_seconds",
+            facts.get("loop") is None and facts.get("plays") == 1 and facts.get("play_seconds", 9) <= 5.0, facts)
+    code, out = cli("cut", master, "--deliverable", "newsletter.preview_gif", "--in", "0", "--out", "2",
+                    "--cut", "c02", "--overlay", overlay)
+    two = renders / "021-web--c02.newsletter-preview-gif.gif"
+    facts2 = I.gif_facts(two) if two.is_file() else {}
+    verdict("a 2-second GIF plays twice (loop count 1), its play time read from the loop extension and the "
+            "frame delays within max_seconds",
+            code == 0 and facts2.get("loop") == 1 and facts2.get("plays") == 2 and facts2.get("play_seconds", 9) <= 5.0,
+            f"{out}\n{facts2}")
+    long_src = work / "long.mp4"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=320x180:rate=30:duration=6", "-c:v", "libx264", "-preset",
+          "ultrafast", "-pix_fmt", "yuv420p", long_src)
+    code, out = cli("cut", long_src, "--deliverable", "newsletter.preview_gif", "--in", "0", "--out", "6",
+                    "-o", renders / "too-long.gif")
+    verdict("a GIF range longer than max_seconds renders nothing (exit 1)",
+            code == 1 and "nothing rendered" in out and not (renders / "too-long.gif").exists(), out)
+    code, out = cli("cut", master, "--deliverable", "newsletter.preview_gif", "--in", "0", "--out", "2",
+                    "--overlay", card, "-o", renders / "wrong-overlay.gif")
+    verdict("an overlay of another size is refused (exit 2)", code == 2 and "1920x1080" in out, out)
+    if two.is_file():
+        budget = max(1, int(two.stat().st_size * 0.75 / 1000))
+        with with_override("newsletter.preview_gif.max_size", f'"{budget} KB"'):
+            code, out = cli("cut", master, "--deliverable", "newsletter.preview_gif", "--in", "0", "--out", "2",
+                            "--overlay", overlay, "-o", renders / "thinned.gif")
+        thin = I.gif_facts(renders / "thinned.gif") if (renders / "thinned.gif").is_file() else {}
+        verdict("a GIF over max_size is made again at half the frame rate, its duration unchanged",
+                code == 0 and "every second frame" in out and thin.get("frames", 0) * 2 <= facts2["frames"] + 1
+                and abs(thin.get("seconds", 0) - facts2["seconds"]) <= 0.15, f"{out}\n{thin}\n{facts2}")
+    code, out = cli("cut", master, "--deliverable", "youtube.long", "--in", "0", "--out", "1", "--overlay",
+                    overlay, "-o", renders / "wrong-video-overlay.mp4")
+    verdict("--overlay on a video cut refuses another size too (exit 2)", code == 2 and "600x338" in out, out)
+    big = renders / "overlay-1080.png"
+    lavfi("-f", "lavfi", "-i", "color=c=black@0.0:s=1920x1080,format=rgba", "-vf",
+          "drawbox=x=900:y=480:w=120:h=120:color=red@1.0:t=fill:replace=1", "-frames:v", "1", big)
+    code, out = cli("cut", master, "--deliverable", "website.video", "--in", "0", "--out", "2", "--overlay", big,
+                    "-o", renders / "overlaid.mp4")
+    red = pixel(renders / "overlaid.mp4", 960, 540) if code == 0 else (0, 0, 0)
+    verdict("--overlay lays a PNG over a video cut, and website.video keeps its index at the front",
+            code == 0 and "verified" in out and red[0] > 160 and red[1] < 90 and "moov first" in out, f"{out}\n{red}")
+    code, out = cli("cut", master, "--deliverable", "website.hero_loop", "--in", "0", "--out", "2", "--cut", "c09")
+    loop = renders / "021-web--c09.website-hero-loop.mp4"
+    info = C.probe(loop) if loop.is_file() else {}
+    verdict("cut to website.hero_loop (audio_tracks = 0) writes no sound track from a source with sound",
+            code == 0 and C.streams(info, "video") and not C.streams(info, "audio"), out)
+    code, out = cli("encode", master, "--deliverable", "website.hero_loop", "--frame", "crop",
+                    "-o", renders / "loop-encoded.mp4")
+    info = C.probe(renders / "loop-encoded.mp4") if code == 0 else {}
+    verdict("encode to website.hero_loop writes no sound track either", code == 0 and not C.streams(info, "audio"), out)
+    with contextlib.redirect_stdout(io.StringIO()):
+        found = V.verify(master, C.preset("website.hero_loop", quiet=True))
+    verdict("a silent table's verification fails a file that keeps its sound (a mutation)",
+            any("audio_tracks = 0" in f for f in found), found)
+    code, out = cli("image", master, "--deliverable", "newsletter.preview_gif", "--at", "1")
+    verdict("image refuses a GIF table: the GIF is cut's (exit 2)", code == 2 and "cut" in out, out)
+    code, out = cli("encode", master, "--deliverable", "website.poster")
+    verdict("encode refuses an image table, naming image and card.py (exit 2)",
+            code == 2 and "media.py image" in out and "card.py" in out, out)
+
+
+FEED_SHOW = {"title": "Harbour Lane Talks", "link": "https://www.example.com/podcast/harbour-lane-talks/",
+             "media_base": "https://media.example.com/podcast/harbour-lane-talks/", "author": "Harbour Lane Studio",
+             "owner_name": "Harbour Lane Studio", "owner_email": "podcast@example.com",
+             "copyright": "© 2026 Harbour Lane Studio", "category": "Business", "subcategory": "Entrepreneurship",
+             "cover": "fixture-show.podcast-cover.jpg", "id3_cover": "fixture-show.podcast-id3-cover.jpg",
+             "approved": "04/10/2026"}
+
+
+def set_description(text: str, after: str, words: str) -> str:
+    """Fill the empty description of [show] (after = 'show') or of an episode (after = its piece)."""
+    lines = text.split("\n")
+    start = next(i for i, ln in enumerate(lines) if (ln.startswith("[show]") if after == "show"
+                                                       else ln.startswith(f'piece = "{after}"')))
+    at = next(i for i in range(start, len(lines)) if lines[i].startswith('description = """'))
+    lines.insert(at + 1, words)
+    return "\n".join(lines)
+
+
+def test_feed(verdict, skip, cli, root: Path, project_zone) -> None:
+    """The self-hosted podcast feed end to end, offline (DESIGN D58, D59, Section 6.17)."""
+    show = "fixture-show"
+    reg = C.path(C.PODCAST) / f"{show}.toml"
+    tracked = C.path(C.PODCAST) / f"{show}.feed.xml"
+    url = "https://www.example.com/podcast/fixture-show/feed.xml"
+    if project_zone:
+        saved, C.TIMEZONE = C.TIMEZONE, project_zone
+        try:
+            verdict(f"the project's timezone ({project_zone}) is known to this machine", C.zone() is not None)
+        except C.Fatal as err:
+            verdict(f"the project's timezone ({project_zone}) is known to this machine", False, err)
+        finally:
+            C.TIMEZONE = saved
+    code, out = cli("feed", "new", show, "--feed-url", url)
+    verdict("feed new refuses a project without the podcast folder (exit 2), naming copier update -a",
+            code == 2 and "copier update" in out and "-a .copier-answers.syntek-media.yml" in out
+            and not C.path(C.PODCAST).exists(), out)
+    for name in ("CONTEXT.md", "CLAUDE.md"):
+        write(C.path(C.PODCAST) / name, "# pair\n")
+    code, out = cli("feed", "new", show, "--feed-url", url + "/", "--site", "studio")
+    data = C.load_toml(reg) if reg.is_file() else {"show": {}}
+    by_hand = F.uuid5_by_hand(str(F.PODCAST_NAMESPACE), "www.example.com/podcast/fixture-show/feed.xml")
+    verdict("feed new writes the register from the skeleton, with podcast:guid the UUIDv5 of the feed URL "
+            "(scheme and trailing slashes stripped, RFC 4122 by hand), and flags owner_email",
+            code == 0 and data["show"].get("podcast_guid") == by_hand and data["show"].get("site") == "studio"
+            and data["show"].get("show") == show and "# AUTHOR TO CONFIRM: owner_email" in C.read_text(reg), out)
+    show_part = F.skeleton_parts()[0].split("\n")
+    verdict("the register keeps every line of the skeleton's [show] table, comments included",
+            all(ln.split("=")[0] in C.read_text(reg) for ln in show_part), show_part)
+    code, out = cli("feed", "new", show, "--feed-url", url)
+    verdict("feed new refuses a show that exists (exit 2)", code == 2 and "exists" in out, out)
+    for piece in ("031-episode-one", "032-episode-two"):
+        (C.path(C.PIECES) / piece).mkdir(parents=True, exist_ok=True)
+        cli("feed", "add", show, "--piece", piece)
+    data = C.load_toml(reg)
+    rows = data.get("episode", [])
+    verdict("feed add appends one planned row per piece, each guid the UUIDv5 of the piece in the show's GUID",
+            len(rows) == 2 and rows[0]["guid"] == F.uuid5_by_hand(by_hand, "031-episode-one")
+            and rows[1]["status"] == "planned", rows)
+    code, out = cli("feed", "add", show, "--piece", "031-episode-one")
+    verdict("feed add refuses a piece already in the register (exit 2)", code == 2 and "already" in out, out)
+    code, out = cli("feed", "add", show, "--piece", "039-no-such-piece")
+    verdict("feed add refuses a piece with no folder: a GUID is for life (exit 2)", code == 2, out)
+    code, out = cli("feed", "new", show, "--feed-url", "https://www.example.com/podcast/fixture-show/rss.xml",
+                    "--rekey")
+    data = C.load_toml(reg)
+    verdict("feed new --rekey rewrites the feed URL and every GUID while nothing is published",
+            code == 0 and data["show"]["feed_url"].endswith("/rss.xml") and data["show"]["podcast_guid"] != by_hand
+            and data["episode"][0]["guid"] == F.episode_guid(data["show"]["podcast_guid"], "031-episode-one"), out)
+    cli("feed", "new", show, "--feed-url", url, "--rekey")
+    # M5: the feed audio, encoded from a picture master (a talk as an episode), untagged.
+    renders = C.path(C.PUB_RENDERS)
+    for piece, hz in (("031-episode-one", 330), ("032-episode-two", 440)):
+        lavfi("-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25:duration=3", "-f", "lavfi", "-i",
+              f"sine=frequency={hz}:sample_rate=48000:duration=3", "-c:v", "libx264", "-preset", "ultrafast",
+              "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", "-metadata", "title=master title",
+              C.path(C.PROD_RENDERS) / f"{piece}.master.mp4")
+        code, out = cli("encode", C.path(C.PROD_RENDERS) / f"{piece}.master.mp4", "--deliverable", "podcast.feed_audio")
+    audio = renders / "031-episode-one.podcast-feed-audio.mp3"
+    info = C.probe(audio) if audio.is_file() else {}
+    tags = {k.lower(): v for k, v in info.get("format", {}).get("tags", {}).items()}
+    verdict("encode to podcast.feed_audio from a picture master: sound only, MP3, untagged, at the podcast target",
+            code == 0 and info and not C.streams(info, "video") and C.streams(info, "audio")[0]["codec_name"] == "mp3"
+            and "title" not in tags and "podcast target" in out and F.id3_version_of(audio) == 3, out + str(tags))
+    # The show's covers: design exports encoded with image (test_web made them, or make them now).
+    if not (renders / "fixture-show.podcast-id3-cover.jpg").is_file():
+        lavfi("-f", "lavfi", "-i", "color=c=0x204060:s=1400x1400", "-frames:v", "1", renders / "fixture-show.podcast-id3-cover.jpg")
+    lavfi("-f", "lavfi", "-i", "color=c=0x204060:s=3000x3000", "-frames:v", "1", renders / "fixture-show.podcast-cover.jpg")
+    before, held = audio.read_bytes(), C.read_text(reg)
+    code, out = cli("feed", "tag", show, "--piece", "031-episode-one")
+    verdict("feed tag of a row with no title or description is exit 1, changing nothing",
+            code == 1 and "title is empty" in out and audio.read_bytes() == before and C.read_text(reg) == held, out)
+    code, out = cli("feed", "tag", show, "--piece", "039-not-a-row")
+    verdict("feed tag of a piece with no row is exit 2, naming feed add", code == 2 and "feed add" in out, out)
+    text = C.read_text(reg)
+    text = F.edit(text, "show", FEED_SHOW)
+    text = set_description(text, "show", "Short talks on running a small business by the water.\n"
+                                         "For owners with no time to spare.")
+    text = "\n".join(ln for ln in text.split("\n") if "AUTHOR TO CONFIRM" not in ln)
+    for n, (piece, title, when) in enumerate((("031-episode-one", "Why the ferry runs late", "05/10/2026 09:00"),
+                                              ("032-episode-two", "What the tide owes us", "12/10/2026 09:00")), start=1):
+        text = F.edit(text, "episode", {"title": title, "number": n, "pub_date": when,
+                                        "page": f"https://www.example.com/podcast/fixture-show/{piece}/",
+                                        "transcript": f"{piece}.en-GB.vtt"}, piece=piece)
+        text = set_description(text, piece, "Every crossing waits for the tide, not the timetable.\n"
+                                             "This episode uses a synthetic voice for the narrator.")
+    text = text.replace('notes = ""\n\n# [[episode.chapter]]', 'notes = ""\n\n[[episode.chapter]]\nstart = "00:00:00.000"\n'
+                        'title = "The Hook"\n\n[[episode.chapter]]\nstart = "00:00:01.000"\ntitle = "The Tide"\n\n'
+                        '[[episode.chapter]]\nstart = "00:00:02.000"\ntitle = "What Next"\n\n# [[episode.chapter]]', 1)
+    write(reg, text)
+    code, out = cli("feed", "tag", show, "--piece", "031-episode-one")
+    proc = subprocess.run(["ffprobe", "-v", "error", "-print_format", "json", "-show_format", "-show_streams",
+                           "-show_chapters", str(audio)], capture_output=True, text=True)
+    tagged = json.loads(proc.stdout) if proc.returncode == 0 else {}
+    tags = {k.lower(): v for k, v in tagged.get("format", {}).get("tags", {}).items()}
+    row = C.load_toml(reg)["episode"][0]
+    verdict("feed tag writes ID3v2.3 title, author, album, track, three chapters and the cover, the audio stream "
+            "unchanged, and writes render, bytes and seconds into the row",
+            code == 0 and tags.get("title") == "Why the ferry runs late" and tags.get("artist") == "Harbour Lane Studio"
+            and tags.get("album") == "Harbour Lane Talks" and tags.get("track") == "1"
+            and len(tagged.get("chapters", [])) == 3 and F.id3_version_of(audio) == 3
+            and any(s.get("disposition", {}).get("attached_pic") for s in tagged.get("streams", []))
+            and abs(C.duration(tagged) - C.duration(info)) < 0.05 and row["bytes"] == audio.stat().st_size
+            and row["render"] == audio.name and abs(row["seconds"] - C.duration(tagged)) < 0.01, out + str(row))
+    cli("feed", "tag", show, "--piece", "032-episode-two")
+    code, out = cli("feed", "chapters", show, "--piece", "031-episode-one")
+    doc = json.loads(C.read_text(renders / "031-episode-one.chapters.json")) if code == 0 else {}
+    verdict("feed chapters writes Podcasting 2.0 JSON chapters (startTime in float seconds)",
+            code == 0 and doc.get("version") == "1.2" and [c["startTime"] for c in doc.get("chapters", [])]
+            == [0.0, 1.0, 2.0], out)
+    code, out = cli("feed", "check", show)
+    verdict("feed check of a complete register is exit 0 (short chapters only warn)",
+            code == 0 and "chapter_min_seconds" in out, out)
+    code, out = cli("feed", "write", show, "--as-of", "05/10/2026 09:00")
+    verdict("feed write leaves out a row that is not ready (exit 1, nothing written)",
+            code == 1 and "ready" in out, out)
+    write(reg, C.read_text(reg).replace('status = "planned"', 'status = "ready"'))
+    code, out = cli("feed", "write", show)
+    verdict("feed write without --as-of is exit 2: no clock is read", code == 2, out)
+    code, first, err = cli_split("feed", "write", show, "--as-of", "05/10/2026 09:00")
+    code2, again, _ = cli_split("feed", "write", show, "--as-of", "05/10/2026 09:00")
+    try:
+        feed = ET.fromstring(first.encode("utf-8"))
+    except ET.ParseError as e:
+        feed = None
+        err += str(e)
+    ns = F.NS
+    item = feed.find("channel/item") if feed is not None else None
+    ok = feed is not None and item is not None and all(feed.find(p, ns) is not None for p in (
+        "channel/title", "channel/link", "channel/description", "channel/language", "channel/itunes:author",
+        "channel/itunes:image", "channel/itunes:category", "channel/itunes:explicit", "channel/podcast:guid",
+        "channel/itunes:owner/itunes:email", "channel/atom:link"))
+    verdict("feed write --as-of: well-formed RSS with every required tag, the same bytes twice, only the episodes "
+            "out by then, an RFC 2822 date in the project's zone, plain text and &#xA9;",
+            code == 0 and code2 == 0 and first == again and ok and len(feed.findall("channel/item")) == 1
+            and item.find("pubDate").text == "Mon, 05 Oct 2026 09:00:00 +0100"
+            and item.find("guid").get("isPermaLink") == "false" and "&#xA9;" in first
+            and item.find("enclosure").get("length") == str(audio.stat().st_size)
+            and item.find("podcast:transcript", ns) is not None and item.find("psc:chapters", ns) is not None,
+            first[-1200:] + err)
+    upload = renders / f"{show}.feed.xml"
+    code, out = cli("feed", "write", show, "--as-of", "12/10/2026 09:00", "-o", upload)
+    write(reg, C.read_text(reg).replace('status = "ready"', 'status = "published"'))
+    code2, out2 = cli("feed", "write", show, "--as-of", "12/10/2026 09:00", "-o", tracked)
+    verdict("feed write -o: the upload copy into renders/, then the tracked copy, byte for byte the same",
+            code == 0 and code2 == 0 and tracked.read_bytes() == upload.read_bytes()
+            and C.read_text(tracked).count("<item>") == 2, out + out2)
+    write(reg, F.edit(C.read_text(reg), "show", {"title": "Harbour Lane Talks Weekly"}))
+    code, out = cli("feed", "write", show, "--as-of", "12/10/2026 09:00", "-o", tracked)
+    verdict("feed write -o the tracked copy replaces it after a register change (the one tracked file it overwrites)",
+            code == 0 and "Talks Weekly" in C.read_text(tracked), out)
+    code, out = cli("feed", "write", show, "--as-of", "12/10/2026 09:00", "-o", reg.with_name("CLAUDE.md"))
+    verdict("feed write -o never overwrites any other tracked file (exit 2)", code == 2 and "never" in out, out)
+    code, out = cli("feed", "check", show)
+    verdict("feed check against the tracked feed is exit 0", code == 0, out)
+    code, out = cli("feed", "new", show, "--feed-url", url, "--rekey")
+    verdict("feed new --rekey is refused once a row is published (exit 2)", code == 2 and "published" in out, out)
+    held, sound = C.read_text(reg), audio.read_bytes()
+
+    def mutate(label, change, expect, write_too=False):
+        write(reg, change(held))
+        try:
+            code, out = cli("feed", "check", show)
+            ok = code == 1 and expect in out
+            if write_too:
+                kept = tracked.read_bytes()
+                code2, out2 = cli("feed", "write", show, "--as-of", "12/10/2026 09:00", "-o", tracked)
+                ok = ok and code2 == 1 and "nothing written" in out2 and tracked.read_bytes() == kept
+                out += out2
+            verdict(f"feed check fails {label} (exit 1)" + (", and feed write writes nothing" if write_too else ""),
+                    ok, out)
+        finally:
+            write(reg, held)
+            audio.write_bytes(sound)
+    g1 = C.load_toml(reg)["episode"][0]["guid"]
+    g2 = C.load_toml(reg)["episode"][1]["guid"]
+    mutate("a repeated GUID", lambda t: t.replace(f'guid = "{g2}"', f'guid = "{g1}"'), "share the GUID")
+    mutate("a GUID vanished from the tracked feed while its row is not withdrawn",
+           lambda t: t.replace(f'guid = "{g2}"', f'guid = "{F.episode_guid(g1, "a retyped guid")}"'),
+           "in no row of the register", write_too=True)
+    write(reg, F.edit(held, "episode", {"status": "withdrawn"}, piece="032-episode-two"))
+    code, out = cli("feed", "write", show, "--as-of", "12/10/2026 09:00")
+    verdict("a withdrawn row leaves the feed, and its GUID's absence is no finding", code == 0
+            and g2 not in out and g1 in out, out[-600:])
+    write(reg, held)
+
+    def retitled(t):
+        t = t.replace('title = "Why the ferry runs late"', 'title = "Why the ferry always runs late"')
+        write(reg, t)
+        cli("feed", "tag", show, "--piece", "031-episode-one")
+        return C.read_text(reg)
+    mutate("an enclosure whose length changed under the same URL (a file tagged again)", retitled,
+           "publish a corrected file under a new URL", write_too=True)
+    mutate("a '<' in a title", lambda t: t.replace('title = "What the tide owes us"', 'title = "What the <tide>"'),
+           "'<' or '>'")
+    mutate("bytes that differ from the render", lambda t: t.replace(f"bytes = {audio.stat().st_size}",
+                                                                   f"bytes = {audio.stat().st_size + 7}"),
+           "is " + str(audio.stat().st_size) + " bytes")
+    mutate("an AUTHOR TO CONFIRM flag left in the register",
+           lambda t: t.replace("[show]\n", "[show]\n# AUTHOR TO CONFIRM: the category\n"), "AUTHOR TO CONFIRM")
+    code, out = cli("feed", "check", show, "--feed", tracked)
+    verdict("feed check --feed validates a saved feed offline", code == 0 and "nothing is fetched" in out, out)
 
 
 if __name__ == "__main__":

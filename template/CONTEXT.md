@@ -20,7 +20,7 @@ in `.claude/rules/syntek-media/01-layout-and-routing.md` Section 1, and the rule
 ├── brand/                  ← LAYER (production): design tokens and layouts, design exports, the spoken voice, platform profiles
 ├── scripts/                ← LAYER (production): one folder per piece (brief, script or transcript, storyboard, shot list)
 ├── production/             ← LAYER (production): source media, voiceover, edit decision lists, cards, rights, credits<: if 'audiobook' in MEDIA_KINDS :>, audiobooks<: endif :>
-├── publishing/             ← LAYER (production): cut-down plans, captions, thumbnails, post packages, schedule, publish log
+├── publishing/             ← LAYER (production): cut-down plans, captions, thumbnails, post packages, schedule, publish log<: if 'podcast' in PLATFORMS :>, podcast show registers and feeds<: endif :>
 ├── toolkit/                ← SUPPORTING: media.py and card.py, the platform data, the fallback layouts
 ├── CONTEXT.md              ← this file
 ├── README.md               ← the human-facing overview

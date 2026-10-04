@@ -273,7 +273,9 @@ negate_gate() {
 #   path ships on it, so it is not a shipping gate an index row may use.
 
 SM_KINDS="business author-fiction author-nonfiction"
-SM_PLATFORMS="youtube tiktok instagram linkedin facebook podcast"
+# The three own-channel platforms joined in 0.2.0 (DESIGN.md D53); the per-kind defaults below
+# did not change (D54).
+SM_PLATFORMS="youtube tiktok instagram linkedin facebook podcast website blog newsletter"
 SM_MEDIA_KINDS="short-video long-video podcast audiobook trailer voiceover"
 
 declare -A SM_GATE_EXPR=(
@@ -411,6 +413,9 @@ p:instagram   f  brand/src/platforms/instagram.md
 p:linkedin    f  brand/src/platforms/linkedin.md
 p:facebook    f  brand/src/platforms/facebook.md
 p:podcast     f  brand/src/platforms/podcast.md
+p:website     f  brand/src/platforms/website.md
+p:blog        f  brand/src/platforms/blog.md
+p:newsletter  f  brand/src/platforms/newsletter.md
 always        f  brand/src/platforms/overrides.toml
 always        d  brand/workflows/01-set-up-the-brand-kit
 always        d  brand/workflows/02-sync-with-claude-design
@@ -486,6 +491,10 @@ p:instagram   f  publishing/docs/reference/instagram.md
 p:linkedin    f  publishing/docs/reference/linkedin.md
 p:facebook    f  publishing/docs/reference/facebook.md
 p:podcast     f  publishing/docs/reference/podcast.md
+p:podcast     f  publishing/docs/reference/podcast-feed.md
+p:website     f  publishing/docs/reference/website.md
+p:blog        f  publishing/docs/reference/blog.md
+p:newsletter  f  publishing/docs/reference/newsletter.md
 always        f  publishing/src/.gitignore
 always        f  publishing/src/schedule.md
 always        f  publishing/src/publish-log.md
@@ -494,6 +503,7 @@ always        d  publishing/src/cut-downs
 always        d  publishing/src/captions
 always        d  publishing/src/thumbnails
 always        d  publishing/src/posts
+p:podcast     d  publishing/src/podcast
 always        d  publishing/workflows/01-plan-the-cut-downs
 always        d  publishing/workflows/02-cut-for-a-platform
 always        d  publishing/workflows/03-caption-a-piece
@@ -501,6 +511,7 @@ always        d  publishing/workflows/04-brief-a-thumbnail
 always        d  publishing/workflows/05-prepare-a-post
 always        d  publishing/workflows/06-record-a-publication
 always        d  publishing/workflows/07-refresh-the-platform-specs
+p:podcast     d  publishing/workflows/08-publish-the-podcast-feed
 always        f  toolkit/.gitignore
 always        f  toolkit/media.py
 always        f  toolkit/media_common.py
@@ -508,6 +519,8 @@ always        f  toolkit/media_video.py
 always        f  toolkit/media_audio.py
 always        f  toolkit/media_captions.py
 always        f  toolkit/media_repo.py
+always        f  toolkit/media_image.py
+always        f  toolkit/media_feed.py
 always        f  toolkit/card.py
 always        f  toolkit/data/platforms.toml
 always        f  toolkit/templates/thumbnail.html
@@ -544,7 +557,7 @@ SM_AUTHOR_FILE_NAMES="Makefile 00-project.md"
 SM_SHARED="README.md CONTEXT.md .gitignore .mcp.json .claude/CLAUDE.md .claude/CONTEXT.md .claude/MEMORY.md .claude/settings.json .claude/skills/CONTEXT.md .claude/skills/CLAUDE.md"
 SM_SHARED_GATE="_copier_operation == 'update'"
 
-# Seeds (DESIGN.md Section 3.1): twenty-three, then the sixteen author-filled index-pair files.
+# Seeds (DESIGN.md Section 3.1): twenty-six, then the sixteen author-filled index-pair files.
 SM_REGISTER_SEEDS="brand/src/design-register.md scripts/src/piece-register.md production/src/rights-register.md production/src/credits-log.md publishing/src/schedule.md publishing/src/publish-log.md"
 SM_TOML_SEEDS="brand/src/platforms/overrides.toml production/src/footage/manifest.toml"
 SM_PLATFORM_SEEDS="$(for p in $SM_PLATFORMS; do printf 'brand/src/platforms/%s.md ' "$p"; done)"
@@ -612,8 +625,10 @@ SM_AFTER_COPY_LINES+=("'conflict' then 'skip'" ".claude/rules/syntek-media/ in .
 unset _sm_x
 
 # Author-owned, pair-only folders (DESIGN.md Section 3.3). Globs are bash patterns on
-# tree-relative directory paths.
-SM_PAIR_ONLY_GLOBS="*/docs/project */workflows/local brand/src/design-system/fonts brand/src/exports brand/src/exports/large brand/src/voice brand/src/platforms scripts/src/pieces production/src/footage production/src/assets production/src/edits production/src/cards production/src/voiceover production/src/audiobook publishing/src/cut-downs publishing/src/captions publishing/src/thumbnails publishing/src/posts"
+# tree-relative directory paths. publishing/src/podcast (gated 'podcast' in PLATFORMS, D59) is
+# listed by hand, so shipped-seeds.sh check 11 polices it: a show register or a feed left there
+# by a toolkit run inside template/ would otherwise ship into every project.
+SM_PAIR_ONLY_GLOBS="*/docs/project */workflows/local brand/src/design-system/fonts brand/src/exports brand/src/exports/large brand/src/voice brand/src/platforms scripts/src/pieces production/src/footage production/src/assets production/src/edits production/src/cards production/src/voiceover production/src/audiobook publishing/src/cut-downs publishing/src/captions publishing/src/thumbnails publishing/src/posts publishing/src/podcast"
 
 # The folder pair's exceptions (DESIGN.md D42): syntek-author's, verbatim — build/, .git/,
 # audio/, __pycache__/, node_modules/, .claude/rules/, the inside of each skill folder, each
@@ -1091,7 +1106,8 @@ sm_render_over_author() { # $1 = syntek-author snapshot, $2 = media snapshot, $3
 #
 # sm_fixture_template: a minimal syntek-media with the real repository's shape — the house
 # delimiters, the named answers file, the ten copy-only shared files, a register seed and a
-# brand seed, a gated profile and platform guide per platform, the audiobook gate on a folder
+# brand seed, a gated profile and platform guide per platform, the podcast platform's gate on
+# the pair-only folder of the show registers (DESIGN.md D59), the audiobook gate on a folder
 # and a skill, one seed-once example, a moded skill with its generated mode block, the D14
 # guard (the previous answers through _external_data, BRAND_KIND's validator), the static
 # _message_before_update, and a _message_after_copy carrying every SM_AFTER_COPY_LINES fragment.
@@ -1114,7 +1130,9 @@ _message_before_update: |
   Before you answer: removing a platform or a media kind deletes EVERY file it generated.
     PLATFORMS without <platform>     brand/src/platforms/<platform>.md and
                                      publishing/docs/reference/<platform>.md — for each of
-                                     youtube, tiktok, instagram, linkedin, facebook, podcast
+                                     youtube, tiktok, instagram, linkedin, facebook, podcast,
+                                     website, blog, newsletter
+    PLATFORMS without podcast        also publishing/src/podcast/ (its pair; registers stay)
     MEDIA_KINDS without audiobook    production/src/audiobook/ and the narrate-audiobook skill
     MEDIA_KINDS without podcast      nothing in this fixture
     MEDIA_KINDS without trailer      nothing in this fixture
@@ -1156,6 +1174,7 @@ EOF
       printf '  - "<: if not (%s%s%s in PLATFORMS) :>/brand/src/platforms/%s.md<: endif :>"\n' "$q" "$p" "$q" "$p"
       printf '  - "<: if not (%s%s%s in PLATFORMS) :>/publishing/docs/reference/%s.md<: endif :>"\n' "$q" "$p" "$q" "$p"
     done
+    printf '  - "<: if not (%spodcast%s in PLATFORMS) :>/publishing/src/podcast<: endif :>"\n' "$q" "$q"
     printf '  - "<: if not (%saudiobook%s in MEDIA_KINDS) :>/production/src/audiobook<: endif :>"\n' "$q" "$q"
     printf '  - "<: if not (%saudiobook%s in MEDIA_KINDS) :>/.claude/skills/narrate-audiobook<: endif :>"\n' "$q" "$q"
     printf '  - "<: if _copier_operation == %supdate%s or not SEED_EXAMPLES :>/scripts/src/pieces/000-example-piece<: endif :>"\n' "$q" "$q"
@@ -1189,6 +1208,9 @@ PLATFORMS:
     "linkedin — video posts": linkedin
     "facebook — reels": facebook
     "podcast — feeds": podcast
+    "website — sites": website
+    "blog — posts": blog
+    "newsletter — issues": newsletter
   default: "<% {'business': ['youtube', 'linkedin', 'instagram'], 'author-fiction': ['youtube', 'tiktok', 'instagram', 'facebook'], 'author-nonfiction': ['youtube', 'podcast', 'instagram', 'facebook']}[BRAND_KIND] | tojson %>"
   validator: "<: if not PLATFORMS :>Choose at least one platform.<: endif :>"
 MEDIA_KINDS:
@@ -1212,7 +1234,7 @@ EOF
   cd "$t/template" || return 1
   mkdir -p .claude/rules/syntek-media .claude/skills/run-media-workflow .claude/skills/write-script \
     .claude/skills/narrate-audiobook brand/src/design-system brand/src/platforms publishing/docs/reference \
-    publishing/src production/src/audiobook/generated scripts/src/pieces/000-example-piece toolkit
+    publishing/src/podcast production/src/audiobook/generated scripts/src/pieces/000-example-piece toolkit
   printf '<%% _copier_answers|to_nice_yaml -%%>\n' > "$SM_ANSWERS_FILE"
   printf '# <%%BRAND_NAME%%>\n\nA fixture brand on <%% PLATFORMS | join(%s, %s) %%>.\n' "$q" "$q" > README.md
   printf '# CONTEXT.md — <%%BRAND_NAME%%>\n' > CONTEXT.md
@@ -1246,6 +1268,8 @@ EOF
   done
   printf '# Publish log\n\n> **This file is a seeded stub, and it is deliberately unfinished.**\n\n| Date | Platform | Deliverable | Piece | URL | Disclosure set | Captions | Notes |\n|---|---|---|---|---|---|---|---|\n' \
     > publishing/src/publish-log.md
+  printf '# CONTEXT.md — publishing/src/podcast/\n' > publishing/src/podcast/CONTEXT.md
+  printf '@./CONTEXT.md\n\n# CLAUDE.md — publishing/src/podcast/\n' > publishing/src/podcast/CLAUDE.md
   printf '# CONTEXT.md — production/src/audiobook/\n' > production/src/audiobook/CONTEXT.md
   printf '@./CONTEXT.md\n\n# CLAUDE.md — production/src/audiobook/\n' > production/src/audiobook/CLAUDE.md
   printf '# generated/\n\nGenerated audio; git-ignored.\n' > production/src/audiobook/generated/README.md
@@ -1409,19 +1433,34 @@ copier_message_text() { # $1 = Copier's captured output
     | { grep -v '^Copying from template' || true; } | tr -s '[:space:]' ' '
 }
 
-# A gated platform and media kind to take away in an update: the first value of the project's
-# answer that some _exclude line of the template gates (a comment or a default naming it does
-# not count), so taking it away deletes files. Prints
-# nothing when none qualifies, or when the answer has a single value (the validators need one).
+# The catalogue paths that ship on exactly one gate atom (p:<platform> or k:<media kind>): the
+# SM_PATHS rows with that gate, then the skill folders SM_SKILLS gates on it. A d row names a
+# whole folder.
+catalogue_paths() { # $1 = gate atom → "kind path" lines (kind: d or f)
+  awk -v g="$1" '$1 == g { print $2 " " $3 }' <<< "$SM_PATHS"
+  awk -v g="$1" '$2 == g { print "d .claude/skills/" $1 }' <<< "$SM_SKILLS"
+}
+
+# A gated platform and media kind to take away in an update (update-test.sh check 13,
+# coexist-test.sh check 18): of the project's values that some _exclude line of the template
+# gates (a comment or a default naming one does not count), the one with the most catalogue
+# paths, the first in answer order on a tie (DESIGN.md Section 7). So the removal that deletes
+# the most is the one proved: podcast in the author-nonfiction defaults, the one platform whose
+# removal deletes a folder that also holds author files (D59). Prints nothing when none
+# qualifies, or when the answer has a single value (the validators need one).
 removable_value() { # $1 = PLATFORMS | MEDIA_KINDS, $2 = answers file, $3 = copier.yml
-  local v n gates
+  local v n gates atom c best="" best_n=-1
   n="$(answer_list "$1" "$2" | grep -c . || true)"
   [[ "$n" -ge 2 ]] || return 0
   gates="$(exclude_gates "$3" | cut -f1)"
+  case "$1" in PLATFORMS) atom=p ;; *) atom=k ;; esac
   while IFS= read -r v; do
     [[ -z "$v" ]] && continue
-    if grep -qF "'$v' in $1" <<< "$gates"; then printf '%s' "$v"; return 0; fi
+    grep -qF "'$v' in $1" <<< "$gates" || continue
+    c="$(catalogue_paths "$atom:$v" | grep -c . || true)"
+    if [[ "$c" -gt "$best_n" ]]; then best="$v"; best_n="$c"; fi
   done < <(answer_list "$1" "$2")
+  [[ -z "$best" ]] || printf '%s' "$best"
 }
 
 # The answer without one value, as Copier's --data takes a list: [a,b] with no spaces.

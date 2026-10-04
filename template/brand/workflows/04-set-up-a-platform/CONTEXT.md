@@ -1,9 +1,10 @@
 # CONTEXT.md — brand/workflows/04-set-up-a-platform/
 
-The procedure for filling one platform profile with the author: the account, the deliverables the
-brand uses there, and, where no social media plan owns them, its cadence, tone, call to action
-and hashtag sets. Where syntek-author's social media plan is present, the profile holds only the
-delivery facts and cites the plan for the rest. A difference the author has confirmed between
+The procedure for filling one platform profile with the author: the account (or, for the brand's
+own sites, blogs and newsletters, one row per site or list with its agreement), the deliverables
+the brand uses there, and, where no written-side document sets them, its cadence, tone, call to
+action and hashtag sets. Where syntek-author's social-media documents are present, whichever sets
+a value for the platform owns it, and the profile cites it. A difference the author has confirmed between
 the platform data and what the platform says today becomes an override, never an edit to the
 data. The procedure never posts, and never calls a platform.
 

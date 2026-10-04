@@ -33,6 +33,8 @@ model: opus
 **Writing and checking**
 
 - [ ] One section per deliverable in the package's skeleton, every bullet filled. · _opus_
+- [ ] **One section per placement** (`— <platform>:<slug>`), with its channel guide's bullets: only the words outside its written piece, its images as bullets, its date cited from the written piece. · _opus_
+- [ ] A feed episode's section cites its show register; its register part of M7 sent through the podcast-feed workflow; each episode page on another site a placement. · _opus_
 - [ ] Every count written beside its `platforms.toml` key under **Limits**; hashtags warned above `platform.instagram.hashtags_max`. · _sonnet_
 - [ ] Every count inside its limit; every `verify` key relied on named. · _sonnet_
 - [ ] The spelling, grammar and fact-check skills run as a supportive report, where present; where absent, the missing skill named. · _opus_
@@ -42,7 +44,8 @@ model: opus
 **Approval and the schedule**
 
 - [ ] The author approved the whole package; `approved` dated. · _opus_
-- [ ] One schedule row per deliverable, status `planned`, the calendar entry cited in Notes where present. · _sonnet_
+- [ ] One schedule row per deliverable and per placement (`<platform>:<slug>`), status `planned`, the calendar entry or the written piece cited in Notes where present. · _sonnet_
+- [ ] Every placement on a site or list the brand does not own has a dated agreement in its profile row; a written piece not `final` reported as a warning. · _opus_
 - [ ] M7's checks confirmed against this run; only then each row set to `ready` and the brief's `status` and `verified` set. · _sonnet_
 - [ ] Handed back: the package, the rows, each disclosure decision, every `verify` key; the author asked to report each post. · _opus_
 

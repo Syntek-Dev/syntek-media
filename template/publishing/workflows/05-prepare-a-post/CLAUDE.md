@@ -45,6 +45,11 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
 - **Never invent** a claim, a quotation, a statistic, a testimonial, an endorsement or a link.
 - **The calendar is cited, never rewritten.** Where syntek-author's content calendar is present,
   a change to it belongs to the social-media-documents skill (syntek-author), where present.
+- **A placement holds only media's words.** A post's, page's or issue's own words, standfirst,
+  link text and date are the written side's: read the written piece, never edit it, and give an
+  embed or player snippet only in chat, on request.
+- **No placement on a site or list the brand does not own is `ready`** without the dated
+  agreement in its profile row.
 - **Never overwrite** an approved package or a schedule row without confirming with the author.
 
 ## Output & naming

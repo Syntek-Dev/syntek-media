@@ -25,14 +25,18 @@ publishing/workflows/05-prepare-a-post/
 - A new deliverable joins a piece already scheduled, such as a cut added to the plan.
 
 Reach for a **different** procedure when the task is a text-only post, a bio or the content
-calendar (the social-media-documents skill (syntek-author), where present), recording a post the
+calendar (the social-media-documents skill (syntek-author), where present), a blog post's or a
+newsletter issue's own words (the writing router of syntek-author, where present), a feed
+episode's register, tags and feed (the podcast-feed workflow, where the project serves its own
+podcast feed, which runs beside this one), recording a post the
 author has made (`publishing/workflows/06-record-a-publication/`), or the platform's own account
 details (`brand/workflows/04-set-up-a-platform/`).
 
 ## What it produces, and where
 
-- **A post package** at `publishing/src/posts/<piece>.md`, approved by the author.
-- **Schedule rows** in `publishing/src/schedule.md`, one per deliverable.
+- **A post package** at `publishing/src/posts/<piece>.md`, approved by the author, with a section
+  per deliverable and per placement on the brand's own sites, blogs and newsletters.
+- **Schedule rows** in `publishing/src/schedule.md`, one per deliverable and per placement.
 - **The gate** in the brief: `status: scheduled` and M7 dated in `verified`.
 
 ## The failure this procedure exists to prevent

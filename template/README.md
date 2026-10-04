@@ -75,7 +75,9 @@ python3 toolkit/media.py cut <master> --deliverable <platform>.<format> --in <st
 python3 toolkit/media.py captions check <captions>.srt --script <script or transcript>
 python3 toolkit/media.py flags                  # every AUTHOR TO CONFIRM and VERIFY still open
 uv run toolkit/card.py render <layout>.html --deliverable <platform>.<format>
-```
+python3 toolkit/media.py image <png or render> --deliverable <platform>.<format>   # JPEG, WebP, AVIF, posters
+<: if 'podcast' in PLATFORMS :>python3 toolkit/media.py feed check <show>           # a self-hosted show's register and feed, offline
+<: endif :>```
 
 Renders are generated: never edit one by hand; change the source and render again. Masters,
 deliverables and generated audio are ignored by Git, and source footage lives in external
@@ -177,8 +179,16 @@ created yourself are never deleted. A list answer replaces the whole list:
   `publishing/docs/reference/linkedin.md` are deleted.
 <: endif :><: if 'facebook' in PLATFORMS :>- Without `facebook`: `brand/src/platforms/facebook.md` (your profile) and
   `publishing/docs/reference/facebook.md` are deleted.
-<: endif :><: if 'podcast' in PLATFORMS :>- Without `podcast` among the platforms: `brand/src/platforms/podcast.md` (your profile) and
-  `publishing/docs/reference/podcast.md` are deleted.
+<: endif :><: if 'podcast' in PLATFORMS :>- Without `podcast` among the platforms: `brand/src/platforms/podcast.md` (your profile),
+  `publishing/docs/reference/podcast.md`, `publishing/docs/reference/podcast-feed.md`,
+  `publishing/workflows/08-publish-the-podcast-feed/` and the pair of `publishing/src/podcast/`
+  are deleted; your show registers and saved feeds stay.
+<: endif :><: if 'website' in PLATFORMS :>- Without `website`: `brand/src/platforms/website.md` (your profile, its sites and their
+  agreements) and `publishing/docs/reference/website.md` are deleted.
+<: endif :><: if 'blog' in PLATFORMS :>- Without `blog`: `brand/src/platforms/blog.md` (your profile) and
+  `publishing/docs/reference/blog.md` are deleted.
+<: endif :><: if 'newsletter' in PLATFORMS :>- Without `newsletter`: `brand/src/platforms/newsletter.md` (your profile, its lists) and
+  `publishing/docs/reference/newsletter.md` are deleted.
 <: endif :><: if 'audiobook' in MEDIA_KINDS :>- Without `audiobook`: the `narrate-audiobook` skill, `production/src/audiobook/` (its pair
   and the README files of its generated and renders folders; your chapter registers stay),
   `production/workflows/05-narrate-an-audiobook/`, `production/workflows/06-master-an-audiobook/`

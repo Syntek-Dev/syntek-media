@@ -21,18 +21,20 @@ the platform data already owns.
   platform's change is confirmed; the mechanical tier for writing values the author has given
   (`.claude/rules/syntek-media/05-model-allocation.md`). The checklist tags are authoritative.
 - **Concrete steps:** follow `STEPS.md` in order and tick `CHECKLIST.md` as you go: confirm the
-  platform → look for the social media plan → the account → the deliverables used → cadence,
+  platform → read the written side's documents → the account, sites or lists → the deliverables used → cadence,
   tone and call to action → hashtag sets → overrides → clear the flags and record → hand back.
 - **Definition of done:** the account and the deliverables used are filled; every other section
-  is filled or cites the plan; each override carries its why, source and date; no flag is left in
+  is filled or cites the document that sets it; each override carries its why, source and date; no flag is left in
   a section `prepare-post` reads.
 
 ## Guardrails
 
-- **Never guess a handle or a URL.** They come from the author, exactly as the platform shows
-  them.
-- **The social media plan wins where it is present.** Never restate its cadence, tone, call to
-  action, hashtags or bios; cite it.
+- **Never guess a handle, a domain, a sender or a URL.** They come from the author, exactly as
+  the platform or the site shows them. A site's agreement is recorded once, and a slug is frozen
+  once a schedule row uses it.
+- **The written side's documents win where they set a value.** Never restate a cadence, tone,
+  call to action, hashtags or bios that a social media plan, calendar or operating procedure sets;
+  cite it.
 - **Never write a platform number in a profile.** Cite the key in `toolkit/data/platforms.toml`;
   an unconfirmed value is cited by its key, never by a figure.
 - **Never edit `toolkit/data/platforms.toml`.** It is template-owned; a confirmed correction is

@@ -70,7 +70,11 @@ exists as a recording) and `picture`, and read the guide for that kind, where th
 it (listed in `scripts/docs/reference/CONTEXT.md`). List `deliverables` as full-length keys of
 `toolkit/data/platforms.toml` on the project's platforms (`python3 toolkit/media.py presets`
 prints them), or `audiobook.<store>` keys for an audiobook; cut-downs are planned later, never
-here. Set `target_seconds` inside every deliverable's `max_seconds`, and `words_per_minute` from
+here. Video for the brand's own sites (`website.video`, `website.video_720`, `blog.video`) and a
+feed episode's `podcast.feed_audio` are full-length deliverables, and a talk published whole as
+an episode lists both `youtube.long` and `podcast.feed_audio`; posters, share, featured and
+preview images and a GIF preview are the thumbnail brief's, and an embed of the YouTube upload is
+a placement, never a deliverable. Set `target_seconds` inside every deliverable's `max_seconds`, and `words_per_minute` from
 the voice file's spoken style, or 150. For a recorded piece, `source_media` lists the recording's
 footage IDs once it is logged, and stays `[]` until then. _Substantive._
 

@@ -1,6 +1,7 @@
 # CONTEXT.md — publishing/workflows/04-brief-a-thumbnail/
 
-The procedure for a piece's thumbnails and covers: which deliverables take one, a brief in words
+The procedure for a piece's thumbnails, covers and other images (posters, share, featured and
+preview images, and a GIF preview for a newsletter): which deliverables take one, a brief in words
 agreed with the author, an HTML layout copied from the brand's own thumbnail component, a PNG for
 each deliverable rendered by `uv run toolkit/card.py`, and the checks at the size a viewer will
 see it. A cut that needs its own thumbnail gets its own brief and layout (`--cNN`). An approved
@@ -30,7 +31,8 @@ Reach for a **different** procedure when the task is the brand's thumbnail compo
 ## What it produces, and where
 
 - **A brief and a layout** in `publishing/src/thumbnails/`, `<piece>[--cNN].md` and `.html`.
-- **A PNG per deliverable** in `publishing/src/renders/`, `<html-stem>.<platform>-<format>.png`.
+- **A PNG per deliverable** in `publishing/src/renders/`, `<html-stem>.<platform>-<format>.png`,
+  and each other format, poster and GIF made from it or from a render by the toolkit.
 - **The author's approval,** dated in the brief's `approved`.
 
 ## The failure this procedure exists to prevent

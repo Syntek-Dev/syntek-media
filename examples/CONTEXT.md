@@ -19,7 +19,7 @@ examples/
 
 - `<kind>.answers.yml` — the shape of a `--data-file` for `copier copy`: every question in `copier.yml`, with made-up values, `PLATFORMS` and `MEDIA_KINDS` as block lists of choice values (never the labels), and `SEED_EXAMPLES: false`, the answer for a project already in use. Copy one outside the project you are applying the template to and change every value.
 - The identities are syntek-author's own inventions — Harbour Lane Studio (owner's chat name Casey), Morgan Example and Robin Example — so a combined render of the two templates tells one story (DESIGN.md D36).
-- Together the three files turn on every platform (`youtube`, `tiktok`, `instagram`, `linkedin`, `facebook`, `podcast`) and every media kind (`short-video`, `long-video`, `podcast`, `audiobook`, `trailer`, `voiceover`) at least once.
+- Together the three files turn on every platform (`youtube`, `tiktok`, `instagram`, `linkedin`, `facebook`, `podcast`, `website`, `blog`, `newsletter`) and every media kind (`short-video`, `long-video`, `podcast`, `audiobook`, `trailer`, `voiceover`) at least once.
 - `.github/scripts/generate-all.sh` check 3 holds each file to exactly the questions `copier.yml` asks for its kind, with valid choices.
 
 ## Cross-references

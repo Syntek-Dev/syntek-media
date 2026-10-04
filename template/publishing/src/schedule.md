@@ -16,6 +16,7 @@ Where syntek-author's content calendar is present, it owns the plan: this file l
 
 1. **One row per deliverable to go out**, keyed by its piece and its `<platform>.<format>` key, with ` — cNN` for a cut.
    A deliverable posted twice has two rows.
+   A placement on the brand's own sites, blogs or newsletters is written `<platform>:<slug>` in Platform, takes its date and time from the page, post or issue it sits in (cited in Notes), and is `moved` when that moves.
 2. **Status is one of** `planned · ready · posted · moved · dropped`.
    `planned` when the package is written; `ready` once the piece passes M7 (captioned → scheduled); `moved` when the author changes the date, with the old date kept in Notes; `posted` only once the author reports it; `dropped` with the reason in Notes.
 3. **Media deliverables only.**

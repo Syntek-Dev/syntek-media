@@ -33,7 +33,8 @@ disclosure and files that were checked and agreed in advance.
   flagged, and hashtags above `platform.instagram.hashtags_max` are warned about.
 - **Media deliverables only.** A text-only post, a bio or a calendar entry belongs to the
   social-media-documents skill (syntek-author), where present; cite its calendar entry, never copy
-  or rewrite it.
+  or rewrite it. A blog post's or an issue's own words, standfirst, link text and date are the
+  written side's; a placement never drafts them.
 - **Never invent** a claim, a quotation, a statistic, a testimonial or a link; a factual claim in
   a description is checked like one in the script.
 - **Never overwrite** an approved package without confirming with the author.
@@ -64,4 +65,31 @@ approved: ""                       # DD/MM/YYYY once the author approves the who
 - **Limits:** <each count against its platforms.toml key>
 ```
 
+- **A placement** on the brand's own channels takes this shape instead (its channel's guide says
+  which bullets it uses; an embed of the upload is `## youtube.long — website:<slug>`):
+
+```markdown
+## <platform>.<format>[ — cNN] — <platform>:<slug>
+
+- **Placement:** <slug> · <the page, post or issue, as the author names it> · <self-hosted, or an embed of youtube.long>
+- **Written piece:** <the unit it sits in, by path in prose, read and never edited; standalone, the author's, outside media; none for a page of its own>
+- **Title:** <an embed's or figure's title only, never the post's>
+- **Alt text:** <one line per image it shows; for a newsletter image, naming the video and saying it opens it>
+- **Links to:** <the placement it depends on, and its publish-log URL once reported; or none>
+- **Structured data:** <the VideoObject values the site's code emits>
+- **Agreement:** <own, or the profile row's dated record; a blog placement cites the website row's>
+- **Disclosure:** <the house line beside the media; no platform label>
+- **Captions:** <the .vtt, and the published transcript of exactly what the page plays>
+- **Images:** <poster, share, featured or fallback render names, as bullets of this placement>
+- **Render:** <render name, or n/a — embed; the channel guide's hosting tests, run by the author>
+- **Calendar:** <the content calendar entry, where syntek-author's is present; otherwise none>
+- **Scheduled:** <the written piece's own date and time, cited>, <%TIMEZONE%>
+- **Limits:** <each count against its platforms.toml key>
+```
+
+- **A feed episode** (`## podcast.feed_audio`) cites its show register for its Title, Description
+  and chapters, never repeating them, and adds **Episode page** (the feed site's page),
+  **Feed** (the `feed check` result, the upload copy, the order and time of upload) and **On
+  YouTube** (the `youtube.long` that carries it, by publish-log URL, or none). A `youtube.long`
+  that carries a feed episode adds **Playlist**. An episode page on another site is a placement.
 - **Generated:** nothing here; renders are in `publishing/src/renders/`.

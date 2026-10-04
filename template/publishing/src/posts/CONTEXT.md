@@ -24,6 +24,10 @@ publishing/src/posts/
   bullets **Title**, **Description**, **Hashtags**, **Disclosure**, **Captions**, **Thumbnail**,
   **Render**, **Calendar**, **Scheduled** and **Limits**. The skeleton is fenced in this folder's
   `CLAUDE.md`.
+- **A placement** on the brand's own sites, blogs and newsletters (the one file a page or an
+  issue plays or shows first) has its own section, qualified `— <platform>:<slug>`, holding only
+  the words outside the written piece it sits in, its images as bullets. **A feed episode** of a show the project serves itself has `## podcast.feed_audio`,
+  citing its show register for its title, description and chapters.
 - A generated project may hold one worked example package, where it was kept; delete it, with the
   other example files, once you no longer need it, and none of them will come back.
 

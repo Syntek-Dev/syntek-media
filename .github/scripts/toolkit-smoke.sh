@@ -15,7 +15,7 @@
 #                    ElevenLabs call: a "take" is a tone or a few fake bytes, and the toolkit's
 #                    handling of the files around a call is what is proved (credits).
 #
-#                    Fourteen checks, per render:
+#                    Nineteen checks, per render:
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
 #                         exercises the media_*.py modules, and card.py). A self-test reads only
 #                         the toolkit, so one result serves every render whose toolkit/ is
@@ -23,13 +23,15 @@
 #                      2. `cut` on a synthetic clip, for every video and audio deliverable of the
 #                         platforms in the answers (and audiobook.acx, the retail sample, where
 #                         the project makes audiobooks), writes what the preset says: size, codecs,
-#                         yuv420p, sample rate, sound only for audio, and the length cut.
+#                         yuv420p, sample rate, sound only for audio, no sound track where the
+#                         table sets audio_tracks = 0, and the length cut. The website.* and
+#                         blog.* video keys and podcast.feed_audio are among them.
 #                      3. `captions burn` onto a cut succeeds at the preset size with an ASS whose
 #                         PlayResX/PlayResY is that size; with the caption font made one that is
 #                         not installed, the burn fails and says the font fell back.
 #                      4. `card.py render` writes a PNG at each image deliverable's preset size,
 #                         and `--transparent` keeps alpha (SKIP by name without uv or Chromium,
-#                         or with --skip-thumbnails).
+#                         or with --skip-thumbnails). A GIF table is check 16's.
 #                      5. `loudness normalise` lands within ±1 LU of the social target ([house])
 #                         and the podcast target ([platform.podcast.apple_rss_audio]), measured
 #                         independently with ffmpeg's ebur128.
@@ -71,16 +73,61 @@
 #                         `--anchors` keeps every cue of a beat inside that beat.
 #                     14. `check --setup`, with HOME pointed at a scratch folder holding a fixture
 #                         ~/.claude.json, reports a missing ask rule and a base path outside the
-#                         repository, and prints no other value from that file.
+#                         repository, prints no other value from that file, and names the optional
+#                         encoders `image` needs (libwebp; an AV1 encoder and the avif muxer).
+#                     15. `image` encodes a PNG into each format of every image deliverable in the
+#                         answers, at its size (jpg, png, webp, avif; an encoder this ffmpeg lacks
+#                         is a SKIP by name), flattening alpha where the table says alpha = false;
+#                         refuses a source of another shape without --frame; takes a poster from a
+#                         video at --at; and fails its verification when max_size is overridden to
+#                         1 KB (DESIGN.md D57).
+#                     16. `cut` to newsletter.preview_gif with an --overlay PNG writes a GIF at the
+#                         preset size, within fps_max and max_size, the overlay on its first frame,
+#                         playing floor(max_seconds / clip) times — read from its own loop
+#                         extension (plays = count + 1, or once with none) and frame delays — so
+#                         it stops within max_seconds; a 3-second range plays once; over max_size
+#                         it is remade with fewer frames and its play time unchanged; an overlay
+#                         of another size is exit 2; a range longer than max_seconds renders
+#                         nothing (exit 1). Where the answers have no GIF table: n/a.
+#                     17. A table with audio_tracks = 0 (website.hero_loop) is cut with no sound
+#                         track, and with an ffmpeg that maps the source's sound in place of -an
+#                         the toolkit's own verification fails the file; website.video is encoded with its index
+#                         (moov) at the front. Where the answers have neither: n/a.
+#                     18. The podcast feed end to end on a fixture show, offline (D58, D59): the
+#                         skeleton fenced in publishing/src/podcast/CLAUDE.md equals
+#                         media_feed.SKELETON, flags and computed values aside; `feed new`
+#                         refuses a project without that folder (exit 2, naming the update),
+#                         reproduces the Podcasting 2.0 specification's published podcast:guid
+#                         example and flags owner_email; `feed add` writes the episode guid as
+#                         the UUIDv5 of the piece; `encode --deliverable podcast.feed_audio`
+#                         from a picture master is sound only, untagged, at the podcast target;
+#                         `feed tag` refuses an empty title changing nothing, then writes
+#                         ID3v2.3 title, author, album, three chapters and the cover, leaving the
+#                         audio stream as it was and the row's render, bytes and seconds true;
+#                         `feed write` needs --as-of (exit 2), gives the same bytes twice and a
+#                         feed with every required tag; `--rekey` recomputes every GUID before
+#                         publication and is exit 2 after; `feed write -o` writes and then
+#                         replaces the tracked feed; `feed chapters` writes version 1.2 JSON;
+#                         `feed check` passes, then exits 1 on each mutation (a repeated GUID, a
+#                         GUID of the previous feed with no row, a changed enclosure length under
+#                         the same URL, a < in a title, bytes that differ from the render, a
+#                         flag left), and `feed write -o` then refuses to replace a tracked feed
+#                         holding a GUID with no row. Where the render has no podcast folder only
+#                         the refusal runs, and the rest is n/a.
+#                     19. `captions transcript` on a fixture script keeps the spoken words, gives
+#                         on-screen text as [On screen: …], drops a lone speaker's tags, NOTE:
+#                         cues, braced directions and every raw cue line, takes only the given
+#                         lines with --lines, and writes a file only with -o (D60).
 #
 #                    Numbers are stable identifiers. Append, never renumber.
 #
 #                    A check whose tool is absent is SKIPPED and named (SKIP — …), never passed:
-#                    no ffmpeg (checks 2, 3, 5–7, 9, 10, 13), no uv or Chromium (check 4, card.py's
+#                    no ffmpeg (checks 2, 3, 5–7, 9, 10, 13, 15–18), no uv or Chromium (check 4, card.py's
 #                    self-test, the cards of check 9). --require-ffmpeg (CI) turns a missing ffmpeg
 #                    into exit 2; --skip-thumbnails skips the Chromium steps by name. A step that
 #                    does not apply to a render (no audiobook folder, no deliverable short enough
-#                    to over-run) is listed as n/a, not as a SKIP.
+#                    to over-run, no podcast folder, no own-channel deliverable) is listed as n/a,
+#                    not as a SKIP.
 #
 #                    What it CANNOT check: that a render LOOKS right — only that it is made to
 #                    the preset; a person watches the master. Nor ElevenLabs itself, which is
@@ -148,7 +195,7 @@ HAVE_CHROMIUM=unknown
 
 # The names the smoke's fixtures use: invented, numbered past any real piece.
 P_EDIT="903-smoke-edit"; P_AUDIO="904-smoke-audio"; P_TAKE="905-smoke-take"; P_PCM="906-smoke-take-pcm"
-P_SCRIPT="907-smoke-script"; P_BOOK="908-smoke-book"; P_ALIGN="909-smoke-align"
+P_SCRIPT="907-smoke-script"; P_BOOK="908-smoke-book"; P_ALIGN="909-smoke-align"; P_TRANSCRIPT="913-smoke-transcript"
 CONSTRUCTED="velunar"
 SECRET="smoke-secret-value-never-printed"
 SECRET_MAIL="robin@example.com"
@@ -182,6 +229,12 @@ tk() { # $1 = log name, then media.py arguments — returns its exit status, nev
   return "$st"
 }
 
+tko() { # $1 = name, then media.py arguments — standard output to OUT/name.out, messages to OUT/name.log
+  local name="$1" st=0; shift
+  (cd "$T" && PYTHONDONTWRITEBYTECODE=1 python3 toolkit/media.py "$@") >"$OUT/$name.out" 2>"$OUT/$name.log" || st=$?
+  return "$st"
+}
+
 tkc() { # $1 = log name, then card.py arguments
   local name="$1" st=0; shift
   (cd "$T" && PYTHONDONTWRITEBYTECODE=1 uv run --quiet toolkit/card.py "$@") >"$OUT/$name.log" 2>&1 || st=$?
@@ -193,6 +246,10 @@ said() { # $1 = log name, $2 = an extended regex → yes | no
 }
 
 tail_of() { grep -v '^[[:space:]]*$' "$OUT/$1.log" 2>/dev/null | tail -1 | cut -c1-110 || true; }
+
+printed() { # $1 = name (tko), $2 = an extended regex, case-sensitive, on standard output only → yes | no
+  if grep -qE -- "$2" "$OUT/$1.out" 2>/dev/null; then echo yes; else echo no; fi
+}
 
 # ── Media, generated at run time ─────────────────────────────────────────────
 
@@ -248,7 +305,8 @@ for a, b in re.findall(r"(\d+:\d\d:\d\d[,.]\d{3}) --> (\d+:\d\d:\d\d[,.]\d{3})",
     print("%.3f %.3f" % (s(a), s(b)))' "$1" 2>/dev/null || true
 }
 
-# Every deliverable table, the brand's overrides applied: key kind w h vcodec acodec rate min max aspect.
+# Every deliverable table, the brand's overrides applied: key kind w h vcodec acodec rate min max
+# aspect formats audio_tracks ("-" for an absent field; formats comma-joined).
 tables() {
   python3 - "$T/toolkit/data/platforms.toml" "$T/brand/src/platforms/overrides.toml" <<'PY'
 import sys, tomllib
@@ -265,11 +323,42 @@ try:
         key, field = str(o.get("key", "")).rsplit(".", 1)
         if key in rows: rows[key][field] = o.get("value")
 except Exception: pass
-g = lambda v, f: str(v.get(f)) if v.get(f) not in (None, "") else "-"
+g = lambda v, f: (",".join(map(str, v[f])) if isinstance(v.get(f), list) else str(v.get(f))) if v.get(f) not in (None, "", []) else "-"
 for k, v in rows.items():
     print("\t".join([k, g(v, "kind"), g(v, "width"), g(v, "height"), g(v, "video_codec"), g(v, "audio_codec"),
-                     g(v, "audio_sample_rate"), g(v, "min_seconds"), g(v, "max_seconds"), g(v, "aspect")]))
+                     g(v, "audio_sample_rate"), g(v, "min_seconds"), g(v, "max_seconds"), g(v, "aspect"),
+                     g(v, "formats"), g(v, "audio_tracks")]))
 PY
+}
+
+# One field of one deliverable table, the brand's overrides applied ("-" when absent; a list
+# comma-joined; a boolean as true or false).
+tfield() { # $1 = key, $2 = field
+  python3 - "$T/toolkit/data/platforms.toml" "$T/brand/src/platforms/overrides.toml" "$1" "$2" <<'PY'
+import sys, tomllib
+try: data = tomllib.load(open(sys.argv[1], "rb"))
+except Exception: print("-"); sys.exit(0)
+key, field = sys.argv[3], sys.argv[4]
+t = data.get("audiobook", {}) if key.startswith("audiobook.") else data.get("platform", {})
+for p in (key.split(".", 1)[1] if key.startswith("audiobook.") else key).split("."):
+    t = t.get(p, {}) if isinstance(t, dict) else {}
+v = t.get(field) if isinstance(t, dict) else None
+try:
+    for o in tomllib.load(open(sys.argv[2], "rb")).get("override", []):
+        if o.get("key") == f"{key}.{field}": v = o.get("value")
+except Exception: pass
+if v is None or v == "": print("-")
+elif isinstance(v, bool): print("true" if v else "false")
+elif isinstance(v, list): print(",".join(map(str, v)))
+else: print(v)
+PY
+}
+
+# A brand override of one field, appended to the scratch copy's overrides.toml (the caller
+# restores the file): how a mutation changes a limit without touching platforms.toml.
+override() { # $1 = key.field, $2 = a TOML value
+  printf '\n[[override]]\nkey = "%s"\nvalue = %s\nwhy = "toolkit-smoke mutation"\nsource = "toolkit-smoke"\nchecked = "01/01/2027"\n' \
+    "$1" "$2" >> "$T/brand/src/platforms/overrides.toml"
 }
 
 toml_value() { # $1 = TOML file, $2 = dotted table, $3 = key
@@ -333,33 +422,37 @@ smoke() { # $1 = tree — fills $RESULTS
   fi
 
   # The deliverables this render's answers ask for.
-  while IFS=$'\t' read -r k kind w h vc ac rate min max asp; do
+  local fmts atr
+  while IFS=$'\t' read -r k kind w h vc ac rate min max asp fmts atr; do
     [[ -z "$k" ]] && continue
     if [[ "$k" == audiobook.* ]]; then
       [[ "$k" == audiobook.acx && " $A_KINDS " == *" audiobook "* ]] || continue
     else
       [[ " $A_PLATFORMS " == *" ${k%%.*} "* ]] || continue
     fi
-    answered+=("$k"$'\t'"$kind"$'\t'"$w"$'\t'"$h"$'\t'"$vc"$'\t'"$ac"$'\t'"$rate"$'\t'"$min"$'\t'"$max"$'\t'"$asp")
+    # A table with audio_tracks = 0 (website.hero_loop) is cut with no sound track (D57).
+    [[ "$atr" == 0 ]] && { ac=none; rate=-; }
+    answered+=("$k"$'\t'"$kind"$'\t'"$w"$'\t'"$h"$'\t'"$vc"$'\t'"$ac"$'\t'"$rate"$'\t'"$min"$'\t'"$max"$'\t'"$asp"$'\t'"$fmts"$'\t'"$atr")
     if [[ "$kind" == video ]]; then
       videos+=("$k"); [[ -z "$first_v" ]] && first_v="$k"
       [[ -z "$first_land" && "$asp" == 16:9 ]] && first_land="$k"
       if [[ "$max" != - ]] && awk -v a="$max" -v b="$short_max" 'BEGIN { exit !(a < b) }'; then short_k="$k"; short_max="$max"; fi
     fi
-    [[ "$kind" == image && "$w" != - ]] && images+=("$k $w $h")
+    # A GIF table (formats = ["gif"]) is check 16's: cut makes it, never card.py alone.
+    [[ "$kind" == image && "$w" != - && "$fmts" != gif ]] && images+=("$k $w $h")
   done < <(tables)
   rec deliverables "${#answered[@]}"
   rec first_video "${first_v:--}"
 
   if ! $HAVE_FFMPEG; then
-    for k in 2 3 5 6 7 9 10 13; do skip_step "$k" "every ffmpeg step" "ffmpeg or ffprobe is not installed"; done
+    for k in 2 3 5 6 7 9 10 13 15 16 17 18; do skip_step "$k" "every ffmpeg step" "ffmpeg or ffprobe is not installed"; done
   else
     gen_av "$OUT/src.mp4" 5 640x360
 
     # ── 2. cut, per deliverable ──
     local row
     for row in "${answered[@]}"; do
-      IFS=$'\t' read -r k kind w h vc ac rate min max asp <<< "$row"
+      IFS=$'\t' read -r k kind w h vc ac rate min max asp fmts atr <<< "$row"
       [[ "$kind" == video || "$kind" == audio ]] || continue
       if [[ "$kind" == video ]]; then out="$OUT/c2.$k.mp4"
       else case "$ac" in mp3) out="$OUT/c2.$k.mp3" ;; flac) out="$OUT/c2.$k.flac" ;; wav|pcm*) out="$OUT/c2.$k.wav" ;; *) out="$OUT/c2.$k.m4a" ;; esac; fi
@@ -508,6 +601,15 @@ SHIM
 
   # ── 14. check --setup ──
   smoke_setup
+
+  # ── 15–19. Images, the GIF preview, web video, the podcast feed, transcripts (0.2.0) ──
+  if $HAVE_FFMPEG; then
+    smoke_image "${answered[@]}"
+    smoke_gif "${answered[@]}"
+    smoke_web "${answered[@]}"
+    smoke_feed
+  fi
+  smoke_transcript
 }
 
 manifest_id() { # $1 = kind → the first footage ID of that kind
@@ -828,6 +930,574 @@ PY
   rec setup.ask "$(said setup "$GONE_ASK")"
   rec setup.base "$(said setup 'base path.*(does not contain|outside)|(does not contain|outside).*repositor')"
   rec setup.leak "$(grep -qF -e "$SECRET" -e "$SECRET_MAIL" "$OUT/setup.log" && echo yes || echo no)"
+  rec setup.encoders "$([[ "$(said setup 'webp')" == yes && "$(said setup 'avif|av1')" == yes ]] && echo yes || echo no)"
+}
+
+# ── 0.2.0: images, the GIF preview, web video, the podcast feed, published transcripts ──
+#
+# Checks 15–19 (DESIGN.md Section 7; D57–D60). Each records facts; run_checks judges them.
+
+# "WxH codec pix_fmt bytes video-streams" of a still (ffprobe; the first video stream).
+img_facts() {
+  local b; b="$(stat -c %s "$1" 2>/dev/null || echo 0)"
+  ffprobe -v error -show_entries stream=codec_type,codec_name,width,height,pix_fmt -of json "$1" 2>/dev/null | python3 -c '
+import json, sys
+try: s = [x for x in json.load(sys.stdin).get("streams", []) if x.get("codec_type") == "video"]
+except Exception: s = []
+v = s[0] if s else {}
+print("%sx%s %s %s %s %d" % (v.get("width", 0), v.get("height", 0), v.get("codec_name", "-"), v.get("pix_fmt", "-"), sys.argv[1], len(s)))' "$b"
+}
+
+# "w h frames one-play-seconds loop-count bytes" of a GIF, read from its own blocks: the logical
+# screen, every image descriptor, every graphic control extension's delay (centiseconds) and the
+# NETSCAPE2.0 loop count (-1 when the file has none: it plays once).
+gif_facts() {
+  python3 - "$1" <<'PY'
+import os, sys
+try: d = open(sys.argv[1], "rb").read()
+except Exception: print("0 0 0 0 -1 0"); sys.exit()
+if d[:6] not in (b"GIF87a", b"GIF89a"): print("0 0 0 0 -1 %d" % len(d)); sys.exit()
+w, h = d[6] | d[7] << 8, d[8] | d[9] << 8
+i = 13 + (3 * 2 ** ((d[10] & 7) + 1) if d[10] & 0x80 else 0)
+frames, delay, loop = 0, 0, -1
+def skip_blocks(i):
+    while i < len(d) and d[i]: i += d[i] + 1
+    return i + 1
+while i < len(d):
+    b = d[i]
+    if b == 0x3B: break
+    if b == 0x21:
+        label = d[i + 1]
+        if label == 0xF9: delay += d[i + 4] | d[i + 5] << 8
+        if label == 0xFF and d[i + 3:i + 14] == b"NETSCAPE2.0" and d[i + 14] == 3 and d[i + 15] == 1:
+            loop = d[i + 16] | d[i + 17] << 8
+        i = skip_blocks(i + 2)
+    elif b == 0x2C:
+        frames += 1
+        p = d[i + 9]; i += 10
+        if p & 0x80: i += 3 * 2 ** ((p & 7) + 1)
+        i = skip_blocks(i + 1)
+    else: break
+print("%d %d %d %.3f %d %d" % (w, h, frames, delay / 100.0, loop, len(d)))
+PY
+}
+
+# The mean "r g b" of a square of a file's first frame.
+region_rgb() { # $1 = file, $2 = size, $3 = x, $4 = y
+  ffmpeg -v error -i "$1" -frames:v 1 -vf "crop=$2:$2:$3:$4,format=rgb24" -f rawvideo - 2>/dev/null | python3 -c '
+import sys
+b = sys.stdin.buffer.read()
+n = len(b) // 3 or 1
+print(" ".join(str(sum(b[c::3]) // n) for c in range(3)))'
+}
+
+# yes when an MP4's moov atom comes before its mdat (the index at the front: a page can start
+# playing before the whole file arrives).
+moov_first() {
+  python3 - "$1" <<'PY'
+import struct, sys
+try: f = open(sys.argv[1], "rb")
+except Exception: print("no"); sys.exit()
+order, pos, size = [], 0, f.seek(0, 2)
+while pos + 8 <= size:
+    f.seek(pos); n, t = struct.unpack(">I4s", f.read(8)); hdr = 8
+    if n == 1: n = struct.unpack(">Q", f.read(8))[0]; hdr = 16
+    if n == 0: n = size - pos
+    order.append(t.decode("latin-1"))
+    if n < hdr: break
+    pos += n
+print("yes" if "moov" in order and "mdat" in order and order.index("moov") < order.index("mdat") else "no")
+PY
+}
+
+max_bytes() { # "1 MB" → 1000000 (the toolkit's own reading of max_size)
+  python3 -c '
+import re, sys
+m = re.fullmatch(r"\s*([\d.]+)\s*(KB|MB|GB|TB)\s*", sys.argv[1], re.I)
+print(int(float(m.group(1)) * {"KB": 1e3, "MB": 1e6, "GB": 1e9, "TB": 1e12}[m.group(2).upper()]) if m else 0)' "$1"
+}
+
+gif_plays() { # a GIF's loop count → how many times it plays (-1: no loop extension, once; 0: for ever)
+  case "$1" in -1) echo 1 ;; 0) echo inf ;; *) echo $(( $1 + 1 )) ;; esac
+}
+
+ext_for() { case "$1" in jpg|jpeg) echo jpg ;; *) echo "$1" ;; esac; }
+codec_for() { case "$1" in jpg|jpeg) echo mjpeg ;; png) echo png ;; webp) echo webp ;; avif) echo av1 ;; gif) echo gif ;; *) echo "$1" ;; esac; }
+
+# Whether this ffmpeg can write a format at all: an encoder it lacks is a named SKIP, never a
+# finding against the toolkit (DESIGN.md D57: libwebp, and an AV1 encoder with the avif muxer).
+FF_ENCODERS=""; FF_MUXERS=""
+can_encode() { # read once into variables: grep -q on a pipe would SIGPIPE ffmpeg under pipefail
+  [[ -n "$FF_ENCODERS" ]] || FF_ENCODERS="$(ffmpeg -hide_banner -encoders 2>/dev/null || true)"
+  [[ -n "$FF_MUXERS" ]] || FF_MUXERS="$(ffmpeg -hide_banner -muxers 2>/dev/null || true)"
+  case "$1" in
+    webp) grep -q ' libwebp ' <<< "$FF_ENCODERS" ;;
+    avif) grep -qE ' (libaom-av1|libsvtav1) ' <<< "$FF_ENCODERS" && grep -qE ' avif ' <<< "$FF_MUXERS" ;;
+    *) return 0 ;;
+  esac
+}
+
+# ── 15. image ──
+smoke_image() { # $@ = the answered rows
+  local row k kind w h vc ac rate min max asp fmts atr f st sw sh out first="" poster="" maxk="" wrong f1
+  local -A srcof=()
+  for row in "$@"; do
+    IFS=$'\t' read -r k kind w h vc ac rate min max asp fmts atr <<< "$row"
+    [[ "$kind" == image && "$w" != - && "$h" != - && "$fmts" != - && "$fmts" != gif ]] || continue
+    if (( w % 2 == 0 && h % 2 == 0 )); then sw=$((w / 2)); sh=$((h / 2)); else sw=$((w * 2)); sh=$((h * 2)); fi
+    srcof[$k]="$OUT/c15src-${sw}x${sh}.png"
+    # Half-transparent, so a table with alpha = false proves the flattening.
+    [[ -f "${srcof[$k]}" ]] || ff -f lavfi -i "testsrc2=size=${sw}x${sh}:rate=1:duration=1,format=rgba,colorchannelmixer=aa=0.6" -frames:v 1 "${srcof[$k]}"
+    [[ -z "$first" ]] && first="$k"
+    [[ -z "$poster" && "$k" == *poster* ]] && poster="$k"
+    [[ -z "$maxk" && "$(tfield "$k" max_size)" != - ]] && maxk="$k"
+    rec "img.$k.want" "${w}x${h} $(tfield "$k" alpha)"
+    for f in ${fmts//,/ }; do
+      if ! can_encode "$f"; then skip_step 15 "image --format $f for $k" "this ffmpeg has no $f encoder or muxer"; continue; fi
+      out="$OUT/c15.$k.$(ext_for "$f")"
+      st=0; tk "img.$k.$f" image "${srcof[$k]}" --deliverable "$k" --format "$f" -o "$out" || st=$?
+      rec "img.$k.$f.status" "$st"; rec "img.$k.$f.tail" "$(tail_of "img.$k.$f")"
+      [[ -f "$out" ]] && rec "img.$k.$f.facts" "$(img_facts "$out")"
+    done
+  done
+  if [[ -z "$first" ]]; then na_step 15 "no image deliverable in the answers"; return 0; fi
+  # A source of another shape, without --frame: refused, nothing written.
+  IFS=x read -r w h <<< "$(awk -F'\t' -v k="$first" '$1 == k { print $3 "x" $4 }' < <(printf '%s\n' "$@"))"
+  wrong="$OUT/c15src-wrong.png"
+  if [[ "$w" == "$h" ]]; then ff -f lavfi -i "testsrc2=size=320x180:rate=1:duration=1" -frames:v 1 "$wrong"
+  else ff -f lavfi -i "testsrc2=size=320x320:rate=1:duration=1" -frames:v 1 "$wrong"; fi
+  f1="$(tfield "$first" formats)"; f1="${f1%%,*}"
+  st=0; tk img.shape image "$wrong" --deliverable "$first" -o "$OUT/c15.shape.$(ext_for "$f1")" || st=$?
+  rec img.shape.key "$first"; rec img.shape.status "$st"
+  rec img.shape.written "$([[ -f "$OUT/c15.shape.$(ext_for "$f1")" ]] && echo yes || echo no)"
+  # A poster: a frame of a video at --at, at the table's size.
+  if [[ -n "$poster" ]]; then
+    f1="$(tfield "$poster" formats)"; f1="${f1%%,*}"
+    st=0; tk img.poster image "$OUT/src.mp4" --deliverable "$poster" --at 00:00:01.000 -o "$OUT/c15.poster.$(ext_for "$f1")" || st=$?
+    rec img.poster.key "$poster"; rec img.poster.status "$st"; rec img.poster.tail "$(tail_of img.poster)"
+    rec img.poster.want "$(awk -F'\t' -v k="$poster" '$1 == k { print $3 "x" $4 }' < <(printf '%s\n' "$@"))"
+    [[ -f "$OUT/c15.poster.$(ext_for "$f1")" ]] && rec img.poster.size "$(img_facts "$OUT/c15.poster.$(ext_for "$f1")" | cut -d' ' -f1)"
+  else
+    na_step 15p "no poster deliverable in the answers (website.poster, blog.poster)"
+  fi
+  # max_size, made impossible by a brand override: the encode must fail its verification.
+  if [[ -n "$maxk" ]]; then
+    f1="$(tfield "$maxk" formats)"; f1="${f1%%,*}"
+    cp "$T/brand/src/platforms/overrides.toml" "$W/overrides.held"
+    override "$maxk.max_size" '"1 KB"'
+    st=0; tk img.maxsize image "${srcof[$maxk]}" --deliverable "$maxk" --format "$f1" -o "$OUT/c15.maxsize.$(ext_for "$f1")" || st=$?
+    cp "$W/overrides.held" "$T/brand/src/platforms/overrides.toml"
+    rec img.maxsize.key "$maxk"; rec img.maxsize.status "$st"
+  fi
+}
+
+# ── 16. the GIF preview ──
+smoke_gif() { # $@ = the answered rows
+  local row k="" kind w h vc ac rate min max asp fmts atr st a fpsmax maxsize limit ov="$OUT/c16.overlay.png"
+  for row in "$@"; do
+    IFS=$'\t' read -r k kind w h vc ac rate min max asp fmts atr <<< "$row"
+    [[ "$fmts" == gif ]] && break
+    k=""
+  done
+  if [[ -z "$k" ]]; then na_step 16 "no GIF deliverable in the answers (newsletter.preview_gif)"; return 0; fi
+  fpsmax="$(tfield "$k" fps_max)"; maxsize="$(tfield "$k" max_size)"
+  rec gif.key "$k"; rec gif.want "$w $h $max $fpsmax $(max_bytes "$maxsize")"
+  # A grey moving source, so any magenta in the GIF is the overlay's; a 7-second range covers
+  # every case below.
+  ff -f lavfi -i "testsrc2=size=640x360:rate=30:duration=7,hue=s=0" -f lavfi -i "sine=frequency=440:sample_rate=48000:duration=7" \
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$OUT/gifsrc.mp4"
+  ff -f lavfi -i "color=c=black@0.0:s=${w}x${h},format=rgba" -f lavfi -i "color=c=0xff00ff:s=80x80,format=rgba" \
+    -filter_complex "[0][1]overlay=20:20,format=rgba" -frames:v 1 "$ov"
+  ff -f lavfi -i "color=c=black@0.0:s=300x169,format=rgba" -frames:v 1 "$OUT/c16.overlay-small.png"
+  st=0; tk gif.a cut "$OUT/gifsrc.mp4" --deliverable "$k" --in 00:00:00.000 --out 00:00:02.000 --overlay "$ov" -o "$OUT/c16.a.gif" || st=$?
+  rec gif.a.status "$st"; rec gif.a.tail "$(tail_of gif.a)"
+  if [[ -f "$OUT/c16.a.gif" ]]; then
+    a="$(gif_facts "$OUT/c16.a.gif")"; rec gif.a.facts "$a"
+    rec gif.a.overlay "$(region_rgb "$OUT/c16.a.gif" 10 55 55 | awk '{ print ($1 > 180 && $2 < 90 && $3 > 180) ? "yes" : "no" }')"
+  fi
+  st=0; tk gif.b cut "$OUT/gifsrc.mp4" --deliverable "$k" --in 00:00:01.000 --out 00:00:04.000 --overlay "$ov" -o "$OUT/c16.b.gif" || st=$?
+  rec gif.b.status "$st"; [[ -f "$OUT/c16.b.gif" ]] && rec gif.b.facts "$(gif_facts "$OUT/c16.b.gif")"
+  # Over max_size: remade at half the frame rate (then a quarter), its play time unchanged.
+  if [[ -f "$OUT/c16.a.gif" ]]; then
+    limit="$(awk -v b="$(cut -d' ' -f6 <<< "$a")" 'BEGIN { printf "%.1f", b * 0.85 / 1000 }')"
+    cp "$T/brand/src/platforms/overrides.toml" "$W/overrides.held"
+    override "$k.max_size" "\"$limit KB\""
+    st=0; tk gif.c cut "$OUT/gifsrc.mp4" --deliverable "$k" --in 00:00:00.000 --out 00:00:02.000 --overlay "$ov" -o "$OUT/c16.c.gif" || st=$?
+    cp "$W/overrides.held" "$T/brand/src/platforms/overrides.toml"
+    rec gif.c.status "$st"; rec gif.c.tail "$(tail_of gif.c)"; rec gif.c.limit "$(max_bytes "$limit KB")"
+    [[ -f "$OUT/c16.c.gif" ]] && rec gif.c.facts "$(gif_facts "$OUT/c16.c.gif")"
+  fi
+  st=0; tk gif.d cut "$OUT/gifsrc.mp4" --deliverable "$k" --in 00:00:00.000 --out 00:00:02.000 --overlay "$OUT/c16.overlay-small.png" -o "$OUT/c16.d.gif" || st=$?
+  rec gif.d.status "$st"
+  if [[ "$max" != - ]]; then
+    st=0; tk gif.e cut "$OUT/gifsrc.mp4" --deliverable "$k" --in 00:00:00.000 --out "$(awk -v m="$max" 'BEGIN { printf "%.3f", m + 1 }')" -o "$OUT/c16.e.gif" || st=$?
+    rec gif.e.status "$st"; rec gif.e.written "$([[ -f "$OUT/c16.e.gif" ]] && echo yes || echo no)"
+  fi
+}
+
+# ── 17. a silent loop and web video ──
+smoke_web() { # $@ = the answered rows
+  local row k kind w h vc ac rate min max asp fmts atr st loop="" web="" real
+  for row in "$@"; do
+    IFS=$'\t' read -r k kind w h vc ac rate min max asp fmts atr <<< "$row"
+    [[ "$kind" == video && "$atr" == 0 && -z "$loop" ]] && loop="$k"
+    [[ "$k" == website.video ]] && web="$k"
+  done
+  if [[ -z "$loop" && -z "$web" ]]; then na_step 17 "no silent loop or website.video in the answers"; return 0; fi
+  if [[ -n "$loop" ]]; then
+    st=0; tk loop cut "$OUT/src.mp4" --deliverable "$loop" --in 00:00:00.000 --out 00:00:04.000 -o "$OUT/c17.loop.mp4" || st=$?
+    rec loop.key "$loop"; rec loop.status "$st"; rec loop.tail "$(tail_of loop)"
+    [[ -f "$OUT/c17.loop.mp4" ]] && rec loop.audio "$(probe_facts "$OUT/c17.loop.mp4" | awk '{ print $5 }')"
+    # The mutation: an ffmpeg that maps the source's sound where it was told -an keeps the
+    # sound; the toolkit's own verification must then fail the file (exit 1).
+    real="$(command -v ffmpeg)"; mkdir -p "$W/anshim"; rm -f "$OUT/c17.saw-an"
+    cat > "$W/anshim/ffmpeg" <<SHIM
+#!/bin/sh
+for a do
+  shift
+  if [ "\$a" = "-an" ]; then echo yes > "$OUT/c17.saw-an"; set -- "\$@" -map '0:a:0?' -c:a aac; continue; fi
+  set -- "\$@" "\$a"
+done
+exec $real "\$@"
+SHIM
+    chmod 755 "$W/anshim/ffmpeg"
+    st=0; PATH="$W/anshim:$PATH" tk loopmut cut "$OUT/src.mp4" --deliverable "$loop" --in 00:00:00.000 --out 00:00:04.000 -o "$OUT/c17.loopmut.mp4" || st=$?
+    rec loopmut.status "$st"; rec loopmut.saw "$([[ -f "$OUT/c17.saw-an" ]] && echo yes || echo no)"
+    [[ -f "$OUT/c17.loopmut.mp4" ]] && rec loopmut.audio "$(probe_facts "$OUT/c17.loopmut.mp4" | awk '{ print $5 }')"
+  fi
+  if [[ -n "$web" ]]; then
+    st=0; tk web encode "$OUT/src.mp4" --deliverable "$web" -o "$OUT/c17.web.mp4" || st=$?
+    rec web.status "$st"; rec web.tail "$(tail_of web)"
+    [[ -f "$OUT/c17.web.mp4" ]] && rec web.moov "$(moov_first "$OUT/c17.web.mp4")"
+  fi
+}
+
+# ── 18. the podcast feed, end to end, offline ──
+#
+# A fixture show on a fixture episode: the register written by `feed new` and `feed add`, edited
+# here line by line as the author would, the feed audio encoded from a picture master, tagged,
+# written, chaptered and checked, then mutated. Never a network call: the URLs are example.com's
+# and Podcasting 2.0's published example, which nothing fetches.
+FEED_SHOW="smoke-talks"; FEED_PIECE="910-smoke-feed"; FEED_SPEC_URL="https://podnews.net/rss/"
+FEED_SPEC_GUID="9b024349-ccf0-5f69-a609-6b82873eab3c"   # the Podcasting 2.0 namespace's published example
+FEED_AS_OF="01/01/2027 09:00"
+
+# Line-level register edits, as an author makes them: `show KEY=TOML …`, `episode:PIECE KEY=TOML …`,
+# or `append TEXT`. A multi-line string is replaced by a one-line one.
+reg_edit() { # $1 = register, $2 = scope, then KEY=VALUE pairs (or the text to append)
+  python3 - "$@" <<'PY'
+import re, sys
+path, scope, pairs = sys.argv[1], sys.argv[2], sys.argv[3:]
+lines = open(path, encoding="utf-8").read().split("\n")
+if scope == "append":
+    lines += pairs[0].split("\n"); open(path, "w", encoding="utf-8").write("\n".join(lines)); sys.exit()
+def is_header(l): return re.match(r"\s*\[", l) is not None
+if scope == "show":
+    s = next(i for i, l in enumerate(lines) if l.strip().startswith("[show]"))
+else:
+    piece, s = scope.split(":", 1)[1], None
+    for i, l in enumerate(lines):
+        if l.strip().startswith("[[episode]]"):
+            j = i + 1
+            while j < len(lines) and not is_header(lines[j]):
+                if re.match(r'\s*piece\s*=\s*"%s"' % re.escape(piece), lines[j]): s = i
+                j += 1
+    if s is None: sys.exit("no row for " + piece)
+for pair in pairs:
+    key, value = pair.split("=", 1)
+    e, i, hit = s + 1, s + 1, None
+    while e < len(lines) and not is_header(lines[e]): e += 1
+    for i in range(s + 1, e):
+        if re.match(r"\s*%s\s*=" % re.escape(key), lines[i]): hit = i; break
+    if hit is None: lines.insert(s + 1, f"{key} = {value}"); continue
+    end = hit
+    if lines[hit].count('"""') == 1:
+        end = hit + 1
+        while end < len(lines) and '"""' not in lines[end]: end += 1
+    lines[hit:end + 1] = [f"{key} = {value}"]
+open(path, "w", encoding="utf-8").write("\n".join(lines))
+PY
+}
+
+reg_get() { # $1 = register, $2 = show KEY | episode:PIECE KEY → the value, or "-"
+  python3 - "$1" "$2" "$3" <<'PY'
+import sys, tomllib
+try: d = tomllib.load(open(sys.argv[1], "rb"))
+except Exception: print("-"); sys.exit()
+scope, key = sys.argv[2], sys.argv[3]
+if scope == "show": t = d.get("show", {})
+else: t = next((e for e in d.get("episode", []) if e.get("piece") == scope.split(":", 1)[1]), {})
+v = t.get(key); print("-" if v is None or v == "" else v)
+PY
+}
+
+uuid5_of() { # $1 = namespace UUID, $2 = name → UUIDv5
+  python3 -c 'import sys, uuid; print(uuid.uuid5(uuid.UUID(sys.argv[1]), sys.argv[2]))' "$1" "$2"
+}
+feed_guid_for() { # $1 = feed URL → the Podcasting 2.0 podcast:guid
+  uuid5_of ead4c236-bf58-58c6-a2c6-a6b28d128cb6 "$(sed -E 's#^[a-zA-Z][a-zA-Z0-9+.-]*://##; s#/+$##' <<< "$1")"
+}
+
+# The fenced register skeleton of the podcast folder's CLAUDE.md against media_feed.SKELETON,
+# flags and computed values aside (DESIGN.md D59): "same", or what differs.
+skeleton_compare() {
+  python3 - "$T/publishing/src/podcast/CLAUDE.md" "$T/toolkit" <<'PY'
+import re, sys
+sys.path.insert(0, sys.argv[2])
+try:
+    import media_feed
+    mod = media_feed.SKELETON
+except Exception as exc:
+    print(f"media_feed.SKELETON unreadable ({exc.__class__.__name__})"); sys.exit()
+try: text = open(sys.argv[1], encoding="utf-8").read()
+except Exception: print("no publishing/src/podcast/CLAUDE.md"); sys.exit()
+blocks = re.findall(r"```toml\n(.*?)```", text, re.S)
+fenced = next((b for b in blocks if "[show]" in b), None)
+if fenced is None: print("no fenced [show] skeleton in publishing/src/podcast/CLAUDE.md"); sys.exit()
+COMPUTED = ("show", "feed_url", "podcast_guid", "guid", "site")
+def norm(t):
+    out = []
+    for l in str(t).split("\n"):
+        if "AUTHOR TO CONFIRM" in l:
+            l = re.sub(r"\s*#\s*AUTHOR TO CONFIRM.*$", "", l)
+            if not l.strip(): continue
+        m = re.match(r"(\s*)([a-z_]+)(\s*=\s*)(\"[^\"]*\"|[^#\s]+)(.*)$", l)
+        if m and m.group(2) in COMPUTED: l = m.group(1) + m.group(2) + " = <computed>" + m.group(5)
+        l = re.sub(r"\s+", " ", l).strip()
+        if l: out.append(l)
+    return out
+a, b = norm(fenced), norm(mod)
+if a == b: print("same"); sys.exit()
+for i, (x, y) in enumerate(zip(a, b)):
+    if x != y: print(f"line {i + 1}: the folder's '{x[:50]}' against the module's '{y[:50]}'"); sys.exit()
+print(f"the folder's copy has {len(a)} lines, the module's {len(b)}")
+PY
+}
+
+# A written feed against DESIGN.md Section 6.17's required tags: "ok", or what is missing.
+feed_xml_check() { # $1 = feed, $2 = podcast:guid, $3 = episode guid, $4 = bytes
+  python3 - "$@" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+NS = {"itunes": "http://www.itunes.com/dtds/podcast-1.0.dtd", "podcast": "https://podcastindex.org/namespace/1.0",
+      "atom": "http://www.w3.org/2005/Atom"}
+try: root = ET.parse(sys.argv[1]).getroot()
+except Exception as exc: print(f"not well-formed XML ({str(exc)[:60]})"); sys.exit()
+miss = []
+if root.tag != "rss" or root.get("version") != "2.0": miss.append("rss version 2.0")
+ch = root.find("channel")
+if ch is None: print("no channel"); sys.exit()
+for tag in ("title", "link", "description", "language", "itunes:author", "itunes:image", "itunes:category",
+            "itunes:explicit", "itunes:owner/itunes:email", "podcast:guid", "podcast:locked", "atom:link"):
+    if ch.find(tag, NS) is None: miss.append(tag)
+g = ch.find("podcast:guid", NS)
+if g is not None and (g.text or "").strip() != sys.argv[2]: miss.append(f"podcast:guid {sys.argv[2]}")
+items = ch.findall("item")
+if len(items) != 1: miss.append(f"exactly one item (found {len(items)})")
+for it in items[:1]:
+    for tag in ("title", "description", "pubDate", "itunes:duration", "podcast:transcript"):
+        if it.find(tag, NS) is None: miss.append("item " + tag)
+    gu = it.find("guid")
+    if gu is None or (gu.text or "").strip() != sys.argv[3] or gu.get("isPermaLink") != "false":
+        miss.append(f"item guid {sys.argv[3]} isPermaLink=false")
+    en = it.find("enclosure")
+    if en is None or en.get("length") != sys.argv[4] or en.get("type") != "audio/mpeg": miss.append(f"enclosure length {sys.argv[4]} type audio/mpeg")
+    if it.find("podcast:chapters", NS) is None and not any(c.tag.endswith("}chapters") for c in it): miss.append("item chapters")
+print("ok" if not miss else "missing: " + ", ".join(miss))
+PY
+}
+
+smoke_feed() {
+  local st reg="$T/publishing/src/podcast/$FEED_SHOW.toml" tracked="$T/publishing/src/podcast/$FEED_SHOW.feed.xml"
+  local render="$T/publishing/src/renders/$FEED_PIECE.podcast-feed-audio.mp3" pg eg sum sumr bytes secs dur held="$W/feed.held"
+  local url="https://example.com/podcast/$FEED_SHOW.xml"
+  # feed new refuses a project without the folder, naming the update that adds it.
+  if [[ -d "$T/publishing/src/podcast" ]]; then mv "$T/publishing/src/podcast" "$W/podcast.away"; fi
+  st=0; tk feed.nofolder feed new "$FEED_SHOW" --feed-url "$url" || st=$?
+  rec feed.nofolder.status "$st"; rec feed.nofolder.said "$(said feed.nofolder 'copier update.*-a \.copier-answers\.syntek-media\.yml|-a \.copier-answers\.syntek-media\.yml')"
+  rec feed.nofolder.made "$([[ -d "$T/publishing/src/podcast" ]] && echo yes || echo no)"
+  if [[ ! -d "$W/podcast.away" ]]; then
+    na_step 18 "no podcast folder (PLATFORMS without podcast): only feed new's refusal was run"; return 0
+  fi
+  rm -rf "$T/publishing/src/podcast"; mv "$W/podcast.away" "$T/publishing/src/podcast"
+  rec feed.skeleton "$(skeleton_compare)"
+
+  # Identity: the spec's own example, then the fixture show and its episode.
+  st=0; tk feed.spec feed new smoke-spec --feed-url "$FEED_SPEC_URL" || st=$?
+  rec feed.spec.status "$st"; rec feed.spec.guid "$(reg_get "$T/publishing/src/podcast/smoke-spec.toml" show podcast_guid)"
+  st=0; tk feed.new feed new "$FEED_SHOW" --feed-url "$url" || st=$?
+  rec feed.new.status "$st"; rec feed.new.tail "$(tail_of feed.new)"
+  [[ -f "$reg" ]] || { rec feed.register missing; return 0; }
+  rec feed.new.flag "$(grep -q 'AUTHOR TO CONFIRM' "$reg" && echo yes || echo no)"
+  pg="$(reg_get "$reg" show podcast_guid)"
+  rec feed.new.guid "$([[ "$pg" == "$(feed_guid_for "$url")" ]] && echo ok || echo "$pg")"
+  mkdir -p "$T/scripts/src/pieces/$FEED_PIECE"   # feed add writes a GUID once, so the piece must exist
+  printf -- '---\npiece: %s\nkind: podcast\nstatus: captioned\ndeliverables: [podcast.feed_audio]\n---\n\n# Smoke feed — brief\n' "$FEED_PIECE" \
+    > "$T/scripts/src/pieces/$FEED_PIECE/brief.md"
+  st=0; tk feed.add feed add "$FEED_SHOW" --piece "$FEED_PIECE" || st=$?
+  rec feed.add.status "$st"; rec feed.add.tail "$(tail_of feed.add)"
+  eg="$(reg_get "$reg" "episode:$FEED_PIECE" guid)"
+  rec feed.add.guid "$([[ "$pg" != - && "$eg" == "$(uuid5_of "$pg" "$FEED_PIECE")" ]] && echo ok || echo "$eg")"
+
+  # M5: the feed audio from a picture master — sound only, untagged, at the podcast target. Six
+  # minutes, so three chapters two minutes apart fit Apple's chapter rules.
+  mkdir -p "$T/production/src/renders" "$T/publishing/src/renders" "$T/publishing/src/captions"
+  ff -f lavfi -i "testsrc2=size=160x90:rate=5:duration=360" -f lavfi -i "sine=frequency=330:sample_rate=48000:duration=360,volume=0.2" \
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -ac 2 -shortest "$T/production/src/renders/$FEED_PIECE.master.mp4"
+  st=0; tk feed.encode encode "production/src/renders/$FEED_PIECE.master.mp4" --deliverable podcast.feed_audio -o "publishing/src/renders/$FEED_PIECE.podcast-feed-audio.mp3" || st=$?
+  rec feed.encode.status "$st"; rec feed.encode.tail "$(tail_of feed.encode)"
+  [[ -f "$render" ]] || return 0
+  rec feed.encode.facts "$(probe_facts "$render")"; rec feed.encode.lufs "$(lufs "$render")"
+  rec feed.encode.tags "$(ffprobe -v error -show_entries format_tags=title,artist,album -of csv=p=0 "$render" 2>/dev/null | tr -d ',\n' | grep -c . || true)"
+
+  # feed tag on a row with no title: refused, nothing changed.
+  sum="$(sha1sum < "$render")"; sumr="$(sha1sum < "$reg")"
+  st=0; tk feed.tag0 feed tag "$FEED_SHOW" --piece "$FEED_PIECE" || st=$?
+  rec feed.tag0.status "$st"
+  rec feed.tag0.unchanged "$([[ "$(sha1sum < "$render")" == "$sum" && "$(sha1sum < "$reg")" == "$sumr" ]] && echo yes || echo no)"
+
+  # The author fills the show and the row; the cover and its ID3 copy are design exports encoded
+  # with image; the transcript is the master-timed VTT.
+  ff -f lavfi -i "testsrc2=size=1500x1500:rate=1:duration=1" -frames:v 1 "$OUT/c18.cover.png"
+  st=0; tk feed.cover image "$OUT/c18.cover.png" --deliverable podcast.cover --format jpg -o "publishing/src/renders/$FEED_SHOW.podcast-cover.jpg" || st=$?
+  rec feed.cover.status "$st"
+  st=0; tk feed.id3cover image "$OUT/c18.cover.png" --deliverable podcast.id3_cover -o "publishing/src/renders/$FEED_SHOW.podcast-id3-cover.jpg" || st=$?
+  rec feed.id3cover.status "$st"
+  printf 'WEBVTT\n\n00:00:00.500 --> 00:00:02.500\nThe tide decides.\n' > "$T/publishing/src/captions/$FEED_PIECE.en-GB.vtt"
+  sed -i -E '/^[[:space:]]*#.*AUTHOR TO CONFIRM/d; s/[[:space:]]*#[[:space:]]*AUTHOR TO CONFIRM.*$//' "$reg"
+  reg_edit "$reg" show 'title="Smoke Talks"' 'author="Probe Studio"' 'owner_name="Probe Studio"' \
+    'owner_email="podcast@example.com"' 'link="https://example.com/podcast/"' 'media_base="https://example.com/media/"' \
+    'copyright="2027 Probe Studio"' 'category="Education"' 'description="A show the audit makes.\nIt exists for a minute."' \
+    "cover=\"$FEED_SHOW.podcast-cover.jpg\"" "id3_cover=\"$FEED_SHOW.podcast-id3-cover.jpg\"" 'approved="01/01/2027"'
+  reg_edit "$reg" "episode:$FEED_PIECE" 'title="The tide decides"' 'description="Why the ferry waits.\nA voice made with a speech tool reads part of it."' \
+    "pub_date=\"$FEED_AS_OF\"" "page=\"https://example.com/podcast/$FEED_PIECE/\"" "transcript=\"$FEED_PIECE.en-GB.vtt\""
+  reg_edit "$reg" append "$(printf '\n[[episode.chapter]]\nstart = "00:00:00.000"\ntitle = "The Bell"\n\n[[episode.chapter]]\nstart = "00:02:00.000"\ntitle = "The Crossing"\n\n[[episode.chapter]]\nstart = "00:04:00.000"\ntitle = "The Harbour"\n')"
+
+  # M7: tag in place, the audio stream untouched.
+  read -r _ _ _ _ _ _ _ dur <<< "$(probe_facts "$render")"
+  st=0; tk feed.tag feed tag "$FEED_SHOW" --piece "$FEED_PIECE" || st=$?
+  rec feed.tag.status "$st"; rec feed.tag.tail "$(tail_of feed.tag)"
+  rec feed.tag.before "$dur"; rec feed.tag.after "$(probe_facts "$render")"
+  rec feed.tag.tags "$(ffprobe -v error -show_entries format_tags=title,artist,album -of default=nw=1 "$render" 2>/dev/null | sed 's/^TAG://I' | LC_ALL=C sort | paste -sd'|' -)"
+  rec feed.tag.id3 "$(python3 -c 'import sys; b = open(sys.argv[1], "rb").read(4); print(b[3] if b[:3] == b"ID3" else 0)' "$render" 2>/dev/null || echo 0)"
+  rec feed.tag.chapters "$(ffprobe -v error -show_chapters -of csv=p=0 "$render" 2>/dev/null | grep -c . || true)"
+  rec feed.tag.apic "$(ffprobe -v error -show_entries stream_disposition=attached_pic -of csv=p=0 "$render" 2>/dev/null | grep -c '^1' || true)"
+  bytes="$(stat -c %s "$render")"; secs="$(reg_get "$reg" "episode:$FEED_PIECE" seconds)"
+  rec feed.tag.row "$(reg_get "$reg" "episode:$FEED_PIECE" render) $(reg_get "$reg" "episode:$FEED_PIECE" bytes) $secs"
+  rec feed.tag.rowwant "$FEED_PIECE.podcast-feed-audio.mp3 $bytes $(probe_facts "$render" | awk '{ print $8 }')"
+
+  # feed write: --as-of is required; one register and one --as-of give one set of bytes.
+  st=0; tk feed.write0 feed write "$FEED_SHOW" || st=$?; rec feed.write0.status "$st"
+  reg_edit "$reg" "episode:$FEED_PIECE" 'status="ready"'
+  st=0; tko feed.write1 feed write "$FEED_SHOW" --as-of "$FEED_AS_OF" || st=$?
+  rec feed.write.status "$st"; rec feed.write.tail "$(tail_of feed.write1)"
+  tko feed.write2 feed write "$FEED_SHOW" --as-of "$FEED_AS_OF" || true
+  rec feed.write.same "$([[ -s "$OUT/feed.write1.out" ]] && cmp -s "$OUT/feed.write1.out" "$OUT/feed.write2.out" && echo yes || echo no)"
+  rec feed.write.xml "$(feed_xml_check "$OUT/feed.write1.out" "$pg" "$eg" "$bytes")"
+
+  # --rekey before anything is published: a new URL, every GUID recomputed from it.
+  st=0; tk feed.rekey feed new "$FEED_SHOW" --rekey --feed-url "https://example.com/podcast/$FEED_SHOW-v2.xml" || st=$?
+  pg="$(reg_get "$reg" show podcast_guid)"; eg="$(reg_get "$reg" "episode:$FEED_PIECE" guid)"
+  rec feed.rekey.status "$st"
+  rec feed.rekey.ok "$([[ "$pg" == "$(feed_guid_for "https://example.com/podcast/$FEED_SHOW-v2.xml")" && "$eg" == "$(uuid5_of "$pg" "$FEED_PIECE")" ]] && echo yes || echo no)"
+
+  # The tracked feed: written with -o, then replaced after a register change.
+  st=0; tk feed.tracked feed write "$FEED_SHOW" --as-of "$FEED_AS_OF" -o "publishing/src/podcast/$FEED_SHOW.feed.xml" || st=$?
+  tko feed.tracked.stdout feed write "$FEED_SHOW" --as-of "$FEED_AS_OF" || true
+  rec feed.tracked.status "$st"
+  rec feed.tracked.same "$([[ -s "$tracked" ]] && cmp -s "$tracked" "$OUT/feed.tracked.stdout.out" && echo yes || echo no)"
+  reg_edit "$reg" "episode:$FEED_PIECE" 'description="Why the ferry waits for the water.\nA voice made with a speech tool reads part of it."'
+  st=0; tk feed.tracked2 feed write "$FEED_SHOW" --as-of "$FEED_AS_OF" -o "publishing/src/podcast/$FEED_SHOW.feed.xml" || st=$?
+  rec feed.tracked2.status "$st"; rec feed.tracked2.replaced "$(grep -q 'waits for the water' "$tracked" 2>/dev/null && echo yes || echo no)"
+
+  st=0; tk feed.chapters feed chapters "$FEED_SHOW" --piece "$FEED_PIECE" -o "$OUT/c18.chapters.json" || st=$?
+  rec feed.chapters.status "$st"
+  rec feed.chapters.json "$(python3 -c '
+import json, sys
+try: d = json.load(open(sys.argv[1]))
+except Exception: print("invalid"); sys.exit()
+s = [c.get("startTime") for c in d.get("chapters", [])]
+print("ok" if d.get("version") == "1.2" and s == [0, 120, 240] and all(isinstance(x, float) for x in s) else "version %s starts %s" % (d.get("version"), s))' "$OUT/c18.chapters.json" 2>/dev/null || echo invalid)"
+
+  st=0; tk feed.check feed check "$FEED_SHOW" || st=$?
+  rec feed.check.status "$st"; rec feed.check.tail "$(tail_of feed.check)"
+
+  # Mutations: each must exit 1. The register and the tracked feed are restored after each.
+  cp "$reg" "$held.toml"; cp "$tracked" "$held.xml" 2>/dev/null || true
+  reg_edit "$reg" append "$(printf '\n[[episode]]\npiece = "911-smoke-duplicate"\nguid = "%s"\ntitle = "A copy"\nstatus = "planned"\n' "$eg")"
+  st=0; tk feed.m.dup feed check "$FEED_SHOW" || st=$?; rec feed.m.dup "$st"; cp "$held.toml" "$reg"
+  python3 - "$held.xml" "$OUT/c18.prev-gone.xml" "$OUT/c18.prev-length.xml" <<'PY'
+import re, sys
+t = open(sys.argv[1], encoding="utf-8").read()
+gone = '<item><title>Gone</title><guid isPermaLink="false">00000000-0000-5000-8000-0000000000aa</guid><enclosure url="https://example.com/media/gone.mp3" length="1" type="audio/mpeg"/></item>'
+open(sys.argv[2], "w", encoding="utf-8").write(t.replace("</channel>", gone + "</channel>", 1))
+open(sys.argv[3], "w", encoding="utf-8").write(re.sub(r'(<enclosure[^>]*length=")(\d+)', lambda m: m.group(1) + str(int(m.group(2)) + 1), t, count=1))
+PY
+  st=0; tk feed.m.gone feed check "$FEED_SHOW" --previous "$OUT/c18.prev-gone.xml" || st=$?; rec feed.m.gone "$st"
+  cp "$OUT/c18.prev-gone.xml" "$tracked"
+  st=0; tk feed.m.gonewrite feed write "$FEED_SHOW" --as-of "$FEED_AS_OF" -o "publishing/src/podcast/$FEED_SHOW.feed.xml" || st=$?
+  rec feed.m.gonewrite "$st"; rec feed.m.gonewrite.kept "$(cmp -s "$tracked" "$OUT/c18.prev-gone.xml" && echo yes || echo no)"
+  cp "$held.xml" "$tracked"
+  st=0; tk feed.m.length feed check "$FEED_SHOW" --previous "$OUT/c18.prev-length.xml" || st=$?; rec feed.m.length "$st"
+  reg_edit "$reg" "episode:$FEED_PIECE" 'title="The tide <b>decides</b>"'
+  st=0; tk feed.m.angle feed check "$FEED_SHOW" || st=$?; rec feed.m.angle "$st"; cp "$held.toml" "$reg"
+  reg_edit "$reg" "episode:$FEED_PIECE" "bytes=$((bytes + 1))"; mv "$tracked" "$held.away"
+  st=0; tk feed.m.bytes feed check "$FEED_SHOW" || st=$?; rec feed.m.bytes "$st"; cp "$held.toml" "$reg"; mv "$held.away" "$tracked"
+  printf '\n# AUTHOR TO CONFIRM: the owner address\n' >> "$reg"
+  st=0; tk feed.m.flag feed check "$FEED_SHOW" || st=$?; rec feed.m.flag "$st"; cp "$held.toml" "$reg"
+
+  # Once an episode is published, the identity is fixed: --rekey is refused.
+  reg_edit "$reg" "episode:$FEED_PIECE" 'status="published"'
+  sumr="$(sha1sum < "$reg")"
+  st=0; tk feed.rekey2 feed new "$FEED_SHOW" --rekey --feed-url "https://example.com/podcast/$FEED_SHOW-v3.xml" || st=$?
+  rec feed.rekey2.status "$st"; rec feed.rekey2.unchanged "$([[ "$(sha1sum < "$reg")" == "$sumr" ]] && echo yes || echo no)"
+}
+
+# ── 19. the published transcript ──
+smoke_transcript() {
+  local st piece="$T/scripts/src/pieces/$P_TRANSCRIPT" before after o="publishing/src/captions/$P_TRANSCRIPT.transcript.en-GB.md"
+  mkdir -p "$piece" "$T/publishing/src/captions"
+  cat > "$piece/script.md" <<EOF
+---
+piece: $P_TRANSCRIPT
+version: 1
+approved: ""
+words: 0
+estimated_seconds: 0
+---
+
+# Smoke — script
+
+## 1. Hook (target 00:03)
+
+VO: {brisk} The harbour bell is ringing.
+TEXT: Ringing again?
+NOTE: hold on the bell
+SFX: rope on wood
+
+## 2. The water decides (target 00:07)
+
+VO: Each boat leaves when the water says so.
+VO: {pause 0.6} So the clock keeps a promise nobody made it.
+VO: The harbour waits for the tide.
+EOF
+  before="$(find "$T/publishing/src/captions" -type f | LC_ALL=C sort | sha1sum)"
+  st=0; tko tr captions transcript "scripts/src/pieces/$P_TRANSCRIPT/script.md" || st=$?
+  after="$(find "$T/publishing/src/captions" -type f | LC_ALL=C sort | sha1sum)"
+  rec tr.status "$st"; rec tr.tail "$(tail_of tr)"
+  rec tr.spoken "$(printed tr 'The harbour bell is ringing\.')"
+  rec tr.onscreen "$(printed tr '\[On screen: Ringing again\?\]')"
+  rec tr.tags "$(printed tr '(^|[^A-Za-z])VO:')"
+  rec tr.note "$(printed tr 'NOTE|hold on the bell')"
+  rec tr.braces "$(printed tr '[{}]')"
+  rec tr.cues "$(printed tr '^[[:space:]]*(SFX|MUSIC|TEXT):')"
+  rec tr.wrote "$([[ "$before" == "$after" ]] && echo no || echo yes)"
+  st=0; tko trlines captions transcript "scripts/src/pieces/$P_TRANSCRIPT/script.md" --lines 2.1-2.2 || st=$?
+  rec tr.lines.status "$st"
+  rec tr.lines.has "$([[ "$(printed trlines 'Each boat leaves')" == yes && "$(printed trlines 'So the clock keeps')" == yes ]] && echo yes || echo no)"
+  rec tr.lines.extra "$(printed trlines 'harbour waits|harbour bell')"
+  st=0; tk tro captions transcript "scripts/src/pieces/$P_TRANSCRIPT/script.md" -o "$o" || st=$?
+  rec tr.o.status "$st"; rec tr.o.written "$([[ -s "$T/$o" ]] && echo yes || echo no)"
 }
 
 # ── The judging: reads RES, fills FINDINGS and NOTES ─────────────────────────
@@ -868,7 +1538,11 @@ run_checks() {
     else
       [[ "$fv" == - ]] || bad+=" a picture stream in an audio deliverable;"
     fi
-    [[ "$ac" == - || "$fa" == "$ac" ]] || bad+=" audio $fa, wants $ac;"
+    if [[ "$ac" == none ]]; then
+      [[ "$fa" == - ]] || bad+=" a sound track ($fa) in a deliverable with audio_tracks = 0;"
+    else
+      [[ "$ac" == - || "$fa" == "$ac" ]] || bad+=" audio $fa, wants $ac;"
+    fi
     [[ "$rate" == - || "$frate" == "$rate" ]] || bad+=" ${frate} Hz, wants $rate;"
     num_eq "$fdur" "$want" 0.1 || bad+=" lasts $fdur s, cut to $want;"
     [[ -z "$bad" ]] || finding "check 2 — $L cut --deliverable $key does not match its preset:${bad%;}"
@@ -1019,6 +1693,193 @@ run_checks() {
   [[ "${RES[setup.ask]:-}" == yes && "${RES[setup.base]:-}" == yes ]] \
     || finding "check 14 — $L check --setup did not report the missing ask $GONE_ASK and the base path outside the repository (ask: ${RES[setup.ask]:-?}; base path: ${RES[setup.base]:-?})"
   [[ "${RES[setup.leak]:-}" != yes ]] || finding "check 14 — $L check --setup printed a value from ~/.claude.json it must never print (the API key or the account)"
+  [[ "${RES[setup.encoders]:-no}" == yes ]] \
+    || finding "check 14 — $L check --setup does not name the optional encoders image needs (libwebp for WebP; an AV1 encoder and the avif muxer for AVIF)"
+
+  # 15
+  local key fmt bad pix nst plays one total loop frames bytes gw gh want_plays mx fpsmax maxb a_frames a_one rrender rbytes rsecs
+  for k in "${!RES[@]}"; do
+    [[ "$k" =~ ^img\.(.+)\.(jpg|png|webp|avif)\.status$ ]] || continue
+    key="${BASH_REMATCH[1]}"; fmt="${BASH_REMATCH[2]}"; bad=""
+    if [[ "${RES[$k]}" != 0 ]]; then finding "check 15 — $L image --deliverable $key --format $fmt failed (exit ${RES[$k]}): ${RES[img.$key.$fmt.tail]:-}"; continue; fi
+    read -r w _ <<< "${RES[img.$key.want]:-? -}"
+    read -r gw fv pix bytes nst <<< "${RES[img.$key.$fmt.facts]:-0x0 - - 0 0}"
+    [[ "$gw" == "$w" ]] || bad+=" ${gw}, wants $w;"
+    [[ "$fv" == "$(codec_for "$fmt")" ]] || bad+=" codec $fv, wants $(codec_for "$fmt");"
+    if [[ "$(cut -d' ' -f2 <<< "${RES[img.$key.want]:-}")" == false ]] \
+       && { [[ "$pix" =~ ^(rgba|bgra|argb|abgr|ya|yuva|gbrap|pal8a) ]] || [[ "$fv" == av1 && "${nst:-1}" -gt 1 ]]; }; then
+      bad+=" kept its alpha channel ($pix), though the table says alpha = false;"
+    fi
+    [[ -z "$bad" ]] || finding "check 15 — $L image --deliverable $key --format $fmt does not match its preset:${bad%;}"
+  done
+  if [[ -n "${RES[img.shape.status]:-}" && ( "${RES[img.shape.status]}" == 0 || "${RES[img.shape.written]:-}" == yes ) ]]; then
+    finding "check 15 — $L image --deliverable ${RES[img.shape.key]:-?} accepted a source of another shape without --frame (exit ${RES[img.shape.status]}, written ${RES[img.shape.written]:-?})"
+  fi
+  if [[ -n "${RES[img.poster.status]:-}" ]]; then
+    if [[ "${RES[img.poster.status]}" != 0 ]]; then finding "check 15 — $L image --deliverable ${RES[img.poster.key]:-?} --at a video's frame failed (exit ${RES[img.poster.status]}): ${RES[img.poster.tail]:-}"
+    elif [[ "${RES[img.poster.size]:-}" != "${RES[img.poster.want]:-}" ]]; then finding "check 15 — $L the poster for ${RES[img.poster.key]:-?} is ${RES[img.poster.size]:-nothing}, not ${RES[img.poster.want]:-?}"; fi
+  fi
+  if [[ -n "${RES[img.maxsize.status]:-}" && "${RES[img.maxsize.status]}" != 1 ]]; then
+    finding "check 15 — $L image --deliverable ${RES[img.maxsize.key]:-?} with max_size overridden to 1 KB did not fail its verification (exit ${RES[img.maxsize.status]})"
+  fi
+
+  # 16
+  if [[ -n "${RES[gif.key]:-}" ]]; then
+    read -r w h mx fpsmax maxb <<< "${RES[gif.want]:-0 0 - - 0}"
+    if [[ "${RES[gif.a.status]:-}" != 0 ]]; then finding "check 16 — $L cut --deliverable ${RES[gif.key]} --overlay of a 2-second range failed (exit ${RES[gif.a.status]:-?}): ${RES[gif.a.tail]:-}"
+    else
+      bad=""; read -r gw gh frames one loop bytes <<< "${RES[gif.a.facts]:-0 0 0 0 -1 0}"
+      plays="$(gif_plays "$loop")"
+      [[ "$gw" == "$w" && "$gh" == "$h" ]] || bad+=" ${gw}x${gh}, wants ${w}x${h};"
+      num_eq "$one" 2.0 0.15 || bad+=" one play lasts $one s, cut to 2.000;"
+      if [[ "$plays" == inf ]]; then bad+=" it loops for ever;"
+      else
+        if [[ "$mx" != - ]]; then
+          want_plays="$(awk -v m="$mx" 'BEGIN { printf "%d", m / 2.0 + 1e-9 }')"
+          [[ "$plays" == "$want_plays" ]] || bad+=" plays $plays times, wants floor($mx / 2) = $want_plays;"
+          total="$(awk -v p="$plays" -v o="$one" 'BEGIN { printf "%.3f", p * o }')"
+          awk -v t="$total" -v m="$mx" 'BEGIN { exit !(t <= m + 0.05) }' || bad+=" plays for $total s, over max_seconds $mx;"
+        fi
+      fi
+      [[ "$fpsmax" == - ]] || awk -v f="$frames" -v o="$one" -v m="$fpsmax" 'BEGIN { exit !(o > 0 && f / o <= m + 0.5) }' || bad+=" $frames frames in $one s, over fps_max $fpsmax;"
+      [[ "${maxb:-0}" -le 0 || "$bytes" -le "$maxb" ]] || bad+=" $bytes bytes, over max_size;"
+      [[ "${RES[gif.a.overlay]:-}" == yes ]] || bad+=" the overlay is not on its first frame;"
+      [[ -z "$bad" ]] || finding "check 16 — $L the GIF preview of a 2-second range does not match its preset:${bad%;}"
+    fi
+    if [[ -n "${RES[gif.b.facts]:-}" && "$mx" != - ]]; then
+      read -r _ _ _ one loop _ <<< "${RES[gif.b.facts]}"
+      plays="$(gif_plays "$loop")"; want_plays="$(awk -v m="$mx" 'BEGIN { printf "%d", m / 3.0 + 1e-9 }')"
+      [[ "$plays" == "$want_plays" ]] || finding "check 16 — $L the GIF preview of a 3-second range plays $plays times (loop count $loop), wants floor($mx / 3) = $want_plays"
+    elif [[ -n "${RES[gif.b.status]:-}" && "${RES[gif.b.status]}" != 0 ]]; then
+      finding "check 16 — $L cut --deliverable ${RES[gif.key]} of a 3-second range failed (exit ${RES[gif.b.status]})"
+    fi
+    if [[ -n "${RES[gif.c.status]:-}" ]]; then
+      if [[ "${RES[gif.c.status]}" != 0 ]]; then finding "check 16 — $L a GIF over max_size was not remade at a lower frame rate (exit ${RES[gif.c.status]}): ${RES[gif.c.tail]:-}"
+      else
+        read -r _ _ frames one _ bytes <<< "${RES[gif.c.facts]:-0 0 0 0 -1 0}"
+        read -r _ _ a_frames a_one _ _ <<< "${RES[gif.a.facts]:-0 0 0 0 -1 0}"
+        if ! awk -v a="$frames" -v b="$a_frames" 'BEGIN { exit !(a < b) }' || ! num_eq "$one" "$a_one" 0.15 || [[ "$bytes" -gt "${RES[gif.c.limit]:-0}" ]]; then
+          finding "check 16 — $L the GIF remade under max_size is not the same play at a lower frame rate ($frames frames for $a_frames, $one s for $a_one, $bytes bytes for a ${RES[gif.c.limit]:-?}-byte limit)"
+        fi
+      fi
+    fi
+    [[ -z "${RES[gif.d.status]:-}" || "${RES[gif.d.status]}" == 2 ]] || finding "check 16 — $L an overlay of another size than the deliverable's was not refused with exit 2 (exit ${RES[gif.d.status]})"
+    if [[ -n "${RES[gif.e.status]:-}" && ( "${RES[gif.e.status]}" != 1 || "${RES[gif.e.written]:-}" == yes ) ]]; then
+      finding "check 16 — $L a GIF range longer than max_seconds did not fail before it rendered (exit ${RES[gif.e.status]}, written ${RES[gif.e.written]:-?})"
+    fi
+  fi
+
+  # 17
+  if [[ -n "${RES[loop.status]:-}" ]]; then
+    if [[ "${RES[loop.status]}" != 0 ]]; then finding "check 17 — $L cut --deliverable ${RES[loop.key]:-?} (audio_tracks = 0) failed (exit ${RES[loop.status]}): ${RES[loop.tail]:-}"
+    elif [[ "${RES[loop.audio]:-}" != - ]]; then finding "check 17 — $L the silent loop ${RES[loop.key]:-?} carries a sound track (${RES[loop.audio]:-?})"; fi
+    case "${RES[loopmut.status]:-}" in
+      1|"") ;;
+      0) if [[ "${RES[loopmut.audio]:--}" != - ]]; then
+           finding "check 17 — $L the verification passed a ${RES[loop.key]:-?} cut that kept its sound (an ffmpeg that ignores -an)"
+         else NOTES+=("n/a: check 17's mutation kept no sound (the toolkit drops it without -an)"); fi ;;
+      *) finding "check 17 — $L the mutated loop cut did not run to its verification (exit ${RES[loopmut.status]})" ;;
+    esac
+  fi
+  if [[ -n "${RES[web.status]:-}" ]]; then
+    if [[ "${RES[web.status]}" != 0 ]]; then finding "check 17 — $L encode --deliverable website.video failed (exit ${RES[web.status]}): ${RES[web.tail]:-}"
+    elif [[ "${RES[web.moov]:-}" != yes ]]; then finding "check 17 — $L website.video was written with its index (moov) after the media data: a page cannot start playing it early"; fi
+  fi
+
+  # 18
+  if [[ -n "${RES[feed.nofolder.status]:-}" ]]; then
+    [[ "${RES[feed.nofolder.status]}" == 2 && "${RES[feed.nofolder.said]:-}" == yes ]] \
+      || finding "check 18 — $L feed new without publishing/src/podcast/ did not exit 2 naming 'copier update -a .copier-answers.syntek-media.yml' (exit ${RES[feed.nofolder.status]})"
+    [[ "${RES[feed.nofolder.made]:-no}" == no ]] || finding "check 18 — $L feed new created publishing/src/podcast/, a folder only copier update may add"
+  fi
+  if [[ -n "${RES[feed.skeleton]:-}" ]]; then
+    [[ "${RES[feed.skeleton]}" == same ]] || finding "check 18 — $L the register skeleton fenced in publishing/src/podcast/CLAUDE.md is not media_feed.SKELETON's: ${RES[feed.skeleton]}"
+    [[ "${RES[feed.spec.status]:-}" == 0 && "${RES[feed.spec.guid]:-}" == "$FEED_SPEC_GUID" ]] \
+      || finding "check 18 — $L feed new --feed-url $FEED_SPEC_URL wrote podcast_guid ${RES[feed.spec.guid]:-none}, not the Podcasting 2.0 example's $FEED_SPEC_GUID (exit ${RES[feed.spec.status]:-?})"
+  fi
+  if [[ "${RES[feed.register]:-}" == missing ]]; then
+    finding "check 18 — $L feed new wrote no publishing/src/podcast/$FEED_SHOW.toml (exit ${RES[feed.new.status]:-?}): ${RES[feed.new.tail]:-}"
+  elif [[ -n "${RES[feed.new.status]:-}" ]]; then
+    [[ "${RES[feed.new.status]}" == 0 ]] || finding "check 18 — $L feed new failed (exit ${RES[feed.new.status]}): ${RES[feed.new.tail]:-}"
+    [[ "${RES[feed.new.flag]:-}" == yes ]] || finding "check 18 — $L feed new wrote no AUTHOR TO CONFIRM flag (owner_email is the author's to confirm)"
+    [[ "${RES[feed.new.guid]:-}" == ok ]] || finding "check 18 — $L feed new's podcast_guid ${RES[feed.new.guid]:-?} is not the UUIDv5 of its feed URL"
+    [[ "${RES[feed.add.status]:-}" == 0 && "${RES[feed.add.guid]:-}" == ok ]] \
+      || finding "check 18 — $L feed add did not write the episode's guid as the UUIDv5 of the piece under the show's (exit ${RES[feed.add.status]:-?}; guid ${RES[feed.add.guid]:-?}): ${RES[feed.add.tail]:-}"
+    if [[ "${RES[feed.encode.status]:-}" != 0 ]]; then finding "check 18 — $L encode --deliverable podcast.feed_audio from a picture master failed (exit ${RES[feed.encode.status]:-?}): ${RES[feed.encode.tail]:-}"
+    else
+      read -r _ _ fv _ fa _ _ _ <<< "${RES[feed.encode.facts]:-- - - - - - - 0}"
+      bad=""
+      [[ "$fv" == - ]] || bad+=" a picture stream ($fv);"
+      [[ "$fa" == mp3 ]] || bad+=" audio $fa, wants mp3;"
+      [[ "${RES[feed.encode.tags]:-0}" == 0 ]] || bad+=" tagged at M5 (title, artist or album set);"
+      num_eq "${RES[feed.encode.lufs]:-nan}" "${RES[loud.podcast.target]:-nan}" 1.0 || bad+=" ${RES[feed.encode.lufs]:-nan} LUFS, not within 1 LU of ${RES[loud.podcast.target]:-?};"
+      [[ -z "$bad" ]] || finding "check 18 — $L the feed audio encoded at M5 is not sound only, untagged, at the podcast target:${bad%;}"
+    fi
+    [[ "${RES[feed.tag0.status]:-}" == 1 && "${RES[feed.tag0.unchanged]:-}" == yes ]] \
+      || finding "check 18 — $L feed tag on a row with no title did not exit 1 changing nothing (exit ${RES[feed.tag0.status]:-?}; unchanged ${RES[feed.tag0.unchanged]:-?})"
+    [[ "${RES[feed.cover.status]:-0}" == 0 && "${RES[feed.id3cover.status]:-0}" == 0 ]] \
+      || finding "check 18 — $L image could not encode the show's cover to podcast.cover and podcast.id3_cover (exit ${RES[feed.cover.status]:-?} and ${RES[feed.id3cover.status]:-?})"
+    if [[ "${RES[feed.tag.status]:-}" != 0 ]]; then finding "check 18 — $L feed tag failed on a filled row (exit ${RES[feed.tag.status]:-?}): ${RES[feed.tag.tail]:-}"
+    else
+      bad=""
+      [[ "${RES[feed.tag.tags]:-}" == "album=Smoke Talks|artist=Probe Studio|title=The tide decides" ]] || bad+=" tags '${RES[feed.tag.tags]:-}';"
+      [[ "${RES[feed.tag.id3]:-0}" == 3 ]] || bad+=" ID3v2.${RES[feed.tag.id3]:-?}, wants v2.3;"
+      [[ "${RES[feed.tag.chapters]:-0}" == 3 ]] || bad+=" ${RES[feed.tag.chapters]:-0} chapters, wants 3;"
+      [[ "${RES[feed.tag.apic]:-0}" -ge 1 ]] || bad+=" no cover (APIC) though id3_cover is set;"
+      read -r _ _ _ _ fa _ _ dur <<< "${RES[feed.tag.after]:-- - - - - - - 0}"
+      [[ "$fa" == mp3 ]] && num_eq "$dur" "${RES[feed.tag.before]:-0}" 0.05 || bad+=" the audio stream changed (${fa}, ${dur} s for ${RES[feed.tag.before]:-?} s);"
+      read -r want bytes one <<< "${RES[feed.tag.rowwant]:-- 0 0}"
+      read -r rrender rbytes rsecs <<< "${RES[feed.tag.row]:-- 0 0}"
+      [[ "$rrender" == "$want" && "$rbytes" == "$bytes" ]] && num_eq "$rsecs" "$one" 0.1 || bad+=" the row reads '${RES[feed.tag.row]:-}', wants '${RES[feed.tag.rowwant]:-}';"
+      [[ -z "$bad" ]] || finding "check 18 — $L feed tag did not tag the file as its row says:${bad%;}"
+    fi
+    [[ "${RES[feed.write0.status]:-}" == 2 ]] || finding "check 18 — $L feed write without --as-of did not exit 2 (exit ${RES[feed.write0.status]:-?}): no clock may be read"
+    if [[ "${RES[feed.write.status]:-}" != 0 ]]; then finding "check 18 — $L feed write --as-of failed (exit ${RES[feed.write.status]:-?}): ${RES[feed.write.tail]:-}"
+    else
+      [[ "${RES[feed.write.same]:-}" == yes ]] || finding "check 18 — $L feed write gave different bytes for the same register and --as-of"
+      [[ "${RES[feed.write.xml]:-}" == ok ]] || finding "check 18 — $L the written feed is not the feed DESIGN.md Section 6.17 requires: ${RES[feed.write.xml]:-?}"
+    fi
+    [[ "${RES[feed.rekey.status]:-}" == 0 && "${RES[feed.rekey.ok]:-}" == yes ]] \
+      || finding "check 18 — $L feed new --rekey before anything was published did not recompute the feed URL's GUIDs (exit ${RES[feed.rekey.status]:-?})"
+    [[ "${RES[feed.tracked.status]:-}" == 0 && "${RES[feed.tracked.same]:-}" == yes ]] \
+      || finding "check 18 — $L feed write -o the tracked feed did not write the bytes feed write prints (exit ${RES[feed.tracked.status]:-?})"
+    [[ "${RES[feed.tracked2.status]:-}" == 0 && "${RES[feed.tracked2.replaced]:-}" == yes ]] \
+      || finding "check 18 — $L feed write -o did not replace the tracked feed after a register change (exit ${RES[feed.tracked2.status]:-?})"
+    [[ "${RES[feed.chapters.status]:-}" == 0 && "${RES[feed.chapters.json]:-}" == ok ]] \
+      || finding "check 18 — $L feed chapters did not write version 1.2 JSON chapters at 0, 120 and 240 s (exit ${RES[feed.chapters.status]:-?}: ${RES[feed.chapters.json]:-?})"
+    if [[ "${RES[feed.check.status]:-}" != 0 ]]; then
+      finding "check 18 — $L feed check fails the fixture show (exit ${RES[feed.check.status]:-?}), so its mutations prove nothing: ${RES[feed.check.tail]:-}"
+    else
+      for k in "dup:a repeated GUID" "gone:a GUID of the previous feed with no row" "length:an enclosure length changed under the same URL" \
+               "angle:a < in a title" "bytes:bytes that differ from the render" "flag:an AUTHOR TO CONFIRM flag left in the register"; do
+        [[ "${RES[feed.m.${k%%:*}]:-}" == 1 ]] || finding "check 18 — $L feed check passed ${k#*:} (exit ${RES[feed.m.${k%%:*}]:-?})"
+      done
+      [[ "${RES[feed.m.gonewrite]:-}" == 1 && "${RES[feed.m.gonewrite.kept]:-}" == yes ]] \
+        || finding "check 18 — $L feed write -o replaced a tracked feed holding a GUID with no row (exit ${RES[feed.m.gonewrite]:-?}; kept ${RES[feed.m.gonewrite.kept]:-?})"
+    fi
+    [[ "${RES[feed.rekey2.status]:-}" == 2 && "${RES[feed.rekey2.unchanged]:-}" == yes ]] \
+      || finding "check 18 — $L feed new --rekey after an episode was published was not refused with exit 2, changing nothing (exit ${RES[feed.rekey2.status]:-?})"
+  fi
+
+  # 19
+  if [[ -n "${RES[tr.status]:-}" ]]; then
+    if [[ "${RES[tr.status]}" != 0 ]]; then finding "check 19 — $L captions transcript failed on a fixture script (exit ${RES[tr.status]}): ${RES[tr.tail]:-}"
+    else
+      bad=""
+      [[ "${RES[tr.spoken]:-}" == yes ]] || bad+=" the spoken words are missing;"
+      [[ "${RES[tr.onscreen]:-}" == yes ]] || bad+=" no [On screen: …] for the TEXT: cue;"
+      [[ "${RES[tr.tags]:-}" == no ]] || bad+=" a lone speaker's VO: tag kept;"
+      [[ "${RES[tr.note]:-}" == no ]] || bad+=" a NOTE: cue kept;"
+      [[ "${RES[tr.braces]:-}" == no ]] || bad+=" a braced direction kept;"
+      [[ "${RES[tr.cues]:-}" == no ]] || bad+=" a raw cue line (SFX:, MUSIC: or TEXT:) kept;"
+      [[ "${RES[tr.wrote]:-}" == no ]] || bad+=" a file written without -o;"
+      [[ -z "$bad" ]] || finding "check 19 — $L captions transcript is not the published transcript:${bad%;}"
+    fi
+    [[ "${RES[tr.lines.status]:-}" == 0 && "${RES[tr.lines.has]:-}" == yes && "${RES[tr.lines.extra]:-}" == no ]] \
+      || finding "check 19 — $L captions transcript --lines 2.1-2.2 did not take exactly those lines (exit ${RES[tr.lines.status]:-?}; has ${RES[tr.lines.has]:-?}; others ${RES[tr.lines.extra]:-?})"
+    [[ "${RES[tr.o.status]:-}" == 0 && "${RES[tr.o.written]:-}" == yes ]] \
+      || finding "check 19 — $L captions transcript -o wrote no file (exit ${RES[tr.o.status]:-?})"
+  fi
   return 0
 }
 
@@ -1131,6 +1992,107 @@ setup.status	1
 setup.ask	yes
 setup.base	yes
 setup.leak	no
+setup.encoders	yes
+img.website.og_image.want	1200x630 -
+img.website.og_image.jpg.status	0
+img.website.og_image.jpg.facts	1200x630 mjpeg yuvj420p 120000 1
+img.podcast.cover.want	3000x3000 false
+img.podcast.cover.png.status	0
+img.podcast.cover.png.facts	3000x3000 png rgb24 900000 1
+img.shape.key	website.og_image
+img.shape.status	2
+img.shape.written	no
+img.poster.key	website.poster
+img.poster.status	0
+img.poster.want	1920x1080
+img.poster.size	1920x1080
+img.maxsize.key	website.og_image
+img.maxsize.status	1
+gif.key	newsletter.preview_gif
+gif.want	600 338 5 15 1000000
+gif.a.status	0
+gif.a.facts	600 338 30 2.000 1 400000
+gif.a.overlay	yes
+gif.b.status	0
+gif.b.facts	600 338 45 3.000 -1 600000
+gif.c.status	0
+gif.c.limit	340000
+gif.c.facts	600 338 15 2.000 1 250000
+gif.d.status	2
+gif.e.status	1
+gif.e.written	no
+loop.key	website.hero_loop
+loop.status	0
+loop.audio	-
+loopmut.status	1
+loopmut.saw	yes
+loopmut.audio	aac
+web.status	0
+web.moov	yes
+feed.nofolder.status	2
+feed.nofolder.said	yes
+feed.nofolder.made	no
+feed.skeleton	same
+feed.spec.status	0
+feed.spec.guid	9b024349-ccf0-5f69-a609-6b82873eab3c
+feed.new.status	0
+feed.new.flag	yes
+feed.new.guid	ok
+feed.add.status	0
+feed.add.guid	ok
+feed.encode.status	0
+feed.encode.facts	- - - - mp3 44100 2 360.000
+feed.encode.lufs	-16.1
+feed.encode.tags	0
+feed.tag0.status	1
+feed.tag0.unchanged	yes
+feed.cover.status	0
+feed.id3cover.status	0
+feed.tag.status	0
+feed.tag.tags	album=Smoke Talks|artist=Probe Studio|title=The tide decides
+feed.tag.id3	3
+feed.tag.chapters	3
+feed.tag.apic	1
+feed.tag.before	360.000
+feed.tag.after	1400 1400 mjpeg yuvj420p mp3 44100 2 360.000
+feed.tag.row	910-smoke-feed.podcast-feed-audio.mp3 576000 360.0
+feed.tag.rowwant	910-smoke-feed.podcast-feed-audio.mp3 576000 360.000
+feed.write0.status	2
+feed.write.status	0
+feed.write.same	yes
+feed.write.xml	ok
+feed.rekey.status	0
+feed.rekey.ok	yes
+feed.tracked.status	0
+feed.tracked.same	yes
+feed.tracked2.status	0
+feed.tracked2.replaced	yes
+feed.chapters.status	0
+feed.chapters.json	ok
+feed.check.status	0
+feed.m.dup	1
+feed.m.gone	1
+feed.m.gonewrite	1
+feed.m.gonewrite.kept	yes
+feed.m.length	1
+feed.m.angle	1
+feed.m.bytes	1
+feed.m.flag	1
+feed.rekey2.status	2
+feed.rekey2.unchanged	yes
+tr.status	0
+tr.spoken	yes
+tr.onscreen	yes
+tr.tags	no
+tr.note	no
+tr.braces	no
+tr.cues	no
+tr.wrote	no
+tr.lines.status	0
+tr.lines.has	yes
+tr.lines.extra	no
+tr.o.status	0
+tr.o.written	yes
 EOF
 }
 
@@ -1200,9 +2162,62 @@ self_test() {
   mut align.placed 1;                     probe "check 13 fires when --lines places too few cues" "check 13 — [fixture] captions align --lines placed 1 of 2"
   mut setup.base no;                      probe "check 14 fires when the outside base path is not reported" "check 14 — [fixture] check --setup did not report"
   mut setup.leak yes;                     probe "check 14 fires when check --setup prints a secret" "check 14 — [fixture] check --setup printed a value"
+  mut setup.encoders no;                  probe "check 14 fires when check --setup names no optional image encoder" "check 14 — [fixture] check --setup does not name the optional encoders"
+  mut img.website.og_image.jpg.facts "1200x628 mjpeg yuvj420p 120000 1"; probe "check 15 fires on an image at the wrong size" "check 15 — [fixture] image --deliverable website.og_image --format jpg does not match its preset: 1200x628"
+  mut img.podcast.cover.png.facts "3000x3000 png rgba 900000 1"; probe "check 15 fires when alpha = false keeps its alpha" "kept its alpha channel (rgba)"
+  mut img.website.og_image.jpg.status 1;  probe "check 15 fires when an image encode fails" "check 15 — [fixture] image --deliverable website.og_image --format jpg failed"
+  mut img.shape.status 0;                 probe "check 15 fires when a source of another shape is accepted" "check 15 — [fixture] image --deliverable website.og_image accepted a source of another shape"
+  mut img.poster.size 1280x720;           probe "check 15 fires on a poster at the wrong size" "check 15 — [fixture] the poster for website.poster is 1280x720"
+  mut img.maxsize.status 0;               probe "check 15 fires when an image over max_size passes" "check 15 — [fixture] image --deliverable website.og_image with max_size overridden"
+  mut gif.a.facts "600 338 30 2.000 0 400000"; probe "check 16 fires on a GIF that loops for ever" "it loops for ever"
+  mut gif.a.facts "600 338 30 2.000 2 400000"; probe "check 16 fires on a GIF that plays too often" "plays 3 times, wants floor(5 / 2) = 2"
+  mut gif.a.facts "600 338 60 2.000 1 400000"; probe "check 16 fires on a GIF over fps_max" "60 frames in 2.000 s, over fps_max 15"
+  mut gif.a.overlay no;                   probe "check 16 fires when the overlay is not on the first frame" "the overlay is not on its first frame"
+  mut gif.b.facts "600 338 45 3.000 1 600000"; probe "check 16 fires when a single play carries a loop extension" "check 16 — [fixture] the GIF preview of a 3-second range plays 2 times"
+  mut gif.c.facts "600 338 30 2.000 1 330000"; probe "check 16 fires when the remake keeps every frame" "check 16 — [fixture] the GIF remade under max_size"
+  mut gif.c.facts "600 338 15 1.000 1 250000"; probe "check 16 fires when the remake shortens the play" "check 16 — [fixture] the GIF remade under max_size"
+  mut gif.d.status 1;                     probe "check 16 fires when an overlay of another size is not exit 2" "check 16 — [fixture] an overlay of another size"
+  mut gif.e.written yes;                  probe "check 16 fires when an over-long GIF range renders" "check 16 — [fixture] a GIF range longer than max_seconds"
+  mut loop.audio aac;                     probe "check 17 fires on a silent loop with a sound track" "check 17 — [fixture] the silent loop website.hero_loop carries a sound track"
+  mut loopmut.status 0;                   probe "check 17 fires when the verification passes a loop that kept its sound" "check 17 — [fixture] the verification passed"
+  mut web.moov no;                        probe "check 17 fires when website.video has its index at the end" "check 17 — [fixture] website.video was written with its index"
+  mut feed.nofolder.said no;              probe "check 18 fires when feed new without the folder does not name the update" "check 18 — [fixture] feed new without publishing/src/podcast/"
+  mut feed.nofolder.made yes;             probe "check 18 fires when feed new creates the folder" "check 18 — [fixture] feed new created publishing/src/podcast/"
+  mut feed.skeleton "line 3: the folder's 'x' against the module's 'y'"; probe "check 18 fires when the fenced skeleton drifts" "check 18 — [fixture] the register skeleton fenced"
+  mut feed.spec.guid 917393e3-1b1e-5cef-ace4-edaa54e1f810; probe "check 18 fires when podcast:guid is not the spec's" "check 18 — [fixture] feed new --feed-url"
+  mut feed.new.flag no;                   probe "check 18 fires when feed new flags nothing" "check 18 — [fixture] feed new wrote no AUTHOR TO CONFIRM flag"
+  mut feed.add.guid 00000000-0000-5000-8000-000000000001; probe "check 18 fires on an episode guid that is not the UUIDv5" "check 18 — [fixture] feed add did not write"
+  mut feed.encode.tags 1;                 probe "check 18 fires when the M5 encode tags the file" "tagged at M5"
+  mut feed.encode.facts "640 360 h264 yuv420p mp3 44100 2 360.000"; probe "check 18 fires when the feed audio keeps the picture" "a picture stream (h264)"
+  mut feed.tag0.unchanged no;             probe "check 18 fires when feed tag on an empty title changes something" "check 18 — [fixture] feed tag on a row with no title"
+  mut feed.tag.chapters 2;                probe "check 18 fires on missing chapter frames" "2 chapters, wants 3"
+  mut feed.tag.after "1400 1400 mjpeg yuvj420p mp3 44100 2 359.000"; probe "check 18 fires when tagging changes the audio" "the audio stream changed"
+  mut feed.tag.row "910-smoke-feed.podcast-feed-audio.mp3 575999 360.0"; probe "check 18 fires when the row's bytes are not the file's" "the row reads"
+  mut feed.write0.status 0;               probe "check 18 fires when feed write reads a clock" "check 18 — [fixture] feed write without --as-of"
+  mut feed.write.same no;                 probe "check 18 fires when feed write is not reproducible" "check 18 — [fixture] feed write gave different bytes"
+  mut feed.write.xml "missing: podcast:guid"; probe "check 18 fires on a feed missing a required tag" "check 18 — [fixture] the written feed is not the feed"
+  mut feed.rekey.ok no;                   probe "check 18 fires when --rekey keeps the old GUIDs" "check 18 — [fixture] feed new --rekey before anything was published"
+  mut feed.tracked.same no;               probe "check 18 fires when the tracked feed differs from feed write's bytes" "check 18 — [fixture] feed write -o the tracked feed"
+  mut feed.tracked2.replaced no;          probe "check 18 fires when the tracked feed is not replaced" "check 18 — [fixture] feed write -o did not replace"
+  mut feed.chapters.json invalid;         probe "check 18 fires on invalid JSON chapters" "check 18 — [fixture] feed chapters"
+  mut feed.check.status 1;                probe "check 18 fires when feed check fails the fixture, never with the mutations" "so its mutations prove nothing"
+  mut feed.m.gone 0;                      probe "check 18 fires when a vanished GUID passes" "feed check passed a GUID of the previous feed with no row"
+  mut feed.m.length 0;                    probe "check 18 fires when a changed length under one URL passes" "feed check passed an enclosure length changed"
+  mut feed.m.flag 0;                      probe "check 18 fires when a flag left in the register passes" "feed check passed an AUTHOR TO CONFIRM flag"
+  mut feed.m.gonewrite.kept no;           probe "check 18 fires when feed write replaces a feed holding a vanished GUID" "check 18 — [fixture] feed write -o replaced a tracked feed"
+  mut feed.rekey2.status 0;               probe "check 18 fires when --rekey is accepted after publication" "check 18 — [fixture] feed new --rekey after an episode was published"
+  mut tr.tags yes;                        probe "check 19 fires when a lone speaker's tag is kept" "a lone speaker's VO: tag kept"
+  mut tr.onscreen no;                     probe "check 19 fires when on-screen text is lost" "no [On screen: …]"
+  mut tr.wrote yes;                       probe "check 19 fires when the transcript is written without -o" "a file written without -o"
+  mut tr.lines.extra yes;                 probe "check 19 fires when --lines takes other lines" "check 19 — [fixture] captions transcript --lines 2.1-2.2"
+  mut tr.o.written no;                    probe "check 19 fires when -o writes nothing" "check 19 — [fixture] captions transcript -o wrote no file"
   write_clean_results "$f"; printf 'na.12\tno audiobook folder\nskip.4\tcard renders (no Chromium)\n' >> "$f"
   sed -i '/^abtext\./d; /^card\./d' "$f"; load_results "$f"
   probe_clean "a render with no audiobook folder and no Chromium is clean, its steps listed n/a and skipped"
+  write_clean_results "$f"
+  printf 'na.15\tno image deliverable\nna.16\tno GIF deliverable\nna.17\tno silent loop\nna.18\tno podcast folder\n' >> "$f"
+  sed -i '/^img\./d; /^gif\./d; /^loop/d; /^web\./d; /^feed\.[a-mo-z]/d; /^feed\.new/d' "$f"; load_results "$f"
+  probe_clean "a render without the own channels or a podcast folder is clean, feed new's refusal still judged"
   st_finish "a toolkit made to its presets from one that is not"
 }
 

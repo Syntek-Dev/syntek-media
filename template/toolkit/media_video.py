@@ -37,10 +37,18 @@ fps_allowed does not list, when it is snapped to the nearest one it does). cut s
 input and re-encodes, so it is frame-accurate; with --captions it burns them in the same pass
 with -copyts, the SRT timed to SRC, or to the cut when its name carries --cNN (captions with no
 cue, an empty cue or overlapping cues are refused before anything renders; any other breach of
-the house limits is a warning). A deliverable with no picture (kind = "audio": a podcast clip,
-an audiobook retail sample) is trimmed and encoded as sound only; a cut of an audiobook.<store>
-key is its retail sample, held to the store's sample_max_seconds rather than the whole book's
-limits.
+the house limits is a warning); with --overlay it lays a transparent PNG of exactly the
+deliverable's size over every frame, under the captions. A deliverable with no picture (kind =
+"audio": a podcast clip, an audiobook retail sample, a podcast feed's audio) is trimmed and
+encoded as sound only, from a picture master too (a talk published as a podcast episode takes
+its sound); a cut of an audiobook.<store> key is its retail sample, held to the store's
+sample_max_seconds rather than the whole book's limits. A table that sets id3_version
+(podcast.feed_audio) is written untagged: the source's tags and chapters are dropped, and the
+feed's own are 'feed tag's, at M7 (DESIGN D59). A table with audio_tracks = 0
+(website.hero_loop) gets no sound track at all, and its verification fails a file that has one
+(DESIGN D57). cut of a kind = "image" table whose only format is gif (newsletter.preview_gif)
+is the GIF pass of media_image.py; any other image table is refused (card.py renders it, and
+media.py image encodes it).
 
 In an edit decision list, x = 0 (the skeleton's default) means a centred crop; a crop from a
 chosen left edge gives that edge in source pixels, 1 or more.
@@ -326,6 +334,15 @@ def faststart(ext: str) -> list:
     return ["-movflags", "+faststart"] if ext in (".mp4", ".m4a", ".mov") else []
 
 
+def untagged(table: dict) -> list:
+    """A table that sets id3_version (podcast.feed_audio) is written untagged, in that ID3 version:
+    the source's tags and chapters dropped, because the feed's own are 'feed tag's (DESIGN D59)."""
+    if not table.get("id3_version"):
+        return []
+    return ["-map_metadata", "-1", "-map_chapters", "-1", "-id3v2_version", str(int(table["id3_version"])),
+            "-write_id3v1", "0"]
+
+
 def audio_ext(table: dict) -> str:
     return {"mp3": ".mp3", "flac": ".flac", "wav": ".wav", "pcm": ".wav"}.get(audio_codec(table), ".m4a")
 
@@ -365,6 +382,10 @@ def verify(out: Path, table: dict, expect: float | None = None) -> list:
         found.append(f"audio codec {a[0].get('codec_name')}; {table['key']} wants {table['audio_codec']}")
     if kind == "audio" and not a:
         found.append("it has no sound")
+    if C.silent(table) and a:
+        found.append(f"it has a sound track; {table['key']} sets audio_tracks = 0 (no sound track at all)")
+    if a and table.get("cbr") and a[0].get("codec_name") == "mp3" and A.cbr(out) is False:
+        found.append(f"its bit rate is not constant; {table['key']} sets cbr = true")
     if table.get("max_seconds") and dur > table["max_seconds"] + 0.05:
         found.append(f"lasts {dur:.3f} s; {table['key']} max_seconds is {table['max_seconds']:g}")
     if table.get("min_seconds") and dur < table["min_seconds"] - 0.05:
@@ -474,6 +495,25 @@ def still_source(src: Path, info: dict) -> None:
                       "list ([[clip]] with seconds), or put it under sound with still-video")
 
 
+def caption_pass(args, table: dict, a: float, b: float, tmp: Path) -> tuple:
+    """(seek, filters, family, audio filter) that burn --captions in the cutting pass, the SRT timed
+    to the source, or to the cut when its name carries --cNN; refused before anything renders when
+    no cue falls inside the range, or the cues cannot be burned."""
+    import media_captions as K
+    cues = K.read_srt(args.captions)
+    shift = a if K.CUT_NAME_RE.search(Path(args.captions).name) else 0.0
+    inside = [c for c in cues if c.end + shift > a and c.start + shift < b]
+    if cues and not inside:
+        raise C.Finding(f"no cue of {C.shown(args.captions)} falls between --in {C.fmt_tc(a)} and --out "
+                        f"{C.fmt_tc(b)}: are these the captions of this source? Nothing rendered")
+    K.burn_check(inside, K.width_for(table), C.shown(args.captions))
+    size = C.size_of(table)
+    ass, family = K.caption_ass(cues, size[0], size[1], table, shift)
+    filters = K.subtitles_filter(tmp, ass) + ",setpts=PTS-STARTPTS,"
+    return (["-ss", C.fmt_tc(a), "-to", C.fmt_tc(b), "-copyts"], filters, family,
+            ["-af", "asetpts=PTS-STARTPTS"])
+
+
 def cmd_cut(args) -> int:
     src = Path(args.src)
     table = C.preset(args.deliverable)
@@ -487,11 +527,20 @@ def cmd_cut(args) -> int:
     if b > total + 0.05:
         raise C.Fatal(f"--out {C.fmt_tc(b)} is past the end of {C.shown(src)} ({C.fmt_tc(total)})")
     burned = bool(args.captions)
+    overlay = getattr(args, "overlay", None)
+    if C.is_gif(table):
+        if not C.streams(info, "video"):
+            raise C.Fatal(f"{C.shown(src)} has no picture to cut a GIF from")
+        import media_image as I
+        return I.cut_gif(args, table, src, info, a, b)
     if table.get("kind") != "video":
         if burned:
             raise C.Fatal(f"{table['key']} is not a video deliverable: no captions to burn")
+        if overlay:
+            raise C.Fatal(f"{table['key']} is not a video deliverable: no picture to lay --overlay on")
         if table.get("kind") != "audio":
-            raise C.Fatal(f"{table['key']} is an image deliverable: render it with card.py")
+            raise C.Fatal(f"{table['key']} is an image deliverable: render it with card.py, and encode it "
+                          "with media.py image")
         if not C.streams(info, "audio"):
             raise C.Fatal(f"{C.shown(src)} has no sound to cut")
         table = sample_table(table)
@@ -504,37 +553,39 @@ def cmd_cut(args) -> int:
         out = C.output_path(C.path(C.PUB_RENDERS) / deliverable_name(src, table["key"], args.cut, False, ext),
                             args.o, inputs=[src])
         render(["-y", "-ss", C.fmt_tc(a), "-to", C.fmt_tc(b)] + C.input_args(src)
-               + ["-map", "0:a:0", "-vn"] + audio_codec_args(table) + faststart(ext) + [str(out)], out, what="cut")
+               + ["-map", "0:a:0", "-vn"] + audio_codec_args(table) + untagged(table) + faststart(ext)
+               + [str(out)], out, what="cut")
         return finish(out, verify(out, table, expect=b - a), "cut")
+    size = C.size_of(table)
+    if overlay:
+        import media_image as I
+        overlay = I.overlay_size(overlay, size)
     out = C.output_path(C.path(C.PUB_RENDERS) / deliverable_name(src, table["key"], args.cut, burned, ".mp4"),
-                        args.o, inputs=[src])
+                        args.o, inputs=[src] + ([overlay] if overlay else []))
     graph, tail, fps = picture_filters(info, table, args.frame, args.x)
     with tempfile.TemporaryDirectory(prefix="media-cut-") as tmp:
         tmp = Path(tmp)
         seek = ["-ss", C.fmt_tc(a), "-to", C.fmt_tc(b)]
-        audio_filter = []
+        audio_filter, family = [], None
         if burned:
-            import media_captions as K
-            cues = K.read_srt(args.captions)
-            shift = a if K.CUT_NAME_RE.search(Path(args.captions).name) else 0.0
-            inside = [c for c in cues if c.end + shift > a and c.start + shift < b]
-            if cues and not inside:
-                raise C.Finding(f"no cue of {C.shown(args.captions)} falls between --in {C.fmt_tc(a)} and --out "
-                                f"{C.fmt_tc(b)}: are these the captions of this source? Nothing rendered")
-            K.burn_check(inside, K.width_for(table), C.shown(args.captions))
-            size = C.size_of(table)
-            ass, family = K.caption_ass(cues, size[0], size[1], table, shift)
-            tail += K.subtitles_filter(tmp, ass) + ",setpts=PTS-STARTPTS,"
-            seek.append("-copyts")
-            audio_filter = ["-af", "asetpts=PTS-STARTPTS"]
+            seek, filters, family, audio_filter = caption_pass(args, table, a, b, tmp)
+            tail += filters
+        inputs = seek + ["-i", str(src.resolve())]
+        if overlay:   # under the captions, which the tail burns after it
+            inputs += ["-i", str(Path(overlay).resolve())]
+            graph.append("[rf][1:v]overlay=0:0:format=auto[rfo]")
+            tail = "[rfo]" + tail[len("[rf]"):]
         graph = graph + [tail + "format=yuv420p[v]"]
-        has_audio = bool(C.streams(info, "audio"))
-        cmd = ["-y", "-loglevel", "info"] + seek + ["-i", str(src.resolve()), "-filter_complex", ";".join(graph),
-                                                    "-map", "[v]"]
+        has_audio = bool(C.streams(info, "audio")) and not C.silent(table)
+        cmd = ["-y", "-loglevel", "info"] + inputs + ["-filter_complex", ";".join(graph), "-map", "[v]"]
         if has_audio:
             cmd += ["-map", "0:a:0"] + audio_filter + audio_codec_args(table)
+        else:
+            cmd += ["-an"]
         cmd += video_codec_args(table, fps) + ["-movflags", "+faststart", str(out.resolve())]
         proc = render(cmd, out, cwd=tmp, what="cut")
+    if C.silent(table) and C.streams(info, "audio"):
+        print(f"  note: {table['key']} sets audio_tracks = 0: the source's sound is left out")
     found = verify(out, table, expect=b - a)
     if burned:
         import media_captions as K
@@ -548,11 +599,14 @@ def cmd_encode(args) -> int:
     src = Path(args.src)
     table = C.preset(args.deliverable)
     if table.get("kind") not in ("video", "audio"):
-        raise C.Fatal(f"{table['key']} is an image deliverable: render it with card.py")
+        raise C.Fatal(f"{table['key']} is an image deliverable: render it with card.py, and encode it with "
+                      "media.py image (an animated GIF is media.py cut's)")
     info = C.probe(src)
     still_source(src, info)
     if not C.streams(info, "audio") and table.get("kind") == "audio":
         raise C.Fatal(f"{C.shown(src)} has no sound to encode")
+    if table.get("kind") == "audio" and C.streams(info, "video"):
+        print(f"  note: {C.shown(src)} has a picture; {table['key']} takes its sound only")
     total = C.duration(info)
     wrong = length_finding(total, table, C.shown(src), 0.05)
     if wrong:
@@ -568,7 +622,9 @@ def cmd_encode(args) -> int:
                           "losing the edges) or --frame pad (keeps it all, over a blurred copy)")
     name = C.target_for(table)
     target = C.loudness_target(name)
-    has_audio = bool(C.streams(info, "audio"))
+    has_audio = bool(C.streams(info, "audio")) and not C.silent(table)
+    if C.silent(table) and C.streams(info, "audio"):
+        print(f"  note: {table['key']} sets audio_tracks = 0: the source's sound is left out")
     layout = "mono" if table["key"].startswith("audiobook.") else "stereo"
     pre = f"aformat=channel_layouts={layout},"   # the deliverable's channels, before loudnorm measures
     afilter = ["-af", pre + A.loudnorm_filter(A.loudnorm_measure(src, target, pre=pre), target)] \
@@ -577,7 +633,7 @@ def cmd_encode(args) -> int:
         out = C.output_path(C.path(C.PUB_RENDERS) / deliverable_name(src, table["key"], None, False,
                                                                      audio_ext(table)), args.o, inputs=[src])
         render(["-y"] + C.input_args(src) + ["-map", "0:a:0", "-vn"] + afilter + audio_codec_args(table)
-               + faststart(out.suffix) + [str(out)], out, what="encode")
+               + untagged(table) + faststart(out.suffix) + [str(out)], out, what="encode")
     else:
         out = C.output_path(C.path(C.PUB_RENDERS) / deliverable_name(src, table["key"], None, False, ".mp4"),
                             args.o, inputs=[src])
@@ -586,6 +642,8 @@ def cmd_encode(args) -> int:
         cmd = ["-y"] + C.input_args(src) + ["-filter_complex", ";".join(graph), "-map", "[v]"]
         if has_audio:
             cmd += ["-map", "0:a:0"] + afilter + audio_codec_args(table)
+        else:
+            cmd += ["-an"]
         render(cmd + video_codec_args(table, fps) + ["-movflags", "+faststart", str(out)], out, what="encode")
     found = verify(out, table, expect=total)
     if has_audio:

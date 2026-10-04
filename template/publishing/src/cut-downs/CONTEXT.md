@@ -22,7 +22,8 @@ publishing/src/cut-downs/
   `Cut · Deliverables · Lines · In · Out · Frame · Hook · Status`; then one `## cNN — <hook>`
   section per cut. The skeleton is fenced in this folder's `CLAUDE.md`.
 - **The cut-downs of a piece live only here,** never in its brief, which lists only full-length
-  deliverables.
+  deliverables. A silent loop for a web page is a cut too, its Lines `—`; a GIF preview is not:
+  it is the thumbnail brief's, in `publishing/src/thumbnails/`.
 - A generated project may hold one worked example plan, where it was kept; delete it, with the
   other example files, once you no longer need it, and none of them will come back.
 

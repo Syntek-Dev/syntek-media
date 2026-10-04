@@ -13,7 +13,7 @@ a hashtag limit is read from data and never remembered.
 ## How to work here
 
 - **Routing:** `cut-for-platform`, `captions`, `thumbnail-brief` and `prepare-post` read it through
-  `python3 toolkit/media.py` and `uv run toolkit/card.py`;
+  `python3 toolkit/media.py` (`image` and `feed` included) and `uv run toolkit/card.py`;
   `publishing/workflows/07-refresh-the-platform-specs/` re-checks it; nothing writes here in the
   normal course of work.
 - **Model:** **Opus** for any change to the data or a decision about a platform's rule; the
@@ -34,6 +34,9 @@ a hashtag limit is read from data and never remembered.
 - **Never present a `verify` value as fact.** Cite it by its key (`platform.instagram.hashtags_max`)
   and say it is unconfirmed; never copy its number into a guide, a brief or a post.
 - **Never invent a value.** An absent key stays absent until an official source publishes it.
+- **A house choice says so.** Where no platform publishes a value (a website's video sizes, an
+  email's image budget), the value is a choice inside published guidance and its key is in
+  `chosen`; a value read only from a third party is in `verify` as well.
 - **Dates are DD/MM/YYYY strings**, never TOML dates, and every `source` is re-checked at least
   every six months.
 

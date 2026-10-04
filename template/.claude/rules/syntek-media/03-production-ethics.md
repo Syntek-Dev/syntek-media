@@ -78,9 +78,9 @@ each gate checks.
 | M2 | briefed → scripted | the script, or a recorded piece's transcript, is approved, timed and fact-checked, with no flag in it; an audiobook, which has no script, has its chapter register approved |
 | M3 | scripted → storyboarded | every spoken line boarded and every shot sourced, with a rights row for anything licensed or identifiable |
 | M4 | storyboarded → produced | the master probes clean, its footage verifies, its takes are approved and archived (an audiobook's mastered chapters), the author has watched or heard it |
-| M5 | produced → cut | every deliverable rendered, verified, and seen or heard by the author |
-| M6 | cut → captioned | every deliverable with speech and picture has captions that pass `captions check --script` |
-| M7 | captioned → scheduled | rights cleared, disclosure set, package approved and inside every limit, no flags, a schedule row per deliverable |
+| M5 | produced → cut | every deliverable rendered, verified, and seen or heard by the author; a feed episode's audio encoded untagged |
+| M6 | cut → captioned | every deliverable with speech and picture has captions that pass `captions check --script`; on a site of the website or blog profile, a `.vtt` sidecar and a published transcript of exactly what each page plays; a feed episode's transcript and master-timed `.vtt` |
+| M7 | captioned → scheduled | rights cleared, disclosure set, package approved and inside every limit, no flags, a schedule row per deliverable and per placement; a placement on a site or list the brand does not own has its dated agreement; a feed episode's register row `ready`, its file tagged and its feed checked |
 
 `published` is not a gate: it follows when every schedule row is `posted` or `dropped`.
 
@@ -119,7 +119,9 @@ different performance, so a lost approved take is paid for twice and never quite
 AI-generated visuals or music, records it in its brief. At publish: (1) set each platform's AI
 label or toggle **exactly when that platform's current rule requires it**, recording the decision
 and the rule in the post package; (2) **always** add a disclosure line to the description, on
-every platform; (3) for a podcast, disclose in the audio and in the episode and show metadata.
+every platform; (3) for a podcast, disclose in the audio and in the episode and show metadata,
+the show register's descriptions included where the brand serves its own feed. On the brand's own
+sites, blogs and newsletters there is no platform label: the house line sits beside the media.
 The criteria, sources and dates live in `publishing/docs/reference/ai-disclosure.md`.
 
 **Why this rule exists.** A label a platform does not ask for can mislead viewers about what is

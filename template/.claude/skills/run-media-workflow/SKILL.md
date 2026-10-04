@@ -3,15 +3,14 @@ name: run-media-workflow
 description: >-
   The media router: turn what the author asks for into one media workflow and run it as written.
   Resolves syntek-author's Workflow aliases first, where present, then each media layer's
-  workflows/local/ (a same-named local folder replaces the template's), then its 'You want to… |
-  Procedure' table or, without one, its workflow folders; loads STEPS.md with CHECKLIST.md open,
-  obeys every M-gate, and hands back with the next deliverable. Use when the author says 'what's
-  next for the trailer?', 'carry on with the launch video', 'resume the voiceover', 'resume the
-  media work from the handoff', 'run 03-caption-a-piece' or describes video, audio, caption or
-  posting work no skill claims. Not for a job a media skill claims by its own triggers
-  (`write-script`). Not for writing work (the writing router of syntek-author, where present). Not
-  for a social media plan, calendar or bios (the social-media-documents skill (syntek-author),
-  where present).
+  workflows/local/, then its 'You want to… | Procedure' table or, without one, its workflow folders;
+  loads STEPS.md with CHECKLIST.md open, obeys every M-gate, and hands back with the next
+  deliverable. Use when the author says 'what's next for the trailer?', 'resume the media work from
+  the handoff', 'run 03-caption-a-piece' or describes video, audio, podcast-feed, caption or posting
+  work, the brand's own sites included, that no skill claims. Not for a job a media skill claims by
+  its own triggers (`write-script`). Not for writing work, a blog post's or newsletter's words
+  included (the writing router of syntek-author, where present). Not for a social media plan,
+  calendar or bios (the social-media-documents skill (syntek-author), where present).
 ---
 
 # Skill: Run Media Workflow (<%BRAND_NAME%>)
@@ -23,8 +22,10 @@ request into **one** media workflow, looks in the project's own procedures befor
 and then runs that workflow exactly as written: `STEPS.md` in order, `CHECKLIST.md` open and ticked
 as each item passes, every gate obeyed. It owns no domain and carries no mode file; the workflows,
 and the skills each step names, carry the domain. It routes the four media layers only, `brand/`,
-`scripts/`, `production/` and `publishing/`; writing work belongs to the writing router of
-syntek-author, where present.
+`scripts/`, `production/` and `publishing/`, media for the brand's own sites, blogs and
+newsletters and a self-hosted podcast's feed included; writing work, a blog post's or a
+newsletter issue's own words included, belongs to the writing router of syntek-author, where
+present.
 
 Its one bias is towards finished pieces. A session that ends with new folders, briefs and register
 rows but no approved script, no approved take, no cut and nothing scheduled has not moved the work:
@@ -117,10 +118,10 @@ This skill runs procedures; it never replaces one, and it never paraphrases one 
    - `produced`: `publishing/workflows/01-plan-the-cut-downs/`, then
      `publishing/workflows/02-cut-for-a-platform/` (M5).
    - `cut`: `publishing/workflows/03-caption-a-piece/` (M6); a piece whose M6 is `n/a` (an
-     audiobook, a podcast without a transcript) goes straight on to M7.
+     audiobook, a podcast with no feed audio and no transcript asked for) goes straight on to M7.
    - `captioned`: `production/workflows/07-clear-the-rights/`,
      `publishing/workflows/04-brief-a-thumbnail/` and `publishing/workflows/05-prepare-a-post/`
-     (M7).
+     (M7), with the podcast-feed procedure for a feed episode, where the project has it.
    - `scheduled`: `publishing/workflows/06-record-a-publication/`, once the author reports a post.
    The first move offered is the one that brings a finished piece nearer: approve a script or a
    take the author has heard, cut a produced master, caption a cut, or package a captioned piece,

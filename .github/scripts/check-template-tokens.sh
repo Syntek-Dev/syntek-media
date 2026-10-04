@@ -14,7 +14,7 @@
 #                            may carry a stray opener (DESIGN.md D2).
 #
 #                            syntek-media adds the failure syntek-author found. It ships three
-#                            brand kinds, six platforms and six media kinds from one tree, and
+#                            brand kinds, nine platforms and six media kinds from one tree, and
 #                            DESIGN.md Section 2 ("Token discipline") allows variant tokens and
 #                            conditional blocks only in a declared SPINE SET. A variant token
 #                            anywhere else makes a shared file differ between renders, so a file

@@ -18,6 +18,9 @@ PLATFORMS:
   - youtube
   - linkedin
   - instagram
+  - website
+  - blog
+  - podcast
 MEDIA_KINDS:
   - short-video
   - long-video

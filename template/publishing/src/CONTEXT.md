@@ -16,11 +16,12 @@ publishing/src/
 ├── .gitignore        ← keeps renders/ out of Git, all but its README
 ├── schedule.md       ← seed: when each media deliverable goes out
 ├── publish-log.md    ← seed: every upload, as the author reported it
-├── renders/          ← deliverables, burned versions and thumbnail PNGs; git-ignored, README.md only
+├── renders/          ← deliverables, burned versions, images, GIFs, chapters files; git-ignored, README.md only
 ├── cut-downs/        ← <piece>.md: one cut-down plan per piece
-├── captions/         ← <piece>[--cNN|.<FID>][.<platform>-<format>].en-GB.srt, and .vtt beside it
-├── thumbnails/       ← <piece>[--cNN].md brief and <piece>[--cNN].html layout
-└── posts/            ← <piece>.md: one post package per piece, a section per deliverable
+├── captions/         ← <piece>[--cNN|.<FID>][.<platform>-<format>].en-GB.srt and .vtt; published transcripts
+├── thumbnails/       ← <piece>[--cNN].md brief and .html layout, for every image deliverable
+<: if 'podcast' in PLATFORMS :>├── podcast/          ← <show>.toml show registers and <show>.feed.xml, each feed as last published
+<: endif :>└── posts/            ← <piece>.md: one post package per piece, a section per deliverable or placement
 ```
 
 ## What's here
@@ -28,12 +29,14 @@ publishing/src/
 | Part | Lives at | Written by |
 |---|---|---|
 | A piece's cut-down plan | `cut-downs/<piece>.md` | `repurpose`, with the author |
-| A deliverable's captions | `captions/` | `captions` |
-| A thumbnail's brief and layout | `thumbnails/<piece>[--cNN].md`, `.html` | `thumbnail-brief`, with the author |
+| A deliverable's captions, and a published transcript | `captions/` | `captions` |
+| A brief and layout for a piece's images | `thumbnails/<piece>[--cNN].md`, `.html` | `thumbnail-brief`, with the author |
+<: if 'podcast' in PLATFORMS :>| A self-hosted show's register and its feed as last published | `podcast/` | `prepare-post` and the `feed` commands, with the author |
+<: endif :>
 | A piece's post package | `posts/<piece>.md` | `prepare-post`, with the author |
 | The schedule | `schedule.md` | `prepare-post`, then the author's reports |
 | The publish log | `publish-log.md` | `prepare-post`, from the author's report only |
-| Rendered deliverables and thumbnails | `renders/` | `cut-for-platform`, `captions`, `thumbnail-brief` |
+| Rendered deliverables, images, GIFs, chapters files and a feed's upload copy | `renders/` | `cut-for-platform`, `captions`, `thumbnail-brief`, `prepare-post` |
 
 - **The schedule and the log are the single source of truth** for what goes out when, and what
   went out. Where syntek-author's content calendar is present, it owns the plan, and every

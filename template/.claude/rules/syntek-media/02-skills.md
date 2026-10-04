@@ -55,13 +55,13 @@ under a media skill's name does not, so the mode file beside it is ignored.
 | `run-media-workflow` | The router for media work no other skill claims, 'what's next?' or 'pick up the trailer': syntek-author's Workflow aliases first, where present, then each media layer's `workflows/local/`, then its index (or its workflow folders, where the index has no table); loads `STEPS.md` with `CHECKLIST.md` open, obeys the M-gates, and biases towards finished, approved deliverables | none |
 | `write-script` | Brief to spoken script for one scripted piece (hook, beats, call to action), timed with `media.py script time`; adapts from written work without editing it; revises on the author's notes; records approval (M2), and M3 `n/a — no picture` for a piece with no picture; never an audiobook | moded |
 | `storyboard` | Script to storyboard and shot list: a picture for every spoken line, vertical framing, on-screen text, sound and a source for every shot; opens a `needed` rights row for anything licensed or identifiable (M3); never for a recorded piece | moded |
-| `repurpose` | One long piece to a cut-down plan per selected platform: the lines each cut carries, its In and Out on the master, hook, framing and caption width; refuses near-identical batches | moded |
-| `thumbnail-brief` | Brief and HTML layout for a piece's thumbnails and covers, copied from the brand's thumbnail layout; renders them with `card.py` and checks legibility, the safe zone and the grid crop | moded |
-| `prepare-post` | The post package per deliverable (title, description, hashtags, disclosure, captions, thumbnail, rights) and its schedule row (M7); never posts; writes the publish-log row from what the author reports | moded |
+| `repurpose` | One long piece to a cut-down plan per selected platform: the lines each cut carries, its In and Out on the master, hook, framing and caption width; a silent loop for a web page as a cut with no words; refuses near-identical batches | moded |
+| `thumbnail-brief` | Brief and HTML layout for a piece's thumbnails, covers and other images, copied from the brand's thumbnail layout; renders them with `card.py`, encodes posters, share, featured and preview images with `media.py image`, makes the GIF preview under its overlay, and checks legibility, the safe zone and the grid crop | moded |
+| `prepare-post` | The post package per deliverable and per placement on the brand's own channels (title, description, hashtags, disclosure, captions, thumbnail, rights; a placement's own bullets and agreement), a feed episode's register words and feed check, and its schedule row (M7); never posts; writes the publish-log row from what the author reports | moded |
 | `voiceover` | ElevenLabs text-to-speech, one segment per spoken sentence or beat: the narrator, the request text, the cost stated and agreed, one call at a time, `take add`, listening, approved takes archived; espeak-ng only as a scratch track | moded |
 <: if 'audiobook' in MEDIA_KINDS :>| `narrate-audiobook` | An audiobook, planned in its chapter register with its credits (its M2: an audiobook has no script), then chapter by chapter by the route each channel accepts (human, AI or external): text through `media.py audiobook text`, takes one call at a time, mastering and the ACX check through the toolkit, every approved master archived, disclosure always | moded |
-<: endif :>| `captions` | Captions by the three timing routes, and a recorded piece's transcript; speech-to-text only when asked; SRT and VTT to the house limits; `captions check`; burned in or sidecar per platform (M6) | none |
-| `cut-for-platform` | Every render through the toolkit: the edit decision list and its cards, `assemble` to the master (M4), `cut` and `encode` per deliverable with captions burned in the same pass, loudness, and a probe of every output (M5) | none |
+<: endif :>| `captions` | Captions by the three timing routes, and a recorded piece's transcript; speech-to-text only when asked; SRT and VTT to the house limits; `captions check`; burned in or sidecar per platform; the published transcript for a profile site or a feed episode (M6) | none |
+| `cut-for-platform` | Every render through the toolkit: the edit decision list and its cards, `assemble` to the master (M4), `cut` and `encode` per deliverable with captions burned in the same pass (web video, silent loops and a feed episode's untagged audio among them), loudness, and a probe of every output (M5); `feed tag` at M7 | none |
 
 ---
 
@@ -85,8 +85,8 @@ never recreate it.
 | grilling, grill-with-docs | the brief, the brand kit, the spoken voice, design decisions | as practice (`.claude/rules/syntek-media/06-global-rules.md` Section 8) |
 | handoff | session boundaries | `.claude/rules/syntek-media/07-session-boundaries.md`; without it, the handoff is written by hand |
 | wayfinder | a large series or a launch | as practice |
-| social-media-documents | social media plans, content calendars, bios, channel voice, text-only posts | owns them where present; media's profiles, schedule and posts cite them, never duplicate them |
-| run-workflow | — | a boundary only: writing work goes there |
+| social-media-documents | social media plans, content calendars, operating procedures, bios, channel voice, text-only posts | owns what each document sets for a platform where present, document by document; media's profiles, schedule and posts cite them, never duplicate them |
+| run-workflow | — | a boundary only: writing work goes there, a blog post's or a newsletter issue's own words included |
 | pronounce | — | never run by media; its IPA is the source for constructed names in `brand/src/voice/voice.md` |
 
 The provenance ledger belongs to syntek-author's content layer, so improve-section and

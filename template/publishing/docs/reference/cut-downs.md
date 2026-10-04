@@ -39,6 +39,9 @@ title, its caption width, whether it needs its own thumbnail, and why this momen
 - **Times come from the record, not the ear.** In and Out are read from the master-timed captions
   or the edit decision list; for a recorded piece, from the captions its transcript was aligned
   and retimed into (`production/docs/reference/recorded-pieces.md`).
+- **A silent loop** for a web page (`website.hero_loop`) is a cut with no words (Lines `—`),
+  outside the stand-alone and near-identical rules; its note names any cut it shares frames with.
+  A GIF preview is not a cut but a thumbnail brief's (`publishing/docs/reference/thumbnails.md`).
 
 ## Framing and safe zones
 
@@ -63,9 +66,6 @@ batch that does not. Source: https://support.google.com/youtube/answer/1311392 (
 - Plan first, cut second: no cut is rendered before its row is `approved`.
 - Cut from the master only, so every cut inherits the master's loudness, rights and disclosure.
 - Make a cut's captions before cutting it where they can be, so the cutting pass burns them in.
-- A social media plan or content calendar is not a cut-down plan; where syntek-author's is
-  present, its calendar entries are read here and never rewritten.
-- One sentence per line in the plan's notes.
 
 ## Who implements it
 

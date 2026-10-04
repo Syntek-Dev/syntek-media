@@ -1,9 +1,12 @@
 # platforms.toml — delivery specs for every platform deliverable syntek-media cuts, encodes or briefs
 #
-# Read by the toolkit's ffmpeg presets (cut-for-platform, captions burn-in, repurpose) and by the
-# thumbnail-brief skill. Each [platform.<name>.<format>] table is one deliverable; each
-# [audiobook.<store>] table is a mastering and delivery target. Values come from the platform's
-# own help centre, developer documentation or ads guide, checked on the date in `checked`.
+# Read by the toolkit's ffmpeg presets (cut-for-platform, captions burn-in, repurpose), by its
+# image encoder and its podcast feed, and by the thumbnail-brief skill. Each
+# [platform.<name>.<format>] table is one deliverable; each [platform.<name>] table holds that
+# platform's own limits; each [audiobook.<store>] table is a mastering and delivery target. Values
+# come from the platform's own help centre, developer documentation or ads guide, or, for the
+# brand's own sites, blogs and newsletters (which no one publishes a spec for), from browser,
+# standards-body and email-vendor guidance, checked on the date in `checked`.
 # Read by `python3 toolkit/media.py` and `uv run toolkit/card.py`; `media.py presets` prints it.
 #
 # Rules for readers:
@@ -13,9 +16,14 @@
 # - `max_size` strings are copied as the platform states them ("4 GB"); never convert units.
 # - `safe_zone` is in pixels at this table's width x height; scale it for other sizes. Inside
 #   safe_zone, 0 means "no margin published for that edge".
-# - `caption_formats = []` means no sidecar upload is documented: burn captions in.
+# - `caption_formats = []` means no sidecar upload is documented: burn captions in. A table with
+#   kind = "image" or audio_tracks = 0 carries no caption_formats: it has no speech and takes no
+#   captions (DESIGN.md D57).
 # - `chosen = [...]` names keys this file fixed inside an official range (e.g. 1920x1080 inside
 #   LinkedIn's 256x144-4096x2304); they are house choices, not platform rules.
+# - `formats` lists an image deliverable's file formats, the first being what `media.py image`
+#   writes unless --format names another of them; formats = ["gif"] marks an animated GIF, which
+#   `media.py cut` makes.
 #
 # Template-owned: `copier update` may refresh it. Platforms change specs without notice:
 # re-check every `source` at least every six months and update `checked` (DD/MM/YYYY).
@@ -26,19 +34,37 @@
 # Fields: kind (video | image | audio) · width · height · aspect ("W:H") · min_seconds ·
 # max_seconds · fps_min · fps_max · container · video_codec · video_bitrate · audio_codec ·
 # audio_bitrate · audio_sample_rate · loudness_lufs · true_peak_db · safe_zone {top, bottom,
-# left, right} · caption_formats · max_size · checked · source · extra_sources · verify · chosen · notes.
+# left, right} · caption_formats · max_size · max_size_mobile · checked · source · extra_sources ·
+# verify · chosen · notes; and, read by the toolkit since 0.2.0, formats · alpha (false: no
+# transparency; `image` flattens it, `feed check` refuses it on a cover or episode art) ·
+# min_width (`feed check`, for the cover and episode art) · audio_tracks (0: no sound track) ·
+# colours_max (a GIF's palette) · cbr · enclosure_type (the feed's type for the enclosed audio) ·
+# id3_version (the ID3 version `feed tag` writes) · and in [platform.podcast] tag_max_chars ·
+# show_description_max_bytes · episode_description_max_chars · chapters_min ·
+# chapter_min_seconds · chapters_per_hour_max · chapter_title_max_chars ·
+# chapter_title_max_words · explicit_values · episode_types · show_types.
+# Documentary (read by people, guides and checklists, never by the toolkit): pix_fmt (the toolkit
+# always writes and checks yuv420p for video) · min_height · max_width · audio_codec_alt ·
+# audio_bitrate_max · loudness_tolerance_db (the toolkit's tolerance is 1 LU) · the own channels'
+# platform-wide keys (embed_*, autoplay_muted_allowed, captions_required, featured_min_width and
+# the other structured-data minimums, display_width, html_clip_kb, html_target_kb, image_formats,
+# video_tag_supported) · and the rest of [platform.podcast] (display_max_chars,
+# episodes_shown_max, max_seconds, chapters_auto_min_seconds, transcript_formats,
+# transcript_max_size_spotify, feed_move_min_days, artwork_dpi).
 
 # ---------------------------------------------------------------------------------------------
-# House values: decisions, NOT platform specs (DESIGN.md D24).
+# House values: decisions, NOT platform specs (DESIGN.md D24, D62).
 # No social video platform publishes a loudness target ("-14 LUFS for YouTube" is folklore, not in
-# YouTube's help), so social video masters to -14 LUFS integrated and -1 dBTP by house decision.
-# Podcast loudness comes from [platform.podcast.apple_rss_audio]; audiobook targets from
-# [audiobook.acx], which ACX measures in RMS, peak and noise floor, not LUFS.
+# YouTube's help), and no web or blog source publishes one either, so every video deliverable,
+# social or for the brand's own sites, masters to -14 LUFS integrated and -1 dBTP by house
+# decision: one master's cuts go to both. Podcast loudness, the self-hosted feed's audio included,
+# comes from [platform.podcast.apple_rss_audio]; audiobook targets from [audiobook.acx], which ACX
+# measures in RMS, peak and noise floor, not LUFS.
 [house]
 social_loudness_lufs = -14.0
 social_true_peak_db = -1.0
-basis = "house decision: no social platform publishes a loudness target"
-checked = "03/10/2026"
+basis = "house decision: no social or web platform publishes a loudness target for video"
+checked = "04/10/2026"
 source = "DESIGN.md D24"
 
 # =============================================================================================
@@ -374,8 +400,64 @@ chosen = ["width", "height", "video_codec", "audio_codec"]
 verify = ["caption_formats", "safe_zone"]
 
 # =============================================================================================
-# Podcast (Apple Podcasts and Spotify)
+# Podcast (Apple Podcasts and Spotify, from the show's own feed or a host)
 # =============================================================================================
+# Platform-wide limits and the self-hosted feed (DESIGN.md D58, D59). A show kept on a podcast
+# host delivers podcast.apple_rss_audio to that host; a self-hosted show's feed encloses
+# podcast.feed_audio, and `media.py feed` writes the feed from the show's register.
+[platform.podcast]
+show_description_max_bytes = 4000       # Apple: <description> "maximum amount of text allowed for this tag is 4000 bytes"
+episode_description_max_chars = 10000   # Apple: episode <description> "up to 10,000 characters"
+tag_max_chars = 255                     # Apple: "Tag values are limited to 255 characters unless otherwise specified"
+display_max_chars = 20                  # Spotify spec 4.3: consumer-facing elements other than descriptions "should not exceed 20 characters" (advice)
+episodes_shown_max = 2000               # Apple "will display the latest 2,000 episodes"
+max_seconds = 43200                     # Spotify: "A maximum duration of 12 hours ... is recommended/supported"
+chapters_min = 3                        # Apple, Spotify and YouTube all ask for at least three, the first at 00:00
+chapter_min_seconds = 120               # Apple best practice "no shorter than two minutes" (Spotify 30 s, YouTube 10 s)
+chapters_per_hour_max = 6               # Apple best practice "no more than six chapters per hour"
+chapter_title_max_chars = 45            # Apple: chapter titles "no more than 45 characters"
+chapter_title_max_words = 4             # Apple: "less than five words"
+chapters_auto_min_seconds = 600         # Apple generates chapters for English full and bonus episodes of 10 minutes or more unless supplied or switched off
+transcript_formats = ["vtt", "srt"]     # Apple: text/vtt, application/srt, application/x-subrip, VTT preferred; Spotify upload: VTT or SRT
+transcript_max_size_spotify = "5 MB"    # Spotify for Creators transcript upload
+feed_move_min_days = 28                 # Apple: keep the 301 and <itunes:new-feed-url> "for at least four weeks"
+explicit_values = ["true", "false"]     # Apple; Spotify also reads yes, no and clean
+episode_types = ["full", "trailer", "bonus"]   # lower case, as Apple's sample feed writes them
+show_types = ["episodic", "serial"]     # serial needs <itunes:episode> on every episode
+artwork_dpi = 72                        # Apple: show and episode art "72 dpi ... RGB colorspace", no alpha channel
+checked = "04/10/2026"
+source = "https://help.apple.com/itc/podcasts_connect/en.lproj/itcb54353390.html"
+extra_sources = ["https://podcasters.apple.com/support/823-podcast-requirements", "https://podcasters.apple.com/support/5482-using-chapters-on-apple-podcasts", "https://podcasters.apple.com/support/5316-transcripts-on-apple-podcasts", "https://podcasters.apple.com/support/change-the-rss-feed-url", "https://help.apple.com/itc/podcasts_connect/en.lproj/itcbaf351599.html", "https://providersupport.spotify.com/article/podcast-delivery-specification-1-9", "https://support.spotify.com/us/creators/article/transcripts/", "https://support.spotify.com/us/creators/article/episode-chapters/", "https://support.google.com/youtube/answer/9884579?hl=en-GB"]   # scrub: allow — a help-centre article ID, not personal data
+verify = ["display_max_chars", "chapter_title_max_words"]
+notes = "One feed per show, served from a site the brand owns: Apple Podcasts and Spotify ingest it and YouTube may (RSS ingestion builds a still video from the show art). Apple needs HTTP HEAD and byte-range requests on the audio host, HEAD with Last-Modified on the artwork host, ASCII file names and URLs, a GUID that never changes, RFC 2822 dates and a unique enclosure per episode. Spotify re-downloads audio or art only when its file name or path changes, and YouTube never replaces an ingested episode's audio: a corrected file is published under a new URL with the same GUID. Spotify reads chapters from Podlove Simple Chapters (psc 1.1) or description timestamps; Apple from podcast:chapters JSON, ID3 or description timestamps. Spotify's spec has no podcast:transcript; its transcript is uploaded in Spotify for Creators (VERIFY whether it now reads the tag)."
+
+[platform.podcast.feed_audio]
+kind = "audio"
+audio_codec = "mp3"                     # the file the brand's own feed encloses; Apple RSS accepts MP3 or AAC, Spotify MP3 (128k+) or AAC-LC
+audio_bitrate = "128k"                  # inside Apple's RSS ranges (mono 64-128k, stereo 128-256k at 44.1/48 kHz) and Spotify's "128kbps+"
+cbr = true                              # constant bit rate: byte offset is proportional to time for byte-range seeking
+audio_sample_rate = 44100
+max_seconds = 43200                     # Spotify: 12 hours recommended/supported
+enclosure_type = "audio/mpeg"           # Apple's and RSS 2.0's type for MP3
+id3_version = 3                         # ID3v2.3, as the toolkit already writes for audiobook masters
+checked = "04/10/2026"
+source = "https://podcasters.apple.com/support/893-audio-requirements"
+extra_sources = ["https://podcasters.apple.com/support/823-podcast-requirements", "https://providersupport.spotify.com/article/podcast-delivery-specification-1-9", "https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Audio_codecs"]
+chosen = ["audio_codec", "audio_bitrate", "cbr", "audio_sample_rate", "id3_version"]
+notes = "One file serves Apple Podcasts, Spotify, the website's <audio> player and, where used, YouTube's RSS ingestion. MP3 is a house choice against Apple's advice ('For RSS feeds, we strongly recommend using AAC'): MDN notes AAC is not available in Chromium builds and Firefox relies on the platform's AAC decoder, while MP3 plays in every browser; an AAC brand overrides audio_codec to aac and enclosure_type to audio/x-m4a. Loudness is [platform.podcast.apple_rss_audio]'s (DESIGN.md D24), set on the master before encoding; the encoded file is measured too, because Apple warns that encoding 'might clip the signal'. 128k is the one rate inside both Apple's mono and stereo ranges and Spotify's floor. Encoded untagged at M5; `media.py feed tag` writes its ID3 tags, chapters and cover at M7."
+
+[platform.podcast.id3_cover]
+kind = "image"
+width = 1400
+height = 1400
+aspect = "1:1"
+formats = ["jpg"]
+alpha = false
+checked = "04/10/2026"
+source = "https://podcasters.apple.com/support/5514-show-cover-template"
+chosen = ["width", "height", "formats"]
+notes = "The copy of the show's cover embedded in feed_audio's ID3 APIC frame, for players that read the file and not the feed, encoded with `media.py image` from the cover's design export, as podcast.cover is. Apple and Spotify read <itunes:image>, never this copy; 1400 is Apple's RSS minimum, chosen to keep the file small."
+
 [platform.podcast.apple_rss_audio]
 kind = "audio"
 audio_codec = "aac"                 # "strongly recommend using AAC instead of MP3" for RSS
@@ -431,9 +513,249 @@ height = 3000
 aspect = "1:1"
 min_width = 1400
 formats = ["png", "jpg"]
+alpha = false                       # Apple: show and episode art in the "RGB colorspace", no alpha channel ([platform.podcast] artwork_dpi)
 checked = "03/10/2026"
 source = "https://podcasters.apple.com/support/5516-episode-art-template"
-notes = "Apple: avoid the podcast logo or any text; the episode title shows beneath the art."
+extra_sources = ["https://help.apple.com/itc/podcasts_connect/en.lproj/itcb54353390.html"]
+notes = "Apple: avoid the podcast logo or any text; the episode title shows beneath the art. No alpha channel: `media.py image` flattens a transparent render, and `feed check` refuses art that keeps one."
+
+# =============================================================================================
+# Website (the sites the brand publishes media to, its own and any it writes for: one `website`
+# platform covers every such site; the specs are the same for each, and which site a piece goes
+# to is a row of the brand's website profile, never a table here, DESIGN.md D53)
+# No web platform publishes a delivery spec: the deliverable tables below are house choices
+# inside browser and standards guidance (MDN, web.dev, Apple's HLS authoring ladder), so their
+# sizes and bit rates are named in `chosen`. Loudness: none published for the web; video takes
+# [house] (DESIGN.md D62).
+# =============================================================================================
+[platform.website]
+embed_min_viewport = 200            # YouTube: "Embedded players must have a viewport that is at least 200px by 200px"
+embed_min_width = 480               # YouTube: 16:9 players "at least 480 pixels wide and 270 pixels tall"
+embed_min_height = 270
+embed_host = "www.youtube-nocookie.com"   # privacy-enhanced mode: views do not personalise YouTube or ads
+autoplay_muted_allowed = true       # Chrome, Safari and Firefox all allow muted autoplay; sound needs a user gesture
+captions_required = true            # WCAG 2.2 SC 1.2.2 Captions (Prerecorded), Level A
+checked = "04/10/2026"
+source = "https://developers.google.com/youtube/player_parameters"
+extra_sources = ["https://support.google.com/youtube/answer/171780?hl=en", "https://developer.chrome.com/blog/autoplay", "https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay", "https://www.w3.org/TR/WCAG22/"]   # scrub: allow — a help-centre article ID, not personal data
+notes = "Embedding a YouTube upload instead of self-hosting: use the youtube.long render and its captions; embed from www.youtube-nocookie.com behind a click-to-load facade. Muted autoplay also needs playsinline for iPhone Safari; iOS Low Power Mode blocks even muted autoplay (WebKit bug 219889, by design: unconfirmed from WebKit's own text), so every autoplaying video needs a poster that stands on its own."
+
+[platform.website.video]
+kind = "video"
+width = 1920
+height = 1080
+aspect = "16:9"
+container = "mp4"                   # +faststart: moov atom at the front, so playback starts before the download ends
+video_codec = "h264"                # MDN: H.264 plays in every browser; the baseline every page serves
+pix_fmt = "yuv420p"
+video_bitrate = "6M"                # Apple HLS ladder: 1920x1080 at 6000 kbps (top rung 7800 kbps)
+audio_codec = "aac"                 # AAC-LC stereo; Apple HLS: 32-160 kbps
+audio_bitrate = "128k"
+audio_sample_rate = 48000
+caption_formats = ["vtt"]           # WebVTT through <track kind="captions" srclang="en-GB">, never burned in
+checked = "04/10/2026"
+source = "https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Video_codecs"
+extra_sources = ["https://developer.apple.com/documentation/http-live-streaming/hls-authoring-specification-for-apple-devices", "https://ffmpeg.org/ffmpeg-formats.html", "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video", "https://web.dev/learn/performance/video-performance"]
+chosen = ["width", "height", "video_bitrate", "audio_bitrate"]
+notes = "Self-hosted <video controls preload=\"metadata\" playsinline poster=…>. No browser or standard publishes a size, length or file-size limit: the hosting or CMS sets one. The bit rates are Apple's HLS ladder rungs used as caps for a single progressive file. A WebM (AV1 or VP9) source offered before the MP4 is deferred (DESIGN.md D57): the MP4 plays in every browser, and AV1 in Safari needs hardware decode (M3 Macs, iPhone 15 Pro and later)."
+
+[platform.website.video_720]
+kind = "video"
+width = 1280
+height = 720
+aspect = "16:9"
+container = "mp4"
+video_codec = "h264"
+pix_fmt = "yuv420p"
+video_bitrate = "3M"                # Apple HLS ladder: 1280x720 at 3000 kbps (also 4500 kbps)
+audio_codec = "aac"
+audio_bitrate = "128k"
+audio_sample_rate = 48000
+caption_formats = ["vtt"]
+checked = "04/10/2026"
+source = "https://developer.apple.com/documentation/http-live-streaming/hls-authoring-specification-for-apple-devices"
+extra_sources = ["https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Video_codecs"]
+chosen = ["width", "height", "video_bitrate", "audio_bitrate"]
+notes = "The lighter cut for an in-page player narrower than about 960 CSS px, or a page where weight matters more than sharpness. Its poster is website.poster_720."
+
+[platform.website.hero_loop]
+kind = "video"
+width = 1280
+height = 720
+aspect = "16:9"
+container = "mp4"
+video_codec = "h264"
+pix_fmt = "yuv420p"
+video_bitrate = "3M"
+audio_tracks = 0                    # no sound track at all: <video autoplay muted loop playsinline>; the toolkit writes none and fails a file with one
+checked = "04/10/2026"
+source = "https://web.dev/articles/replace-gifs-with-videos"
+extra_sources = ["https://developer.chrome.com/blog/autoplay", "https://webkit.org/blog/6784/new-video-policies-for-ios/", "https://hacks.mozilla.org/2019/02/firefox-66-to-block-automatically-playing-audible-video-and-audio/", "https://www.w3.org/TR/WCAG22/", "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion"]
+chosen = ["width", "height", "video_bitrate", "audio_tracks"]
+notes = "A silent background or hero loop. WebKit lets a video with no audio track autoplay without a gesture; Chrome and Firefox allow muted autoplay. WCAG 2.2 SC 2.2.2 (Level A): motion that starts by itself and lasts over 5 s needs a visible pause control; honour prefers-reduced-motion by showing the poster (website.poster_720) instead; SC 2.3.1: nothing flashes more than three times a second. A decorative loop carries no words and takes no captions. A WebM source offered before the MP4 is deferred (DESIGN.md D57)."
+
+[platform.website.poster]
+kind = "image"
+width = 1920
+height = 1080
+aspect = "16:9"
+formats = ["jpg", "webp"]           # the poster attribute takes one URL (no <picture> fallback): AVIF is not safe there
+checked = "04/10/2026"
+source = "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video"
+extra_sources = ["https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Image_types", "https://web.dev/learn/performance/video-performance"]
+chosen = ["width", "height"]
+notes = "Same size and aspect as the video it fronts (website.video); website.video_720 and website.hero_loop take website.poster_720. It is the LCP candidate above the fold: never lazy-load it there. WebP plays in every current browser (Safari 14+ on macOS 11+)."
+
+[platform.website.poster_720]
+kind = "image"
+width = 1280
+height = 720
+aspect = "16:9"
+formats = ["jpg", "webp"]           # the poster attribute takes one URL (no <picture> fallback): AVIF is not safe there
+checked = "04/10/2026"
+source = "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video"
+extra_sources = ["https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Image_types", "https://web.dev/learn/performance/video-performance"]
+chosen = ["width", "height"]
+notes = "Fronts website.video_720 and website.hero_loop, at their size; otherwise as website.poster."
+
+[platform.website.og_image]
+kind = "image"
+width = 1200
+height = 630
+aspect = "1.91:1"
+min_width = 1200                    # LinkedIn: "Minimum image dimensions: 1200 (w) x 627 (h) pixels"
+formats = ["jpg", "png"]
+max_size = "5 MB"                   # LinkedIn 5 MB and X 5 MB are the tightest; Facebook allows 8 MB
+safe_zone = { top = 15, bottom = 15, left = 0, right = 0 }
+checked = "04/10/2026"
+source = "https://developers.facebook.com/docs/sharing/webmasters/images/"
+extra_sources = ["https://www.linkedin.com/help/linkedin/answer/46687", "https://ogp.me/", "https://developer.x.com/en/docs/x-for-websites/cards/overview/summary-card-with-large-image"]
+chosen = ["formats"]
+verify = ["safe_zone", "max_size"]
+notes = "og:image with og:image:width, og:image:height and og:image:alt. Facebook: at least 1200x630, about 1.91:1, minimum 200x200, at most 8 MB. LinkedIn: minimum 1200x627, 1.91:1, at most 5 MB; under 401 px wide shows as a thumbnail. X (summary_large_image): 2:1, 300x157 to 4096x4096, under 5 MB, JPG/PNG/WEBP/GIF (first frame), alt text up to 420 characters: X's card documentation no longer loads (redirects to docs.x.com/overview, 04/10/2026), so the X values come from search snippets of it. The safe_zone is DERIVED: X's 2:1 centre crop of 1200x630 removes 15 px top and bottom."
+
+# =============================================================================================
+# Blog (dated posts on those sites: the video, its transcript and its images)
+# =============================================================================================
+[platform.blog]
+featured_min_width = 1200           # Google Discover: large images "at least 1200 px wide", with max-image-preview:large
+featured_min_pixels = 300000        # Discover: "more than 300,000 total pixels"
+featured_aspect = "16:9"            # Discover: 16x9
+structured_data_min_pixels = 50000  # Article structured data: 50K pixels (width x height) at least
+structured_data_aspects = ["16:9", "4:3", "1:1"]
+captions_required = true            # WCAG 2.2 SC 1.2.2, Level A
+transcript_audio_only = true        # SC 1.2.1, Level A: a transcript for every prerecorded audio-only piece
+described_video = "AA"              # SC 1.2.3 (A): descriptive transcript or audio description; SC 1.2.5 (AA): audio description
+checked = "04/10/2026"
+source = "https://developers.google.com/search/docs/appearance/google-discover"
+extra_sources = ["https://developers.google.com/search/docs/appearance/structured-data/article", "https://www.w3.org/TR/WCAG22/", "https://www.w3.org/WAI/media/av/transcripts/", "https://developers.google.com/search/docs/appearance/video"]
+notes = "Publish the transcript, or a link to it, right under the player (W3C WAI). For WCAG AA every visual fact the narration leaves out needs audio description, or narration that says it; a descriptive transcript alone meets Level A only. WordPress scales an upload over 2560 px on either side (big_image_size_threshold, since 5.3). Google reads video in <video>, <iframe>, <embed> or <object>; one watch page per video helps it index one."
+
+[platform.blog.featured_image]
+kind = "image"
+width = 1920
+height = 1080
+aspect = "16:9"
+min_width = 1200
+formats = ["jpg", "webp", "avif"]   # <picture> offers AVIF, then WebP, then this JPEG in <img>
+checked = "04/10/2026"
+source = "https://developers.google.com/search/docs/appearance/google-discover"
+extra_sources = ["https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Image_types", "https://web.dev/articles/optimize-lcp", "https://developer.wordpress.org/reference/hooks/big_image_size_threshold/"]
+chosen = ["width", "height", "formats"]
+notes = "The hero of the post: width and height attributes set, fetchpriority=\"high\", never loading=\"lazy\" (web.dev LCP guidance); alt text that says what the image shows. Google's Article guidance also asks for 4:3 and 1:1 crops of the same picture: crop them from this one. No platform publishes a weight limit: the house budget belongs in the brand's override, not here."
+
+[platform.blog.og_image]
+kind = "image"
+width = 1200
+height = 630
+aspect = "1.91:1"
+min_width = 1200
+formats = ["jpg", "png"]
+max_size = "5 MB"
+safe_zone = { top = 15, bottom = 15, left = 0, right = 0 }
+checked = "04/10/2026"
+source = "https://developers.facebook.com/docs/sharing/webmasters/images/"
+extra_sources = ["https://www.linkedin.com/help/linkedin/answer/46687", "https://ogp.me/", "https://developer.x.com/en/docs/x-for-websites/cards/overview/summary-card-with-large-image"]
+chosen = ["formats"]
+verify = ["safe_zone", "max_size"]
+notes = "As website.og_image: one per post, so a shared link shows the post's own picture. Repeated here because a project may choose blog without website."
+
+[platform.blog.video]
+kind = "video"
+width = 1280
+height = 720
+aspect = "16:9"
+container = "mp4"
+video_codec = "h264"
+pix_fmt = "yuv420p"
+video_bitrate = "3M"
+audio_codec = "aac"
+audio_bitrate = "128k"
+audio_sample_rate = 48000
+caption_formats = ["vtt"]
+checked = "04/10/2026"
+source = "https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats/Video_codecs"
+extra_sources = ["https://developer.apple.com/documentation/http-live-streaming/hls-authoring-specification-for-apple-devices", "https://www.w3.org/TR/WCAG22/"]
+chosen = ["width", "height", "video_bitrate", "audio_bitrate"]
+notes = "A player inside a post's text column; a full-width layout takes website.video instead. Or embed the youtube.long upload (see platform.website). Captions as a <track>, the transcript under the player. A WebM source offered before the MP4 is deferred (DESIGN.md D57)."
+
+[platform.blog.poster]
+kind = "image"
+width = 1280
+height = 720
+aspect = "16:9"
+formats = ["jpg", "webp"]
+checked = "04/10/2026"
+source = "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video"
+chosen = ["width", "height"]
+notes = "Fronts blog.video, at its size."
+
+# =============================================================================================
+# Newsletter (email: no client plays video reliably, so a piece reaches a newsletter as a still
+# or a short GIF linking to its watch page)
+# =============================================================================================
+[platform.newsletter]
+display_width = 600                 # house: inside the 600-640 px body width; Mailchimp's builders are 600 and 660 px
+html_clip_kb = 102                  # Gmail clips a message whose HTML passes about 102 KB (images not counted)
+html_target_kb = 80                 # Email on Acid: stay under 80 KB, since the sender's tracking links add weight
+image_formats = ["jpg", "png", "gif"]   # WebP: no classic Outlook for Windows, Gmail converts it to JPEG
+video_tag_supported = false         # Gmail strips <video>; about a quarter of clients play it (caniemail)
+checked = "04/10/2026"
+source = "https://www.emailonacid.com/blog/article/email-development/gmail-email-clipping/"
+extra_sources = ["https://mailchimp.com/help/image-requirements-for-templates/", "https://www.caniemail.com/features/html-video/", "https://www.caniemail.com/features/image-webp/", "https://www.litmus.com/blog/video-in-email", "https://www.litmus.com/blog/the-ultimate-guide-to-dark-mode-for-email-marketers"]
+chosen = ["display_width", "html_target_kb"]
+verify = ["html_clip_kb", "image_formats", "video_tag_supported"]
+notes = "Google publishes no clipping size: 102 KB comes from Email on Acid and Litmus testing, and clipping can come sooner; html_target_kb is Email on Acid's 80 KB used as a house budget. image_formats and video_tag_supported come from third-party client testing (caniemail, Litmus). The pattern for a video: a still or GIF from the piece with a play button drawn on it, linked to the watch page (website, blog or YouTube), and a text link beside it. Every image takes alt text (WCAG 2.2 SC 1.1.1): classic Outlook blocks downloaded pictures by default. Dark mode (Litmus, 27/02/2025): Apple Mail and desktop Gmail change no colours; Outlook.com and the Outlook mobile apps invert partly; the Gmail iOS app, Outlook 2021 for Windows and Windows Mail invert fully; Gmail supports no prefers-color-scheme (caniemail). Use transparent PNGs with a light outline for logos and dark text."
+
+[platform.newsletter.preview_image]
+kind = "image"
+width = 1200
+height = 675
+aspect = "16:9"
+formats = ["jpg", "png"]
+max_size = "1 MB"                   # Mailchimp: "We recommend a maximum file size of 1MB for images"
+checked = "04/10/2026"
+source = "https://mailchimp.com/help/image-requirements-for-templates/"
+extra_sources = ["https://www.litmus.com/blog/video-in-email", "https://www.litmus.com/blog/the-ultimate-guide-to-dark-mode-for-email-marketers"]
+chosen = ["width", "height", "max_size"]
+notes = "Twice the 600 px display width (Mailchimp: images 600-1200 px in its 600 px builder, 660-1320 px in its 660 px one), shown with width=\"600\". A frame of the piece with a large play button on it, linked to the watch page; alt text names the video and says it opens a video. A JPEG for a photo, a PNG only where it needs transparency. max_size is Mailchimp's recommendation, used as a house budget."
+
+[platform.newsletter.preview_gif]
+kind = "image"
+width = 600
+height = 338
+aspect = "16:9"
+formats = ["gif"]
+max_seconds = 5                     # WCAG 2.2 SC 2.2.2: motion over 5 s that starts by itself needs a pause control, which email cannot give
+fps_max = 15
+colours_max = 128
+max_size = "1 MB"                   # Litmus and Mailchimp: keep a GIF under 1 MB
+checked = "04/10/2026"
+source = "https://www.litmus.com/blog/a-guide-to-animated-gifs-in-email"
+extra_sources = ["https://www.litmus.com/blog/animated-gifs-in-email-10-tips-for-keeping-files-sizes-small", "https://www.caniemail.com/features/image-gif/", "https://support.microsoft.com/en-US/Outlook/the-animated-graphic-in-my-e-mail-message-doesn-t-work", "https://learn.microsoft.com/en-us/microsoft-365-apps/outlook/get-started/guide-product-availability", "https://email-dev.com/animated-gifs-in-email/", "https://www.w3.org/TR/WCAG22/"]
+chosen = ["width", "height", "max_seconds", "colours_max", "max_size"]
+verify = ["fps_max"]
+notes = "The FIRST FRAME carries the message and the play button: classic Outlook for Windows 2007-2019 shows only the first frame, Outlook for Microsoft 365 plays it three times and then shows a play button (caniemail), and Outlook for Microsoft 365, 2021 and 2024 show only the first frame where Windows animation effects are off (Microsoft). Classic Outlook stays supported until at least 2029; new Outlook (Chromium-based) animates. Litmus asks for 2x size for retina; this table keeps 1x because a 2x GIF of footage rarely fits 1 MB. Colours: Litmus suggests 128-256 for video and 64-128 for illustration. fps_max (10-15) comes from a third-party guide only. It plays floor(max_seconds / clip seconds) times, written as the GIF's loop count, so motion stops within max_seconds; nothing flashes more than three times a second (SC 2.3.1). Over max_size it is made again at half the frame rate, keeping every second frame, then at a quarter (Litmus: 'keep every second frame, or one in four'). max_size is a house budget inside Litmus's and Mailchimp's advice."
 
 # =============================================================================================
 # Audiobook stores (mastering and delivery targets)

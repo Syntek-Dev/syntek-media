@@ -19,7 +19,8 @@ the toolkit measures it rather than trusting a meter on screen.
 | Deliverable | Target | Where it comes from |
 |---|---|---|
 | Social video | −14 LUFS integrated, −1 dBTP true peak | a house decision, because no social platform publishes one: `[house]` in `toolkit/data/platforms.toml` |
-| Podcast episode | the platform's own published recommendation | `[platform.podcast.apple_rss_audio]`, its `loudness_lufs` and `true_peak_db` |
+| Video for the brand's own sites and blogs | the social video target | the same house decision: no web source publishes one, and one master's cuts go to both |
+| Podcast episode, the feed's MP3 included | the platform's own published recommendation | `[platform.podcast.apple_rss_audio]`, its `loudness_lufs` and `true_peak_db`; measured again after the encode |
 | Audiobook chapter | RMS, peak and noise floor, not LUFS | `[audiobook.acx]`, set out in the audiobook narration guide where the project makes audiobooks |
 
 `loudness` in an edit decision list (`social`, `podcast` or `none`) chooses the master's target.

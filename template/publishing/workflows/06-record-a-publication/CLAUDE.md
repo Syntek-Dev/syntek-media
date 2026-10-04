@@ -46,5 +46,6 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
 
 - **Produces:** updated rows in `publishing/src/schedule.md`; new rows in
   `publishing/src/publish-log.md`.
-- **Also writes:** the brief's `status`, once the piece is published.
+- **Also writes:** the brief's `status`, once the piece is published; for a feed episode, its
+  show register row's `status` and the show's tracked feed, through `media.py feed write -o`.
 - **Does not produce:** a post, an upload, or any change to a package or a render.

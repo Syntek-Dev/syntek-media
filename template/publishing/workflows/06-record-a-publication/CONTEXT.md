@@ -31,7 +31,10 @@ social-media-documents skill (syntek-author), where present).
 ## What it produces, and where
 
 - **Updated schedule rows** in `publishing/src/schedule.md`, each with its status moved on.
-- **A log row** in `publishing/src/publish-log.md` for every post the author reports.
+- **A log row** in `publishing/src/publish-log.md` for every post and placement the author
+  reports.
+- **For a feed episode** of a show the project serves itself: its register row `published`, and
+  the show's feed as last published written beside the register, matching what was uploaded.
 - **The brief's `status` set to `published`,** once every row for the piece is out or dropped.
 - **A hand-back** of one line per change, and everything still to go out.
 
