@@ -13,6 +13,24 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Fixed
+
+- **`assemble` no longer runs out of memory on a long list of stills** (DESIGN.md Section 6.4, D47). Each still, card and colour is first framed on its own, in a short ffmpeg pass, to one PNG of the master's size: fitted, cropped or padded as the clip says, stood upright from its EXIF orientation, with no colour tags or side data. Consecutive ones with no push-in and no fade between them are then read through one ffconcat input, one image at a time, whatever their sources' sizes, formats or orientations. One looped input per still had held a decoder and its frames for the whole render: 32 stills at 1920x1080 peaked near 6 GB, and 213 exhausted a 31 GB machine. 213 mixed stills (PNG and JPEG, several sizes, EXIF-turned photographs, colours) now peak at about 0.8 GB. A push-in loops its framed image, and each video clip, push-in or fade still opens an input of its own; every image decoder runs one thread.
+- **Every clip starts and ends on the master's frame** (or its sample, in an audio master) nearest its running total, never rounded clip by clip, so the master ends on the edit's own total however many clips it has (DESIGN.md Section 6.4). A clip shorter than one frame of the master is now refused (exit 2).
+- **`[[overlay]]` lands on exact frames** (DESIGN.md Section 6.4). It shows from the frame its `at` rounds to up to, not including, the frame its `until` rounds to, so one timed to a clip's start or end starts or ends with that clip; it used to miss a clip's first frame and take one frame past its end. An overlay that starts after the master ends, or would show on no frame, is now refused (exit 2).
+- **A deliverable's sound ends with its picture** (DESIGN.md Section 4.2). After the loudness pass, `assemble`, `encode` and `still-video` hold the sound to the picture's length, sample for sample: loudnorm's late timestamps had run a 30 s master's sound on to 30.100 s and stretched an AAC frame over the gap. Their output is checked stream by stream. `cut` and `captions burn`, which keep the source's own sound, are judged by the file's length, as before.
+- **Output folders ship their `README.md` and nothing else** (D19, D42). `copier.yml` excludes everything below each `renders/`, `generated/` and `raw/` folder at any depth, sub-folders and SRT, VTT and text outputs included, and brings back only that folder's own README. The gated audiobook folders take no negation (DESIGN.md Section 3.5, Section 10). Only READMEs were ever tracked there, so no file stops shipping and no migration is needed.
+- **`media.py --self-test` no longer reads the machine's own git configuration.** It uses a scratch global configuration, no system files and none of the caller's `GIT_` variables, and it checks that it hands back the environment it was given. A machine whose git configures an LFS filter no longer fails the two LFS cases.
+- The guides `production/docs/reference/edit-decision-lists.md` and `sound-and-loudness.md` describe the frame grid, overlays, how stills are framed and read, and the held sound. Rules 04 Section 4 and `media.py check --setup` now name fontconfig's `fc-match` as optional (D49).
+
+### Changed
+
+- **`encode` refuses a source whose sound runs more than a frame and 0.1 s past its picture** (exit 1, nothing rendered) rather than cut that sound; it points the author to `cut` or `still-video`. A sound that stops short of its picture is padded with silence (DESIGN.md Section 4.2).
+- **`card.py --self-test` never counts a skipped part as a pass** (DESIGN.md Section 4.2, Section 7).
+  - It now exits 2, ending 'self-test incomplete', when any part could not run (Playwright, its Chromium, or `fc-match` for the brand-font probe), each named on a `SKIP` line. It exits 1 when a case failed. It used to print 'self-test passed' and exit 0.
+  - `toolkit-smoke.sh` check 1 reports that exit as a named SKIP in `card.py`'s own words, never as a pass.
+- **`DESIGN.md` says all of this** (approved by the maintainer on 05/10/2026): D49 names `fc-match` as an optional setup item; Section 4.2 holds the sound of `assemble`, `encode` and `still-video` to the picture and states `encode`'s refusal; Section 6.4 puts every clip boundary and overlay on the master's frame grid and states `assemble`'s two refusals; Section 7 makes `card.py`'s incomplete self-test a named SKIP in check 1.
+
 ## [0.2.1] - 04/10/2026
 
 A fix release for the template's own audits: nothing a generated project receives changes, so a 0.2.0 project needs no update and no migration.

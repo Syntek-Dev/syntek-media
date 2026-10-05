@@ -43,6 +43,9 @@ A missing browser is exit 2 with the command that installs it:
 Exit codes: 0 = done (or clean); 1 = a finding (a request over the network, a missing token,
 font or image, a PNG of the wrong size or over max_size, a contract breach); 2 = could not run (bad arguments, a missing
 file, Playwright or its browser missing).
+--self-test: 0 = every case ran and passed; 1 = a case failed (whatever else was skipped); 2 = a
+part could not run (Playwright, its Chromium or fc-match missing): each part is named on a SKIP
+line with why, and the last line says the self-test is incomplete. A skip is never a pass.
 """
 from __future__ import annotations
 
@@ -390,19 +393,26 @@ html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
 """
 
 
-def self_test() -> int:
-    """Prove the PNG reader, the safe zone, rendering and the layout check on runtime fixtures."""
+def self_test(nested: bool = False) -> int:
+    """Prove the PNG reader, the safe zone, rendering and the layout check on runtime fixtures,
+    and that a part which cannot run is named SKIP and exits 2, never passed. nested: a run the
+    self-test makes of itself (without Playwright, without Chromium), which skips those cases."""
     import contextlib
     import io
     import shutil
     import subprocess
-    failures = []
+    import types
+    failures, passes, skips = [], [], []
 
     def verdict(label, passed, detail=""):
         print(f"  {'ok  ' if passed else 'FAIL'} {label}")
+        (passes if passed else failures).append(label)
         if not passed:
-            failures.append(label)
             print(f"         {str(detail)[-1200:]}")
+
+    def skip(what, why):
+        print(f"  SKIP {what}: {why}")
+        skips.append(what)
 
     def cli(*argv):
         out = io.StringIO()
@@ -449,8 +459,12 @@ def self_test() -> int:
             except C.Fatal as err:
                 have_browser, why = False, str(err)
             if not have_browser:
-                print(f"  skip render, transparency, the network guard and check: {why}")
+                skip("every browser case (render, transparency, the network guard, check)", why)
             else:
+                if not font:
+                    skip("the brand-font probe (a @font-face that loads, then one that does not)",
+                         "fc-match is not installed to find a font file" if shutil.which("fc-match") is None
+                         else "fc-match found no .ttf or .otf file to stand in for a brand font")
                 out = root / "renders" / "card.png"
                 code, text = cli("render", card, "--size", "320x180", "-o", out)
                 info = png_info(out) if out.is_file() else {}
@@ -548,11 +562,69 @@ def self_test() -> int:
                 verdict("check fails a preview without its @dsCard line", code == 1 and "@dsCard" in text, text)
         finally:
             C.ROOT = saved_root
-    if shutil.which("fc-match") is None:
-        print("  skip the brand-font probe: fc-match is not installed to find a font file")
+    if not nested:
+        # The self-test's own skip, proved by running it without Playwright and without Chromium:
+        # a skipped part once ended 'self-test passed', exit 0, and was counted as a pass.
+        def run(label, stand_in, want):
+            said = io.StringIO()
+            with contextlib.redirect_stdout(said), contextlib.redirect_stderr(said):
+                code = stand_in(lambda: self_test(nested=True))
+            text = said.getvalue()
+            verdict(label, code == 2 and "  SKIP every browser case" in text and want in text
+                    and "self-test incomplete" in text and "self-test passed" not in text, f"exit {code}: {text}")
+
+        def no_playwright(go):   # the import fails as it does where Playwright is not installed
+            held = {m: sys.modules.get(m) for m in ("playwright", "playwright.sync_api")}
+            sys.modules.update(dict.fromkeys(held))
+            try:
+                return go()
+            finally:
+                for m, module in held.items():
+                    if module is None:
+                        sys.modules.pop(m, None)
+                    else:
+                        sys.modules[m] = module
+
+        def no_chromium(go):     # Playwright 1.62.0 is there, its browser is not
+            global playwright
+
+            class Gone(Exception):
+                pass
+
+            def launch():
+                raise Gone("BrowserType.launch: Executable doesn't exist at …/chrome-headless-shell")
+            pw = types.SimpleNamespace(stop=lambda: None, chromium=types.SimpleNamespace(launch=launch))
+            pw.start = lambda: pw
+            held, playwright = playwright, lambda: (lambda: pw, Gone)
+            try:
+                return go()
+            finally:
+                playwright = held
+
+        run("without Playwright, the browser cases are named SKIP with why, and the self-test exits 2, "
+            "never 'passed'", no_playwright, "Playwright is not available")
+        run("without Playwright's Chromium, the SKIP names the command that installs it, and the self-test "
+            "exits 2", no_chromium, INSTALL_BROWSER)
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            codes = (outcome(["a case"], ["another"], ["a part"]), outcome([], ["a case"], ["a part"]),
+                     outcome([], ["a case"], []))
+        verdict("a FAIL outranks a SKIP (exit 1), a SKIP alone is exit 2, and only every case run and "
+                "passed is exit 0", codes == (1, 2, 0), f"{codes} {said.getvalue()}")
+    return outcome(failures, passes, skips)
+
+
+def outcome(failures: list, passes: list, skips: list) -> int:
+    """The self-test's last line and exit: 1 when a case failed, whatever was skipped; 2 when a
+    part could not run (named SKIP above, with why); 0 only when every case ran and passed."""
     if failures:
-        print(f"self-test FAILED: {len(failures)} case(s)")
+        print(f"self-test FAILED: {len(failures)} case(s)"
+              + (f", and {len(skips)} part(s) skipped (SKIP above)" if skips else ""))
         return 1
+    if skips:
+        print(f"self-test incomplete: {len(passes)} case(s) passed, {len(skips)} part(s) skipped "
+              "(SKIP above): a skip is never a pass")
+        return 2
     print("self-test passed")
     return 0
 

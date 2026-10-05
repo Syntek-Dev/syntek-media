@@ -38,7 +38,8 @@ In a picture master every clip has a picture; a sound with no picture goes in `[
 ## Overlays and sound
 
 - `[[overlay]]` lays a card, rendered with a transparent background, over the picture from `at`
-  to `until`.
+  to `until`, each on the frame it rounds to as a clip's start does: an overlay timed to a
+  clip's start or end starts or ends with that clip, and one that would show on no frame is refused.
 - `[[audio]]` places a sound on the timeline at `at`. Its `source` is `vo:<piece>` (the piece's
   approved voiceover segments, joined in order with their pauses), a footage ID or an asset;
   `in` and `out` take part of it; `gain_db`, `fade_in` and `fade_out` shape it; `role` is
@@ -52,8 +53,12 @@ with `seconds`, `motion = "push-in"` where one should drift, `transition = "fade
 and a music bed in `[[audio]]`. Cards are HTML files in `production/src/cards/`, copied from the
 brand's card component; `assemble` renders any card PNG that is missing or older than its HTML
 or the brand's tokens before it composites, so a master always rebuilds from tracked files.
-Transitions beyond a cross-fade, motion beyond a push-in and layered picture are not in this
-version.
+Every clip starts and ends on the master's frame nearest its running total, never rounded clip by
+clip: 187 stills of 0.16 s end on the frame nearest 29.92 s, one holding a frame more or less.
+Each still, card and colour is framed alone to the master's size, so stills of any size, format
+or orientation with no push-in or fade between them are one input, read an image at a time, and
+a long run needs no more memory than a short one; each video, push-in or fade opens another.
+Transitions beyond a cross-fade, motion beyond a push-in and layered picture are not in this version.
 
 ## How we apply it here
 

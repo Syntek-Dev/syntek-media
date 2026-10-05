@@ -7,8 +7,16 @@ and media.py's self-test exercises it.
 assemble builds a master from an edit decision list, production/src/edits/<piece>.toml (DESIGN
 Section 6.4), with ffmpeg's own filters only: a [[clip]] is a video or audio source cut
 frame-accurately by its in and out (decoded and re-encoded, never stream-copied), a still or a
-card held for its seconds (an image looped, then trimmed), or a solid colour; a clip may enter
-with transition = "fade" (xfade, and acrossfade for its sound), and a still or card may carry
+card held for its seconds, or a solid colour. Each still, card and colour is first framed on its
+own, in a short ffmpeg pass, to one PNG of the master's size (framed_still), so every one of them
+decodes alike whatever its source's size, format or orientation. Consecutive ones with no push-in
+and no fade between them are then read through one input, an ffconcat list the concat demuxer
+opens one image at a time, so a run of hundreds needs no more memory than a run of one; each
+video clip, push-in or fade among them opens another input for the whole render (a push-in is
+its framed image looped, then trimmed). Every boundary sits on the master's frames (its
+samples, in an audio master), rounded from the timeline's running total and never clip by clip,
+so the master ends on the frame nearest the edit's total however many clips it has. A clip may
+enter with transition = "fade" (xfade, and acrossfade for its sound), and a still or card may carry
 motion = "push-in" (a slow zoompan). A GIF or WebP holding one frame is a still; one holding
 more (a screen recording saved as a GIF) is moving media, cut by its in and out like a video,
 and a moving WebP is refused, named, where ffmpeg cannot decode it (6.1 cannot). frame says how
@@ -16,17 +24,21 @@ a source fills the master's size: fit (letterboxed), crop (to fill; x is the lef
 pixels) or pad (over a blurred copy of itself). A card under production/src/cards/ is rendered
 to production/src/renders/ with 'uv run toolkit/card.py' whenever its PNG is missing or older
 than its HTML or tokens.css. [[overlay]] lays a card (rendered with alpha) or a still image over
-the picture between two timecodes. [[audio]] places sound on the timeline: vo:<piece> joins the
-segments of production/src/voiceover/<piece>.toml with their pause_after, and refuses the master
-while any segment is not approved (its line would be skipped); a footage ID or an asset path may
-take an in and out range, gain, fades, and duck = true to sit under the voice (sidechaincompress;
-a ducked track is music). With size = "" the master is audio only (.wav) and takes sound from
-every clip. A clip's out may not pass the end of its source. The picture's frame rate is the
+the picture from the frame its at rounds to up to the frame its until rounds to, rounded as the
+clips' boundaries are, so one timed to a clip's start or end starts or ends with that clip; an
+overlay that would show on no frame is refused. [[audio]] places sound on the timeline:
+vo:<piece> joins the segments of production/src/voiceover/<piece>.toml with their pause_after,
+and refuses the master while any segment is not approved (its line would be skipped); a footage
+ID or an asset path may take an in and out range, gain, fades, and duck = true to sit under the
+voice (sidechaincompress; a ducked track is music). With size = "" the master is audio only
+(.wav) and takes sound from every clip. A clip's out may not pass the end of its source. The picture's frame rate is the
 first video clip's; an animated GIF's only where no other clip has one, rounded to a whole
 number (GIF frame delays are centiseconds); 30 where there is none; a rate that is not standard
 (a variable-rate recording) is snapped to the nearest of 23.976, 24, 25, 29.97, 30, 50, 59.94 and
 60. A clip with no sound (a screen recording) is silence under the [[audio]] tracks. Loudness
-goes to the edit's target by two-pass loudnorm, and the master is probed before it is reported.
+goes to the edit's target by two-pass loudnorm; a picture master's sound is then held to its
+picture's frames, sample for sample (held_sound: loudnorm's dynamic mode stamps its last block
+late), and the master is probed, each stream against the edit's total, before it is reported.
 
 cut and encode make one deliverable of toolkit/data/platforms.toml (brand overrides applied)
 from moving media (a video, a screen recording, an animated GIF; a still image is refused): size
@@ -48,7 +60,13 @@ feed's own are 'feed tag's, at M7 (DESIGN D59). A table with audio_tracks = 0
 (website.hero_loop) gets no sound track at all, and its verification fails a file that has one
 (DESIGN D57). cut of a kind = "image" table whose only format is gif (newsletter.preview_gif)
 is the GIF pass of media_image.py; any other image table is refused (card.py renders it, and
-media.py image encodes it).
+media.py image encodes it). After its loudness pass, encode holds a deliverable's sound to the
+source's picture (with no picture, to the sound's own length), padding one that stops short with
+silence, and refuses a source whose sound runs on more than a frame and 0.1 s past its picture
+(nothing rendered: that sound would be lost); still-video holds it to its own length. Where the
+toolkit held the sound, the deliverable's length is verified stream by stream, the picture and
+the sound each named, and the sound must end within a frame of its picture; cut and captions
+burn keep the source's own sound, and are verified by the file's length.
 
 In an edit decision list, x = 0 (the skeleton's default) means a centred crop; a crop from a
 chosen left edge gives that edge in source pixels, 1 or more.
@@ -63,6 +81,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from fractions import Fraction
 from pathlib import Path
 
 import media_common as C
@@ -314,10 +333,15 @@ def sample_table(table: dict) -> dict:
     return sample
 
 
+def audio_rate(table: dict) -> int:
+    """A deliverable's sample rate: audio_sample_rate, else 48 kHz under a picture and 44.1 without."""
+    return int(table.get("audio_sample_rate") or (48000 if table.get("kind") == "video" else 44100))
+
+
 def audio_codec_args(table: dict) -> list:
     """Codec, bit rate, rate and channels for a deliverable's sound."""
     codec = audio_codec(table)
-    rate = str(table.get("audio_sample_rate") or (48000 if table.get("kind") == "video" else 44100))
+    rate = str(audio_rate(table))
     channels = ["-ac", "1" if table["key"].startswith("audiobook.") else "2"]   # audiobooks: mono, the house choice
     if codec == "mp3":
         out = ["-c:a", "libmp3lame", "-b:a", str(table.get("audio_bitrate", "192k"))]
@@ -351,8 +375,68 @@ def render(cmd: list, out: Path, cwd=None, what="ffmpeg"):
     return A.render(cmd, out, cwd=cwd, what=what)
 
 
-def verify(out: Path, table: dict, expect: float | None = None) -> list:
-    """Findings for a rendered deliverable against its table."""
+def span(info: dict, kind: str):
+    """(start, end) in seconds of a probed file's first stream of a kind (video or audio), or None
+    where it has none: from the stream's own start and duration (Matroska keeps a stream's in a
+    DURATION tag), else from the file's duration."""
+    s = C.streams(info, kind)
+    if not s:
+        return None
+    s = s[0]
+
+    def number(value):
+        try:
+            got = C.parse_tc(value) if isinstance(value, str) and ":" in value else float(value)
+        except (TypeError, ValueError, C.Fatal):
+            return None
+        return got if math.isfinite(got) else None
+    start = number(s.get("start_time")) or 0.0
+    length = number(s.get("duration"))
+    if length is None:
+        length = number((s.get("tags") or {}).get("DURATION"))
+    return start, (start + length if length is not None else C.duration(info))
+
+
+def held_sound(n: int, rate: int) -> str:
+    """Filters that follow loudnorm and hold the sound to exactly n samples at rate. loudnorm's
+    dynamic mode (ffmpeg 6.1.1) stamps the short block it reads last as a whole 100 ms, so the
+    2.9 s it then flushes is stamped up to 100 ms late: its samples are all there, in order, but
+    an MP4 muxer stretches one AAC frame over the hole, the sound after it is stamped late, and
+    the track runs past its picture (30.016 s of samples stamped to 30.100 s). asetpts stamps every
+    sample again from the first, and apad and atrim give exactly n, which also drops the padding
+    an AAC decoder hands back from a source's last frame (16 ms of a 30 s master)."""
+    n = max(1, n)
+    return f"asetpts=STARTPTS+N/SR/TB,aresample={rate},apad=whole_len={n},atrim=end_sample={n}"
+
+
+def length_findings(info: dict, expect: float, held: bool = False, slack: float | None = None) -> list:
+    """Each stream's own end against expect, within slack (by default 0.1 s or 0.2%), in seconds
+    from the file's first stream start, so a sound that runs on past its picture is named as the
+    sound. held (the toolkit held the sound to the picture) also wants the two to end within one
+    frame of each other."""
+    slack = max(0.1, expect * 0.002) if slack is None else slack
+    ends = {what: span(info, kind) for what, kind in (("picture", "video"), ("sound", "audio"))}
+    ends = {what: s for what, s in ends.items() if s}
+    if not ends:
+        ends = {"file": (0.0, C.duration(info))}
+    base = min(s[0] for s in ends.values())
+    ends = {what: s[1] - base for what, s in ends.items()}
+    found = [f"its {what} lasts {end:.3f} s where {expect:.3f} s was expected"
+             for what, end in ends.items() if abs(end - expect) > slack]
+    if held and not found and len(ends) == 2:
+        v = C.streams(info, "video")[0]
+        frame = 1 / (C.rate(v.get("avg_frame_rate") or v.get("r_frame_rate")) or 25)
+        if abs(ends["sound"] - ends["picture"]) > frame + 1e-6:
+            found.append(f"its sound lasts {ends['sound']:.3f} s and its picture {ends['picture']:.3f} s: "
+                         f"more than a frame ({frame:.3f} s) apart")
+    return found
+
+
+def verify(out: Path, table: dict, expect: float | None = None, held: bool = False) -> list:
+    """Findings for a rendered deliverable against its table; with expect, its length against it.
+    held (the toolkit held the sound to the picture: encode, still-video) checks each stream and
+    the sound against the picture (length_findings). Without it the file's own length is checked,
+    as cut and captions burn keep the source's sound, whose end may differ from its picture's."""
     info = C.probe(out)
     found = []
     v, a = C.streams(info, "video"), C.streams(info, "audio")
@@ -390,7 +474,9 @@ def verify(out: Path, table: dict, expect: float | None = None) -> list:
         found.append(f"lasts {dur:.3f} s; {table['key']} max_seconds is {table['max_seconds']:g}")
     if table.get("min_seconds") and dur < table["min_seconds"] - 0.05:
         found.append(f"lasts {dur:.3f} s; {table['key']} min_seconds is {table['min_seconds']:g}")
-    if expect is not None and abs(dur - expect) > max(0.1, expect * 0.002):
+    if expect is not None and held:
+        found += length_findings(info, expect, held=True)
+    elif expect is not None and abs(dur - expect) > max(0.1, expect * 0.002):
         found.append(f"lasts {dur:.3f} s where {expect:.3f} s was expected")
     limit = C.max_bytes(table.get("max_size"))
     if limit and out.stat().st_size > limit:
@@ -607,7 +693,29 @@ def cmd_encode(args) -> int:
         raise C.Fatal(f"{C.shown(src)} has no sound to encode")
     if table.get("kind") == "audio" and C.streams(info, "video"):
         print(f"  note: {C.shown(src)} has a picture; {table['key']} takes its sound only")
-    total = C.duration(info)
+    # The deliverable lasts as long as its picture (with none, its sound), and its sound is held to
+    # that end, sample for sample, after the loudness pass (held_sound). Never -shortest: it ends
+    # the sound by loudnorm's late timestamps, and so drops its last samples.
+    pic, snd = span(info, "video"), span(info, "audio")
+    has_audio = bool(snd) and not C.silent(table)
+    lead = (pic if table.get("kind") == "video" else snd) or pic or snd
+    if not lead:
+        raise C.Fatal(f"{C.shown(src)} has neither a picture nor a sound")
+    total = lead[1] - min([lead[0]] + ([snd[0]] if has_audio else []))
+    if has_audio and lead is pic:
+        # Holding cuts only what a loudness pass or an AAC decoder adds (hundredths of a second) and
+        # pads a sound that stops short; sound running on past that is the author's, never cut unasked.
+        v = C.streams(info, "video")[0]
+        slack = 1 / (C.rate(v.get("avg_frame_rate") or v.get("r_frame_rate")) or 25) + 0.1
+        if snd[1] - pic[1] > slack:
+            print(f"  FAIL {C.shown(src)}'s sound runs {snd[1] - pic[1]:.3f} s past its picture (it ends at "
+                  f"{snd[1]:.3f} s, the picture at {pic[1]:.3f} s), more than a frame and 0.1 s, and the "
+                  "deliverable would lose it: cut the range you want with 'media.py cut', or put the sound "
+                  "under a still with 'media.py still-video' (nothing rendered)")
+            return 1
+        if abs(snd[1] - pic[1]) > 0.1:
+            print(f"  note: {C.shown(src)}'s sound ends at {snd[1]:.3f} s and its picture at {pic[1]:.3f} s: the "
+                  "deliverable's sound is held to its picture (cut where it runs on, silence where it stops short)")
     wrong = length_finding(total, table, C.shown(src), 0.05)
     if wrong:
         print(f"  FAIL {wrong}: {'cut it instead' if 'max_seconds' in wrong else 'it is too short'} "
@@ -622,13 +730,15 @@ def cmd_encode(args) -> int:
                           "losing the edges) or --frame pad (keeps it all, over a blurred copy)")
     name = C.target_for(table)
     target = C.loudness_target(name)
-    has_audio = bool(C.streams(info, "audio")) and not C.silent(table)
     if C.silent(table) and C.streams(info, "audio"):
         print(f"  note: {table['key']} sets audio_tracks = 0: the source's sound is left out")
     layout = "mono" if table["key"].startswith("audiobook.") else "stereo"
     pre = f"aformat=channel_layouts={layout},"   # the deliverable's channels, before loudnorm measures
-    afilter = ["-af", pre + A.loudnorm_filter(A.loudnorm_measure(src, target, pre=pre), target)] \
-        if has_audio else []
+    afilter = []
+    if has_audio:
+        rate = audio_rate(table)
+        afilter = ["-af", pre + A.loudnorm_filter(A.loudnorm_measure(src, target, pre=pre), target) + ","
+                   + held_sound(tick(lead[1] - snd[0], Fraction(rate)), rate)]
     if table.get("kind") != "video":
         out = C.output_path(C.path(C.PUB_RENDERS) / deliverable_name(src, table["key"], None, False,
                                                                      audio_ext(table)), args.o, inputs=[src])
@@ -645,7 +755,7 @@ def cmd_encode(args) -> int:
         else:
             cmd += ["-an"]
         render(cmd + video_codec_args(table, fps) + ["-movflags", "+faststart", str(out)], out, what="encode")
-    found = verify(out, table, expect=total)
+    found = verify(out, table, expect=total, held=has_audio and table.get("kind") == "video")
     if has_audio:
         summary, lf = A.loudness_findings(out, target, name)
         print(f"  loudness: {summary} ({name} target {target[0]:g} LUFS, {target[1]:g} dBTP)")
@@ -700,12 +810,14 @@ def cmd_still_video(args) -> int:
                         args.o, inputs=[image, audio])
     pre = "aformat=channel_layouts=stereo,"
     m = A.loudnorm_measure(audio, target, pre=pre)
+    rate = audio_rate(table)   # the sound held to its own length: -t alone cut loudnorm's late stamps
     render(["-y"] + C.still_input(image, "1") + C.input_args(audio)
            + ["-filter_complex", ";".join(graph), "-map", "[v]", "-map", "1:a:0", "-af",
-              pre + A.loudnorm_filter(m, target)] + audio_codec_args(table)
-           + video_codec_args(table, 30) + ["-tune", "stillimage", "-t", f"{total:.3f}",
-                                            "-movflags", "+faststart", str(out)], out, what="still-video")
-    found = verify(out, table, expect=total)
+              pre + A.loudnorm_filter(m, target) + "," + held_sound(tick(total, Fraction(rate)), rate)]
+           + audio_codec_args(table) + video_codec_args(table, 30)
+           + ["-tune", "stillimage", "-t", f"{total:.3f}", "-movflags", "+faststart", str(out)], out,
+           what="still-video")
+    found = verify(out, table, expect=total, held=True)
     summary, lf = A.loudness_findings(out, target, "social")
     print(f"  loudness: {summary}")
     return finish(out, found + lf, "still-video")
@@ -775,7 +887,87 @@ def voice_segments(piece: str) -> list:
     return out
 
 
+def tick(seconds, rate: Fraction) -> int:
+    """A time as a whole number of ticks at rate (picture frames, or audio samples), half up. A
+    time in float seconds is first taken to its nearest microsecond, so a running total and the
+    timecode that names it round alike even on a half tick: three stills of 0.1 s end at
+    0.30000000000000004 and 00:00:00.300 is 0.29999999999999998, 7.5 frames at 25 fps either way,
+    and both are frame 8."""
+    if isinstance(seconds, float):
+        seconds = Fraction(round(seconds * 1_000_000), 1_000_000)
+    return math.floor(Fraction(seconds) * rate + Fraction(1, 2))
+
+
+def shown_size(info: dict) -> tuple:
+    """A still's width and height as the filter graph sees them. ffmpeg stands a picture upright
+    before any filter when its EXIF orientation turns it a quarter (a phone photograph), so its
+    probed width and height then swap."""
+    v = C.streams(info, "video")[0]
+    f = (info.get("frames") or [{}])[0]
+    w, h = int(f.get("width") or v["width"]), int(f.get("height") or v["height"])
+    turn = next((int(float(s["rotation"])) for s in f.get("side_data_list", []) if "rotation" in s), 0)
+    return (h, w) if abs(turn) % 180 == 90 else (w, h)
+
+
+def framed_still(c: dict, w: int, h: int, tmp: Path, made: dict) -> Path:
+    """A still, card or colour clip as the one image the master shows: a PNG of w x h in tmp,
+    framed as the clip says (fit, crop from x, or pad) and stood upright, in its own short ffmpeg
+    pass, made once for each image, frame and x (made holds them). Each is rgb24 with square
+    pixels and no colour tags or side data (an ICC profile, a display matrix), so every one decodes
+    alike: ffmpeg rebuilds the whole graph mid-render, every filter losing its place, when an
+    input's frames change size, pixel format or orientation, so a run of stills could share one
+    input only while their sources matched, and one input each held a decoder and its frames for
+    the whole render (64 stills of two sizes peaked at 2.4 GB, 213 passed 6 GB; 05/10/2026)."""
+    key = ("colour", c["colour"].lower()) if c["kind"] == "colour" else \
+        (str(Path(c["path"]).resolve()), c["clip"]["frame"], c["clip"].get("x") or None)
+    if key in made:
+        return made[key]
+    out = tmp / f"framed-{len(made):05d}.png"
+    if c["kind"] == "colour":
+        inp, graph = ["-f", "lavfi", "-i", f"color=c=0x{c['colour'][1:]}:s={w}x{h}:r=1"], ["[0:v]null[r0]"]
+    else:
+        sw, sh = shown_size(c["info"])
+        inp = ["-threads", "1"] + C.input_args(c["path"])
+        graph = reframe("0:v", "r0", sw, sh, w, h, c["clip"]["frame"], c["clip"].get("x") or None, "0")
+    graph.append("[r0]format=rgb24,setsar=1,setparams=color_primaries=unknown:color_trc=unknown,"
+                 "sidedata=mode=delete[v]")
+    render(["-y"] + inp + ["-filter_complex", ";".join(graph), "-map", "[v]", "-frames:v", "1", "-update", "1",
+            str(out)], out, what=f"framing clip {c['id']}")
+    made[key] = out
+    return out
+
+
+def still_list(run: list, rate: Fraction, fps_text: str, out: Path) -> Path:
+    """An ffconcat list of a run of framed stills (framed_still), each held for its frames. The
+    concat demuxer opens one image at a time, so a run of any length is one input and one decoder.
+    Each duration is the difference of two cumulative boundaries in whole microseconds, so the run
+    adds up to its last boundary exactly; framerate gives the images the master's own time base,
+    so no boundary is rounded twice; and the last image is named again with no duration, so a
+    frame stands on the run's end and the fps filter holds the image until it (trim then cuts that
+    frame)."""
+    def us(t):
+        return round(Fraction(t - run[0]["t0"]) / rate * 1_000_000)
+    lines = ["ffconcat version 1.0"]
+    for n, c in enumerate(run + run[-1:]):
+        name = str(Path(c["image"]).resolve())
+        if "\n" in name or "\r" in name:
+            raise C.Fatal(f"the scratch folder {Path(name).parent} has a line break in its name, which an "
+                          "ffconcat list cannot hold: set TMPDIR to another folder")
+        lines += ["file '" + name.replace("'", "'\\''") + "'", f"option framerate {fps_text}"]
+        if n < len(run):
+            d = us(c["t1"]) - us(c["t0"])
+            lines.append(f"duration {d // 1_000_000}.{d % 1_000_000:06d}")
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out
+
+
 def cmd_assemble(args) -> int:
+    with tempfile.TemporaryDirectory(prefix="media-assemble-") as tmp:
+        return assemble(args, Path(tmp))
+
+
+def assemble(args, tmp: Path) -> int:
+    """assemble's work, with a scratch folder for the still lists and the stage render."""
     edl = load_edl(Path(args.edl))
     e = edl["edit"]
     piece = str(e["piece"])
@@ -815,57 +1007,94 @@ def cmd_assemble(args) -> int:
                 c["path"] = card_png(c["path"], w, h, transparent=False)
                 c["kind"] = "still"
             if c["kind"] == "still":
-                c["info"] = C.probe(c["path"])
+                c["info"] = C.probe(c["path"], frame=True)
     fps = C.rate(fps_text)
+    # The grid every boundary sits on: the master's frames, or its samples in an audio master.
+    # Clip i covers ticks round(start_i) to round(start_i + seconds_i), both rounded from the
+    # timeline's running total and never from the clip's own length, so stills of 0.16 s at 30 fps
+    # hold 5, 5, 4, 5, 5 frames and the master ends on the edit's own total however many there are.
+    rate = Fraction(fps_text) if size else Fraction(ar)
+    unit = "frame" if size else "sample"
+    for c in clips:
+        c["t0"], c["t1"] = tick(c["start"], rate), tick(c["start"] + c["dur"], rate)
+        if c["t1"] <= c["t0"]:
+            raise C.Fatal(f"clip {c['id']} lasts {c['dur']:g} s, under one {unit} of the master where it "
+                          f"falls ({float(1 / rate):.4f} s): give it longer, or take it out")
+        c["over"] = 0
+    for prev, c in zip(clips, clips[1:]):
+        if c["fade"] > 0:
+            c["over"] = prev["t1"] - c["t0"]   # a fade that rounds to no tick is a cut
+
+    def seconds(t) -> float:
+        return float(Fraction(t) / rate)
+
+    def samples(t) -> int:
+        return tick(Fraction(t) / rate, Fraction(ar))
+
+    # Every still, card and colour is framed first, one image at a time (framed_still), so all of
+    # them decode alike. Consecutive plain ones (a still with no push-in, or a colour, entering with
+    # a cut) are one block, read through one ffconcat input, whatever their sources. One looped
+    # input per still held a decoder and its frames for the whole render: 32 stills at 1920x1080
+    # peaked near 6 GB, 213 exhausted 31 GB (05/10/2026), and lists of 40 and of 64 never finished.
+    made, blocks = {}, []
+    for c in clips:
+        if size and c["kind"] in ("still", "colour"):
+            c["image"] = framed_still(c, w, h, tmp, made)
+        plain = bool(size) and (c["kind"] == "colour" or (c["kind"] == "still" and c["clip"]["motion"] == "none"))
+        if plain and blocks and blocks[-1]["plain"] and not c["over"]:
+            blocks[-1]["clips"].append(c)
+        else:
+            blocks.append({"plain": plain, "clips": [c]})
+    for g in blocks:
+        g["t0"], g["t1"], g["over"] = g["clips"][0]["t0"], g["clips"][-1]["t1"], g["clips"][0]["over"]
     inputs, graph = [], []
 
     def add(args_):
         inputs.append(args_)
         return len(inputs) - 1
 
-    total = clips[-1]["start"] + clips[-1]["dur"]
-    for i, c in enumerate(clips):
-        d = c["dur"]
+    total, total_samples = seconds(clips[-1]["t1"]), samples(clips[-1]["t1"])
+    for i, g in enumerate(blocks):
+        c = g["clips"][0]
+        n = g["t1"] - g["t0"]
+        d = seconds(n)
+        ns = samples(g["t1"]) - samples(g["t0"])
         mute = bool(c["clip"].get("mute", False))
-        # picture
+        # picture: every chain gives exactly n frames, from 0
         if size:
-            if c["kind"] == "colour":
-                graph.append(f"color=c=0x{c['colour'][1:]}:s={w}x{h}:r={fps_text}:d={d:.6f},format=yuv420p,"
-                             f"setsar=1,settb=AVTB[v{i}]")
+            if g["plain"]:   # framed images at the master's size: nothing to reframe
+                lst = still_list(g["clips"], rate, fps_text, tmp / f"stills-{i}.ffconcat")
+                k = add(["-f", "concat", "-safe", "0", "-threads", "1", "-i", str(lst)])
+                graph.append(f"[{k}:v]fps={fps_text},trim=end_frame={n},setpts=PTS-STARTPTS,"
+                             f"format=yuv420p,setsar=1,settb=AVTB[v{i}]")
             elif c["kind"] == "media":
                 k = c["k"] = add(["-ss", f"{c['in']:.6f}", "-t", f"{d + 0.5:.6f}"] + C.input_args(c["path"]))
                 v = C.streams(c["info"], "video")[0]
                 graph.append(f"[{k}:v]setpts=PTS-STARTPTS,fps={fps_text}[s{i}]")
                 graph += reframe(f"s{i}", f"r{i}", int(v["width"]), int(v["height"]), w, h,
                                  c["clip"]["frame"], c["clip"].get("x") or None, str(i))
-                graph.append(f"[r{i}]tpad=stop_mode=clone:stop_duration={d:.6f},trim=duration={d:.6f},"
+                graph.append(f"[r{i}]tpad=stop_mode=clone:stop={n},trim=end_frame={n},"
                              f"setpts=PTS-STARTPTS,format=yuv420p,settb=AVTB[v{i}]")
-            else:
-                k = add(C.still_input(c["path"], fps_text, d + 1))
-                v = C.streams(c["info"], "video")[0]
-                graph += reframe(f"{k}:v", f"r{i}", int(v["width"]), int(v["height"]), w, h,
-                                 c["clip"]["frame"], c["clip"].get("x") or None, str(i))
-                chain = f"[r{i}]"
-                if c["clip"]["motion"] == "push-in":
-                    frames = max(1, int(round(d * fps)))
-                    chain += (f"scale={2 * w}:{2 * h},zoompan=z='1+0.08*on/{frames}':"
-                              f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={w}x{h}:fps={fps_text},")
-                graph.append(chain + f"fps={fps_text},trim=duration={d:.6f},setpts=PTS-STARTPTS,"
+            else:   # a still with a push-in: its framed image, looped
+                k = add(C.still_input(c["image"], fps_text, d + 1))
+                graph.append(f"[{k}:v]scale={2 * w}:{2 * h},zoompan=z='1+0.08*on/{n}':"
+                             f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={w}x{h}:fps={fps_text},"
+                             f"fps={fps_text},trim=end_frame={n},setpts=PTS-STARTPTS,"
                              f"format=yuv420p,setsar=1,settb=AVTB[v{i}]")
-        # sound
+        # sound: exactly ns samples, the block's own share of the cumulative sample grid
         if c["kind"] == "media" and c["has_a"] and not mute:
             if size:
                 k = c["k"]
             else:
                 k = add(["-ss", f"{c['in']:.6f}", "-t", f"{d + 0.5:.6f}"] + C.input_args(c["path"]))
             graph.append(f"[{k}:a]asetpts=PTS-STARTPTS,aresample={ar},aformat=sample_fmts=fltp:"
-                         f"channel_layouts=stereo,apad=whole_dur={d:.6f},atrim=duration={d:.6f}[a{i}]")
+                         f"channel_layouts=stereo,apad=whole_len={ns},atrim=end_sample={ns}[a{i}]")
         else:
             if c["kind"] == "media" and not c["has_a"] and not size:
                 print(f"  note: clip {c['id']} has no sound; it is silence in this audio master")
-            graph.append(f"anullsrc=r={ar}:cl=stereo,atrim=duration={d:.6f},"
+            graph.append(f"anullsrc=r={ar}:cl=stereo,atrim=end_sample={ns},"
                          f"aformat=sample_fmts=fltp:channel_layouts=stereo[a{i}]")
-    # join
+    # join: a fade overlaps the block before by its own ticks, so each join ends on the grid
     acc_v, acc_a = "v0", "a0"
     first = clips[0]
     if first["clip"]["transition"] == "fade" and float(first["clip"].get("transition_seconds", 0) or 0) > 0:
@@ -875,26 +1104,42 @@ def cmd_assemble(args) -> int:
             acc_v = "vf0"
         graph.append(f"[a0]afade=t=in:st=0:d={t:.6f}[af0]")
         acc_a = "af0"
-    for i, c in enumerate(clips[1:], start=1):
-        if c["fade"] > 0:
+    for i, g in enumerate(blocks[1:], start=1):
+        if g["over"] > 0:
             if size:
-                graph.append(f"[{acc_v}][v{i}]xfade=transition=fade:duration={c['fade']:.6f}:"
-                             f"offset={c['start']:.6f}[vj{i}]")
-            graph.append(f"[{acc_a}][a{i}]acrossfade=d={c['fade']:.6f}[aj{i}]")
+                graph.append(f"[{acc_v}][v{i}]xfade=transition=fade:duration={seconds(g['over']):.6f}:"
+                             f"offset={seconds(g['t0']):.6f}[vj{i}]")
+            graph.append(f"[{acc_a}][a{i}]acrossfade=ns={samples(blocks[i - 1]['t1']) - samples(g['t0'])}[aj{i}]")
         else:
             if size:
                 graph.append(f"[{acc_v}][{acc_a}][v{i}][a{i}]concat=n=2:v=1:a=1[vj{i}][aj{i}]")
             else:
                 graph.append(f"[{acc_a}][a{i}]concat=n=2:v=0:a=1[aj{i}]")
         acc_v, acc_a = f"vj{i}", f"aj{i}"
-    # overlays
+    # overlays: on the master's frames from the one at rounds to up to, not including, the one
+    # until rounds to, each rounded as a clip's boundary is, so an overlay timed to a clip's start
+    # or end starts or ends with that clip. between(t, at, until) on milliseconds missed a clip's
+    # first frame (frame 11 of 30 fps is shown at 0.3667 s, before 0.370), and its closed end
+    # took the frame on until as well. n counts the main input's frames from 0, the master's; ffmpeg
+    # 6.1.1 also evaluates enable on each frame the overlay's own input hands it, so that input is
+    # one frame, read once at the start (where its n is the master's too) and held by repeat.
     if size:
+        frames = clips[-1]["t1"]
         for j, o in enumerate(edl["overlay"]):
             src = str(o.get("source", "")).strip()
             at = C.parse_tc(o.get("at") or 0, f"overlay {j + 1} at")
+            a = tick(at, rate)
+            if a >= frames:
+                raise C.Fatal(f"overlay {j + 1} starts at {C.fmt_tc(at)}, when the master has ended (it "
+                              f"lasts {C.fmt_tc(total)}): bring it inside the edit, or take it out")
             until = C.parse_tc(o.get("until") or total, f"overlay {j + 1} until")
             if until <= at:
                 raise C.Fatal(f"overlay {j + 1}: until must come after at")
+            b = tick(until, rate) if o.get("until") else frames
+            if b <= a:
+                raise C.Fatal(f"overlay {j + 1}: {C.fmt_tc(at)} to {C.fmt_tc(until)} is under one frame of the "
+                              f"master ({float(1 / rate):.4f} s) and would show on none: give it longer, or "
+                              "take it out")
             r = resolve_source(src, manifest_entries())
             if r["kind"] == "card":
                 png = card_png(r["path"], w, h, transparent=True)
@@ -905,10 +1150,10 @@ def cmd_assemble(args) -> int:
                               "(put a moving source in a [[clip]])")
             else:
                 raise C.Fatal(f"overlay {j + 1}: {src!r} is neither a card nor an image this project has")
-            k = add(C.still_input(png, fps_text, until))
+            k = add(["-threads", "1"] + C.input_args(png))
             graph.append(f"[{k}:v]scale={w}:{h},format=rgba[ol{j}]")
-            graph.append(f"[{acc_v}][ol{j}]overlay=0:0:enable='between(t,{at:.3f},{until:.3f})':"
-                         f"eof_action=pass[vo{j}]")
+            graph.append(f"[{acc_v}][ol{j}]overlay=0:0:enable='gte(n,{a})*lt(n,{b})':"
+                         f"eof_action=repeat[vo{j}]")
             acc_v = f"vo{j}"
         graph.append(f"[{acc_v}]format=yuv420p[vout]")
     # [[audio]] tracks
@@ -998,38 +1243,44 @@ def cmd_assemble(args) -> int:
     mix += tracks
     if len(mix) > 1:
         graph.append("".join(f"[{m}]" for m in mix) + f"amix=inputs={len(mix)}:duration=first:normalize=0,"
-                     f"atrim=duration={total:.6f}[aout]")
+                     f"atrim=end_sample={total_samples}[aout]")
     else:
-        graph.append(f"[{mix[0]}]atrim=duration={total:.6f}[aout]")
+        graph.append(f"[{mix[0]}]atrim=end_sample={total_samples}[aout]")
     ext = ".mp4" if size else ".wav"
     out = C.output_path(C.path(C.PROD_RENDERS) / f"{piece}.master{ext}", args.o)
     print(f"assemble {C.shown(edl['path'])}: {len(clips)} clip(s), {len(edl['overlay'])} overlay(s), "
           f"{len(edl['audio'])} audio track(s), {total:.3f} s" + (f" at {w}x{h}, {fps_text} fps" if size else
                                                                    ", audio only"))
-    with tempfile.TemporaryDirectory(prefix="media-assemble-") as tmp:
-        stage = Path(tmp) / ("stage.mkv" if size else "stage.wav")
-        cmd = ["-y"]
-        for a in inputs:
-            cmd += a
-        cmd += ["-filter_complex", ";".join(graph)]
-        if size:
-            cmd += ["-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", "-preset", C.X264_PRESET,
-                    "-crf", "18", "-pix_fmt", "yuv420p", "-r", fps_text, "-c:a", "pcm_s16le", "-ar", str(ar)]
-        else:
-            cmd += ["-map", "[aout]", "-c:a", "pcm_s16le", "-ar", str(ar)]
-        A.render(cmd + ["-t", f"{total:.6f}", str(stage)], stage, what="assemble")
-        tail = ["-c:a", "aac", "-b:a", "192k", "-ar", str(ar)] if size else ["-c:a", "pcm_s16le", "-ar", str(ar)]
-        lead = ["-y", "-i", str(stage), "-map", "0:v:0", "-map", "0:a:0", "-c:v", "copy"] if size else \
-            ["-y", "-i", str(stage), "-map", "0:a:0"]
-        if loud != "none":
-            target = C.loudness_target(loud)
-            m = A.loudnorm_measure(stage, target)
-            lead += ["-af", A.loudnorm_filter(m, target)]
-        render(lead + tail + (["-movflags", "+faststart"] if size else []) + [str(out)], out, what="assemble")
+    stage = tmp / ("stage.mkv" if size else "stage.wav")
+    cmd = ["-y"]
+    for a in inputs:
+        cmd += a
+    cmd += ["-filter_complex", ";".join(graph)]
+    if size:
+        cmd += ["-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", "-preset", C.X264_PRESET,
+                "-crf", "18", "-pix_fmt", "yuv420p", "-r", fps_text, "-c:a", "pcm_s16le", "-ar", str(ar)]
+    else:
+        cmd += ["-map", "[aout]", "-c:a", "pcm_s16le", "-ar", str(ar)]
+    A.render(cmd + ["-t", f"{total:.6f}", str(stage)], stage, what="assemble")
+    tail = ["-c:a", "aac", "-b:a", "192k", "-ar", str(ar)] if size else ["-c:a", "pcm_s16le", "-ar", str(ar)]
+    lead = ["-y", "-i", str(stage), "-map", "0:v:0", "-map", "0:a:0", "-c:v", "copy"] if size else \
+        ["-y", "-i", str(stage), "-map", "0:a:0"]
+    afilter = []
+    if loud != "none":
+        target = C.loudness_target(loud)
+        m = A.loudnorm_measure(stage, target)
+        afilter.append(A.loudnorm_filter(m, target))
+    if size:   # a picture master's sound held to its picture's frames, on the sample grid (held_sound)
+        afilter.append(held_sound(total_samples, ar))
+    if afilter:
+        lead += ["-af", ",".join(afilter)]
+    render(lead + tail + (["-movflags", "+faststart"] if size else []) + [str(out)], out, what="assemble")
     info = C.probe(out)
     found = []
     got = C.duration(info)
-    if abs(got - total) > max(0.1, 2 / (fps or 30)):
+    if size:
+        found += length_findings(info, total, held=True, slack=max(0.1, 2 / fps))
+    elif abs(got - total) > max(0.1, 2 / (fps or 30)):
         found.append(f"lasts {got:.3f} s where the edit adds up to {total:.3f} s")
     if size:
         v = C.streams(info, "video")

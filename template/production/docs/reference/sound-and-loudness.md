@@ -53,6 +53,11 @@ own sound rather than cutting to digital silence.
   finished mix, never on a part of it.
 - Measure the master with `loudness measure` before calling it done, and quote the figures.
 - Each deliverable is encoded to its own target in the cutting pass, never adjusted by ear.
+- After the loudness pass, `assemble` and `encode` hold the sound to the picture's own length,
+  sample for sample, and check each stream: a sound ending over a frame from its picture fails.
+  `encode` pads a sound that stops short with silence, and refuses a source whose sound runs on
+  more than a frame and 0.1 s past its picture, rather than cut it: take the part you want with
+  `cut`, or put the sound under a still with `still-video`.
 - An episode's master is an audio master with `loudness = "podcast"`, made by its own procedure
   where the project makes podcasts.
 - Never lift a quiet recording past its noise: record it again or accept it, with the author.

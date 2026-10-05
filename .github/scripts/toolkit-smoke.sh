@@ -19,7 +19,9 @@
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
 #                         exercises the media_*.py modules, and card.py). A self-test reads only
 #                         the toolkit, so one result serves every render whose toolkit/ is
-#                         byte-identical (it says so).
+#                         byte-identical (it says so). card.py's exit 2 with its own SKIP lines
+#                         (no Playwright, Chromium or fc-match) is a named SKIP in its words, and
+#                         is carried to every such render as a SKIP, never as a pass.
 #                      2. `cut` on a synthetic clip, for every video and audio deliverable of the
 #                         platforms in the answers (and audiobook.acx, the retail sample, where
 #                         the project makes audiobooks), writes what the preset says: size, codecs,
@@ -123,11 +125,11 @@
 #
 #                    A check whose tool is absent is SKIPPED and named (SKIP — …), never passed:
 #                    no ffmpeg (checks 2, 3, 5–7, 9, 10, 13, 15–18), no uv or Chromium (check 4, card.py's
-#                    self-test, the cards of check 9). --require-ffmpeg (CI) turns a missing ffmpeg
-#                    into exit 2; --skip-thumbnails skips the Chromium steps by name. A step that
-#                    does not apply to a render (no audiobook folder, no deliverable short enough
-#                    to over-run, no podcast folder, no own-channel deliverable) is listed as n/a,
-#                    not as a SKIP.
+#                    self-test, the cards of check 9), no fc-match (card.py's brand-font probe).
+#                    --require-ffmpeg (CI) turns a missing ffmpeg into exit 2; --skip-thumbnails
+#                    skips the Chromium steps by name. A step that does not apply to a render (no
+#                    audiobook folder, no deliverable short enough to over-run, no podcast folder,
+#                    no own-channel deliverable) is listed as n/a, not as a SKIP.
 #
 #                    What it CANNOT check: that a render LOOKS right — only that it is made to
 #                    the preset; a person watches the master. Nor ElevenLabs itself, which is
@@ -386,6 +388,16 @@ skip_step() { # $1 = key, $2 = what, $3 = why — a named SKIP: the tool to look
 }
 na_step() { rec "na.$1" "$2"; }   # does not apply to this render: listed, never a SKIP
 
+# card.py --self-test exits 2, its last line 'self-test incomplete', when a part of it could not
+# run (Playwright, its Chromium or fc-match absent), each part named on a SKIP line with why. That
+# is a named SKIP here, in card.py's own words: never a pass, never a finding. Any other exit, a
+# FAIL beside a SKIP (exit 1) among them, is judged as it stands.
+card_skips() { # $1 = exit status, $2 = log → card.py's reasons on one line, or nothing
+  [[ "$1" == 2 ]] && grep -q '^self-test incomplete' "$2" 2>/dev/null || return 0
+  grep -E '^[[:space:]]+SKIP[[:space:]]' "$2" | sed -E 's/^[[:space:]]+SKIP[[:space:]]+//' | head -3 \
+    | paste -sd '|' - | sed 's/|/; /g' | cut -c1-300 || true
+}
+
 smoke() { # $1 = tree — fills $RESULTS
   local src="$1" k kind w h vc ac rate min max asp st f out hash first_v="" first_land="" short_k="" short_max=999999
   local -a answered=() videos=() images=()
@@ -403,23 +415,29 @@ smoke() { # $1 = tree — fills $RESULTS
   # ── 1. Self-tests (cached by the toolkit's bytes) ──
   hash="$( (cd "$T/toolkit" && find . -type f ! -path '*/__pycache__/*' -print0 | LC_ALL=C sort -z | xargs -0 sha1sum) | sha1sum | cut -c1-12)"
   if [[ -n "${SELFTEST_CACHE[$hash]:-}" ]]; then
+    # A skip is carried like a result, so every render with this toolkit names it.
     while IFS='=' read -r k st; do
-      if [[ -n "$k" ]]; then rec "selftest.$k" "$st"; rec "selftest.$k.tail" "${SELFTEST_TAIL[$hash/$k]:-}"; fi
+      [[ -n "$k" ]] || continue
+      if [[ "$st" == skip ]]; then skip_step 1 "$k --self-test" "${SELFTEST_TAIL[$hash/$k]:-}"
+      else rec "selftest.$k" "$st"; rec "selftest.$k.tail" "${SELFTEST_TAIL[$hash/$k]:-}"; fi
     done < <(printf '%s\n' "${SELFTEST_CACHE[$hash]}" | tr ';' '\n')
     rec selftest.reused "$hash"
   else
-    local cache=""
+    local cache="" why
     for f in "$T"/toolkit/*.py; do
       grep -q -- '--self-test' "$f" && grep -q '__main__' "$f" || continue
-      k="${f##*/}"; st=0
+      k="${f##*/}"; st=0; why=""
       if [[ "$k" == card.py ]]; then
-        if ! $HAVE_UV; then skip_step 1 "card.py --self-test" "uv is not installed"; continue; fi
-        tkc "selftest.$k" --self-test || st=$?
-        if [[ "$st" -eq 2 ]] && grep -qiE 'playwright install|chromium' "$OUT/selftest.$k.log"; then
-          skip_step 1 "card.py --self-test" "Playwright's Chromium is not installed"; continue
+        if ! $HAVE_UV; then why="uv is not installed"
+        else
+          tkc "selftest.$k" --self-test || st=$?
+          why="$(card_skips "$st" "$OUT/selftest.$k.log")"
         fi
       else
         tk "selftest.$k" --self-test || st=$?
+      fi
+      if [[ -n "$why" ]]; then
+        skip_step 1 "$k --self-test" "$why"; cache+="$k=skip;"; SELFTEST_TAIL["$hash/$k"]="$why"; continue
       fi
       rec "selftest.$k" "$st"; rec "selftest.$k.tail" "$(selftest_tail "selftest.$k")"
       cache+="$k=$st;"; SELFTEST_TAIL["$hash/$k"]="$(selftest_tail "selftest.$k")"
@@ -2120,6 +2138,7 @@ self_test() {
 
   mut selftest.media.py 1;                probe "check 1 fires when media.py --self-test fails" "check 1 — [fixture] python3 toolkit/media.py --self-test failed"
   mut selftest.media.py missing;          probe "check 1 fires when media.py is missing" "check 1 — [fixture] toolkit/media.py is missing"
+  mut selftest.card.py 2;                 probe "check 1 fires when card.py --self-test exits 2 and names no skip" "toolkit/card.py --self-test failed (exit 2)"
   mut cut.youtube.short.status 2;         probe "check 2 fires when a cut fails" "check 2 — [fixture] cut --deliverable youtube.short failed"
   mut cut.youtube.short.facts "1080 1080 h264 yuv420p aac 48000 2 4.000"
   probe "check 2 fires on a cut at the wrong size" "check 2 — [fixture] cut --deliverable youtube.short does not match its preset: picture 1080x1080"
@@ -2217,9 +2236,32 @@ self_test() {
   mut tr.wrote yes;                       probe "check 19 fires when the transcript is written without -o" "a file written without -o"
   mut tr.lines.extra yes;                 probe "check 19 fires when --lines takes other lines" "check 19 — [fixture] captions transcript --lines 2.1-2.2"
   mut tr.o.written no;                    probe "check 19 fires when -o writes nothing" "check 19 — [fixture] captions transcript -o wrote no file"
-  write_clean_results "$f"; printf 'na.12\tno audiobook folder\nskip.4\tcard renders (no Chromium)\n' >> "$f"
-  sed -i '/^abtext\./d; /^card\./d' "$f"; load_results "$f"
+  write_clean_results "$f"; printf 'na.12\tno audiobook folder\nskip.4\tcard renders (no Chromium)\nskip.1\tcard.py --self-test (no Chromium)\n' >> "$f"
+  sed -i '/^abtext\./d; /^card\./d; /^selftest\.card\.py/d' "$f"; load_results "$f"
   probe_clean "a render with no audiobook folder and no Chromium is clean, its steps listed n/a and skipped"
+
+  # The driver's reading of card.py's own verdict (check 1), on logs in card.py's shape.
+  local card_log="$tmp/card.log" why
+  local chromium="every browser case (render, transparency, the network guard, check): Chromium for Playwright 1.62.0 is not installed: uv run --with playwright==1.62.0 playwright install chromium"
+  local font="the brand-font probe (a @font-face that loads, then one that does not): fc-match is not installed to find a font file"
+  local ended="self-test incomplete: 5 case(s) passed, 1 part(s) skipped (SKIP above): a skip is never a pass"
+  read_card() { # $1 = label, $2 = exit status, $3 = the log's lines, $4 = the reasons wanted ('' = judged, never skipped)
+    ST_PROBES=$((ST_PROBES + 1))
+    printf 'card.py --self-test\n  ok   the safe zone scales to the render size\n%s\n' "$3" > "$card_log"
+    why="$(card_skips "$2" "$card_log")"
+    if [[ "$why" == "$4" ]]; then log "  ✓ $1"
+    else
+      ST_FAILS=$((ST_FAILS + 1))
+      printf '\033[31m  ✗ %s: read %s, wants %s\033[0m\n' "$1" "${why:-(nothing)}" "${4:-(nothing)}"
+    fi
+  }
+  read_card "card.py's exit 2 without Chromium is a named SKIP, in card.py's words" 2 "  SKIP $chromium"$'\n'"$ended" "$chromium"
+  read_card "a brand-font SKIP is named for fc-match, never for the Chromium a passing case mentions" 2 \
+    "  SKIP $font"$'\n'"  ok   without Playwright's Chromium, the SKIP names the command that installs it"$'\n'"$ended" "$font"
+  read_card "a FAIL beside a SKIP (card.py's exit 1) is judged, never skipped" 1 \
+    "  FAIL render writes a PNG of exactly the size asked"$'\n'"  SKIP $font"$'\n'"self-test FAILED: 1 case(s), and 1 part(s) skipped (SKIP above)" ""
+  read_card "an exit 2 that does not end 'self-test incomplete' is judged, never skipped" 2 \
+    "error: Chromium would not start: playwright install chromium" ""
   write_clean_results "$f"
   printf 'na.15\tno image deliverable\nna.16\tno GIF deliverable\nna.17\tno silent loop\nna.18\tno podcast folder\n' >> "$f"
   sed -i '/^img\./d; /^gif\./d; /^loop/d; /^web\./d; /^feed\.[a-mo-z]/d; /^feed\.new/d' "$f"; load_results "$f"

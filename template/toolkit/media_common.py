@@ -797,12 +797,16 @@ def input_args(p, pcm_format=None) -> list:
     return ["-i", str(p)]
 
 
-def probe(p, pcm_format=None) -> dict:
-    """ffprobe's format and streams as a dict (JSON)."""
+def probe(p, pcm_format=None, frame: bool = False) -> dict:
+    """ffprobe's format and streams as a dict (JSON). frame adds the first decoded frame under
+    "frames": what a filter graph is handed, which the stream's header does not always say (an
+    image's EXIF orientation arrives as the frame's display matrix)."""
     p = Path(p)
     if not p.is_file():
         raise Fatal(f"not found: {shown(p)}")
     cmd = [need("ffprobe"), "-v", "error", "-print_format", "json", "-show_format", "-show_streams"]
+    if frame:
+        cmd += ["-show_frames", "-read_intervals", "%+#1"]
     fmt = pcm_format or pcm_format_for(p)
     if fmt:
         cmd += ["-f", "s16le", "-sample_rate", str(pcm_rate(fmt)), "-ch_layout", "mono"]
@@ -916,11 +920,13 @@ def is_still(p, info=None) -> bool:
 def still_input(p, fps_text: str, seconds=None) -> list:
     """ffmpeg input arguments that hold one image as a stream of frames at fps_text. The gif
     demuxer has no loop option ('Option loop not found'), so a GIF is read by the image2 demuxer
-    with the gif decoder named, which also holds the first frame of a moving GIF."""
+    with the gif decoder named, which also holds the first frame of a moving GIF. The decoder
+    runs one thread: with one frame thread per CPU, each looped 1920x1080 image held about 180 MB
+    for the whole render, and with one about 37 MB (ffmpeg 6.1.1, 16 CPUs)."""
     p = Path(p)
     head = ["-f", "image2", "-c:v", "gif"] if p.suffix.lower() == ".gif" else []
     tail = ["-t", f"{seconds:.6f}"] if seconds is not None else []
-    return head + ["-loop", "1", "-framerate", str(fps_text)] + tail + ["-i", str(p)]
+    return head + ["-loop", "1", "-framerate", str(fps_text)] + tail + ["-threads", "1", "-i", str(p)]
 
 
 # ── Git: never read what it ignores (DESIGN D50) ────────────────────────────────────────

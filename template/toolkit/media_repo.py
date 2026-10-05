@@ -19,8 +19,9 @@ configured, a file over 10 MB outside the ignored and LFS folders, and a missing
 rule. 'check --setup' adds the readiness report of DESIGN D49: ffmpeg and ffprobe with libass,
 x264 and mp3lame, the optional encoders 'image' needs (libwebp for WebP; an AV1 encoder and the
 avif muxer for AVIF), each named with the formats its absence blocks and never a finding,
-Python, uv, the pinned Playwright's Chromium, git-lfs where large exports exist, the allow, ask
-and deny entries of .claude/settings.json (D13's two deny entries keep hand edits out of
+Python, uv, the pinned Playwright's Chromium, git-lfs where large exports exist, the optional
+espeak-ng, pandoc and fontconfig's fc-match (card.py --self-test's brand-font probe), the allow,
+ask and deny entries of .claude/settings.json (D13's two deny entries keep hand edits out of
 renders/ and generated/), and whether the user-scope ElevenLabs server's base path contains this
 repository. It reads only that one key of ~/.claude.json and prints no other value from it.
 
@@ -476,6 +477,9 @@ def setup_report(root: Path) -> tuple:
         item(None, "git-lfs: not needed until brand/src/exports/large/ holds a file")
     item(None, "espeak-ng (optional scratch track): " + ("present" if shutil.which("espeak-ng") else "absent"))
     item(None, "pandoc (optional, for audiobook text): " + ("present" if shutil.which("pandoc") else "absent"))
+    item(None, "fc-match (optional, fontconfig: card.py --self-test's brand-font probe, which without it is "
+               "skipped and the self-test incomplete, exit 2): "
+               + ("present" if shutil.which("fc-match") else "absent"))
     if ff:
         import media_image as I
         for ok, label in I.optional_encoders():   # a note, never a finding (DESIGN D57)

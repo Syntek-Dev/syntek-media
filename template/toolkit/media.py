@@ -796,13 +796,14 @@ def self_test() -> int:
         return code, out + err
 
     print("media.py --self-test")
+    given = dict(os.environ)
     saved_root, saved_preset, saved_zone = C.ROOT, C.X264_PRESET, C.TIMEZONE
     rendered_zone = not C.TIMEZONE.startswith("<")
     C.X264_PRESET = "ultrafast"
     C.TIMEZONE = "Europe/London"   # the fixtures' feed dates are written for this zone
     have_ff = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
     have_git = bool(shutil.which("git"))
-    with tempfile.TemporaryDirectory(prefix="media-self-test-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="media-self-test-") as tmp, hermetic_git(Path(tmp) / "gitconfig"):
         root = Path(tmp) / "project"
         C.ROOT = root
         try:
@@ -830,6 +831,9 @@ def self_test() -> int:
                             f"{type(err).__name__}: {err}\n{traceback.format_exc()}")
         finally:
             C.ROOT, C.X264_PRESET, C.TIMEZONE = saved_root, saved_preset, saved_zone
+    changed = sorted(k for k in set(given) | set(os.environ) if given.get(k) != os.environ.get(k))
+    verdict("the self-test hands back the environment it was given, git's variables included",
+            not changed, f"changed: {', '.join(changed)}")
     if failures:
         print(f"self-test FAILED: {len(failures)} case(s)")
         return 1
@@ -853,6 +857,44 @@ def write(p: Path, text: str) -> Path:
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(text, encoding="utf-8")
     return p
+
+
+@contextlib.contextmanager
+def held_env(drop=(), **values):
+    """A context in which os.environ lacks the variables named in drop and carries values, every
+    one of them restored after; each subprocess, the toolkit's own git among them, inherits it."""
+    keys = set(drop) | set(values)
+    saved = {k: os.environ[k] for k in keys if k in os.environ}
+    for k in keys:
+        os.environ.pop(k, None)
+    os.environ.update(values)
+    try:
+        yield
+    finally:
+        for k in keys:
+            os.environ.pop(k, None)
+        os.environ.update(saved)
+
+
+def hermetic_git(config: Path):
+    """A context in which every git the self-test causes reads none of the machine's own files: no
+    system configuration or attributes, a scratch global configuration in place of ~/.gitconfig,
+    no global attributes or ignore file, and no GIT_ variable of the caller's (a hook's GIT_DIR, a
+    'git -c' parent's GIT_CONFIG_PARAMETERS). A machine whose git configures an LFS filter would
+    otherwise store the fixtures' LFS file as a pointer and pass the filter checks. HOME and
+    XDG_CONFIG_HOME are left alone, because uv, Playwright and fontconfig read them; git 2.32 or
+    later reads GIT_CONFIG_GLOBAL in their place. gc and maintenance stay off, so no background
+    run writes into a fixture repository while it is removed."""
+    write(config, "# media.py --self-test: the only global git configuration its fixtures read\n"
+                  f"[core]\n\tattributesFile = {os.devnull}\n\texcludesFile = {os.devnull}\n"
+                  "[gc]\n\tauto = 0\n[maintenance]\n\tauto = false\n")
+    return held_env(drop=[k for k in os.environ if k.startswith("GIT_")], GIT_CONFIG_NOSYSTEM="1",
+                    GIT_ATTR_NOSYSTEM="1", GIT_CONFIG_GLOBAL=str(config))
+
+
+def git_version() -> tuple:
+    proc = subprocess.run(["git", "--version"], capture_output=True, text=True)
+    return tuple(int(n) for n in re.findall(r"\d+", proc.stdout)[:2])
 
 
 def caption_family() -> str:
@@ -1220,6 +1262,24 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
     write(root / "brand/src/sample.css", "a { color: red; } /* VERIFY: the accent */\n")
     write(root / "publishing/src/sample.toml", "# AUTHOR TO CONFIRM: the cadence\n")
     write(root / "brand/src/ignored-notes.md", "<!-- VERIFY: never read -->\n")
+    machine = Path(str(root) + "-machine")  # a machine whose own git filters, marks and ignores
+    for rel, text in ((".gitconfig", '[filter "lfs"]\n\tclean = false\n\tprocess = false\n'),
+                      ("etc/gitconfig", '[filter "lfs"]\n\tclean = false\n\tprocess = false\n'),
+                      (".config/git/attributes", "* filter=lfs diff=lfs merge=lfs -text\n"),
+                      (".config/git/ignore", "*.md\n")):
+        write(machine / rel, text)
+    label = ("the fixtures' git reads no LFS filter, attribute or ignore rule from the machine's system or "
+             "global files")
+    if git_version() < (2, 32):
+        skip(label, "git is older than 2.32, the first to read GIT_CONFIG_GLOBAL in place of ~/.gitconfig")
+    else:
+        with held_env(HOME=str(machine), XDG_CONFIG_HOME=str(machine / ".config"),
+                      GIT_CONFIG_SYSTEM=str(machine / "etc/gitconfig")):
+            filters = R.git_config("filter.lfs.process", root) + R.git_config("filter.lfs.clean", root)
+            marked = R.lfs_marked(["brand/src/notes.md"], root)
+            kept = C.not_ignored([root / "brand/src/notes.md"], root)
+        verdict(label, not filters and not marked and len(kept) == 1,
+                f"filter: {filters!r}; marked: {sorted(marked)}; not ignored: {kept}")
     code, out = cli("flags")
     verdict("flags lists both flags in every form, never a backticked example or an ignored file",
             code == 0 and "AUTHOR TO CONFIRM: 2" in out and "VERIFY: 1" in out and "never read" not in out, out)
@@ -1296,6 +1356,9 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
                 secret not in out and "fixture@example.com" not in out and "uvx elevenlabs-mcp" in out, out)
         verdict("check --setup names the optional encoders image needs, as notes, never findings",
                 ("libwebp (optional" in out and "avif muxer (optional" in out) or not shutil.which("ffmpeg"), out)
+        verdict("check --setup names fontconfig's fc-match, without which card.py --self-test is incomplete, as "
+                "a note, never a finding", "--    fc-match (optional, fontconfig" in out
+                and "FAIL  fc-match" not in out, out)
         verdict("check --setup requires D13's two deny entries, each with its fix, like the allows",
                 "FAIL  deny Edit(**/generated/**) is not in" in out and "FAIL  deny Edit(**/renders/**) is not in" in out
                 and 'fix: add "Edit(**/renders/**)" to permissions.deny by hand' in out, out)
@@ -1437,9 +1500,13 @@ def test_media(verdict, skip, cli, root: Path) -> None:
                     C.path(C.PUB_RENDERS) / "p.mp4")
     verdict("encode --frame pad fills the other shape", code == 0 and "1920x1080" in out, out)
     test_assemble(verdict, skip, cli, root, work)
+    test_stills(verdict, cli)
+    test_overlays(verdict, cli)
     test_align(verdict, cli, root, work)
     test_audiobook(verdict, cli, root, work)
     test_screen(verdict, skip, cli, work)
+    test_held_sound(verdict, cli, work)
+    test_source_sound(verdict, cli, work)
 
 
 def test_assemble(verdict, skip, cli, root: Path, work: Path) -> None:
@@ -1738,6 +1805,341 @@ role = "music"
                 '[[clip]]\nid = "c01"\nsource = "F0099"\nin = "0"\nout = "2"\n')
     code, out = cli("assemble", bad)
     verdict("assemble names footage the project does not have (exit 2)", code == 2 and "F0099" in out, out)
+
+
+def test_stills(verdict, cli) -> None:
+    """A long list of stills: one input for a run of plain stills and colours, every boundary on the
+    frame its running total rounds to (a still of 0.16 s at 30 fps holds 5, 5, 4, 5, 5 frames), a
+    run split only where a push-in, a fade or a video comes between, and never by its sources'
+    sizes, decoders, pixel formats or orientations, each image framed once before the render. Each
+    still is a flat colour, so every frame of the master says which it shows."""
+    stills = C.path(C.ASSETS) / "stills"
+    stills.mkdir(parents=True, exist_ok=True)
+    lavfi("-f", "lavfi", "-i", "color=c=black:s=320x180:r=1,format=rgb24,geq=r='10+6*N':g='245-6*N':"
+          "b='60+120*mod(N,2)'", "-frames:v", "40", stills / "s%03d.png")
+    (stills / "s007.png").rename(stills / "harbour's edge 07.png")   # a quote and a space in an ffconcat line
+    colours = [(10 + 6 * k, 245 - 6 * k, 60 + 120 * (k % 2)) for k in range(40)]
+    names = [f"s{k + 1:03d}.png" if k != 6 else "harbour's edge 07.png" for k in range(40)]
+    edl = write(C.path(C.EDITS) / "014-stills.toml", '[edit]\npiece = "014-stills"\nsize = "320x180"\n'
+                'loudness = "none"\n' + "".join(f'\n[[clip]]\nsource = "production/src/assets/stills/{n}"\n'
+                                                 "seconds = 0.16\n" for n in names))
+    code, out, stage = spied_assemble(cli, edl)
+    master = C.path(C.PROD_RENDERS) / "014-stills.master.mp4"
+    seen = frame_colours(master) if code == 0 and master.is_file() else []
+    bounds = [(48 * k + 5) // 10 for k in range(41)]   # round(0.16 k x 30), half up
+    want = [k for k in range(40) for _ in range(bounds[k + 1] - bounds[k])]
+    got = [min(range(40), key=lambda k: sum((a - b) ** 2 for a, b in zip(rgb, colours[k]))) for rgb in seen]
+    wrong = next((f for f, (a, b) in enumerate(zip(got, want)) if a != b), None)
+    verdict("assemble: 40 stills of 0.16 s at 30 fps are exactly 192 frames (6.400 s), each still on the frames "
+            "its running total rounds to (5, 5, 4, 5, 5...), the last one whole",
+            len(seen) == 192 and got == want and abs(C.duration(C.probe(master)) - 6.4) < 0.0005,
+            f"{len(seen)} frames; first wrong frame {wrong}: still {got[wrong] + 1 if wrong is not None else '-'} "
+            f"where {want[wrong] + 1 if wrong is not None else '-'} was due\n{out}")
+    lists = stage.get("lists", [])
+    lines = lists[0].splitlines() if len(lists) == 1 else []
+    files = [line for line in lines if line.startswith("file ")]
+    held = [round(float(line.split()[1]) * 1e6) for line in lines if line.startswith("duration ")]
+    verdict("assemble reads a run of plain stills through one ffconcat input, never one looped input each "
+            "(each still framed once, a quote in its name too; frame-exact durations adding up to 6.400 s; the "
+            "last image named twice)",
+            stage.get("inputs") == 1 and stage.get("loops") == 0 and stage.get("framed") == 40 and len(files) == 41
+            and files[-1] == files[-2] and len(held) == 40 and sum(held) == 6_400_000
+            and all("/framed-" in f.replace("\\", "/") for f in files), f"{stage}\n{out}")
+    flat = {"a": "2050c0", "b": "e0a020", "c": "20c040", "d": "8020e0"}
+    for name, hexa in flat.items():
+        lavfi("-f", "lavfi", "-i", f"color=c=0x{hexa}:s=320x180", "-frames:v", "1", stills / f"mix-{name}.png")
+    for name, hexa in (("j1", "30a0dc"), ("j2", "e0c828")):
+        lavfi("-f", "lavfi", "-i", f"color=c=0x{hexa}:s=320x180", "-frames:v", "1", stills / f"mix-{name}.jpg")
+    exif_turned(stills / "mix-j2.jpg")
+    src = "source = \"production/src/assets/stills/mix-{}\"\n"
+    edl = write(C.path(C.EDITS) / "015-mixed.toml", '[edit]\npiece = "015-mixed"\nsize = "320x180"\n'
+                'loudness = "none"\n\n[[clip]]\n' + src.format("a.png") + 'seconds = 0.37\n\n[[clip]]\n'
+                'colour = "#c03050"\nseconds = 0.25\n\n[[clip]]\n' + src.format("b.png") + 'seconds = 0.52\n'
+                'motion = "push-in"\n\n[[clip]]\n' + src.format("c.png") + 'seconds = 0.45\ntransition = "fade"\n'
+                'transition_seconds = 0.2\n\n[[clip]]\n' + src.format("d.png") + 'seconds = 0.17\n\n[[clip]]\n'
+                f'source = "{kind_id("video")}"\nin = "00:00:00.500"\nout = "00:00:00.900"\n\n[[clip]]\n'
+                + src.format("j1.jpg") + 'seconds = 0.2\nframe = "crop"\n\n[[clip]]\n' + src.format("j2.jpg")
+                + 'seconds = 0.2\nframe = "crop"\n')
+    code, out, stage = spied_assemble(cli, edl)
+    master = C.path(C.PROD_RENDERS) / "015-mixed.master.mp4"
+    seen = frame_colours(master) if code == 0 and master.is_file() else []
+    # Ends at 0.37, 0.62, 1.14, 1.39 (from 0.94: a 0.2 s fade), 1.56, 1.96, 2.16, 2.36 s: frames 11, 19, 34, 42
+    # (from 28), 47, 59, 65 and 71. Per-clip rounding (0.37 s as 12 frames) puts the colour on frame 12.
+    spans = [(0, 11, "2050c0"), (11, 19, "c03050"), (34, 42, "20c040"), (42, 47, "8020e0"), (59, 65, "30a0dc"),
+             (65, 71, "e0c828")]
+    off = [(f, seen[f]) for a, b, hexa in spans for f in range(a, b) if f < len(seen) and max(
+        abs(x - y) for x, y in zip(seen[f], bytes.fromhex(hexa))) > 12]
+    counts = [sum(line.startswith("duration ") for line in x.splitlines()) for x in stage.get("lists", [])]
+    verdict("assemble: a still, a colour, a push-in, a fade into two stills, a video and two JPEGs (one turned by "
+            "EXIF) are 71 frames, each clip on its cumulative boundaries, plain stills and colours split into runs "
+            "only where a push-in, a fade or a video comes between them, never by decoder or orientation",
+            len(seen) == 71 and not off and counts == [2, 2, 2] and stage.get("loops") == 1,
+            f"{len(seen)} frames; off: {off[:6]}; runs {counts}; looped {stage.get('loops')}\n{out}")
+    test_still_sources(verdict, cli, stills)
+
+
+def test_still_sources(verdict, cli, stills: Path) -> None:
+    """Stills that ffmpeg decodes unalike, one after another with no push-in or fade between them:
+    sizes, decoders (PNG, JPEG, GIF), pixel formats (rgb24, 16-bit, grey), an EXIF orientation,
+    every frame mode, and a colour. Each was its own input for the whole render before every image
+    was framed first (64 stills of two sizes peaked at 2.4 GB, 213 passed 6 GB); now they are one
+    input, each image framed once (the first, named twice, is framed once), and every frame shows
+    the clip due on it. Each clip is 0.2 s, six frames at 30 fps; a 16x16 patch at the frame's
+    centre is the source's own colour under every frame mode."""
+    plan = [("a.png", "320x180", "2050c0", "fit", []), ("b.jpg", "400x180", "e0a020", "crop", ["-q:v", "2"]),
+            ("c.png", "320x200", "20c040", "pad", []), ("", "", "8020e0", "", []),
+            ("e.jpg", "320x180", "30a0dc", "fit", ["-q:v", "2"]), ("f.gif", "160x90", "c03050", "fit", []),
+            ("a.png", "", "2050c0", "fit", []), ("g.png", "320x180", "a0c8e0", "fit", ["-pix_fmt", "rgb48be"]),
+            ("h.png", "320x180", "808080", "crop", ["-pix_fmt", "gray"])]
+    body = '[edit]\npiece = "018-sources"\nsize = "320x180"\nloudness = "none"\n'
+    for name, size, hexa, frame, extra in plan:
+        if not name:
+            body += f'\n[[clip]]\ncolour = "#{hexa}"\nseconds = 0.2\n'
+            continue
+        p = stills / f"src-{name}"
+        if size and name.endswith(".gif"):   # a palette of its own, so the flat colour stays exact
+            lavfi("-f", "lavfi", "-i", f"color=c=0x{hexa}:s={size}:r=1:d=1", "-vf",
+                  "split[a][b];[a]palettegen[p];[b][p]paletteuse", "-frames:v", "1", p)
+        elif size:
+            lavfi("-f", "lavfi", "-i", f"color=c=0x{hexa}:s={size}", "-frames:v", "1", *extra, p)
+        if name == "e.jpg" and size:
+            exif_turned(p)   # stands 180x320, a portrait, under fit
+        body += f'\n[[clip]]\nsource = "production/src/assets/stills/src-{name}"\nseconds = 0.2\nframe = "{frame}"\n'
+    edl = write(C.path(C.EDITS) / "018-sources.toml", body)
+    code, out, stage = spied_assemble(cli, edl)
+    master = C.path(C.PROD_RENDERS) / "018-sources.master.mp4"
+    seen = frame_colours(master, "16:16:152:82") if code == 0 and master.is_file() else []
+    off = [(f, seen[f]) for f in range(len(seen)) if f // 6 < len(plan) and max(
+        abs(x - y) for x, y in zip(seen[f], bytes.fromhex(plan[f // 6][2]))) > 12]
+    lists = stage.get("lists", [])
+    verdict("assemble reads stills of other sizes, decoders, pixel formats and orientations, and a colour, "
+            "through one ffconcat input when nothing comes between them, never one input each, every image "
+            "framed once and every frame showing its clip (54 frames)",
+            code == 0 and len(seen) == 54 and not off and stage.get("inputs") == 1 and stage.get("loops") == 0
+            and len(lists) == 1 and sum(line.startswith("duration ") for line in lists[0].splitlines()) == 9
+            and stage.get("framed") == 8, f"{len(seen)} frames; off: {off[:6]}; {stage}\n{out}")
+
+
+def test_overlays(verdict, cli) -> None:
+    """[[overlay]] on the master's frames: from the frame its at rounds to, up to and not including
+    the frame its until rounds to, each rounded as a clip's boundary is (half up, from the running
+    total). Flat clips under two opaque boxes, one in each half of the frame, so every frame says
+    which clip and which overlay it shows. At 30 fps the clips end on frames 2, 5 (0.05 + 0.1 s is
+    4.5 frames, half up), 11 (0.37 s, frame 11 shown at 0.3667 s), 19 and 25; the left box is timed
+    to the third clip (00:00:00.150 to .370) and the right box to the fourth (.370 to .620)."""
+    folder = C.path(C.ASSETS) / "overlays"
+    folder.mkdir(parents=True, exist_ok=True)
+    for name, hexa in (("a", "2050c0"), ("b", "e0a020"), ("e", "30a0dc")):
+        lavfi("-f", "lavfi", "-i", f"color=c=0x{hexa}:s=64x36", "-frames:v", "1", folder / f"{name}.png")
+    for name, x, hexa in (("left", 0, "f0f0f0"), ("right", 32, "101010")):
+        lavfi("-f", "lavfi", "-i", f"color=c=black@0.0:s=64x36,format=rgba,drawbox=x={x}:y=0:w=32:h=36:"
+              f"color=0x{hexa}@1.0:t=fill:replace=1", "-frames:v", "1", folder / f"box-{name}.png")
+    src = 'source = "production/src/assets/overlays/{}"\n'
+    text = ('[edit]\npiece = "016-overlays"\nsize = "64x36"\nloudness = "none"\n\n[[clip]]\n' + src.format("a.png")
+            + 'seconds = 0.05\n\n[[clip]]\n' + src.format("b.png") + 'seconds = 0.1\n\n[[clip]]\n'
+            'colour = "#20c040"\nseconds = 0.22\n\n[[clip]]\ncolour = "#8020e0"\nseconds = 0.25\n\n[[clip]]\n'
+            + src.format("e.png") + 'seconds = 0.2\n\n[[overlay]]\n' + src.format("box-left.png")
+            + 'at = "00:00:00.150"\nuntil = "00:00:00.370"\n\n[[overlay]]\n' + src.format("box-right.png")
+            + 'at = "00:00:00.370"\nuntil = "00:00:00.620"\n')
+    edl = write(C.path(C.EDITS) / "016-overlays.toml", text)
+    code, out = cli("assemble", edl)
+    master = C.path(C.PROD_RENDERS) / "016-overlays.master.mp4"
+    made = code == 0 and master.is_file()
+    halves = {"left": frame_colours(master, "16:16:8:10") if made else [],
+              "right": frame_colours(master, "16:16:40:10") if made else []}
+    under = ["2050c0"] * 2 + ["e0a020"] * 3 + ["20c040"] * 6 + ["8020e0"] * 8 + ["30a0dc"] * 6
+    due = {"left": ["f0f0f0" if 5 <= f < 11 else u for f, u in enumerate(under)],
+           "right": ["101010" if 11 <= f < 19 else u for f, u in enumerate(under)]}
+
+    def off(half, frames):
+        """The frames, of those named, whose half does not show the colour due there."""
+        seen = halves[half]
+        return [f for f in frames if f >= len(seen) or max(
+            abs(a - b) for a, b in zip(seen[f], bytes.fromhex(due[half][f]))) > 12]
+    whole = len(halves["left"]) == len(halves["right"]) == 25
+    shown = (f"{len(halves['left'])} frames; off: left {off('left', range(25))[:8]}, right "
+             f"{off('right', range(25))[:8]}\n{out}")
+    verdict("an [[overlay]] at a clip's start (00:00:00.370) is on that clip's first frame (11), shown at "
+            "0.3667 s, and not on the frame before", whole and not off("right", [10, 11]), shown)
+    verdict("an [[overlay]] until a clip's end is gone on the next clip's first frame (11, and 19), and on "
+            "every frame of the clip it is timed to", whole and not off("left", range(4, 12))
+            and not off("right", range(10, 20)), shown)
+    verdict("an [[overlay]] at 00:00:00.150 starts on the frame its clip does where the running total "
+            "0.05 + 0.1 s puts that clip on a half frame (frame 5, half up), never a frame early",
+            whole and not off("left", [4, 5]) and not off("right", [4, 5]), shown)
+    verdict("assemble: every frame of a master with two overlays shows the clip and the overlays due on it "
+            "(25 frames)", whole and not off("left", range(25)) and not off("right", range(25)), shown)
+    for old, new, what, word in (
+            ('until = "00:00:00.620"', 'until = "00:00:00.380"', "covers no frame (.370 to .380 at 30 fps)",
+             "under one frame"),
+            ('at = "00:00:00.370"\nuntil = "00:00:00.620"', 'at = "00:00:01.000"\nuntil = "00:00:02.000"',
+             "starts after the master's last frame", "has ended")):
+        bad = write(C.path(C.EDITS) / "016-bad.toml", text.replace(old, new))
+        code, out = cli("assemble", bad, "-o", C.path(C.PROD_RENDERS) / "016-bad.mp4")
+        verdict(f"assemble refuses an [[overlay]] that {what} (exit 2, nothing rendered)",
+                code == 2 and "overlay 2" in out and word in out
+                and not (C.path(C.PROD_RENDERS) / "016-bad.mp4").exists(), out)
+
+
+def test_held_sound(verdict, cli, work: Path) -> None:
+    """A master's sound, and each deliverable's, ends with its picture, every frame of it on time.
+    A steady tone has no loudness range, so loudnorm never runs linear on it, and its dynamic mode
+    (ffmpeg 6.1.1) stamps the short block it reads last as a whole 100 ms: the sound ran on to the
+    next tenth of a second, one AAC frame stretched over the hole and all after it stamped late.
+    A 30 s stills master encoded to youtube.long had 30.100 s of sound under 30.000 s of picture."""
+    folder = C.path(C.ASSETS) / "held"
+    folder.mkdir(parents=True, exist_ok=True)
+    for name, hexa in (("a", "2050c0"), ("b", "e0a020")):
+        lavfi("-f", "lavfi", "-i", f"color=c=0x{hexa}:s=64x36", "-frames:v", "1", folder / f"{name}.png")
+    lavfi("-f", "lavfi", "-i", "sine=frequency=330:sample_rate=48000:duration=5", "-ac", "2", folder / "tone.wav")
+    src = 'source = "production/src/assets/held/{}"\n'
+
+    def master(piece: str, second: str) -> tuple:
+        """(exit code, output, master): two stills, 2 s and second, over the tone."""
+        edl = write(C.path(C.EDITS) / f"{piece}.toml", f'[edit]\npiece = "{piece}"\nsize = "64x36"\n\n[[clip]]\n'
+                    + src.format("a.png") + "seconds = 2.0\n\n[[clip]]\n" + src.format("b.png")
+                    + f"seconds = {second}\n\n[[audio]]\n" + src.format("tone.wav") + 'role = "music"\n')
+        code, out = cli("assemble", edl)
+        return code, out, C.path(C.PROD_RENDERS) / f"{piece}.master.mp4"
+
+    def ends(p: Path) -> dict:
+        """Where each stream of a render ends, from its own probe: {"video": s, "audio": s}."""
+        info = C.probe(p) if p.is_file() else {}
+        return {s["codec_type"]: float(s.get("start_time") or 0) + float(s.get("duration") or 0)
+                for s in info.get("streams", []) if s.get("codec_type") in ("video", "audio")}
+
+    def held(p: Path, length: float, slack: float) -> str:
+        """'' when p's sound, and its picture where it has one, end at length within slack and no
+        AAC frame between its first and its last lasts longer than the rest; else what is wrong."""
+        got = ends(p)
+        wrong = [f"its {kind} ends at {end:.4f} s" for kind, end in got.items() if abs(end - length) > slack]
+        if "audio" not in got:
+            wrong.append("it has no sound")
+        proc = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries",
+                               "packet=pts,duration", "-of", "json", str(p)], capture_output=True, text=True)
+        packets = json.loads(proc.stdout or "{}").get("packets", []) if proc.returncode == 0 else []
+        frame = int(packets[1].get("duration", 0)) if len(packets) > 2 else 0
+        stretched = [k for k in packets[1:-1] if int(k.get("duration", 0)) != frame]
+        if stretched:
+            wrong.append(f"an AAC frame is stretched over a hole in its timestamps: {stretched[0]}")
+        return "; ".join(wrong)
+
+    # 130 frames at 30 fps (4.333 s): the master's own loudness pass ran its sound on to 4.400 s.
+    code, out, grid = master("017-held-grid", "2.3333")
+    wrong = held(grid, 130 / 30, 1 / 60)
+    verdict("assemble holds a stills master's sound to its picture after the loudness pass (130 frames, 4.333 s: "
+            "never on to the next tenth, 4.400 s)", code == 0 and "verified" in out and not wrong, f"{wrong}\n{out}")
+    # 4.000 s: a master the loudness pass leaves whole, whose deliverables ran on to 4.100 s.
+    code, out, whole = master("017-held", "2.0")
+    made = C.path(C.PUB_RENDERS) / "017-held.youtube-long.mp4"
+    code2, out2 = cli("encode", whole, "--deliverable", "youtube.long", "-o", made)
+    wrong = held(made, 4.0, 1 / 60) if code == 0 else out
+    verdict("encode of a 4.000 s stills master to youtube.long holds its sound to the picture (never 4.100 s of "
+            "sound under 4.000 s of picture, nor an AAC frame stretched over a hole)",
+            code2 == 0 and "verified" in out2 and not wrong, f"{wrong}\n{out2}")
+    sound = C.path(C.PUB_RENDERS) / "017-held.podcast.m4a"
+    code2, out2 = cli("encode", whole, "--deliverable", "podcast.apple_rss_audio", "-o", sound)
+    wrong = held(sound, 4.0, 0.002) if code == 0 else out
+    verdict("encode of the same master to podcast.apple_rss_audio lasts the master's 4.000 s, its timestamps "
+            "unbroken", code2 == 0 and "verified" in out2 and not wrong, f"{wrong}\n{out2}")
+    episode = work / "held episode.m4a"
+    lavfi("-f", "lavfi", "-i", "sine=frequency=330:sample_rate=48000:duration=4.37", "-ac", "2", "-c:a", "aac", episode)
+    cover = folder / "a.png"
+    made = C.path(C.PUB_RENDERS) / "017-held.still.mp4"
+    code2, out2 = cli("still-video", cover, episode, "--deliverable", "youtube.long", "-o", made)
+    wrong = held(made, C.duration(C.probe(episode)), 1 / 30)
+    verdict("still-video keeps the whole of its sound, to its last sample, under its picture (never cut short by "
+            "-t at loudnorm's late timestamps)", code2 == 0 and "verified" in out2 and not wrong, f"{wrong}\n{out2}")
+    probe = {"format": {"duration": "30.150000"},
+             "streams": [{"codec_type": "video", "duration": "30.000000", "avg_frame_rate": "30/1"},
+                         {"codec_type": "audio", "duration": "30.150000"}]}
+    found = V.length_findings(probe, 30.0)
+    near = V.length_findings({"streams": [dict(probe["streams"][0]), dict(probe["streams"][1], duration="30.050000")]},
+                             30.0, held=True)
+    verdict("a deliverable's length is checked stream by stream, naming the sound where it runs past its picture "
+            "and, where the toolkit held it, where it ends more than a frame from the picture",
+            found == ["its sound lasts 30.150 s where 30.000 s was expected"] and len(near) == 1
+            and "sound lasts 30.050 s and its picture 30.000 s" in near[0], f"{found} {near}")
+
+
+def test_source_sound(verdict, cli, work: Path) -> None:
+    """A source made elsewhere whose sound and picture end apart (a screen recording, a phone clip).
+    cut and captions burn keep the source's own sound, so they are judged by the file's length, as
+    before the toolkit held any sound: checked stream by stream, a cut of a sound 0.3 s short and a
+    burn of a sound 0.2 s long each failed, and nothing the author could pass fixed them. encode
+    holds a sound to its picture only within a frame and 0.1 s: it once cut 7 s of a recording's
+    sound, said only a note, and reported the deliverable verified."""
+    made = {}
+    for name, size, picture, sound in (("short", "1080x1920", 2, 1.7), ("long", "1080x1920", 2, 2.2),
+                                       ("far", "192x108", 1, 4), ("near", "192x108", 1, 1.1)):
+        made[name] = work / f"sound-{name}.mp4"
+        lavfi("-f", "lavfi", "-i", f"testsrc2=size={size}:rate=30:duration={picture}", "-f", "lavfi", "-i",
+              f"sine=frequency=440:sample_rate=48000:duration={sound}", "-c:v", "libx264", "-preset", "ultrafast",
+              "-pix_fmt", "yuv420p", "-c:a", "aac", made[name])
+    out_dir = C.path(C.PUB_RENDERS)
+    code, out = cli("cut", made["short"], "--deliverable", "youtube.short", "--in", "0", "--out", "00:00:02.000",
+                    "-o", out_dir / "sound-short.cut.mp4")
+    verdict("cut of a source whose sound stops 0.3 s before its picture is verified by the file's length "
+            "(exit 0), never failed for the sound it never had", code == 0 and "verified" in out, out)
+    srt = write(work / "sound.srt", K.srt_text([K.Cue(0.3, 1.5, ["The ferry is late."])]))
+    for name, what in (("short", "stops 0.3 s before"), ("long", "runs 0.2 s past")):
+        code, out = cli("captions", "burn", made[name], srt, "--deliverable", "youtube.short", "-o",
+                        out_dir / f"sound-{name}.burned.mp4")
+        verdict(f"captions burn of a source whose sound {what} its picture is clean (exit 0): it keeps the "
+                "source's sound, and is judged by the file's length", code == 0 and "FAIL" not in out, out)
+    far = out_dir / "sound-far.youtube-long.mp4"
+    code, out = cli("encode", made["far"], "--deliverable", "youtube.long", "-o", far)
+    verdict("encode refuses a source whose sound runs 3 s past its picture, naming it (exit 1, nothing rendered), "
+            "never cutting the author's sound with only a note", code == 1 and "runs 3.000 s past its picture" in out
+            and "nothing rendered" in out and not far.exists(), out)
+    near = out_dir / "sound-near.youtube-long.mp4"
+    code, out = cli("encode", made["near"], "--deliverable", "youtube.long", "-o", near)
+    info = C.probe(near) if near.is_file() else {}
+    ends = [V.span(info, kind) for kind in ("video", "audio")]
+    verdict("encode holds a sound 0.1 s past its picture (within a frame and 0.1 s) to the picture, verified",
+            code == 0 and "verified" in out and all(ends) and abs(ends[1][1] - ends[0][1]) <= 1 / 30 + 1e-3,
+            f"{ends}\n{out}")
+
+
+def spied_assemble(cli, edl: Path) -> tuple:
+    """(exit code, output, stage) of one assemble, stage holding its render's input count, looped
+    inputs and each ffconcat list, read while the list exists, and how many images it framed."""
+    stage, real = {"framed": 0}, C.ffmpeg
+
+    def spy(args, cwd=None, what="ffmpeg"):
+        args = [str(a) for a in args]
+        if args and Path(args[-1]).name.startswith("framed-"):   # framed_still's own pass
+            stage["framed"] += 1
+        elif "-filter_complex" in args:
+            stage.update(inputs=args.count("-i"), loops=args.count("-loop"), lists=[
+                Path(args[args.index("-i", n) + 1]).read_text(encoding="utf-8")
+                for n in range(len(args) - 1) if args[n:n + 2] == ["-f", "concat"]])
+        return real(args, cwd=cwd, what=what)
+    C.ffmpeg = spy
+    try:
+        code, out = cli("assemble", edl)
+    finally:
+        C.ffmpeg = real
+    return code, out, stage
+
+
+def frame_colours(p: Path, crop: str = "") -> list:
+    """The mean (r, g, b) of every frame of a video, in order: each frame (or the region crop names,
+    as ffmpeg's crop takes it: w:h:x:y) scaled to one pixel."""
+    proc = subprocess.run(["ffmpeg", "-v", "error", "-i", str(p), "-vf", (f"crop={crop}," if crop else "")
+                           + "format=rgb24,scale=1:1:flags=area", "-fps_mode", "passthrough", "-f", "rawvideo",
+                           "-"], capture_output=True, check=True)
+    return [tuple(proc.stdout[k:k + 3]) for k in range(0, len(proc.stdout) - 2, 3)]
+
+
+def exif_turned(jpg: Path) -> Path:
+    """The JPEG with an EXIF orientation of 6 (turned a quarter clockwise), as a phone writes one."""
+    tiff = (b"MM\x00\x2a\x00\x00\x00\x08\x00\x01" + b"\x01\x12\x00\x03\x00\x00\x00\x01\x00\x06\x00\x00"
+            + b"\x00\x00\x00\x00")
+    app1 = b"Exif\x00\x00" + tiff
+    data = jpg.read_bytes()
+    jpg.write_bytes(data[:2] + b"\xff\xe1" + (len(app1) + 2).to_bytes(2, "big") + app1 + data[2:])
+    return jpg
 
 
 def kind_id(kind: str) -> str:

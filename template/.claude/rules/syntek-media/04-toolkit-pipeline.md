@@ -133,6 +133,7 @@ and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
 | ffmpeg's libwebp, an AV1 encoder (libaom-av1 or libsvtav1) and the `avif` muxer (optional) | `media.py image` to WebP and AVIF; JPEG and PNG need none |
 | `pandoc` (optional) | cleaner chapter text in `audiobook text`, which works without it |
 | `espeak-ng` (optional) | a scratch voice track for timing, labelled approximate |
+| fontconfig's `fc-match` (optional) | the brand-font probe of `uv run toolkit/card.py --self-test`, which without it is skipped by name and the self-test ends incomplete (exit 2) |
 
 `python3 toolkit/media.py check --setup` reports every one of them, the allow, ask and deny
 entries of `.claude/settings.json`, and whether the ElevenLabs server's base path contains the

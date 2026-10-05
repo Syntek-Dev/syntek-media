@@ -118,23 +118,33 @@ _exclude:
   - "*.flac"
   - "*.ogg"
   - "*.pcm"
-  # Rendered stills, ANCHORED to the two folders the toolkit renders PNGs into, never an
-  # unanchored *.png: an image is not by nature a render, and these are the only places a
-  # card, a frame or a thumbnail lands by default (DESIGN.md Section 4.2).
-  - /production/src/renders/*.png
-  - /production/src/renders/*.jpg
-  - /publishing/src/renders/*.png
-  - /publishing/src/renders/*.jpg
-  # Since 0.2.0 the publishing renders folder also takes `media.py image` output (WebP, AVIF),
-  # the GIF preview `cut` makes, an episode's JSON chapters and a podcast feed's upload copy
-  # (DESIGN.md D57, D59, Section 6.16). Anchored for the same reason: a show's tracked feed is
-  # an .xml too, but it lives in publishing/src/podcast/, which is pair-only, so one left
-  # there by a toolkit run inside template/ is shipped-seeds.sh check 11's to catch.
-  - /publishing/src/renders/*.gif
-  - /publishing/src/renders/*.webp
-  - /publishing/src/renders/*.avif
-  - /publishing/src/renders/*.json
-  - /publishing/src/renders/*.xml
+  # The output folders: each generated/, renders/ and raw/ ships its README.md and nothing
+  # else (DESIGN.md D19, D42). Copier matches every file and every folder it walks against
+  # these patterns one path at a time and never prunes, so a pattern on a folder's children
+  # (`renders/*.png`) misses a per-piece sub-folder, and a list of extensions misses the next
+  # output (an SRT or VTT sidecar, an extract, a chunk's text). `/**` takes everything below
+  # the folder at any depth, sub-folders included, and the quoted negation after it brings
+  # back that folder's own README.md and no other: a README.md in a sub-folder stays out
+  # (Copier 9.18.2, pathspec 1.1.1, 05/10/2026). ANCHORED, never an unanchored `renders/**`:
+  # the audiobook folder's two are gated, and below that gate nothing is negated back in.
+  - /production/src/renders/**
+  - "!/production/src/renders/README.md"
+  - /production/src/footage/raw/**
+  - "!/production/src/footage/raw/README.md"
+  - /production/src/voiceover/generated/**
+  - "!/production/src/voiceover/generated/README.md"
+  - /publishing/src/renders/**
+  - "!/publishing/src/renders/README.md"
+  # The audiobook folder's outputs sit under a gated directory, where nothing is negated back
+  # in (DESIGN.md Section 3.5, Section 10): a negation outlives a shut gate in Copier, so it
+  # would ship their READMEs to a brand that makes no audiobooks. They take no `/**` and no
+  # negation. `*/` takes everything inside a sub-folder at any depth (Copier still makes the
+  # empty sub-folder), the chunk text and sidecars `audiobook text` writes are named by type
+  # (Section 6.16), and their audio is excluded by extension above.
+  - /production/src/audiobook/generated/*/
+  - /production/src/audiobook/generated/*.txt
+  - /production/src/audiobook/generated/*.toml
+  - /production/src/audiobook/renders/*/
   #
   # ── Shared root files: copy only, never on update (DESIGN.md D11, Section 3.6) ──
   #
@@ -189,8 +199,9 @@ _exclude:
   # BRAND_KIND test in every gate, as syntek-author's do.
   #
   # Bare paths name whole directories. That is safe only because nothing under a gated
-  # directory is negated back in; a future allowlist inside one needs `/**` and quoted
-  # `"!…"` negations instead.
+  # directory is negated back in (DESIGN.md Section 10): Copier obeys the LAST pattern that
+  # matches a path, so a negation listed after a gate brings its path back with the gate shut,
+  # whether the gate reads `/dir` or `/dir/**` (pathspec 1.1.1, 05/10/2026).
   #
   # Everything not listed ships always — the voiceover skill, its workflow, its folder and its
   # guide included (D51). toolkit/data/platforms.toml ships whole, and every nested .gitignore
