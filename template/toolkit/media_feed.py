@@ -36,8 +36,8 @@ upload copy) at the top of publishing/src/renders/.
 same bytes. Before it writes anything it compares the new feed with the show's tracked copy,
 publishing/src/podcast/<show>.feed.xml, where one exists, and refuses (exit 1) a changed
 podcast:guid, a GUID that vanished while its row is not withdrawn, or an enclosure whose length
-changed under the same URL; -o that tracked copy replaces it through a temporary file (the one
-tracked file the toolkit ever overwrites), and without -o the feed goes to stdout.
+changed under the same URL; -o that tracked copy replaces it through a temporary file (the D59
+feed exception beside D66's named timing and scene exceptions), and without -o the feed goes to stdout.
 'feed chapters' writes Podcasting 2.0 JSON chapters, to publishing/src/renders/<piece>/ unless -o
 names a path; 'feed check' proves the register (or, with --feed, any saved feed) offline against
 Section 6.17 and the [platform.podcast] keys of toolkit/data/platforms.toml, never numbers of its
@@ -1042,7 +1042,7 @@ def cmd_write(args) -> int:
         sys.stdout.flush()
         print(f"feed write {show}: {len(items)} episode(s) as of {args.as_of} (to stdout)", file=sys.stderr)
         return 0
-    out = C.output_path(Path(args.o), None, inputs=[p], tracked_feed=tracked)
+    out = C.output_path(Path(args.o), args.o, inputs=[p], tracked_feed=tracked)
     C.replace_file(out, xml.encode("utf-8"))
     what = "the tracked feed, replaced" if out.resolve() == tracked.resolve() else "the upload copy" \
         if C.in_output_folder(out) else "a copy"

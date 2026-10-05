@@ -73,6 +73,7 @@ MODEL_LIMITS = {   # characters per request (ElevenLabs documentation, 03/10/202
 }
 DEFAULT_LIMIT = 5000
 IPA_MODELS = {"eleven_v4", "eleven_v4_turbo"}   # read inline IPA between slashes (VERIFY on change)
+TAG_MODELS = {"eleven_v3", "eleven_v4", "eleven_v4_turbo"}   # confirmed by the maintainer
 SCENE = "QQSCENEBREAKQQ"   # a placeholder no chapter carries
 USE_PANDOC = True   # the self-test turns it off to prove the plain fallback
 BOOKS = ("Genesis|Gen|Exodus|Exod|Ex|Leviticus|Lev|Numbers|Num|Deuteronomy|Deut|Joshua|Josh|"
@@ -296,11 +297,14 @@ ROOM_TONE_MAX_DB = -45.0     # a window louder than this holds speech or a breat
 WINDOW = 0.5                 # ACX measures the noise floor over 0.5 s windows
 
 
-def window_levels(p) -> list:
-    """The RMS level (dB) of every 0.5 s window of a file, in order, at 44.1 kHz mono."""
+def window_levels(p, window: float = WINDOW, sample_rate: int = 44100) -> list:
+    """RMS dBFS per window, including the final short window; ACX keeps its 0.5 s default."""
+    if not math.isfinite(window) or window <= 0 or sample_rate <= 0 or window * sample_rate < 1:
+        raise C.Fatal("the levels window must be finite, positive and at least one audio sample")
+    samples = math.floor(sample_rate * window + 0.5)
     proc = C.ffmpeg(C.input_args(p) + [
         "-map", "0:a:0", "-af",
-        f"aformat=channel_layouts=mono,aresample=44100,asetnsamples=n={int(44100 * WINDOW)}:p=0,"
+        f"aformat=channel_layouts=mono,aresample={sample_rate},asetnsamples=n={samples}:p=0,"
         "astats=metadata=1:reset=1:measure_perchannel=RMS_level:measure_overall=none,"
         "ametadata=print:key=lavfi.astats.1.RMS_level:file=-", "-f", "null", "-"], what="window levels")
     return [float("-inf") if "inf" in m.group(1) else float(m.group(1))
@@ -446,6 +450,189 @@ def pronunciations(ipa: bool = True) -> dict:
         elif respelling:
             out[word] = respelling
     return out
+
+
+def substitute_pronunciations(text: str, sounds: dict) -> str:
+    """Replace whole words once, preserving punctuation and leaving generated IPA untouched."""
+    if not sounds:
+        return text
+    lookup = {word.casefold(): form for word, form in sounds.items()}
+    pattern = r"(?<!\w)(?:" + "|".join(re.escape(w) for w in sorted(sounds, key=len, reverse=True)) + r")(?!\w)"
+    return re.sub(pattern, lambda m: lookup[m.group().casefold()], text, flags=re.IGNORECASE)
+
+
+def request_lines(piece: str):
+    """The script's numbered spoken lines, retaining braces for the offline request plan."""
+    import media_captions as K
+    script = K.read_script(C.path(C.PIECES) / piece / "script.md")
+    _, body, _ = C.split_frontmatter(C.read_text(script.path))
+    raw_lines, beat, number = {}, 0, 0
+    for raw in body.splitlines():
+        stripped = raw.strip()
+        b = K.BEAT_RE.match(stripped)
+        if b:
+            beat, number = int(b.group(1)), 0
+            continue
+        if stripped.startswith("## "):
+            beat, number = 0, 0
+            continue
+        s = K.SPEAKER_RE.match(stripped)
+        if not s or s.group(1) in K.CUE_TAGS:
+            continue
+        text = re.sub(r"\s+", " ", K.BRACE_RE.sub(" ", s.group(2))).strip()
+        if not text and not K.PAUSE_RE.findall(s.group(2)):
+            continue
+        number += 1
+        raw_lines[beat, number] = s.group(2)
+    return script, raw_lines
+
+
+def cmd_speak_plan(args) -> int:
+    """Print requests, character limits and calls offline; create only the output directory."""
+    import media_captions as K
+    if args.trial is not None:
+        name = args.trial
+        if args.piece or args.segment or not name or name in (".", "..") or "/" in name or "\\" in name:
+            raise C.Fatal("speak plan --trial needs one folder name, without PIECE or --segment")
+        folder = C.path(C.VO_GENERATED) / "voice-trials" / name
+        folder.mkdir(parents=True, exist_ok=True)
+        print(f"voice trial output_directory: {folder.resolve()}")
+        return 0
+    piece = str(args.piece or "")
+    if C.piece_key(piece) != piece or not piece:
+        raise C.Fatal("speak plan needs PIECE (NNN-kebab-title), or --trial NAME")
+    register = C.path(C.VOICEOVER) / f"{piece}.toml"
+    reg = C.load_toml(register)
+    model = str(reg.get("voiceover", {}).get("model_id", "") or "").strip()
+    if not model:
+        raise C.Fatal(f"{C.shown(register)} needs its recorded model_id before speak plan")
+    segments = reg.get("segment", [])
+    ids = [str(s.get("id", "")) for s in segments]
+    if not segments or len(set(ids)) != len(ids) or any(not re.fullmatch(r"s\d{2,}", sid) for sid in ids):
+        raise C.Fatal(f"{C.shown(register)} needs distinct segment IDs (sNN)")
+    named = set(args.segment or [])
+    if named - set(ids):
+        raise C.Fatal("unknown segment(s): " + ", ".join(sorted(named - set(ids))))
+    selected = [s for s in segments if s["id"] in named] if named else [
+        s for s in segments if not (s.get("status") == "approved" and s.get("file") and s.get("take"))]
+    script, raw_lines = request_lines(piece) if selected else (None, {})
+    sounds, limit, requests = pronunciations(model in IPA_MODELS), MODEL_LIMITS.get(model, DEFAULT_LIMIT), []
+    for segment in selected:
+        spec = str(segment.get("script_lines", "") or "")
+        if not spec:
+            raise C.Fatal(f"segment {segment['id']} needs script_lines to read its delivery directions")
+        lines = K.select_lines(script, spec)
+        plain = " ".join(line.text for line in lines).strip()
+        text = str(segment.get("text", "") or "")
+        if re.sub(r"\s+", " ", text).strip() != plain:
+            raise C.Fatal(f"segment {segment['id']}: text differs from script lines {spec}; reconcile the "
+                          "register with the script before planning a call")
+        raw = " ".join(raw_lines[line.beat, line.n] for line in lines)
+        def direction(part):
+            mark = part[1:-1].strip()
+            if re.fullmatch(r"pause\s+[\d.]+", mark, flags=re.IGNORECASE):
+                return " "
+            return f"[{mark}]" if model in TAG_MODELS else " "
+        # Pronunciations apply to spoken text, never to an audio tag's words.
+        parts = re.split(r"(\{[^}]*\})", raw)
+        request = "".join(direction(part) if re.fullmatch(r"\{[^}]*\}", part)
+                          else substitute_pronunciations(part, sounds) for part in parts)
+        request = re.sub(r"\s+", " ", request).strip()
+        requests.append((segment["id"], request))
+    folder = C.piece_folder(C.VO_GENERATED, piece, "takes")
+    folder.mkdir(parents=True, exist_ok=True)
+    print(f"speak plan {piece}: model {model}, limit {limit} characters per call")
+    print(f"output_directory: {folder.resolve()}")
+    for sid, request in requests:
+        print(f"{sid}: {len(request)} characters / {limit}" + (" — OVER LIMIT" if len(request) > limit else ""))
+        print(f"  request: {request}")
+    print(f"total: {sum(len(request) for _, request in requests)} characters; {len(requests)} calls")
+    return 1 if any(len(request) > limit for _, request in requests) else 0
+
+
+def voice_join_graph(segments: list, sample_rate: int, add, graph: list, prefix: str) -> float:
+    """The shared mono join for voice join and assemble; pauses are digital silence."""
+    if not segments:
+        raise C.Fatal("the voice register has no approved segments to join")
+    parts, total = [], 0
+    for number, (file, duration, pause, _) in enumerate(segments):
+        if not math.isfinite(pause) or pause < 0:
+            raise C.Fatal("pause_after must be finite and non-negative")
+        samples = math.floor((duration + pause) * sample_rate + 0.5)
+        index = add(C.input_args(file))
+        label = f"{prefix}s{number}"
+        graph.append(f"[{index}:a]asetpts=PTS-STARTPTS,aresample={sample_rate},"
+                     f"aformat=sample_fmts=fltp:channel_layouts=mono,apad=whole_len={samples},"
+                     f"atrim=end_sample={samples}[{label}]")
+        parts.append(f"[{label}]")
+        total += samples
+    graph.append("".join(parts) + f"concat=n={len(parts)}:v=0:a=1[{prefix}]")
+    return total / sample_rate
+
+
+def joined_voice(piece: str) -> Path:
+    if not piece or C.piece_key(piece) != piece:
+        raise C.Fatal("PIECE must be NNN-kebab-title")
+    return C.piece_folder(C.PROD_RENDERS, piece) / f"{piece}.voice.wav"
+
+
+def voice_sample_rate(piece: str) -> int:
+    head = C.load_toml(C.path(C.VOICEOVER) / f"{piece}.toml").get("voiceover", {})
+    fmt = str(head.get("output_format", "") or "")
+    m = re.fullmatch(r"(?:pcm_(\d+)|mp3_(\d+)_\d+)", fmt)
+    if not m:
+        raise C.Fatal("voice join needs the register's recorded pcm_RATE or mp3_RATE_BITRATE output_format")
+    rate = int(m.group(1) or m.group(2))
+    if not 8000 <= rate <= 192000:
+        raise C.Fatal("the voice register's sample rate must be between 8000 and 192000 Hz")
+    return rate
+
+
+def cmd_voice_join(args) -> int:
+    import media_video as V
+    default = joined_voice(args.piece)
+    rate = voice_sample_rate(args.piece)
+    segments = V.voice_segments(args.piece)
+    out = C.output_path(default, args.o, inputs=[s[0] for s in segments])
+    inputs, graph = [], []
+    def add(argv):
+        index = sum(1 for token in inputs if token == "-i")
+        inputs.extend(argv)
+        return index
+    duration = voice_join_graph(segments, rate, add, graph, "voice")
+    C.ffmpeg(inputs + ["-filter_complex", ";".join(graph), "-map", "[voice]", "-ar", str(rate),
+                       "-ac", "1", "-c:a", "pcm_s16le", "-f", "wav", out], what="voice join")
+    info = C.probe(out)
+    stream = C.streams(info, "audio")[0]
+    clean = (stream.get("codec_name") == "pcm_s16le" and int(stream.get("channels", 0)) == 1
+             and int(stream.get("sample_rate", 0)) == rate and abs(C.duration(info) - duration) <= 1 / rate)
+    print(f"voice join: {C.shown(out)} — {duration:.6f} s, mono 16-bit, {rate} Hz; "
+          + ("verified" if clean else "verification failed"))
+    return 0 if clean else 1
+
+
+def cmd_levels(args) -> int:
+    voice = joined_voice(args.piece)
+    if not voice.is_file():
+        raise C.Fatal(f"{C.shown(voice)} is missing: run media.py voice join {args.piece}")
+    info = C.probe(voice)
+    rate = int(C.streams(info, "audio")[0].get("sample_rate", 0))
+    values = window_levels(voice, args.window, rate)
+    duration = C.duration(info)
+    if duration <= 0 or not values:
+        raise C.Fatal("the joined voice has no measurable audio windows")
+    samples = math.floor(rate * args.window + 0.5)
+    windows = []
+    for index, value in enumerate(values):
+        if math.isnan(value) or value == float("inf"):
+            raise C.Fatal("ffmpeg returned a non-finite RMS level")
+        windows.append({"start": index * samples / rate, "end": min((index + 1) * samples / rate, duration),
+                        "rms_dbfs": max(-120.0, value)})
+    out = C.output_path(C.piece_folder(C.PROD_RENDERS, args.piece, "timing") / f"{args.piece}.levels.json")
+    C.replace_file(out, (json.dumps({"piece": args.piece, "window_seconds": args.window, "sample_rate": rate,
+                                   "windows": windows}, indent=2, allow_nan=False) + "\n").encode())
+    print(f"levels: {C.shown(out)} — {len(windows)} windows, {args.window:g} s, {rate} Hz, silence floor -120 dBFS")
+    return 0
 
 
 def _footnotes(text: str, mode: str) -> str:

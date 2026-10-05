@@ -4,7 +4,8 @@ The procedure for making a piece's voiceover through ElevenLabs, on the author's
 approved script is split into segments, one per spoken sentence or short beat; each is voiced
 with the brand's recorded narrator and model through the user-scope MCP server `elevenlabs`, one
 call at a time, renamed and logged the moment it lands by `python3 toolkit/media.py take add`,
-heard by the author, and archived once approved. It states the cost before spending anything.
+heard by the author, and archived once approved. The offline plan states characters and calls
+before spending anything; it writes no rate and edits no register.
 It does not write or change the script (`scripts/workflows/02-write-a-script/`) and does not
 assemble the master (`production/workflows/03-assemble-the-master/`).
 
@@ -40,6 +41,9 @@ Never run it unasked. Reach for a **different** procedure when the script is not
 - **Credits-log rows** in `production/src/credits-log.md`, one per call, written by `take add`.
 - **The narrator record** in `brand/src/voice/voice.md`, the first time.
 - **Archived takes:** each approved take logged in `production/src/footage/manifest.toml`.
+- **Joined voice:** `voice join` writes a mono 16-bit WAV at the register's rate to
+  `production/src/renders/<piece>/<piece>.voice.wav`, in register order with pauses.
+- **For a scene piece:** `M4.takes` dated in its brief after approval and archiving.
 
 ## The failure this procedure exists to prevent
 

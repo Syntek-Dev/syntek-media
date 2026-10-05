@@ -8,9 +8,11 @@ files); how toolkit/data/platforms.toml is read and the brand's [[override]] tab
 brand/src/platforms/overrides.toml applied and printed; how a deliverable key such as
 youtube.short or audiobook.acx names its table; which custom properties tokens.css must define;
 where an output may be written (a renders/ or generated/ folder, or a path -o names, and nothing
-outside those folders is ever overwritten, with one named exception: a podcast show's tracked
+outside those folders is ever overwritten, with named exceptions: a podcast show's tracked
 feed, publishing/src/podcast/<show>.feed.xml, which only 'feed write -o' replaces, through a
-temporary file renamed over it); how ffmpeg and ffprobe are run (argument lists, never a shell
+temporary file renamed over it), and D66's timing and scene files, replaced only by their owning
+command while committed and unchanged in Git, through the same temporary-file rule; how ffmpeg
+and ffprobe are run (argument lists, never a shell
 string, so a path with spaces or quotes is safe under zsh); how a raw ElevenLabs PCM take
 (.pcm) is read; which image formats an image deliverable takes and which ffmpeg encoder writes
 each; the project's timezone, for the dates a podcast feed carries; and how the files git
@@ -167,18 +169,53 @@ def in_output_folder(p: Path) -> bool:
     return any(part in OUTPUT_FOLDERS for part in Path(p).resolve().parent.parts)
 
 
-def output_path(default: Path, given=None, inputs=(), tracked_feed=None) -> Path:
+TIMING_OUTPUTS = {"words.json": TIMING, "words-check.md": TIMING, "mouth.json": TIMING,
+                  "cues.json": SCENES, "real.json": SCENES}
+
+
+def clean_tracked_output(out: Path) -> None:
+    """D66: HEAD holds this file, and neither the index nor the working copy changes it."""
+    git = shutil.which("git")
+    top = git_toplevel(ROOT)
+    if not git or top is None:
+        raise Fatal(f"{shown(out)} cannot be replaced outside a Git work tree (D66)")
+    if out.is_symlink():
+        raise Fatal(f"{shown(out)} is a symbolic link; the tracked timing file cannot be replaced")
+    try:
+        rel = str(out.resolve().relative_to(top))
+    except ValueError:
+        raise Fatal(f"{shown(out)} is outside this Git work tree") from None
+    held = subprocess.run([git, "cat-file", "-e", f"HEAD:{rel}"], cwd=top, capture_output=True)
+    status = subprocess.run([git, "status", "--porcelain", "--untracked-files=all", "--", rel],
+                            cwd=top, capture_output=True, text=True)
+    if held.returncode or status.returncode or status.stdout.strip():
+        raise Fatal(f"{shown(out)} is not committed and unchanged in Git: commit or preserve the "
+                    "author's changes before replacing it (D66); nothing written")
+
+
+def output_path(default: Path, given=None, inputs=(), tracked_feed=None, tracked_timing=None) -> Path:
     """Where to write: -o when given, else the default; never over a file outside the output folders.
 
-    The one exception (DESIGN Section 4.2, D59): tracked_feed names a show's tracked feed,
+    The feed exception (DESIGN Section 4.2, D59): tracked_feed names a show's tracked feed,
     publishing/src/podcast/<show>.feed.xml, which only 'feed write -o' passes; that one file may
     exist and be replaced, and the caller replaces it with replace_file (a temporary file renamed
-    over it), never by writing into it."""
+    over it), never by writing into it. tracked_timing is (piece, suffix), passed only by the
+    command that owns that D66 output; an existing named copy must be committed and unchanged.
+    Both exceptions require an explicit -o, and the caller writes through replace_file."""
     out = Path(given) if given else Path(default)
     for src in inputs:
         if src is not None and out.resolve() == Path(src).resolve():
             raise Fatal(f"the output {shown(out)} is also an input; name another with -o")
-    allowed = tracked_feed is not None and out.resolve() == Path(tracked_feed).resolve()
+    allowed = given is not None and tracked_feed is not None and out.resolve() == Path(tracked_feed).resolve()
+    if tracked_timing is not None:
+        piece, suffix = tracked_timing
+        if suffix not in TIMING_OUTPUTS or piece_key(piece) != piece:
+            raise Fatal("unknown tracked timing or scene output")
+        named = path(TIMING_OUTPUTS[suffix]) / f"{piece}.{suffix}"
+        if given is not None and out.resolve() == named.resolve():
+            if out.exists():
+                clean_tracked_output(out)
+            allowed = True
     if out.exists() and not in_output_folder(out) and not allowed:
         raise Fatal(f"{shown(out)} exists outside a renders/ or generated/ folder, and the toolkit "
                     "never overwrites it: move it aside first (with the author's say-so), or name "

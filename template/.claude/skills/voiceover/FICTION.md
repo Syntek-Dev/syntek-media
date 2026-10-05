@@ -12,6 +12,8 @@ reading and the audiobook.
   character's upper-case name.
 - **Register:** `production/src/voiceover/<piece>.toml`; takes in
   `production/src/voiceover/generated/<piece>/takes/` (git-ignored).
+- **Joined voice:** `production/src/renders/<piece>/<piece>.voice.wav`, from `voice join`;
+  a scene piece dates `M4.takes` after its used takes are approved and archived.
 - **Narrators:** the `voiceover` row of `brand/src/voice/voice.md`, and one `character:<name>` row
   for each character the author has chosen to voice separately.
 - **Constructed names:** the language's lexicon or the names register in syntek-author's world

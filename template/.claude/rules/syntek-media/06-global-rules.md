@@ -62,6 +62,9 @@ later, edit away the rule that protected the work.
 **Requirement.** Never overwrite a script, a transcript, a plan, a register, a master, a source
 recording, an exported design asset, an approved take or any file the author wrote without
 confirming first. A new version goes beside the old one; `footage add` copies and never moves.
+The D66 timing and scene exceptions in rules 04 Section 3 replace their named tracked copy only
+through an accepted run's `-o`, while Git holds it committed and unchanged, through a temporary
+file renamed over it. A dirty or untracked copy is refused; every other file keeps the rule above.
 
 **Why this rule exists.** A take cannot be generated again and a recording cannot be made again;
 an overwritten one is gone.

@@ -18,7 +18,8 @@ has agreed, with every take named, logged and kept.
   `production/docs/reference/elevenlabs.md`; tools `mcp__elevenlabs__list_models`,
   `mcp__elevenlabs__search_voices`, `mcp__elevenlabs__check_subscription` and
   `mcp__elevenlabs__text_to_speech` from the user-scope server `elevenlabs`, loaded with
-  ToolSearch; `python3 toolkit/media.py check --setup` and `take add`; fallback `espeak-ng`.
+  ToolSearch; `python3 toolkit/media.py check --setup`, `speak plan`, `take add` and `voice join`;
+  fallback `espeak-ng`.
 - **Model:** **Opus** for choosing a voice, splitting the script and judging a take with the
   author; the mechanical tier for building request text, counting characters, generating and
   logging (`.claude/rules/syntek-media/05-model-allocation.md`). The checklist tags are
@@ -35,8 +36,8 @@ has agreed, with every take named, logged and kept.
 
 - **Never generate unasked.** Not as a demonstration, not to check a setting, not as a helpful
   extra after another job. Every call spends credits.
-- **State the characters, calls and credits before any batch, and wait for a yes.** Count the
-  request text exactly as it will be sent.
+- **State the offline plan's characters and calls before any batch, and wait for a yes.** Never
+  invent a credit rate; copy the requests to the register without changing the script or `text`.
 - **One call at a time, renamed at once.** Run `take add` straight after each call, before the
   next; stop at the first error.
 - **An absolute `output_directory`, always,** built from `git rev-parse --show-toplevel`, so no
@@ -61,4 +62,6 @@ has agreed, with every take named, logged and kept.
   a footage-manifest row for each archived take; a scratch track in `generated/<piece>/`, beside
   its takes folder. A voice trial is never a take: it keeps the server's name in
   `voice-trials/<name>/`, enters no register, and its credits-log row has `—` for the piece.
-- **Does not touch:** the script, the brief's gates, or any render.
+- **Also writes:** the joined mono 16-bit voice in the piece's production renders folder, and
+  `M4.takes` in a scene piece's brief after the used takes are approved and archived.
+- **Does not touch:** the script or the brief's other gates.

@@ -68,16 +68,18 @@ and its `pause_after`. Agree the split with the author. _Substantive._
 
 > **Skill:** `voiceover` · **Guide:** `production/docs/reference/voiceover.md`
 
-For each segment, write `request`: pronunciations substituted from `brand/src/voice/voice.md`,
-braced directions turned into audio tags only where the recorded model takes them and dropped
-otherwise, cue lines left out. The script itself is never changed. _Mechanical._
+Run `python3 toolkit/media.py speak plan <piece>`: offline, it prints requests, characters and
+calls and creates the takes folder. Repeat `--segment sNN` for named re-rolls; otherwise approved
+takes are skipped. Directions come from the original script lines, pronunciations from
+`brand/src/voice/voice.md`, each supported by the recorded model. Copy the printed requests and
+lengths to `request` and `characters`; neither script nor caption `text` changes. _Mechanical._
 
 ## 6. State the cost and wait
 
 > **Skill:** `voiceover` · **Guide:** `production/docs/reference/elevenlabs.md`
 
-Count the characters of every request exactly as it will be sent, the number of calls and the
-estimated credits, and say whether the output format needs a higher ElevenLabs tier. Give the
+State the offline plan's characters and calls, never credits or a rate, and say whether the
+output format needs a higher ElevenLabs tier. Give the
 balance from `mcp__elevenlabs__check_subscription` if the author wants it. Wait for a yes.
 _Mechanical._
 
@@ -93,7 +95,8 @@ missing; never make it with `mkdir`. For each segment in turn, call
 `git rev-parse --show-toplevel` followed by `/production/src/voiceover/generated/<piece>/takes`.
 Straight after the call, and before the next, run `python3 toolkit/media.py take add` on the
 file the result names, with `--piece` and `--segment`: it renames the take, writes the
-register's `take` and `file`, and appends the credits-log row. Never rename a take with a shell
+register's `take` and `file`, resets `status` to `generated` and clears `archived`, and appends
+the credits-log row: a re-roll is unheard and unarchived. Never rename a take with a shell
 `mv`. Stop at the first error and report it, rather than retrying into spent credits.
 _Mechanical._
 
@@ -114,7 +117,11 @@ The author listens to every take. Set each segment's `status` to `approved` or `
 rejected segment is regenerated only on the author's word, as a new take, through steps 6 and 7.
 For each approved take, offer to archive it with
 `python3 toolkit/media.py footage add FILE --kind generated --location LABEL`, and record the
-footage ID in `archived`. The audio stays out of Git; never force it in. _Substantive._
+footage ID in `archived`. The audio stays out of Git; never force it in. Then run
+`python3 toolkit/media.py voice join <piece>`: one mono 16-bit WAV at the register's sample rate,
+in register order with each `pause_after`. For a scene piece, date `M4.takes` in its brief once
+every used take is approved and archived; the other sub-checks still need their verdicts.
+_Substantive._
 
 ## 10. Hand back
 

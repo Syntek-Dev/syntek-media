@@ -1200,16 +1200,10 @@ def assemble(args, tmp: Path) -> int:
         at = C.parse_tc(t.get("at") or 0, f"audio {n + 1} at")
         label = f"t{n}"
         if src.startswith("vo:"):
-            segs = voice_segments(src[3:].strip() or piece)
-            parts = []
-            for m, (f, dur, pause, _) in enumerate(segs):
-                k = add(C.input_args(f))
-                graph.append(f"[{k}:a]asetpts=PTS-STARTPTS,aresample={ar},aformat=sample_fmts=fltp:"
-                             f"channel_layouts=stereo,apad=whole_dur={dur + pause:.6f},"
-                             f"atrim=duration={dur + pause:.6f}[s{n}_{m}]")
-                parts.append(f"[s{n}_{m}]")
-            graph.append("".join(parts) + f"concat=n={len(parts)}:v=0:a=1[raw{n}]")
-            length = sum(dur + pause for _, dur, pause, _ in segs)
+            voiced_piece = src[3:].strip() or piece
+            segs = voice_segments(voiced_piece)
+            length = A.voice_join_graph(segs, A.voice_sample_rate(voiced_piece), add, graph, f"joined{n}")
+            graph.append(f"[joined{n}]aresample={ar},aformat=sample_fmts=fltp:channel_layouts=stereo[raw{n}]")
         else:
             r = resolve_source(src, manifest_entries())
             if r["kind"] == "missing" or not r["path"].is_file():

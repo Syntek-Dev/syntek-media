@@ -35,8 +35,8 @@ model: opus
 
 - [ ] One segment per spoken sentence or short beat (per cue only for a kinetic-caption short, on the author's word), agreed with the author. · _opus_
 - [ ] Register written: the `[voiceover]` table, and each segment's `script_lines`, `text` (braces removed) and `pause_after`. · _sonnet_
-- [ ] Request text built: pronunciations substituted, directions as audio tags only where the model takes them, cue lines left out. · _sonnet_
-- [ ] Characters, calls and estimated credits stated, and any higher tier the format needs named. · _sonnet_
+- [ ] `speak plan <piece>` run offline (named re-rolls with `--segment`); its requests and lengths copied to the register, script and caption `text` unchanged. · _sonnet_
+- [ ] Characters and calls stated, no credit rate invented, and any higher tier the format needs named. · _sonnet_
 - [ ] The author said yes. · _opus_
 
 **Generating**
@@ -51,6 +51,8 @@ model: opus
 
 - [ ] The author listened; each take `approved` or `rejected`; regeneration only on the author's word, as a new take. · _opus_
 - [ ] Each approved take archived with `footage add --kind generated` where the author agreed, its footage ID in `archived`. · _sonnet_
+- [ ] `voice join <piece>` run: approved takes in register order, with pauses, mono 16-bit at the register's rate. · _sonnet_
+- [ ] For a scene piece, `M4.takes` dated in its brief once every used take is approved and archived. · _sonnet_
 
 ## Done When
 

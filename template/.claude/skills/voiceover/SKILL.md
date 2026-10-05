@@ -1,9 +1,9 @@
 ---
 name: voiceover
 description: >-
-  Voice a piece through the user-scope ElevenLabs MCP server, only when the author asks: one
+  Voice a piece through the ElevenLabs MCP server, only when the author asks: one
   segment per spoken sentence or beat of the approved script, with the narrator, model and
-  pronunciations of brand/src/voice/voice.md; the cost stated before any call; one call at a time
+  pronunciations of brand/src/voice/voice.md; characters and calls stated before any call; one call at a time
   into the piece's ignored takes/ folder, each take logged at once with 'media.py take add' and
   archived once approved; an espeak-ng scratch track as the fallback. Use when the author says
   'voice the script', 'make the voiceover for the trailer', 'take segment 4 again', 'choose a
@@ -102,18 +102,18 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
    `archived` are filled as each take is made. Never renumber a segment that has a take.
    *Complete when:* every line to voice belongs to exactly one segment, and the register reads.
 
-5. **Build the request text.** For each segment, start from `text` and substitute every word that
-   `voice.md` `## Pronunciations` records: its IPA between forward slashes where the recorded model
-   takes inline IPA, otherwise its respelling. Turn a braced direction into an audio tag
-   (`[whispers]`) only when the recorded model supports tags; otherwise leave it out, and the
-   delivery comes from the voice settings. A `{pause S}` inside a sentence is never sent as text:
-   report it, and keep the sentence whole. Record the result in `request` and its length in
-   `characters`. The request goes to the server only, never back into the script or into `text`.
+5. **Build the request text.** Run `python3 toolkit/media.py speak plan <piece>`, or repeat
+   `--segment sNN` for the named re-rolls: offline, it prints the requests, characters and calls,
+   and makes the takes folder. Approved takes are skipped unless named. Pronunciations come from
+   `voice.md`: IPA where the model takes it, respellings otherwise. Directions come from the
+   original script lines named by `script_lines`, as tags for v3, v4 and v4_turbo, dropped for
+   other models. Copy the printed requests and lengths to `request` and `characters`; the command
+   never edits the register. A `{pause S}` inside a sentence is never sent: report it and keep
+   the sentence whole. Neither the script nor caption `text` changes.
    *Complete when:* every segment to voice has its `request` and `characters`.
 
-6. **State the cost and wait.** Count the characters of the request text exactly as it will be
-   sent, and the number of calls (one per segment), and estimate the credits from them at the rate
-   of the author's plan, saying that it is an estimate. Name the output format, chosen for the
+6. **State the characters and calls and wait.** Present the offline plan's counts, one call per
+   segment; never invent credits or a rate. Name the output format, chosen for the
    deliverable, and say when it needs a higher ElevenLabs tier (`mp3_44100_192` needs Creator or
    above, `pcm_44100` Pro or above). For a single segment, mention the count in one line; for a
    batch, give the total and, if the author wants it, the balance from
@@ -129,8 +129,8 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
    `python3 toolkit/media.py take add FILE --piece PIECE --segment sNN`, FILE being the path the
    result names: it renames the take to `<piece>.sNN.tN.mp3` (`.pcm` for a `pcm_*` format),
    because the server names files by the second and can overwrite one, and writes the segment's
-   `take` and `file` and the credits-log row. Never rename a take with a shell `mv`. Set the
-   segment's `status` to `generated`. Stop at the first error and report it, rather than retrying
+   `take` and `file` and the credits-log row, resets `status` to `generated` and clears `archived`:
+   a re-roll is unheard and unarchived. Never rename a take with a shell `mv`. Stop at the first error rather than retrying
    into spent credits. If the first take says a name or a term wrongly, stop: settle its
    pronunciation in `voice.md` with the author before anything more is spent.
    *Complete when:* each segment has one named take and a credits-log row, or the first error is
@@ -153,7 +153,10 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
    the local mirror, hashes it and gives it the next `F` ID. Record that ID in the segment's
    `archived`, and the take it archives in that manifest row's `notes`. Audio is git-ignored (the
    rule is in `production/src/.gitignore`): never add it to Git, and never force it past the
-   ignore rule.
+   ignore rule. Run `python3 toolkit/media.py voice join <piece>`: the approved takes in register
+   order, each followed by `pause_after`, as a mono 16-bit WAV at the register's sample rate.
+   For a scene piece, date `M4.takes` in the brief once every used take is approved and archived;
+   the other sub-checks still need their own verdicts.
    *Complete when:* every take has the author's verdict, and every approved take is archived or
    the author has declined with the risk said.
 

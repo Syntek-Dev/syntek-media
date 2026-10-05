@@ -12,8 +12,8 @@ model: opus
 **What it is.** A voiceover is made from the approved script in segments: one ElevenLabs call per
 spoken sentence, or per short beat, and never one per caption cue. Each segment is a row in the
 piece's register, `production/src/voiceover/<piece>.toml`, which records the words, the request
-as sent, the take, the file and its status. `assemble` joins the approved segments into the voice
-track, and `captions from-segments` times the captions from them, exactly, at no cost.
+as sent, the take, the file and its status. `voice join` makes the mono 16-bit joined WAV;
+`assemble` uses the same join, and `captions from-segments` times captions at no cost.
 
 ## Why a sentence, not a cue
 
@@ -43,8 +43,10 @@ instead, only for a kinetic-caption short, on the author's word.
 ## From script to request
 
 - Only spoken lines are voiced: cue lines (`TEXT:`, `SFX:`, `MUSIC:`, `NOTE:`) never are.
-- A braced direction (`{softly}`) becomes an audio tag only where the recorded model takes tags,
-  and is otherwise dropped from the request. It never reaches `text`.
+- `media.py speak plan <piece>` reads directions from the original `script_lines`, with tags for
+  v3, v4 and v4_turbo, dropped for other models; it applies IPA or respellings per model.
+- It prints requests, characters and calls, never credits, and creates the takes folder only.
+  Copy its results to the register; `--segment sNN` includes a named re-roll, even if approved.
 - `{pause S}` becomes the previous segment's `pause_after`, never words in a request.
 - Pronunciations come from `brand/src/voice/voice.md`; the script holds no IPA.
 
@@ -57,13 +59,16 @@ instead, only for a kinetic-caption short, on the author's word.
   numbered after its highest take in either layout, never an overwrite. A scratch track sits in
   the piece's folder itself, never among its takes.
 - The author listens to every take; only `approved` takes reach a master, and each is archived.
+- `take add` resets a re-roll's approval and archive; `voice join <piece>` refuses unapproved
+  takes, and writes `<piece>.voice.wav` in the piece's production renders folder with each pause.
+- For a scene piece, date `M4.takes` after approval and archiving; the other sub-checks remain.
 - A piece with a generated voice says so in its brief's `synthetic_voice`, and is disclosed at
   publish.
 
 ## Who implements it
 
 - **Workflow:** `production/workflows/02-make-a-voiceover/`.
-- **Skill:** `voiceover` splits, costs, generates, logs and archives, following the call
+- **Skill:** `voiceover` splits, plans, generates, logs and archives, following the call
   discipline of `production/docs/reference/elevenlabs.md`.
 
 ## Governing standard

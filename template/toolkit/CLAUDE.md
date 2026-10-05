@@ -70,6 +70,9 @@ deliverable is one line and a failed render says exactly what failed.
 - **Identity is for life.** A show's `podcast:guid` and each episode's `guid` are written once by
   `feed new` and `feed add`; never type one by hand, and `feed new --rekey` only while nothing is
   published.
+- **Voice planning is offline.** `speak plan` prints requests, characters and calls and creates
+  only the takes or trial folder. `voice join` reads approved takes by their recorded paths;
+  `levels` writes only working JSON, never a tracked copy or a credit rate.
 - **Never read what Git ignores.** Each scan lists only what Git tracks or would track; an ignored
   media file is opened only by the path a manifest, register or argument names.
 - **A piece's output folders are the toolkit's.** It makes a piece's folder in

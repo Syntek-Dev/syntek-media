@@ -31,6 +31,9 @@ Usage:
                                               [--tail S] [--room-tone FILE] [-o OUT]
     python3 toolkit/media.py audiobook check FILE...
     python3 toolkit/media.py take add FILE --piece PIECE (--segment sNN | --chapter chNN --part pNN)
+    python3 toolkit/media.py speak plan [PIECE [--segment sNN...]] [--trial NAME]
+    python3 toolkit/media.py voice join PIECE [-o OUT]
+    python3 toolkit/media.py levels PIECE [--window S]
     python3 toolkit/media.py feed new SHOW --feed-url URL [--site SLUG] [--rekey]
     python3 toolkit/media.py feed add SHOW --piece PIECE
     python3 toolkit/media.py feed tag SHOW --piece PIECE
@@ -64,7 +67,9 @@ the commands named for it: the registers and the manifest (take add, footage add
 podcast show's register: feed new, feed add and feed tag, none of which rewrites a value the
 author set), and a show's tracked feed, publishing/src/podcast/<show>.feed.xml, which only
 feed write -o replaces, after its GUID comparison passes, through a temporary file renamed over
-it. Every render is probed before it is reported.
+it; and D66's named timing and scene files, replaced only by their owning command through -o
+while committed and unchanged in Git, through the same temporary-file rule. Timing working
+copies, levels included, sit in production/src/renders/<piece>/timing/. Every render is probed.
 
 The modules beside this file do the work and have no command of their own: media_common.py
 (TOML, timecodes, presets and overrides, paths, the ffmpeg runner), media_video.py (assemble,
@@ -86,6 +91,7 @@ import argparse
 import contextlib
 import io
 import json
+import math
 import os
 import re
 import shutil
@@ -234,7 +240,7 @@ STDOUT_HELP = ("the output path; without -o the captions go to stdout and every 
 FEED_HELP = ("the output path; without -o the feed goes to stdout and every report line to stderr. "
              "-o publishing/src/renders/<show>.feed.xml is the upload copy (M7); -o "
              "publishing/src/podcast/<show>.feed.xml replaces the tracked feed through a temporary file, "
-             "the one tracked file the toolkit overwrites, once the author reports the feed live "
+             "the D59 feed exception, once the author reports the feed live "
              "(publishing/workflows/06-record-a-publication/); any other existing file outside a "
              "renders/ or generated/ folder is never overwritten")
 
@@ -479,6 +485,33 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--chapter", metavar="chNN")
     q.add_argument("--part", metavar="pNN")
     q.set_defaults(func=A.cmd_take_add)
+
+    p = sub.add_parser("speak", help="offline voice request planning")
+    ss = p.add_subparsers(dest="sub", metavar="action")
+    q = ss.add_parser("plan", help="print request text, characters and calls; create the output folder",
+                     description="Offline: applies voice.md pronunciations and supported delivery tags from "
+                     "the script; prints character counts and calls, never credits. Skips approved takes "
+                     "unless --segment names them. Creates only the takes folder, or --trial's trial folder.")
+    q.add_argument("piece", nargs="?", metavar="PIECE")
+    q.add_argument("--segment", action="append", metavar="sNN", help="plan this segment, repeat for more")
+    q.add_argument("--trial", metavar="NAME", help="create only this voice trial's output directory")
+    q.set_defaults(func=A.cmd_speak_plan)
+
+    p = sub.add_parser("voice", help="join approved voice takes")
+    vs = p.add_subparsers(dest="sub", metavar="action")
+    q = vs.add_parser("join", help="join the approved takes in register order, with pause_after",
+                     description="One mono 16-bit WAV at the register's sample rate, using each row's file "
+                     "and pause_after; exit 1 while any segment is not approved.")
+    q.add_argument("piece", metavar="PIECE")
+    out(q, "the WAV path (default: production/src/renders/<piece>/<piece>.voice.wav)")
+    q.set_defaults(func=A.cmd_voice_join)
+
+    p = sub.add_parser("levels", help="RMS windows of the joined voice, as finite JSON",
+                       description="Reads the joined voice. Writes only a working copy under "
+                       "production/src/renders/<piece>/timing/, with silence floored at -120 dBFS; no -o.")
+    p.add_argument("piece", metavar="PIECE")
+    p.add_argument("--window", type=float, default=0.1, metavar="S", help="window seconds (default: 0.1)")
+    p.set_defaults(func=A.cmd_levels)
 
     p = sub.add_parser("feed", help="a self-hosted podcast: new, add, tag, write, chapters, check",
                        description="A self-hosted show's register, publishing/src/podcast/<show>.toml (where the "
@@ -850,6 +883,8 @@ def self_test() -> int:
                       ("uv scripts: the interpreter, the timeout, the first-run lock, card renders and the "
                        "setup row", lambda: test_uv(verdict, skip, cli, root)),
                       ("default output paths: each piece's own folder", lambda: test_piece_defaults(verdict))]
+            groups.append(("offline voice plans and tracked timing guards",
+                           lambda: test_voice_plan(verdict, skip, cli, root, have_git)))
             if have_ff:
                 groups.append(("cut, burn-in, loudness, assemble, align and the audiobook master",
                                lambda: test_media(verdict, skip, cli, root)))
@@ -1665,6 +1700,119 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
             os.environ["HOME"] = saved_home
 
 
+def test_voice_plan(verdict, skip, cli, root: Path, have_git: bool) -> None:
+    piece = "031-request-plan"
+    register = C.path(C.VOICEOVER) / f"{piece}.toml"
+    script = C.path(C.PIECES) / piece / "script.md"
+    raw = "## 1. Opening\n\nVO: {whispers} The ferry is late again. {pause 0.2}\n"
+    write(script, raw)
+    reg = voice_register(piece, [("s01", 1, "generated/old.mp3", "approved", "F0001"),
+                                 ("s02", 0, "", "", "")])
+    write(register, reg)
+    voice_md = C.path(C.VOICE_MD)
+    held_voice = C.read_text(voice_md)
+    write(voice_md, "## Pronunciations\n\n| Word | IPA | Respelling |\n|---|---|---|\n| ferry | feri | feh ree |\n")
+    try:
+        before = register.read_bytes()
+        code, out = cli("speak", "plan", piece)
+        verdict("speak plan skips approved takes, prints IPA and script-derived tags offline, creates only "
+                "the takes directory and leaves the register unchanged",
+                code == 0 and "[whispers] The /feri/ is late again." in out and "1 calls" in out
+                and "s01:" not in out and "pause" not in out and "credits" not in out.lower()
+                and (C.path(C.VO_GENERATED) / piece / "takes").is_dir()
+                and register.read_bytes() == before, out)
+        for model, form, tags in (("eleven_v3", "feh ree", True), ("eleven_v4_turbo", "/feri/", True),
+                                  ("eleven_multilingual_v2", "feh ree", False)):
+            write(register, reg.replace('model_id = "eleven_v4"', f'model_id = "{model}"'))
+            code, out = cli("speak", "plan", piece, "--segment", "s01", "--segment", "s02")
+            verdict(f"speak plan {model}: the approved segment can be explicitly planned, pronunciations "
+                    "follow IPA support and tags follow the confirmed model set",
+                    code == 0 and "2 calls" in out and form in out
+                    and ("[whispers]" in out) == tags, out)
+        write(register, reg)
+        code, out = cli("speak", "plan", piece, "--segment", "s99")
+        verdict("speak plan refuses an unknown segment without altering the register", code == 2
+                and "unknown segment" in out and register.read_bytes() == before, out)
+        words = "a" * (A.MODEL_LIMITS["eleven_v4"] + 1)
+        write(script, f"## 1. Opening\n\nVO: {words}\n")
+        write(register, reg.replace("The ferry is late again.", words))
+        code, out = cli("speak", "plan", piece)
+        verdict("speak plan flags a request over the model's limit, reporting characters and calls, no rate",
+                code == 1 and "OVER LIMIT" in out and "1 calls" in out and "credits" not in out.lower(), out[-400:])
+        code, out = cli("speak", "plan", "--trial", "candidate-a")
+        trial = C.path(C.VO_GENERATED) / "voice-trials" / "candidate-a"
+        verdict("speak plan --trial creates only the trial directory, with no piece or register",
+                code == 0 and trial.is_dir() and not list(trial.iterdir()) and str(trial.resolve()) in out, out)
+        code, out = cli("speak", "plan", "--trial", "../escape")
+        verdict("speak plan refuses a trial directory traversal", code == 2, out)
+    finally:
+        write(voice_md, held_voice)
+    if not have_git:
+        skip("D66 tracked timing guard", "git is not installed")
+        return
+    saved = C.ROOT
+    C.ROOT = root.parent / "timing-guard"
+    C.ROOT.mkdir()
+    def git(*argv):
+        subprocess.run(["git", *argv], cwd=C.ROOT, capture_output=True, check=True)
+    try:
+        git("init", "-q")
+        git("config", "user.name", "Fixture Author")
+        git("config", "user.email", "fixture@example.com")
+        files = []
+        patterns = {"words.json": C.TIMING, "words-check.md": C.TIMING, "mouth.json": C.TIMING,
+                    "cues.json": C.SCENES, "real.json": C.SCENES}
+        verdict("D66 names exactly the five approved timing and scene exceptions", C.TIMING_OUTPUTS == patterns)
+        for suffix, folder in patterns.items():
+            p = write(C.path(folder) / f"{piece}.{suffix}", "first\n")
+            files.append((suffix, p))
+        other = write(C.path(C.TIMING) / f"{piece}.levels.json", "first\n")
+        git("add", ".")
+        git("commit", "-qm", "fixture")
+        explicit_only = False
+        try:
+            C.output_path(files[0][1], tracked_timing=(piece, files[0][0]))
+        except C.Fatal:
+            explicit_only = True
+        verdict("D66 never replaces the tracked copy without an explicit -o", explicit_only)
+        for suffix, p in files:
+            made = C.output_path(root / "renders" / p.name, p, tracked_timing=(piece, suffix))
+            C.replace_file(made, b"replacement\n")
+            refused = False
+            try:
+                C.output_path(root / "renders" / p.name, p, tracked_timing=(piece, suffix))
+            except C.Fatal:
+                refused = True
+            verdict(f"D66 {suffix}: a committed clean file is replaced atomically, then a dirty rerun is refused",
+                    p.read_bytes() == b"replacement\n" and refused and not p.with_name(f".{p.name}.partial").exists())
+            git("add", str(p.relative_to(C.ROOT)))
+            staged_refused = False
+            try:
+                C.output_path(p, p, tracked_timing=(piece, suffix))
+            except C.Fatal:
+                staged_refused = True
+            verdict(f"D66 {suffix}: staged changes are protected too", staged_refused)
+        untracked = write(C.path(C.TIMING) / "032-untracked.mouth.json", "untracked\n")
+        def refuses(p, owner):
+            try:
+                C.output_path(p, p, tracked_timing=owner)
+                return False
+            except C.Fatal:
+                return True
+        verdict("D66 protects an untracked copy and an unrelated tracked output",
+                refuses(untracked, ("032-untracked", "mouth.json")) and refuses(other, (piece, "mouth.json")))
+        outside = root.parent / "outside-git"
+        C.ROOT = outside
+        p = write(C.path(C.TIMING) / f"{piece}.mouth.json", "outside\n")
+        verdict("D66 refuses an existing timing copy outside a Git work tree", refuses(p, (piece, "mouth.json")))
+        p.unlink()
+        made = C.output_path(p, p, tracked_timing=(piece, "mouth.json"))
+        C.replace_file(made, b"first write\n")
+        verdict("D66 allows the first explicit -o as the ordinary output rule does", p.read_bytes() == b"first write\n")
+    finally:
+        C.ROOT = saved
+
+
 def voice_register(piece: str, rows: list) -> str:
     """A segment register for the take fixtures: one [[segment]] per (id, take, file, status, archived)."""
     text = (f'[voiceover]\npiece = "{piece}"\nvoice_use = "voiceover"\nmodel_id = "eleven_v4"\n'
@@ -1840,6 +1988,7 @@ def lavfi(*args) -> None:
 def test_media(verdict, skip, cli, root: Path) -> None:
     work = Path(str(root) + "-media")
     work.mkdir()
+    test_voice_join(verdict, cli)
     src = work / "camera clip.mp4"
     lavfi("-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30:duration=3", "-f", "lavfi", "-i",
           "sine=frequency=440:sample_rate=48000:duration=3", "-c:v", "libx264", "-preset", "ultrafast",
@@ -1987,6 +2136,70 @@ def test_media(verdict, skip, cli, root: Path) -> None:
     test_screen(verdict, skip, cli, work)
     test_held_sound(verdict, cli, work)
     test_source_sound(verdict, cli, work)
+
+
+def test_voice_join(verdict, cli) -> None:
+    import wave
+    piece = "033-voice-join"
+    files = [C.path(C.VO_GENERATED) / f"{piece}.s01.t1.pcm",
+             C.path(C.VO_GENERATED) / piece / "takes" / f"{piece}.s02.t1.pcm"]
+    for f, duration, frequency in zip(files, (0.2, 0.17), (440, 880)):
+        f.parent.mkdir(parents=True, exist_ok=True)
+        lavfi("-f", "lavfi", "-i", f"sine=frequency={frequency}:sample_rate=8000:duration={duration}",
+              "-c:a", "pcm_s16le", "-f", "s16le", f)
+    register = C.path(C.VOICEOVER) / f"{piece}.toml"
+    reg = voice_register(piece, [("s01", 1, f"generated/{files[0].name}", "approved", "F0001"),
+                                 ("s02", 1, f"generated/{piece}/takes/{files[1].name}", "approved", "F0002")])
+    reg = reg.replace('output_format = "mp3_44100_128"', 'output_format = "pcm_8000"')
+    # Different pauses for each segment, the final pause included.
+    reg = reg.replace("pause_after = 0.3", "pause_after = 0.16", 1)
+    at = reg.rfind("pause_after = 0.3")
+    reg = reg[:at] + reg[at:].replace("pause_after = 0.3", "pause_after = 0.03", 1)
+    write(register, reg)
+    code, out = cli("voice", "join", piece)
+    voice = A.joined_voice(piece)
+    with wave.open(str(voice), "rb") as wav:
+        data = wav.readframes(wav.getnframes())
+        facts = (wav.getnchannels(), wav.getsampwidth(), wav.getframerate(), wav.getnframes())
+    expected = files[0].read_bytes() + bytes(1280 * 2) + files[1].read_bytes() + bytes(240 * 2)
+    verdict("voice join reads flat and per-piece takes by their register paths, in order, with exact "
+            "silence after both, as mono 16-bit WAV at the register's rate",
+            code == 0 and facts == (1, 2, 8000, 4480) and data == expected, out + str(facts))
+    code, out = cli("levels", piece)
+    levels = C.piece_folder(C.PROD_RENDERS, piece, "timing") / f"{piece}.levels.json"
+    result = json.loads(levels.read_text())
+    windows = result["windows"]
+    verdict("levels defaults to 0.1 s windows, floors digital silence, writes finite JSON only to the "
+            "working timing folder, and ends its final short window at the voice duration",
+            code == 0 and result["piece"] == piece and result["sample_rate"] == 8000
+            and result["window_seconds"] == 0.1 and len(windows) == 6
+            and windows[2]["rms_dbfs"] == -120 and abs(windows[-1]["start"] - 0.5) < 1e-9
+            and abs(windows[-1]["end"] - 0.56) < 1e-9
+            and all(math.isfinite(w["rms_dbfs"]) for w in windows)
+            and not (C.path(C.TIMING) / levels.name).exists(), out + str(result))
+    code, out = cli("levels", piece, "--window", "0.2")
+    verdict("levels accepts a different window while ACX keeps its 0.5 s default",
+            code == 0 and len(json.loads(levels.read_text())["windows"]) == 3 and A.WINDOW == 0.5, out)
+    for value in ("0", "-0.1", "nan", "inf"):
+        before = levels.read_bytes()
+        code, out = cli("levels", piece, "--window", value)
+        verdict(f"levels refuses invalid window {value} without changing its output",
+                code == 2 and levels.read_bytes() == before, out)
+    code, out = cli("levels", piece, "-o", "elsewhere.json")
+    verdict("levels has no tracked-output option", code == 2, out)
+    code, out = cli("levels", "034-missing-voice")
+    verdict("levels names voice join when its named joined voice is missing",
+            code == 2 and "voice join 034-missing-voice" in out, out)
+    write(register, reg.replace('status = "approved"', 'status = "generated"', 1))
+    target = voice.with_name("unapproved.wav")
+    code, out = cli("voice", "join", piece, "-o", target)
+    verdict("voice join refuses each unapproved segment before writing (exit 1)",
+            code == 1 and "s01" in out and not target.exists(), out)
+    write(register, reg)
+    target = voice.with_name("chosen-output")
+    code, out = cli("voice", "join", piece, "-o", target)
+    verdict("voice join honours an explicit output path without a filename extension, still as WAV",
+            code == 0 and target.is_file() and C.probe(target).get("format", {}).get("format_name") == "wav", out)
 
 
 def test_assemble(verdict, skip, cli, root: Path, work: Path) -> None:
@@ -3242,7 +3455,7 @@ def test_feed(verdict, skip, cli, root: Path, project_zone) -> None:
             and C.read_text(tracked).count("<item>") == 2, out + out2)
     write(reg, F.edit(C.read_text(reg), "show", {"title": "Harbour Lane Talks Weekly"}))
     code, out = cli("feed", "write", show, "--as-of", "12/10/2026 09:00", "-o", tracked)
-    verdict("feed write -o the tracked copy replaces it after a register change (the one tracked file it overwrites)",
+    verdict("feed write -o the tracked copy replaces it after a register change (the D59 feed exception)",
             code == 0 and "Talks Weekly" in C.read_text(tracked), out)
     code, out = cli("feed", "write", show, "--as-of", "12/10/2026 09:00", "-o", reg.with_name("CLAUDE.md"))
     verdict("feed write -o never overwrites any other tracked file (exit 2)", code == 2 and "never" in out, out)

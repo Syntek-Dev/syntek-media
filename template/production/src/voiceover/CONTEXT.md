@@ -4,7 +4,8 @@ One segment register per piece, recording its voiceover from script line to appr
 segment's words, the request sent to ElevenLabs, the take, the file, the characters billed, the
 pause after it and its status. The takes themselves sit in the piece's own folder in
 `production/src/voiceover/generated/`, git-ignored. `assemble` joins a register's approved
-segments into the voice track, and `captions from-segments` times captions from them exactly.
+segments into the voice track using the same join as `voice join`, and `captions from-segments`
+times captions from them exactly. `speak plan` prints requests offline without changing a row.
 
 ## Directory Tree
 

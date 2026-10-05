@@ -15,7 +15,7 @@
 #                    ElevenLabs call: a "take" is a tone or a few fake bytes, and the toolkit's
 #                    handling of the files around a call is what is proved (credits).
 #
-#                    Twenty-one checks, per render: 1–19, 24 and 25. Numbers 20–23 and 26–28 are
+#                    Twenty-three checks, per render: 1–20, 23–25. Numbers 21–22 and 26–28 are
 #                    DESIGN.md Section 7's for commands the toolkit does not have yet, and are
 #                    taken when they arrive (24 then gains `cues` and `real` beside `where`).
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
@@ -134,6 +134,13 @@
 #                         on-screen text as [On screen: …], drops a lone speaker's tags, NOTE:
 #                         cues, braced directions and every raw cue line, takes only the given
 #                         lines with --lines, and writes a file only with -o (D60).
+#                     20. Offline speak plans create only takes or trial folders and print characters
+#                         and calls, never credits; a re-roll numbers across both layouts and clears
+#                         approval and archive. The voice join is mono 16-bit in register order with
+#                         pauses, refuses unapproved segments, and levels are finite working JSON only.
+#                     23. The D66 writer replaces a committed clean named timing copy atomically;
+#                         dirty, staged, untracked and outside-Git copies, and unrelated files,
+#                         are refused without changing their bytes.
 #                     24. `where` on a fixture piece prints its files Git tracks or would track
 #                         across scripts/, production/ and publishing/, its timing file among
 #                         them, names its three ignored per-piece folders, each existing or
@@ -683,6 +690,11 @@ SHIM
 
   # ── 24. where ──
   smoke_where
+  if $HAVE_FFMPEG; then smoke_voice
+  else
+    rec skip.20 'the voice tools on tone takes (no ffmpeg or ffprobe)'
+    rec skip.23 'the timing guard with voice fixtures (no ffmpeg or ffprobe)'
+  fi
 }
 
 manifest_id() { # $1 = kind → the first footage ID of that kind
@@ -1623,6 +1635,119 @@ smoke_where() {
 # 0.480 s (the fourth still's start, frame 14) until 0.800 s (frame 24), and a tone running past
 # the picture (DESIGN.md Section 6.4). Then the master is encoded to a video deliverable with
 # sound: its sound ends no later than its picture, and encode's own check passes.
+smoke_voice() {
+  local p="916-smoke-voice" gen="$T/production/src/voiceover/generated"
+  mkdir -p "$gen/$p/takes"
+  ff -f lavfi -i 'sine=frequency=440:sample_rate=8000:duration=0.2' -c:a pcm_s16le -f s16le "$gen/$p.s01.t1.pcm"
+  ff -f lavfi -i 'sine=frequency=880:sample_rate=8000:duration=0.17' -c:a pcm_s16le -f s16le "$gen/$p/takes/fresh.mp3"
+  HOME="$GHOME" GIT_CONFIG_NOSYSTEM=1 PYTHONDONTWRITEBYTECODE=1 python3 - "$T" "$p" > "$OUT/voice.results" <<'PY'
+import json, math, os, subprocess, sys, wave
+from pathlib import Path
+root, piece = Path(sys.argv[1]), sys.argv[2]
+sys.path.insert(0, str(root / 'toolkit'))
+import media_common as C
+C.ROOT = root
+def record(key, passed): print(key + '\t' + ('yes' if passed else 'no'))
+def write(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+def cli(*args):
+    result = subprocess.run([sys.executable, 'toolkit/media.py', *map(str, args)], cwd=root, capture_output=True, text=True)
+    return result.returncode, result.stdout + result.stderr
+reg = root / C.VOICEOVER / (piece + '.toml')
+script = root / C.PIECES / piece / 'script.md'
+write(script, '## 1. Opening\n\nVO: {whispers} The ferry is late.\nVO: It leaves at dawn.\n')
+header = '[voiceover]\npiece = "' + piece + '"\nmodel_id = "eleven_v4"\noutput_format = "pcm_8000"\n'
+def segment(sid, line, text, take, file, pause, status):
+    return ('\n[[segment]]\nid = "' + sid + '"\nscript_lines = "' + line + '"\ntext = "' + text
+            + '"\nrequest = "' + text + '"\ntake = ' + str(take) + '\nfile = "' + file
+            + '"\ncharacters = 0\npause_after = ' + str(pause) + '\nstatus = "' + status + '"\narchived = "F0001"\n')
+write(reg, header + segment('s01','1.1','The ferry is late.',1,'generated/' + piece + '.s01.t1.pcm',0.16,'approved')
+      + segment('s02','1.2','It leaves at dawn.',0,'',0.03,''))
+before = reg.read_bytes()
+known_files = {str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
+code, text = cli('speak','plan',piece)
+record('voice.plan', code == 0 and '1 calls' in text and '[whispers]' not in text and 's01:' not in text
+       and 'credits' not in text.lower() and 'characters' in text and reg.read_bytes() == before
+       and (root / C.VO_GENERATED / piece / 'takes').is_dir()
+       and known_files == {str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()})
+code, text = cli('speak','plan',piece,'--segment','s01')
+record('voice.tags', code == 0 and '[whispers] The ferry is late.' in text and '1 calls' in text)
+code, text = cli('speak','plan','--trial','candidate')
+trial = root / C.VO_GENERATED / 'voice-trials' / 'candidate'
+record('voice.trial', code == 0 and trial.is_dir() and not list(trial.iterdir()) and reg.read_bytes() == before)
+# A re-roll starts with a flat t1, named by its row; take add must pick t2 in takes/.
+fresh = root / C.VO_GENERATED / piece / 'takes' / 'fresh.mp3'
+code, text = cli('take','add',fresh,'--piece',piece,'--segment','s01')
+data = C.load_toml(reg)
+s = data['segment'][0]
+record('voice.take', code == 0 and s['take'] == 2 and s['status'] == 'generated' and not s['archived']
+       and s['file'] == 'generated/' + piece + '/takes/' + piece + '.s01.t2.pcm'
+       and (root / C.VO_GENERATED / (piece + '.s01.t1.pcm')).is_file())
+# Restore the first tone and use the re-roll's tone for s02: the row's file controls each join.
+write(reg, header + segment('s01','1.1','The ferry is late.',1,'generated/' + piece + '.s01.t1.pcm',0.16,'approved')
+      + segment('s02','1.2','It leaves at dawn.',2,s['file'],0.03,'approved'))
+code, text = cli('voice','join',piece)
+voice = root / C.PROD_RENDERS / piece / (piece + '.voice.wav')
+joined = False
+if voice.is_file():
+    with wave.open(str(voice)) as wav:
+        joined = wav.getnchannels() == 1 and wav.getsampwidth() == 2 and wav.getframerate() == 8000
+        joined = joined and wav.readframes(wav.getnframes()) == (root / C.VO_GENERATED / (piece + '.s01.t1.pcm')).read_bytes() + bytes(2560) + (root / C.VOICEOVER / s['file']).read_bytes() + bytes(480)
+record('voice.join', code == 0 and joined)
+held = reg.read_text()
+write(reg, held.replace('status = "approved"','status = "generated"',1))
+other = voice.with_name('pending.wav')
+code, text = cli('voice','join',piece,'-o',other)
+record('voice.pending', code == 1 and not other.exists() and 's01' in text)
+write(reg, held)
+code, text = cli('levels',piece)
+out = voice.parent / 'timing' / (piece + '.levels.json')
+try:
+    values = json.loads(out.read_text())['windows']
+    finite = len(values) == 6 and values[2]['rms_dbfs'] == -120 and abs(values[-1]['end'] - 0.56) < 1e-9
+    finite = finite and all(math.isfinite(row['rms_dbfs']) for row in values)
+except Exception: finite = False
+record('voice.levels', code == 0 and finite and not (root / C.TIMING / out.name).exists())
+# The output helper is the writer that later timing commands own. Test each refusal independently.
+tracked = root / C.TIMING / (piece + '.mouth.json')
+def writer():
+    try:
+        target = C.output_path(out, tracked, tracked_timing=(piece, 'mouth.json'))
+        C.replace_file(target, b'{"mouthCues": []}\n')
+        return 0
+    except C.Fatal: return 2
+def git(*args):
+    subprocess.run(['git','-c','user.name=Fixture Author','-c','user.email=fixture@example.invalid',*args],cwd=C.ROOT,check=True,capture_output=True)
+write(tracked, 'first\n')
+git('add', str(tracked.relative_to(root)))
+git('commit','-qm','timing fixture')
+record('guard.clean', writer() == 0 and tracked.read_bytes() == b'{"mouthCues": []}\n'
+       and not tracked.with_name('.' + tracked.name + '.partial').exists())
+held = tracked.read_bytes()
+record('guard.dirty', writer() == 2 and tracked.read_bytes() == held)
+git('add', str(tracked.relative_to(root)))
+record('guard.staged', writer() == 2 and tracked.read_bytes() == held)
+git('reset','--',str(tracked.relative_to(root)))
+git('rm','--cached','-f',str(tracked.relative_to(root)))
+record('guard.untracked', writer() == 2 and tracked.read_bytes() == held)
+elsewhere = root.parent / 'outside-git'
+C.ROOT = elsewhere
+tracked = elsewhere / C.TIMING / (piece + '.mouth.json')
+write(tracked, 'outside\n')
+record('guard.outside', writer() == 2 and tracked.read_text() == 'outside\n')
+C.ROOT = root
+other = root / C.TIMING / (piece + '.levels.json')
+write(other,'keep\n')
+git('add',str(other.relative_to(root)))
+git('commit','-qm','other output')
+tracked = other
+record('guard.other', writer() == 2 and other.read_text() == 'keep\n')
+PY
+  local key value
+  while IFS=$'\t' read -r key value; do rec "$key" "$value"; done < "$OUT/voice.results"
+}
+
 smoke_frames() { # $@ = the answered rows
   local st a="$T/production/src/assets/smoke-frames" k e="" m="$T/production/src/renders/$P_FRAMES/$P_FRAMES.master.mp4" kind min max atr
   mkdir -p "$a" "$T/production/src/edits"
@@ -2072,6 +2197,19 @@ run_checks() {
       || finding "check 19 — $L captions transcript -o wrote no file (exit ${RES[tr.o.status]:-?})"
   fi
 
+  # 20 and 23
+  local feature
+  for feature in plan tags trial take join pending levels; do
+    if [[ -n "${RES[voice.$feature]:-}" && "${RES[voice.$feature]}" != yes ]]; then
+      finding "check 20 — $L voice tools failed $feature (${RES[voice.$feature]})"
+    fi
+  done
+  for feature in clean dirty staged untracked outside other; do
+    if [[ -n "${RES[guard.$feature]:-}" && "${RES[guard.$feature]}" != yes ]]; then
+      finding "check 23 — $L tracked timing guard failed $feature (${RES[guard.$feature]})"
+    fi
+  done
+
   # 24
   if [[ -n "${RES[where.status]:-}" ]]; then
     if [[ "${RES[where.status]}" != 0 ]]; then finding "check 24 — $L where $P_WHERE failed (exit ${RES[where.status]}): ${RES[where.tail]:-}"
@@ -2323,6 +2461,19 @@ tr.o.status	0
 tr.o.written	yes
 where.status	0
 where.listed	yes
+voice.plan	yes
+voice.tags	yes
+voice.trial	yes
+voice.take	yes
+voice.join	yes
+voice.pending	yes
+voice.levels	yes
+guard.clean	yes
+guard.dirty	yes
+guard.staged	yes
+guard.untracked	yes
+guard.outside	yes
+guard.other	yes
 where.hidden
 where.folders	yes
 where.bad	2
@@ -2459,6 +2610,12 @@ self_test() {
   mut tr.lines.extra yes;                 probe "check 19 fires when --lines takes other lines" "check 19 — [fixture] captions transcript --lines 2.1-2.2"
   mut tr.o.written no;                    probe "check 19 fires when -o writes nothing" "check 19 — [fixture] captions transcript -o wrote no file"
   mut where.listed "no: production/src/timing/914-smoke-where.words.json"; probe "check 24 fires when where misses a tracked timing file" "check 24 — [fixture] where 914-smoke-where did not list every file"
+  for feature in plan tags trial take join pending levels; do
+    mut "voice.$feature" no; probe "check 20 fires when voice $feature fails" "check 20 — [fixture] voice tools failed $feature"
+  done
+  for feature in clean dirty staged untracked outside other; do
+    mut "guard.$feature" no; probe "check 23 fires when timing guard $feature fails" "check 23 — [fixture] tracked timing guard failed $feature"
+  done
   mut where.hidden "production/src/renders/914-smoke-where/914-smoke-where.master.mp4"; probe "check 24 fires when where lists inside an ignored folder" "check 24 — [fixture] where 914-smoke-where named what is inside an ignored per-piece folder"
   mut where.folders "production/src/renders/914-smoke-where/=exists"; probe "check 24 fires when where does not name all three folders" "check 24 — [fixture] where 914-smoke-where did not name its three ignored per-piece folders"
   mut where.bad 0;                        probe "check 24 fires when where accepts a name with no piece folder" "check 24 — [fixture] where with a name that has no piece folder"

@@ -26,7 +26,8 @@ publishing/src/podcast/
   episode, the order of upload and the hand steps.
 - `<show>.feed.xml` — the bytes the directories read, written by `feed write -o` with the same
   `--as-of` as the upload, once the author reports the feed live, so every public change shows as
-  a diff. It is the one tracked file the toolkit overwrites, and only after its GUID comparison.
+  a diff. It is the D59 feed exception, replaced only after its GUID comparison; D66 separately
+  names the timing and scene exceptions in `.claude/rules/syntek-media/04-toolkit-pipeline.md`.
 - Both are the author's: removing the podcast platform deletes this pair, never a register or a
   feed.
 

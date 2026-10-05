@@ -20,7 +20,7 @@ rebuilt from approved takes without a credit spent twice.
   (`.claude/rules/syntek-media/05-model-allocation.md`).
 - **Concrete steps:** split the approved script into segments → write the register → build each
   request → state the cost and wait → generate one call at a time, `take add` after each → the
-  author listens → approve, reject or regenerate → archive each approved take.
+  author listens → approve, reject or regenerate → archive each approved take → `voice join`.
 - **Definition of done:** every segment has a take the author approved, each approved take is
   archived and named in `archived`, and every call has its credits-log row.
 
@@ -34,6 +34,10 @@ rebuilt from approved takes without a credit spent twice.
   request, never the text, which is also the caption text.
 - **Segment IDs are permanent.** A regenerated segment is a new take of the same ID, never a
   renumbering.
+- **A re-roll resets approval and archive.** `take add` sets `status` to `generated` and clears
+  `archived`; the new take is unheard and unarchived.
+- **Plan offline.** `speak plan` prints requests, characters and calls, creating only the takes
+  folder; copy its requests and lengths to this register. It never changes `text` or the script.
 - **Never overwrite a take or an approved row** without confirming with the author.
 
 ## Output & naming

@@ -12,6 +12,8 @@ its terms the same way every time.
   is never voiced, even to patch a fluffed take.
 - **Register:** `production/src/voiceover/<piece>.toml`; takes in
   `production/src/voiceover/generated/<piece>/takes/` (git-ignored).
+- **Joined voice:** `production/src/renders/<piece>/<piece>.voice.wav`, from `voice join`;
+  a scene piece dates `M4.takes` after its used takes are approved and archived.
 - **Narrator:** the `voiceover` row of `brand/src/voice/voice.md`.
 - **Written voice:** syntek-author's brand voice, standards/brand/brand-voice.md, where present;
   the spoken style in `voice.md` follows it and never restates it.

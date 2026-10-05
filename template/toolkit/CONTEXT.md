@@ -33,7 +33,8 @@ toolkit/
 
 - `media.py` — **the only entry point.** Every render, check and register write goes through
   `python3 toolkit/media.py <command>`: probe, presets, script time, assemble, cut, encode, frame,
-  image, still-video, extract-audio, captions, loudness, audiobook, take add, feed, footage,
+  image, still-video, extract-audio, captions, loudness, audiobook, take add, speak plan, voice join,
+  levels, feed, footage,
   tokens, flags, where and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
   shapes Playwright and VHS write (WebM, MP4, animated GIF, none with sound), SRT, TOML, a show
   register and a git repository at run time and exercises every module; a probe that needs

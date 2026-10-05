@@ -12,6 +12,8 @@ and the sound of a technical, Greek or Hebrew term carry the argument.
   has chosen a synthetic host voice for an introduction or a close.
 - **Register:** `production/src/voiceover/<piece>.toml`; takes in
   `production/src/voiceover/generated/<piece>/takes/` (git-ignored).
+- **Joined voice:** `production/src/renders/<piece>/<piece>.voice.wav`, from `voice join`;
+  a scene piece dates `M4.takes` after its used takes are approved and archived.
 - **Narrators:** the `voiceover` row of `brand/src/voice/voice.md`, or its `podcast-host` row.
 - **Written voice:** syntek-author's voice notes, standards/style/voice-notes.md, where present;
   the spoken style in `voice.md` follows them and never restates them.

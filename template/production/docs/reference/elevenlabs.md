@@ -30,10 +30,10 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
 ## Cost before spend
 
 - **Never generate unasked**, not even as a demonstration or a test: trying voices costs too.
-- Before any batch, state the characters (or audio minutes for speech-to-text), the number of
-  calls and the estimated credits, and wait for a yes; `mcp__elevenlabs__check_subscription`
-  gives the balance. Stop at the first error, rather than retrying into spent credits, and log
-  every call in `production/src/credits-log.md`.
+- Before any batch, run the offline `media.py speak plan <piece>` and state characters and calls
+  (audio minutes for speech-to-text), never an invented credit rate; wait for a yes. The plan
+  builds model-specific requests without editing the register; copy them there before calling.
+  `mcp__elevenlabs__check_subscription` gives the balance. Stop at the first error and log each call.
 
 ## One call at a time, into the project
 
