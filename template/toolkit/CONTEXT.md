@@ -2,9 +2,10 @@
 
 The supporting layer that holds the machinery: the one command that turns tracked sources into
 masters, deliverables and images (and, where the project self-hosts a podcast, its feed), the one
-script that turns a layout into a PNG, the platform data both read, and the fallback layouts. It is deliberately minimal: standard-library Python driving
-ffmpeg and ffprobe, plus one script with a single pinned dependency run through `uv run`; no
-server, no web interface, no framework and no network call. You run it from the repository root;
+script that turns a layout into a PNG, the word aligner, the platform data and fallback layouts.
+It is minimal: standard-library Python driving ffmpeg and ffprobe, with heavy dependencies in
+pinned PEP 723 scripts; no server or web interface. Only the author's `transcribe fetch` reaches
+the network deliberately, uv's first package install aside. Run it from the repository root;
 you do not keep work here. The rules it serves live in
 `.claude/rules/syntek-media/04-toolkit-pipeline.md`; if the two ever disagree, `--help` is right
 and the rules file is reported as stale.
@@ -25,6 +26,7 @@ toolkit/
 ├── media_image.py      ← image, and the GIF pass of cut (a newsletter's preview GIF)
 ├── media_feed.py       ← feed: a self-hosted podcast's register, RSS feed, chapters and file tags
 ├── card.py             ← HTML and CSS to PNG in headless Chromium (uv run; Playwright 1.62.0, pinned)
+├── transcribe.py       ← offline known-word alignment; WhisperX 3.8.6, Python >=3.10,<3.14
 ├── data/               ← platforms.toml: every deliverable's delivery specs, dated and sourced
 └── templates/          ← thumbnail.html and card.html: fallbacks for the brand's two layouts
 ```
@@ -34,7 +36,7 @@ toolkit/
 - `media.py` — **the only entry point.** Every render, check and register write goes through
   `python3 toolkit/media.py <command>`: probe, presets, script time, assemble, cut, encode, frame,
   image, still-video, extract-audio, captions, loudness, audiobook, take add, speak plan, voice join,
-  levels, feed, footage,
+  levels, transcribe, feed, footage,
   tokens, flags, where and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
   shapes Playwright and VHS write (WebM, MP4, animated GIF, none with sound), SRT, TOML, a show
   register and a git repository at run time and exercises every module; a probe that needs
@@ -58,8 +60,13 @@ toolkit/
 - `card.py` — renders a thumbnail or card layout at a deliverable's exact size with the
   safe-zone variables set on `:root`, aborting every outside request, and checks a layout against
   the contract: tokens linked and resolving, brand fonts loading, `@dsCard` on line 1 of a
-  preview. **The one script with a dependency**, declared inline (PEP 723) and pinned, so
+  preview. **A script with a dependency**, declared inline (PEP 723) and pinned, so
   `uv run toolkit/card.py` fetches Playwright for itself and installs nothing globally.
+- `transcribe.py` — WhisperX 3.8.6 aligns approved segment words on the joined voice; the heard-word
+  cross-check runs by default. `media.py transcribe` uses `MEDIA_TRANSCRIBE_PYTHON` where set,
+  otherwise offline uv. Only the author runs `transcribe fetch` once; the worker's self-test
+  needs no dependency. Working words/check files land in the piece's ignored timing folder;
+  accepted tracked copies are written together through `-o`, both Git-clean for replacement.
 - `data/platforms.toml` — the template's platform data, refreshed by `copier update`; the
   brand's confirmed corrections are `[[override]]` tables in `brand/src/platforms/overrides.toml`,
   which every command applies and prints.
@@ -98,7 +105,7 @@ toolkit/
   never its content. `where <piece>` lists a piece's tracked files and names its ignored
   per-piece folders, saying whether each exists, never listing what is inside. Outside a git
   work tree every file is read.
-- **Nothing here spends.** No command calls ElevenLabs or any other network service; `take add`
+- **Nothing here spends.** No command calls ElevenLabs; only the author's model fetch uses the network. `take add`
   names and logs a file a skill has already generated with the author's yes.
 
 ## Cross-references
@@ -110,7 +117,7 @@ toolkit/
 - `production/docs/reference/edit-decision-lists.md` — the edit decision list `assemble` reads.
 - `production/docs/reference/sound-and-loudness.md` — the loudness targets `loudness` and
   `assemble` meet.
-- `publishing/docs/reference/captions.md` — the caption limits, the three timing routes and the
+- `publishing/docs/reference/captions.md` — the caption limits, the four timing routes and the
   published transcript.
 - `publishing/docs/reference/platform-specs.md` — how `data/platforms.toml` is read.
 - `publishing/docs/reference/thumbnails.md` — the images `card.py` lays out and `image` encodes,

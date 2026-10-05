@@ -36,7 +36,8 @@ take a sidecar. _Substantive._
 
 > **Skill:** `captions` · **Guide:** `publishing/docs/reference/captions.md`
 
-Generated voiceover takes route one, from its segment register. Speech on camera, and a recorded
+Generated voiceover takes route four where accepted aligned words exist, otherwise route one
+from its segment register. Speech on camera, and a recorded
 piece, take route two, alignment over the speech the toolkit finds. Route three, by hand, is for
 what neither fits. The words always come from `script.md`, or from a recorded piece's approved
 `transcript.md`; **a piece with neither goes back to
@@ -58,6 +59,13 @@ python3 toolkit/media.py extract-audio <master>
 python3 toolkit/media.py captions align scripts/src/pieces/<piece>/script.md <audio> -o <srt>
 ```
 
+Route four: run `voice join <piece>` then `transcribe <piece>` and read its printed check.
+If models are absent, give the author `python3 toolkit/media.py transcribe fetch`; never run it.
+Resolve its findings, then on acceptance run `transcribe <piece> -o
+production/src/timing/<piece>.words.json`, with the words check beside it. Existing tracked
+copies must be committed and unchanged. Use `captions from-words
+production/src/timing/<piece>.words.json --deliverable KEY --offset TC -o <srt>`, the offset
+from the edit's voice row. Word boundaries stay intact; short gaps are findings for review.
 Route two, a recorded piece: retime its recording-timed file to the master with
 `captions retime … --edl` (`production/docs/reference/recorded-pieces.md`), unless that has
 already been done. _Mechanical._

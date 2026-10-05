@@ -12,7 +12,8 @@ House caption limits (DESIGN Section 6.9): at most 42 characters a line (32 for 
 deliverable), at most two lines a cue, at most 17 characters a second, a cue of 1.0 to 7.0
 seconds, at least 0.08 seconds between cues, no braces and no audio tags.
 
-Timing routes (DESIGN D22): from-segments spreads each approved voiceover segment's probed
+Timing routes (DESIGN D22): from-words uses each cue's first and last aligned word and reports
+short gaps without trimming a spoken word; from-segments spreads each approved segment's probed
 duration over its cues by character share, so a cue starts exactly where its segment starts;
 align spreads a script's or transcript's cues over the speech ffmpeg's silencedetect finds (a
 heuristic: the author checks it by eye in a burned preview), beat by beat with --anchors; retime
@@ -35,7 +36,7 @@ lower case; NOTE cues and braced directions dropped; and 'As recorded on DD/MM/Y
 --date or, for a recorded piece's transcript.md, its recording's recorded date in the
 manifest. What the picture shows and the words leave out is added by hand.
 
-Where the output goes: from-segments writes to its piece's publishing/src/renders/<piece>/ unless
+Where the output goes: from-words and from-segments write to publishing/src/renders/<piece>/ unless
 -o names a path; align, retime, rewrap, vtt and transcript write to the path -o names, or else to
 stdout, with every report line on stderr, because their files belong in the tracked
 publishing/src/captions/, where the toolkit never chooses a path itself. burn writes its render
@@ -52,6 +53,7 @@ Standard library only; Python 3.11+.
 from __future__ import annotations
 
 import difflib
+import json
 import math
 import re
 import sys
@@ -408,12 +410,15 @@ def spread(texts: list, start: float, end: float, width: int) -> list:
     return cues
 
 
-def keep_gaps(cues: list) -> list:
+def keep_gaps(cues: list, preserve_words: bool = False) -> list:
     """Cues in time order with the house gap between them. A cue the gap would leave with no
     length (it starts at or after the next cue's start, less the gap) is merged into the next,
     its words first, so no cue ends before it starts and no word is lost; captions check then
     judges the merged cue's lines and reading speed."""
     cues.sort(key=lambda c: c.start)
+    if preserve_words:
+        # D22's word boundaries take priority: check_cues reports any short gap.
+        return cues
     i = 0
     while i < len(cues) - 1:
         a, b = cues[i], cues[i + 1]
@@ -623,6 +628,66 @@ def cmd_from_segments(args) -> int:
     print(f"{len(cues)} cue(s) from {len(segs)} approved segment(s); every segment's first cue "
           f"starts on its segment")
     return report(check_cues(cues, width), "captions from-segments")
+
+
+def cmd_from_words(args) -> int:
+    source = Path(args.words)
+    try:
+        rows = json.loads(C.read_text(source))
+    except ValueError:
+        raise C.Fatal(f'{C.shown(source)} is not a words JSON file') from None
+    if not isinstance(rows, list) or not rows:
+        raise C.Finding('the words file holds no words')
+    width = width_for(C.preset(args.deliverable))
+    offset = C.parse_tc(args.offset) if args.offset else 0.0
+    groups, previous = [], None
+    for row in rows:
+        if not isinstance(row, dict) or not str(row.get('word', '')).strip() or not row.get('segment') \
+                or 'score' not in row:
+            raise C.Fatal('every words row needs word, start, end, score and segment')
+        if any(char in str(row['word']) for char in '{}[]'):
+            raise C.Finding('a direction or audio tag cannot reach captions from words')
+        a, b = row.get('start'), row.get('end')
+        if a is None or b is None:
+            raise C.Finding(f"untimed word {row['word']!r}; fix the words check before making captions")
+        score = row['score']
+        if not isinstance(score, (int, float)) or isinstance(score, bool) or not math.isfinite(score) \
+                or not 0 <= score <= 1:
+            raise C.Fatal('every timed word needs a finite score between zero and one')
+        if any(not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v)
+               for v in (a, b)) or a < 0 or b <= a:
+            raise C.Fatal('every word needs finite, increasing start/end times')
+        if previous is not None and a < previous:
+            raise C.Finding('word times overlap or run backwards')
+        previous = b
+        if not groups or groups[-1][0]['segment'] != row['segment']:
+            groups.append([])
+        groups[-1].append(row)
+    cues = []
+    for group in groups:
+        chunks = chunk_text(' '.join(row['word'] for row in group), width)
+        cursor = 0
+        for chunk in chunks:
+            # Original words preserve punctuation; chunk_text may only split between them.
+            chosen = []
+            while cursor + len(chosen) < len(group):
+                chosen.append(group[cursor + len(chosen)])
+                if ' '.join(row['word'] for row in chosen) == chunk:
+                    break
+            if not chosen or ' '.join(row['word'] for row in chosen) != chunk:
+                raise C.Fatal('caption chunking changed the word sequence; nothing written')
+            cue = Cue(chosen[0]['start'] + offset, chosen[-1]['end'] + offset, as_cue_lines(chunk, width))
+            cues.append(cue)
+            cursor += len(chosen)
+        if cursor != len(group):
+            raise C.Fatal('caption chunking left words out; nothing written')
+    piece = C.piece_of(source)
+    out = C.output_path(default_srt(f'{piece}.{C.file_form(args.deliverable)}.en-GB.srt'), args.o,
+                        inputs=[source])
+    keep_gaps(cues, preserve_words=True)
+    write_out(out, srt_text(cues))
+    print(f'{len(cues)} cue(s) from word boundaries; alignment times are estimates')
+    return report(check_cues(cues, width), 'captions from-words')
 
 
 def speech_intervals(audio: Path, noise_db: float, min_silence: float) -> tuple:

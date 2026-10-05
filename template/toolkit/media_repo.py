@@ -610,6 +610,28 @@ def setup_report(root: Path) -> tuple:
     item(bool(uv), "uv" if uv else "uv is not installed (card.py runs through it)", C.INSTALL["uv"])
     for ok, label, fix in uv_interpreter_rows(root):
         item(ok, label, fix)
+    import media_audio as A
+    import transcribe as T
+    python = A.transcribe_python()
+    if not python:
+        item(None, 'WhisperX interpreter absent: transcribe needs the author-run transcribe fetch, '
+                   'or MEDIA_TRANSCRIBE_PYTHON at user scope')
+    else:
+        try:
+            proc = subprocess.run([python, str(A.transcribe_script()), 'status'], capture_output=True,
+                                  text=True, timeout=30)
+            status = json.loads(proc.stdout) if proc.returncode == 0 else {}
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            status = {}
+        version = status.get('version', '')
+        item(version == T.VERSION and status.get('supported_python') is True,
+             f'WhisperX interpreter: {python}; version {version or "missing or broken"}'
+             f' (requires {T.VERSION})', C.INSTALL['whisperx'])
+    missing = T.missing_cache(T.cache_paths())
+    for label in ('English wav2vec2 weights', "nltk's English punkt_tab",
+                  'faster-whisper large-v3-turbo in the default Hugging Face cache'):
+        item(None if label in missing else True, f'transcribe cache: {label}'
+             + (' absent; run transcribe fetch once yourself' if label in missing else ' ready'))
     cache = playwright_cache()
     found = [d.name for d in cache.glob(f"chromium*-{PLAYWRIGHT_REVISION}")] if cache.is_dir() else []
     item(bool(found), f"Chromium for Playwright 1.62.0 ({', '.join(found) or 'not installed'})",

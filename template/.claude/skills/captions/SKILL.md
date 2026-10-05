@@ -1,7 +1,7 @@
 ---
 name: captions
 description: >-
-  Make a piece's captions and transcripts: timed from the voiceover's approved segments, aligned to
+  Make a piece's captions and transcripts: timed from approved segments or aligned words, aligned to
   recorded speech beat by beat with 'python3 toolkit/media.py captions align' and checked by eye, or
   made by hand. Speech-to-text through the user-scope ElevenLabs MCP server runs only when the
   author asks, after the audio minutes are stated; on its base-path error this skill prints the
@@ -20,10 +20,10 @@ Locale: en_GB · <%TIMEZONE%> · dates DD/MM/YYYY.
 Captions are the script, or the transcript, timed. The words come from that record and never from
 a guess; the timing comes from the cheapest route that is true. The ElevenLabs speech-to-text tool
 returns text only, with no timestamps, so it can draft a transcript but never time a caption.
-**Timing has three routes, in this order of preference**: the voiceover's approved segments,
-whose measured durations make every cue boundary exact at each join; recorded speech, where cues
-are spread over the speech intervals ffmpeg finds, beat by beat, a heuristic the author checks by
-eye in a burned preview; and by hand.
+**Timing has four routes**: approved voiceover segments, recorded speech aligned beat by beat,
+by hand, and aligned words for a generated voice. Prefer an accepted words file where present;
+otherwise the segments' measured durations make boundaries exact at each join. Both alignment
+routes produce estimates that the author checks by eye in a burned preview.
 
 A recorded piece has no script: its transcript, made here and approved by the author, stands in
 for one wherever a script is read. This skill never changes the script or the transcript to fit a
@@ -41,7 +41,7 @@ are the procedure of record — do not restate them at length here.
 - If a layer's `workflows/local/` holds a folder with the same `NN-name` as a procedure named here,
   follow that procedure instead: the author's local procedure replaces the template's
   (`run-media-workflow`, step 2).
-- `publishing/docs/reference/captions.md` — the house limits, the names, the three routes,
+- `publishing/docs/reference/captions.md` — the house limits, the names, the four routes,
   captions made before the cut, and the published transcript on a profile site or for a feed
   episode (its page detail in the website, blog and podcast-feed guides, where they ship).
 - `production/docs/reference/recorded-pieces.md` — the transcript, its anchors, and the chain from
@@ -58,8 +58,8 @@ are the procedure of record — do not restate them at length here.
 
 1. **Confirm the job and the route.** Name the procedure by its full folder name, the piece by its
    folder name, and the job: a transcript, captions for the master, captions for one or more cuts,
-   a check, or burn-in. Choose the timing route from the record: the first route when every spoken
-   line of the master comes from approved voiceover segments; the second for speech recorded on
+   a check, or burn-in. Choose route four when accepted aligned words exist for a generated voice,
+   otherwise route one when every spoken line comes from approved segments; route two for speech recorded on
    camera or in a recording, or a piece that mixes the two; the third when the author prefers it,
    or for cues the other two cannot place. Speech-to-text runs only on a request for it,
    confirmed exactly: which recording, and how many minutes.
@@ -137,7 +137,15 @@ are the procedure of record — do not restate them at length here.
    `python3 toolkit/media.py check --setup` again. Then stop.
    *Complete when:* the author has the command with the computed path, and the run has stopped.
 
-6. **Time the captions from the voiceover (the first route).** With every segment `approved`, run
+6. **Time the captions from the voiceover (routes one and four).** With every segment `approved`, run
+   `voice join <piece>` and `transcribe <piece>` where word timing is wanted, then read its printed
+   check. Missing models: give the author `python3 toolkit/media.py transcribe fetch`, never run it
+   yourself. Resolve untimed words or heard-word disagreements with the author; low scores are
+   warnings. On acceptance, run `transcribe <piece> -o production/src/timing/<piece>.words.json`;
+   its words check is beside it, and both must be committed and unchanged for replacement.
+   Use `captions from-words WORDS --deliverable KEY --offset TC -o SRT` with that accepted file;
+   boundaries follow the words, and short gaps are findings, never trimmed speech. Where no
+   accepted words file exists, run
    `python3 toolkit/media.py captions from-segments REGISTER --deliverable KEY --offset TC`, the
    register being `production/src/voiceover/<piece>.toml` and the offset the `at` of the edit
    list's `vo:<piece>` row, with `-o` naming `publishing/src/captions/<piece>.en-GB.srt`. It chunks
@@ -237,7 +245,8 @@ are the procedure of record — do not restate them at length here.
 - `publishing/src/captions/` — every SRT and VTT, named for its timing and line width, and the
   published transcripts.
 - `scripts/src/pieces/` — each piece's script or transcript, the words every caption follows.
-- `production/src/voiceover/` — the segment registers the first route reads.
+- `production/src/voiceover/` — the segment registers routes one and four read.
+- `production/src/timing/` — accepted words and their check for route four.
 - `production/src/edits/` — the edit decision lists that carry recording time to the master.
 - `publishing/src/cut-downs/` — each cut's lines, In and Out.
 - `production/src/credits-log.md` — one row per speech-to-text call.

@@ -9,10 +9,9 @@ model: opus
 **Last Updated**: <%DATE%> **Version**: 0.1.0 **Maintained By**: <%OWNER_NAME%>
 **Language**: British English (en_GB)
 
-**What it is.** Most short video is watched with the sound off, so for most viewers the captions
-are the piece. A caption file holds the spoken words of one deliverable, timed to its picture, in
-SRT (WebVTT is generated from it). The words are the script's or a recorded piece's approved
-transcript's, never retyped; `captions check --script` compares them with their source (M6).
+**What it is.** A caption file holds one deliverable's spoken words, timed to its picture, in
+SRT (WebVTT is generated from it). The script or approved transcript supplies the words;
+`captions check --script` compares them with that source (M6).
 
 ## House limits
 
@@ -23,10 +22,9 @@ transcript's, never retyped; `captions check --script` compares them with their 
 | Reading speed | at most 17 characters a second |
 | Cue length | 1.0 to 7.0 seconds, with at least 0.08 seconds between cues |
 
-House values, not platform rules; `media.py captions check` enforces them. Break at a sentence or
-clause, never inside a name. A speaker change inside one cue opens each line with `- `. Sounds go
-in square brackets, lower case, only when they matter; no braced direction or audio tag ever
-reaches a caption, and words are spelt as the script spells them, in en_GB.
+`media.py captions check` enforces these house limits. Break at clauses, never inside a name;
+a speaker change opens each line with `- `. Relevant sounds go in lower-case square brackets;
+no direction or audio tag reaches a caption, and words follow the script's en_GB spelling.
 
 ## Names
 
@@ -35,26 +33,31 @@ to one cut and `<piece>.<FID>.en-GB.srt` to a recording; a deliverable with its 
 `.<platform>-<format>` before `.en-GB` (`.linkedin-video-vertical`); a `.vtt` sits beside an `.srt`
 that needs one; a published transcript is `<piece>[--cNN].transcript.en-GB.md`.
 
-## Three timing routes
+## Four timing routes
 
 1. **Generated voiceover**: `captions from-segments` reads the segment register in
    `production/src/voiceover/`, splits each approved segment's measured length across its cues by
    character share, and is exact at every segment join, at no cost.
-2. **Recorded speech**, and speech on camera: `captions align` spreads the script's or
-   transcript's cues over the speech ffmpeg finds. A whole recording is aligned beat by beat
-   (`--anchors`, so drift never crosses a beat); one cut is aligned on its own audio and lines
-   (`extract-audio --in --out`, then `--lines`). `captions retime` carries recording timing to the
-   master, and master timing to each cut. It is a heuristic: check it by eye in a burned preview.
+2. **Recorded speech**: `captions align` spreads cues over the speech ffmpeg finds, beat by beat
+   (`--anchors`) for a recording, or on a cut's own audio and `--lines`. `captions retime` carries
+   recording timing to the master, and master timing to cuts. Check this heuristic by eye.
 3. **By hand.** Speech-to-text spends credits: only when the author asks
    (`production/docs/reference/elevenlabs.md`).
+4. **Aligned words**, for a generated voice: `voice join`, then `transcribe <piece>` aligns the
+   approved segments offline with WhisperX 3.8.6, cross-checking heard words by default.
+   Read its printed check; untimed or differing words are findings. `--no-cross-check` records
+   that choice. The author alone runs `transcribe fetch` once for the models and tokenizer.
+   Accept with `transcribe <piece> -o production/src/timing/<piece>.words.json`; its check sits
+   beside it, and both must be committed and unchanged before replacement. `captions from-words
+   WORDS --deliverable KEY --offset TC -o SRT` uses each cue's first and last word boundaries;
+   short gaps are findings, never trimmed words. Times are estimates: watch a burned preview.
 
 ## Burned or sidecar
 
 - A deliverable whose table has `caption_formats = []` takes no sidecar: burn the captions in.
   Otherwise upload the SRT, unless the brief asks for burned captions. A `caption_formats` named
   in the table's `verify` is unconfirmed: check the platform, or burn.
-- Captions made before the cut let `media.py cut --captions` burn them in the cutting pass, so M5
-  and M6 pass together; both dates are recorded.
+- `media.py cut --captions` burns captions in the cutting pass: M5 and M6 dated together.
 - A burn writes an ASS file sized to the output, styled from the `--caption-*` tokens of
   `brand/src/design-system/tokens.css`; it fails when the caption font falls back.
 - **On a profile site** (of the website or blog profile, whoever owns it) a video's `.vtt` loads
@@ -65,18 +68,15 @@ that needs one; a published transcript is `<piece>[--cNN].transcript.en-GB.md`.
 
 ## How we apply it here
 
-- Every deliverable with speech and picture is captioned; M6's `n/a` list in the ladder guide says
-  what is not, and the reason is recorded.
+- Caption every deliverable with speech and picture; record M6's `n/a` reason where exempt.
 - Fix a mis-transcription only, never improve on what was said; watch a burned preview first.
 
 ## Who implements it
 
-- **Workflows:** `publishing/workflows/03-caption-a-piece/` for every deliverable;
-  `production/workflows/08-bring-in-a-recording/` for a recording's own captions.
+- **Workflows:** `publishing/workflows/03-caption-a-piece/`; `production/workflows/08-bring-in-a-recording/` for recordings.
 - **Skill:** `captions` times, checks, rewraps, converts and burns them.
 
 ## Governing standard
 
-`.claude/rules/syntek-media/03-production-ethics.md` Section 3 owns the ladder and M6, and Section
-4 owns credits; `.claude/rules/syntek-media/04-toolkit-pipeline.md` Section 3 owns renders. The
-rules own the requirement; this guide owns how captions are timed, written and delivered.
+`.claude/rules/syntek-media/03-production-ethics.md` Sections 3–4 own M6 and credits;
+`.claude/rules/syntek-media/04-toolkit-pipeline.md` owns renders; this guide owns caption delivery.

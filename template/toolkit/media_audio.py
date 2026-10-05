@@ -59,9 +59,11 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import shutil
 import tempfile
+import time
 from pathlib import Path
 
 import media_common as C
@@ -633,6 +635,113 @@ def cmd_levels(args) -> int:
                                    "windows": windows}, indent=2, allow_nan=False) + "\n").encode())
     print(f"levels: {C.shown(out)} — {len(windows)} windows, {args.window:g} s, {rate} Hz, silence floor -120 dBFS")
     return 0
+
+
+# ── Word alignment: project paths outside the dependency worker (DESIGN D67) ────────────
+
+def transcribe_script() -> Path:
+    return C.TOOLKIT / 'transcribe.py'
+
+
+def transcribe_interpreter_record() -> Path:
+    import hashlib
+    key = hashlib.sha256(str(transcribe_script().resolve()).encode('utf-8')).hexdigest()[:16]
+    return C.lock_folder() / f'transcribe-{key}.python'
+
+
+def transcribe_python() -> str:
+    named = os.environ.get('MEDIA_TRANSCRIBE_PYTHON', '').strip()
+    if named:
+        return str(Path(named).expanduser())
+    record = transcribe_interpreter_record()
+    if record.is_file():
+        python = record.read_text(encoding='utf-8').strip()
+        if python and Path(python).is_file():
+            return python
+    return ''
+
+
+def run_transcribe(argv: list, fetch=False):
+    named = os.environ.get('MEDIA_TRANSCRIBE_PYTHON', '').strip()
+    if named:
+        return C._run_until([str(Path(named).expanduser()), str(transcribe_script()), *argv],
+                            C.ROOT, True, time.monotonic() + 1200, 'transcribe.py', 1200,
+                            'check MEDIA_TRANSCRIBE_PYTHON and the fetched files')
+    return C.uv_script(transcribe_script(), argv, timeout=1200, cwd=C.ROOT, offline=not fetch,
+                       hint='run transcribe fetch once, or set MEDIA_TRANSCRIBE_PYTHON at user scope')
+
+
+def cmd_transcribe(args) -> int:
+    import transcribe as T
+    import media_video as V
+    if args.piece == 'fetch':
+        if args.o or args.no_cross_check:
+            raise C.Fatal('transcribe fetch takes no -o or --no-cross-check')
+        proc = run_transcribe(['fetch'], fetch=True)
+        print(proc.stdout, end='')
+        print(proc.stderr, end='', file=C.sys.stderr)
+        if proc.returncode == 0:
+            # The environment's interpreter belongs at user scope, never in the project.
+            marker = next((line.removeprefix('INTERPRETER: ') for line in proc.stdout.splitlines()
+                           if line.startswith('INTERPRETER: ')), '')
+            if marker and not os.environ.get('MEDIA_TRANSCRIBE_PYTHON'):
+                record = transcribe_interpreter_record()
+                record.parent.mkdir(parents=True, exist_ok=True)
+                record.write_text(marker + '\n', encoding='utf-8')
+        return proc.returncode if proc.returncode in (0, 1, 2) else 2
+    piece = args.piece
+    voice = joined_voice(piece)   # validates the piece name
+    register = C.path(C.VOICEOVER) / f'{piece}.toml'
+    data = C.load_toml(register)
+    segments = data.get('segment', [])
+    # Text rejection must precede every process, including probing takes or starting uv.
+    try:
+        T.prepare([{**s, 'start': 0.0, 'end': 1.0} for s in segments], pronunciations(ipa=False))
+    except T.BadText as error:
+        raise C.Finding(str(error)) from None
+    except T.CannotRun as error:
+        raise C.Fatal(str(error)) from None
+    if not voice.is_file():
+        raise C.Fatal(f'{C.shown(voice)} is missing: run media.py voice join {piece}')
+    words = C.output_path(C.piece_folder(C.PROD_RENDERS, piece) / 'timing' / f'{piece}.words.json',
+                          args.o, inputs=[register, voice], tracked_timing=(piece, 'words.json'))
+    check = C.output_path(words.with_name(f'{piece}.words-check.md'),
+                         str(words.with_name(f'{piece}.words-check.md')) if args.o else None,
+                         inputs=[register, voice], tracked_timing=(piece, 'words-check.md'))
+    rate = voice_sample_rate(piece)
+    position, prepared = 0, []
+    for _file, duration, pause, segment in V.voice_segments(piece):
+        if not math.isfinite(pause) or pause < 0:
+            raise C.Fatal(f"segment {segment.get('id')}: pause_after must be finite and nonnegative")
+        prepared.append({**segment, 'start': position / rate, 'end': position / rate + duration})
+        position += math.floor((duration + pause) * rate + 0.5)
+    info = C.probe(voice)
+    if abs(C.duration(info) - position / rate) > 1 / rate + 0.001:
+        raise C.Fatal(f'{C.shown(voice)} no longer matches the approved takes and pauses; run voice join again')
+    job = {'piece': piece, 'audio': str(voice), 'segments': prepared,
+           'pronunciations': pronunciations(ipa=False), 'cross_check': not args.no_cross_check}
+    with tempfile.TemporaryDirectory(prefix='media-transcribe-') as folder:
+        jobfile = Path(folder) / 'job.json'
+        jobfile.write_text(json.dumps(job, ensure_ascii=False, allow_nan=False), encoding='utf-8')
+        proc = run_transcribe(['align', str(jobfile)])
+    print(proc.stderr, end='', file=C.sys.stderr)
+    if proc.returncode not in (0, 1):
+        raise C.Fatal('transcribe could not run; see its diagnostic above')
+    try:
+        reply = json.loads(proc.stdout)
+        body = json.dumps(reply['words'], ensure_ascii=False, indent=2, allow_nan=False) + '\n'
+        report = str(reply['check'])
+    except (ValueError, KeyError, TypeError):
+        raise C.Fatal('transcribe returned an unreadable result; nothing written') from None
+    # Alignment may take minutes: recheck both guards against edits made while it ran.
+    C.output_path(words, str(words) if args.o else None, tracked_timing=(piece, 'words.json'))
+    C.output_path(check, str(check) if args.o else None, tracked_timing=(piece, 'words-check.md'))
+    # Both paths have passed their fresh guards before either file changes.
+    C.replace_file(words, body.encode('utf-8'))
+    C.replace_file(check, report.encode('utf-8'))
+    print(report, end='')
+    print(f'wrote {C.shown(words)} and {C.shown(check)}')
+    return proc.returncode
 
 
 def _footnotes(text: str, mode: str) -> str:

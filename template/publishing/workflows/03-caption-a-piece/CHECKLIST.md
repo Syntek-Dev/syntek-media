@@ -32,7 +32,8 @@ model: opus
 
 **Making**
 
-- [ ] The master's captions made with `from-segments`, `align` or `retime --edl`, written as `<piece>.en-GB.srt`. · _sonnet_
+- [ ] The master's captions made with `from-segments`, `from-words`, `align` or `retime --edl`, written as `<piece>.en-GB.srt`. · _sonnet_
+- [ ] Route four: printed words check reviewed, findings decided, accepted words and check written through `-o`; fetch left to the author. · _opus_
 - [ ] Each cut's captions retimed from the master's, or aligned on its own audio and lines where it drifted. · _sonnet_
 - [ ] Files rewrapped where a deliverable needs its own width, named with the `.<platform>-<format>` qualifier. · _sonnet_
 
@@ -40,6 +41,7 @@ model: opus
 
 - [ ] **Every file passes `captions check --script`;** each finding decided, and a mis-transcription fixed in the transcript first, with the author. · _opus_
 - [ ] Line breaks at clauses, never inside a name; no braced direction or audio tag in any cue. · _opus_
+- [ ] Route four's word boundaries preserved; short-gap findings decided and timing estimates checked in the preview. · _opus_
 - [ ] Burned deliverables burned (or re-cut with their captions); sidecars kept, with a VTT where a platform takes one, a profile site's video and a feed episode included. · _sonnet_
 - [ ] Each published transcript written with `captions transcript` (`--lines` for a cut), described where the picture says more, and approved by the author. · _opus_
 - [ ] No caption-font fallback accepted. · _sonnet_

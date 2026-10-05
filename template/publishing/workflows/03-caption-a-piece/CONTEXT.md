@@ -49,7 +49,7 @@ checking it against them, and deciding per platform what is burned prevents all 
 
 ## Cross-references
 
-- `publishing/docs/reference/captions.md` — house limits, names, the three timing routes, burned
+- `publishing/docs/reference/captions.md` — house limits, names, the four timing routes, burned
   or sidecar.
 - `production/docs/reference/recorded-pieces.md` — a recorded piece's transcript and its anchors.
 - `.claude/skills/captions/SKILL.md` — the skill that runs every caption command.

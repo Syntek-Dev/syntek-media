@@ -42,9 +42,9 @@ deliverable is one line and a failed render says exactly what failed.
   the date checked, and run `media.py presets <key>` to see it applied; never edit
   `data/platforms.toml` in a project.
 - **Concrete steps (changing the machinery):** describe the change and why to the author first;
-  keep every module standard-library only (`card.py` alone declares one dependency, inline, and
-  runs with `uv run`); run `python3 toolkit/media.py --self-test` and
-  `uv run toolkit/card.py --self-test` before and after.
+  keep helper modules standard-library only; dependencies live in pinned PEP 723 scripts,
+  `card.py` and `transcribe.py`. Run `python3 toolkit/media.py --self-test`,
+  `uv run toolkit/card.py --self-test` and `python3 toolkit/transcribe.py --self-test` before and after.
 - **Concrete steps (a self-hosted podcast's feed):** `feed write` takes `--as-of` always (the
   episode's `pub_date`, the time it is uploaded): at M7 its upload copy goes to the top of
   `publishing/src/renders/`, which no piece owns; once the author reports the feed live,
@@ -118,3 +118,9 @@ deliverable is one line and a failed render says exactly what failed.
   `feed add`, `feed tag`) and its tracked feed (`feed write -o`).
 - **New modules:** `media_<area>.py`, standard library only, imported by `media.py` and covered by
   its `--self-test`; never a second command line.
+- **Known-word alignment:** `media.py transcribe <piece>` reads approved segments on the joined
+  WAV, prints the words check and writes ignored working timing; `-o` accepts words/check into
+  `production/src/timing/`, both committed and unchanged before replacement. Cross-check is on
+  by default; `--no-cross-check` records its omission. Only the author runs `transcribe fetch`.
+- **Captions from words:** `captions from-words WORDS --deliverable KEY [--offset TC] [-o SRT]`
+  preserves first/last word boundaries, reports short gaps and checks the existing house limits.

@@ -132,6 +132,8 @@ INSTALL = {
                "git-lfs; macOS: brew install git-lfs)",
     "pandoc": "optional: install pandoc for a cleaner plain-text conversion",
     "espeak-ng": "optional: install espeak-ng for a scratch timing track (sudo apt install espeak-ng)",
+    'whisperx': 'optional: run python3 toolkit/media.py transcribe fetch once yourself; or set '
+                'MEDIA_TRANSCRIBE_PYTHON at user scope to an environment with whisperx==3.8.6',
 }
 
 X264_PRESET = "medium"   # the self-test lowers it to "ultrafast" for speed

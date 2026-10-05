@@ -65,7 +65,9 @@ Grouped by what each script reads:
   0.2.0 that includes `image` in every format, the newsletter GIF read from its own loop
   extension, the silent loop and web video, the podcast feed end to end offline on a fixture show,
   and the published transcript (checks 15–19), plus offline voice preparation and the Git-clean
-  timing overwrite guard (checks 20 and 23). It records what each step did in a results file and
+  timing overwrite guard (checks 20 and 23), known-word alignment and captions from words (22),
+  and WhisperX setup notes (26). No audit fetches models or builds WhisperX; live alignment needs
+  a prepared user interpreter or SKIPs by name. It records each step in a results file and
   judges that; its self-test writes a clean results file at run time and mutates one fact per
   probe, so it needs no ffmpeg or Chromium. A missing tool is a named SKIP; a step a render does
   not need (no audiobook folder) is n/a.

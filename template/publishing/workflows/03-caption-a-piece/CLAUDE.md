@@ -19,7 +19,7 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
 - **Routing:** skill `captions`. Guides: `publishing/docs/reference/captions.md`,
   `production/docs/reference/recorded-pieces.md` for a recorded piece, and the guide for each
   platform a deliverable goes to. Tools: `python3 toolkit/media.py captions …` and
-  `extract-audio`.
+  `extract-audio`, `voice join` and offline `transcribe`; model fetch belongs to the author.
 - **Model:** **Opus** for line breaks, speaker changes, resolving a word that differs from the
   script and judging a burned preview; the mechanical tier for running the toolkit, rewrapping,
   converting and recording the gate (`.claude/rules/syntek-media/05-model-allocation.md`).
@@ -40,6 +40,8 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
 - **Fix the source, not the caption.** A mis-transcription is corrected in the transcript first,
   with the author; a caption never improves on what was said.
 - **No braced direction or audio tag** reaches a caption.
+- **Word timing is estimated.** Read the printed words check, accept tracked timing through `-o`,
+  preserve first/last word boundaries, and decide short-gap findings with the author.
 - **A font fallback is a failure.** `captions burn` fails when the caption font is missing; fix
   the font, never accept the fallback.
 - **Never overwrite** a checked caption file without confirming with the author.

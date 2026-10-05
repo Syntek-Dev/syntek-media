@@ -16,6 +16,7 @@ Usage:
     python3 toolkit/media.py extract-audio SRC [--in TC --out TC] [--rate HZ] [-o OUT]
     python3 toolkit/media.py captions check SRT [--deliverable KEY] [--script SCRIPT]
     python3 toolkit/media.py captions from-segments REGISTER --deliverable KEY [--offset TC] [-o SRT]
+    python3 toolkit/media.py captions from-words WORDS --deliverable KEY [--offset TC] [-o SRT]
     python3 toolkit/media.py captions align TEXT AUDIO [--lines B.L-B.L] [--anchors] [--noise DB]
                                             [--min-silence S] [-o SRT]
     python3 toolkit/media.py captions retime SRT (--in TC --out TC | --edl EDL --source FID) [-o SRT]
@@ -34,6 +35,8 @@ Usage:
     python3 toolkit/media.py speak plan [PIECE [--segment sNN...]] [--trial NAME]
     python3 toolkit/media.py voice join PIECE [-o OUT]
     python3 toolkit/media.py levels PIECE [--window S]
+    python3 toolkit/media.py transcribe PIECE [--no-cross-check] [-o WORDS]
+    python3 toolkit/media.py transcribe fetch
     python3 toolkit/media.py feed new SHOW --feed-url URL [--site SLUG] [--rekey]
     python3 toolkit/media.py feed add SHOW --piece PIECE
     python3 toolkit/media.py feed tag SHOW --piece PIECE
@@ -356,7 +359,13 @@ def build_parser() -> argparse.ArgumentParser:
            "stem's leading piece key, or the folder's top for a stem with none, such as a footage file's)")
     p.set_defaults(func=A.cmd_extract)
 
-    p = sub.add_parser("captions", help="check, from-segments, align, retime, rewrap, vtt, transcript, burn")
+    p = sub.add_parser('transcribe', help='align approved known words offline; fetch is the author-run setup')
+    p.add_argument('piece', help='PIECE, or fetch for the one deliberate model download')
+    p.add_argument('--no-cross-check', action='store_true', help='disable the heard-word cross-check, recorded in the check')
+    out(p, 'the words JSON path (default: production/src/renders/<piece>/timing/<piece>.words.json); its check is beside it')
+    p.set_defaults(func=A.cmd_transcribe)
+
+    p = sub.add_parser("captions", help="check, from-segments, from-words, align, retime, rewrap, vtt, transcript, burn")
     cs = p.add_subparsers(dest="sub", metavar="action")
     q = cs.add_parser("check", help="limits, overlaps and gaps; the words against a script")
     q.add_argument("srt")
@@ -369,6 +378,12 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--offset", metavar="TC", help="where the voice track starts on the master")
     out(q, "the output path (default: publishing/src/renders/<piece>/<piece>.<platform>-<format>.en-GB.srt)")
     q.set_defaults(func=K.cmd_from_segments)
+    q = cs.add_parser('from-words', help='captions at the aligned words’ boundaries')
+    q.add_argument('words', help='the accepted words JSON file')
+    q.add_argument('--deliverable', required=True, metavar='KEY')
+    q.add_argument('--offset', metavar='TC', help='where the voice starts on the master')
+    out(q, 'the output path (default: publishing/src/renders/<piece>/<piece>.<platform>-<format>.en-GB.srt)')
+    q.set_defaults(func=K.cmd_from_words)
     q = cs.add_parser("align", help="captions spread over the speech silencedetect finds")
     q.add_argument("text", help="a script.md or a transcript.md")
     q.add_argument("audio")
@@ -885,6 +900,8 @@ def self_test() -> int:
                       ("default output paths: each piece's own folder", lambda: test_piece_defaults(verdict))]
             groups.append(("offline voice plans and tracked timing guards",
                            lambda: test_voice_plan(verdict, skip, cli, root, have_git)))
+            groups.append(('word alignment logic and captions from words',
+                           lambda: test_words(verdict, cli, root)))
             if have_ff:
                 groups.append(("cut, burn-in, loudness, assemble, align and the audiobook master",
                                lambda: test_media(verdict, skip, cli, root)))
@@ -892,6 +909,8 @@ def self_test() -> int:
                                lambda: test_web(verdict, skip, cli, root)))
                 groups.append(("the podcast feed: register, tags, feed, chapters and checks",
                                lambda: test_feed(verdict, skip, cli, root, saved_zone if rendered_zone else None)))
+                groups.append(('transcribe launcher and paired output guards',
+                               lambda: test_transcribe(verdict, cli, root, have_git)))
             else:
                 skip("every ffmpeg probe (cut, burn-in, loudness, assemble, align, audiobook, image, GIF, "
                      "the podcast feed)", "ffmpeg or ffprobe is not installed")
@@ -1698,6 +1717,148 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
             os.environ.pop("HOME", None)
         else:
             os.environ["HOME"] = saved_home
+
+
+def test_words(verdict, cli, root: Path) -> None:
+    import transcribe as T
+    verdict('transcribe worker standard-library self-test', T.self_test() == 0)
+    rows = [{'word': 'A', 'start': 0.1, 'end': 0.3, 'score': 0.8, 'segment': 's01'},
+            {'word': 'ferry', 'start': 0.4, 'end': 1.1, 'score': 0.7, 'segment': 's01'},
+            {'word': 'crosses.', 'start': 1.2, 'end': 2.5, 'score': 0.9, 'segment': 's01'},
+            {'word': 'Home.', 'start': 2.8, 'end': 4.0, 'score': 0.8, 'segment': 's02'}]
+    source = root / C.TIMING / '033-fixture.words.json'
+    write(source, json.dumps(rows))
+    code, out = cli('captions', 'from-words', source, '--deliverable', 'youtube.short')
+    destination = K.default_srt('033-fixture.youtube-short.en-GB.srt')
+    cues = K.read_srt(destination) if destination.is_file() else []
+    verdict('from-words: every cue lands on its first and last word, within limits',
+            code == 0 and [(c.start, c.end, c.text) for c in cues] ==
+            [(0.1, 2.5, 'A ferry crosses.'), (2.8, 4.0, 'Home.')], out)
+    explicit = root / C.CAPTIONS / '033-fixture.offset.en-GB.srt'
+    code, out = cli('captions', 'from-words', source, '--deliverable', 'youtube.short', '--offset', '2',
+                    '-o', explicit)
+    verdict('from-words: an offset shifts the exact boundaries, explicit -o writes tracked captions',
+            code == 0 and K.read_srt(explicit)[0].start == 2.1, out)
+    rows[-1]['start'] = 2.52
+    write(source, json.dumps(rows))
+    code, out = cli('captions', 'from-words', source, '--deliverable', 'youtube.short')
+    verdict('from-words: short gap is a finding, no spoken word is trimmed',
+            code == 1 and 'before the next cue' in out and K.read_srt(destination)[0].end == 2.5, out)
+    before = destination.read_bytes()
+    for value, expected in ((None, 1), (float('nan'), 2), (-0.1, 2)):
+        rows[0]['start'] = value
+        write(source, json.dumps(rows))
+        code, out = cli('captions', 'from-words', source, '--deliverable', 'youtube.short')
+        verdict(f'from-words: invalid time {value!r} refuses output',
+                code == expected and destination.read_bytes() == before, out)
+    rows[0]['start'] = 0.1
+    for score in (None, True, float('nan'), 1.1):
+        rows[0]['score'] = score
+        write(source, json.dumps(rows))
+        code, out = cli('captions', 'from-words', source, '--deliverable', 'youtube.short')
+        verdict(f'from-words: invalid score {score!r} refuses output',
+                code == 2 and destination.read_bytes() == before, out)
+    rows[0]['score'] = 0.8
+    for word in ('{quiet} A', '[quiet] A'):
+        rows[0]['word'] = word
+        write(source, json.dumps(rows))
+        code, out = cli('captions', 'from-words', source, '--deliverable', 'youtube.short')
+        verdict('from-words: directions and tags refuse output ' + word,
+                code == 1 and destination.read_bytes() == before, out)
+
+
+def test_transcribe(verdict, cli, root: Path, have_git: bool) -> None:
+    import subprocess
+    import wave
+    from unittest.mock import patch
+    piece = '034-fixture'
+    take = root / C.VOICEOVER / 'generated' / piece / 'takes' / f'{piece}.s01.t1.wav'
+    take.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(take), 'wb') as audio:
+        audio.setnchannels(1); audio.setsampwidth(2); audio.setframerate(8000)
+        audio.writeframes(b'\0\0' * 24000)
+    register = root / C.VOICEOVER / f'{piece}.toml'
+    def register_text(text='A ferry crosses.', request='A ferry crosses.'):
+        return ('[voiceover]\npiece = "034-fixture"\noutput_format = "pcm_8000"\n'
+                '[[segment]]\nid = "s01"\nstatus = "approved"\n'
+                f'text = "{text}"\nrequest = "{request}"\n'
+                f'file = "generated/{piece}/takes/{take.name}"\npause_after = 0\n')
+    write(register, register_text())
+    code, out = cli('voice', 'join', piece)
+    verdict('transcribe fixture joined with the real voice command', code == 0, out)
+    reply = {'words': [{'word': 'A', 'start': 0.1, 'end': 0.3, 'score': 0.8, 'segment': 's01'},
+                       {'word': 'ferry', 'start': 0.4, 'end': 1.1, 'score': 0.7, 'segment': 's01'},
+                       {'word': 'crosses.', 'start': 1.2, 'end': 2.5, 'score': 0.9, 'segment': 's01'}],
+             'check': '# Words check\n\nFixture alignment.\n', 'exit': 0}
+    jobs = []
+    def worker(argv, fetch=False):
+        jobs.append(json.loads(Path(argv[-1]).read_text()))
+        return subprocess.CompletedProcess(argv, 0, json.dumps(reply), '')
+    with patch.object(A, 'run_transcribe', worker):
+        code, out = cli('transcribe', piece, '--no-cross-check')
+        working = A.joined_voice(piece).parent / 'timing' / f'{piece}.words.json'
+        verdict('transcribe launcher supplies the known segment window and prints its check',
+                code == 0 and working.is_file() and jobs[-1]['segments'][0]['start'] == 0
+                and jobs[-1]['segments'][0]['end'] == 3 and jobs[-1]['cross_check'] is False
+                and 'Fixture alignment.' in out, out)
+        for text in ('A 2 ferry crosses.', 'A & ferry crosses.', 'A ten % ferry crosses.'):
+            write(register, register_text(text))
+            calls = len(jobs)
+            with patch.object(C, 'probe', wraps=C.probe) as probe:
+                code, out = cli('transcribe', piece)
+            verdict('transcribe rejects digits and symbols before a worker or process starts: ' + text,
+                    code == 1 and len(jobs) == calls and probe.call_count == 0, out)
+        write(register, register_text())
+        tracked = root / C.TIMING / f'{piece}.words.json'
+        checkfile = tracked.with_name(f'{piece}.words-check.md')
+        code, out = cli('transcribe', piece, '-o', tracked)
+        verdict('transcribe explicit -o writes its paired tracked files for the first time',
+                code == 0 and tracked.is_file() and checkfile.is_file(), out)
+        if have_git:
+            with tempfile.TemporaryDirectory(prefix='media-timing-git-') as folder:
+                saved = C.ROOT
+                gitroot = Path(folder)
+                try:
+                    C.ROOT = gitroot
+                    write(gitroot / C.VOICEOVER / register.name, register_text())
+                    copied_take = gitroot / take.relative_to(root)
+                    copied_take.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(take, copied_take)
+                    copied_voice = A.joined_voice(piece)
+                    copied_voice.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(root / C.PROD_RENDERS / piece / f'{piece}.voice.wav', copied_voice)
+                    C.run(['git', 'init', '-q'], cwd=gitroot)
+                    C.run(['git', 'config', 'user.name', 'Fixture'], cwd=gitroot)
+                    C.run(['git', 'config', 'user.email', 'fixture@example.com'], cwd=gitroot)
+                    target = gitroot / C.TIMING / f'{piece}.words.json'
+                    sibling = target.with_name(f'{piece}.words-check.md')
+                    write(target, 'old words\n'); write(sibling, 'old check\n')
+                    C.run(['git', 'add', '-A'], cwd=gitroot)
+                    C.run(['git', 'commit', '-qm', 'fixture'], cwd=gitroot)
+                    code, out = cli('transcribe', piece, '-o', target)
+                    verdict('transcribe -o replaces both committed clean outputs', code == 0
+                            and json.loads(target.read_text()) == reply['words']
+                            and sibling.read_text() == reply['check'], out)
+                    C.run(['git', 'add', '-A'], cwd=gitroot)
+                    C.run(['git', 'commit', '-qm', 'accepted timing'], cwd=gitroot)
+                    sibling.write_text('author edit\n')
+                    before = target.read_bytes()
+                    calls = len(jobs)
+                    code, out = cli('transcribe', piece, '-o', target)
+                    verdict('paired guards: a dirty words check refuses before either output changes',
+                            code == 2 and len(jobs) == calls and target.read_bytes() == before
+                            and sibling.read_text() == 'author edit\n', out)
+                    C.run(['git', 'restore', str(sibling.relative_to(gitroot))], cwd=gitroot)
+                    def editing_worker(argv, fetch=False):
+                        sibling.write_text('edited during alignment\n')
+                        return worker(argv, fetch)
+                    with patch.object(A, 'run_transcribe', editing_worker):
+                        code, out = cli('transcribe', piece, '-o', target)
+                    verdict('paired guards recheck edits made while the alignment runs',
+                            code == 2 and target.read_bytes() == before
+                            and sibling.read_text() == 'edited during alignment\n', out)
+                finally:
+                    C.ROOT = saved
 
 
 def test_voice_plan(verdict, skip, cli, root: Path, have_git: bool) -> None:

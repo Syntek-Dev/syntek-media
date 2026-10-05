@@ -38,6 +38,9 @@ Explain each finding to the author: what is missing, what it blocks, and the fix
 | Python older than 3.11 | the whole toolkit |
 | uv missing | `card.py`: thumbnails, cards, and any master that holds a card |
 | the pinned Playwright's Chromium missing | `card.py render` and `card.py check` |
+| a plain uv interpreter mislinked across Python versions | the script it names; fix UV_PYTHON at user scope |
+| WhisperX absent, or fetched files missing (optional note) | `transcribe`; the author runs `python3 toolkit/media.py transcribe fetch` once |
+| configured WhisperX interpreter broken or not version 3.8.6 | `transcribe`; fix MEDIA_TRANSCRIBE_PYTHON at user scope |
 | git-lfs or its filter missing while `brand/src/exports/large/` holds files | adding a large export |
 | an allow entry missing from `.claude/settings.json` | nothing, but every toolkit call asks for permission |
 | an ask entry missing from `.claude/settings.json` | every credit-spending ElevenLabs call, which would not prompt |

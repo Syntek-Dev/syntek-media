@@ -6,7 +6,7 @@
 > **Template-owned.** Shipped by syntek-media and replaced by every `copier update`: never edit it here. Where syntek-author's project settings file (00-project.md) is present, it outranks this file and says where project rules go; otherwise they go in `.claude/CLAUDE.md`, under the heading 'Project-specific rules'.
 
 Every render runs through `toolkit/`: one standard-library command line,
-`python3 toolkit/media.py <command>`, and one PEP 723 script, `uv run toolkit/card.py`. Its
+`python3 toolkit/media.py <command>`, with PEP 723 scripts `toolkit/card.py` and `toolkit/transcribe.py`. Its
 `--help` lists every command; **where this file and `--help` disagree, `--help` is right**, and
 this file is reported as stale. Media has no root Makefile; one that exists is syntek-author's.
 
@@ -59,6 +59,8 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 | `extract-audio` | `SRC [--in TC --out TC] [--rate HZ] [-o OUT]` | mono 16-bit WAV of a file or a range, for speech-to-text or alignment; by default `production/src/renders/<piece>/<stem>[.<in>-<out>].wav`, or at the folder's top for a stem with no piece key, such as a footage file's | 0 · 2 |
 | `captions check` | `SRT [--deliverable KEY] [--script SCRIPT]` | the caption limits, overlaps and gaps; with `--script`, the words against a script or transcript | 0 · 1 · 2 |
 | `captions from-segments` | `REGISTER --deliverable KEY [--offset TC] [-o SRT]` | cues from approved voiceover segments, each segment's duration shared by character count; joins exact | 0 · 1 · 2 |
+| `captions from-words` | `WORDS --deliverable KEY [--offset TC] [-o SRT]` | cues from first/last aligned word boundaries; short gaps are findings, words never trimmed | 0 · 1 · 2 |
+| `transcribe` | `PIECE [--no-cross-check] [-o WORDS]` or `fetch` | offline WhisperX 3.8.6 alignment of approved segments on the joined voice, cross-check on by default; prints the words check; fetch is author-run once | 0 · 1 · 2 |
 | `captions align` | `TEXT AUDIO [--lines B.L-B.L] [--anchors] [--noise DB] [--min-silence S] [-o SRT]` | cues spread over the speech that `silencedetect` finds, beat by beat with `--anchors`, one cut's lines with `--lines`; to standard output without `-o` | 0 · 1 · 2 |
 | `captions retime` | `SRT (--in TC --out TC \| --edl EDL --source FID) [-o SRT]` | master timing to a cut's, or recording timing to the master's through the edit decision list; to standard output without `-o` | 0 · 2 |
 | `captions rewrap` | `SRT --deliverable KEY [-o SRT]` | re-chunks to the deliverable's line width; to standard output without `-o` | 0 · 1 · 2 |
@@ -141,8 +143,12 @@ and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
   them, and a working copy in a piece's `timing` folder is never opened, because the command
   that wrote it printed what it found
   (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
-- **Keep the toolkit minimal**: the Python standard library only (3.11 or later) and TOML data,
-  with one exception, `toolkit/card.py`, which declares Playwright inline and runs through `uv run`.
+- **Keep the toolkit minimal**: standard-library Python 3.11+ and author-edited TOML; tool-written
+  timing is finite JSON. Heavy dependencies stay in pinned PEP 723 scripts: `toolkit/card.py`
+  (Playwright 1.62.0) and `toolkit/transcribe.py` (WhisperX 3.8.6; Python >=3.10,<3.14).
+- **Transcription stays offline** after the author runs `python3 toolkit/media.py transcribe fetch`
+  once. Never run fetch from a skill. `MEDIA_TRANSCRIBE_PYTHON` names an existing interpreter at
+  user scope; otherwise the uv helper runs with `--offline`. Missing cache files are exit 2.
 
 ---
 
@@ -153,6 +159,7 @@ and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
 | `ffmpeg` and `ffprobe`, built with libass, x264 and mp3lame | every render, probe, loudness pass and caption burn |
 | `python3` (3.11 or later) and `git` | every `media.py` command; the repository root and what Git ignores |
 | `uv`, with Playwright's Chromium | `toolkit/card.py`, and the card PNGs `assemble` renders |
+| WhisperX 3.8.6 and its fetched English weights, punkt_tab and cross-check model (optional) | `transcribe`; the author runs `transcribe fetch` once, no skill downloads models |
 | `git-lfs` | large design exports in `brand/src/exports/large/` |
 | ffmpeg's libwebp, an AV1 encoder (libaom-av1 or libsvtav1) and the `avif` muxer (optional) | `media.py image` to WebP and AVIF; JPEG and PNG need none |
 | `pandoc` (optional) | cleaner chapter text in `audiobook text`, which works without it |

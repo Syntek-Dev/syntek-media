@@ -24,10 +24,12 @@ model: opus
 - [ ] `python3 toolkit/media.py check --setup` run; its exit code read (0 clean, 1 findings, 2 could not run). · _sonnet_
 - [ ] Nothing from the user's Claude Code configuration printed or copied beyond what the report prints. · _sonnet_
 - [ ] Each finding explained to the author with what it blocks and its fix. · _opus_
+- [ ] The uv mislink row read; WhisperX interpreter, exact version and three cache items read, missing optional items distinguished from a broken configured tool. · _sonnet_
 
 **The fixes**
 
 - [ ] Each fix given as an exact command; installs and the server re-add done by the author. · _sonnet_
+- [ ] Missing transcription models: `python3 toolkit/media.py transcribe fetch` given to the author; never run by the skill. · _sonnet_
 - [ ] The base-path fix taken from `production/docs/reference/elevenlabs.md`; the key exported in the shell, never typed or written. · _sonnet_
 - [ ] **A permission entry added to `.claude/settings.json` only on the author's explicit word, exactly as printed, nothing else changed.** · _opus_
 - [ ] The check run again after the fixes, until it exits 0 or each open finding is accepted. · _sonnet_

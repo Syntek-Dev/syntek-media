@@ -15,11 +15,11 @@
 #                    ElevenLabs call: a "take" is a tone or a few fake bytes, and the toolkit's
 #                    handling of the files around a call is what is proved (credits).
 #
-#                    Twenty-three checks, per render: 1–20, 23–25. Numbers 21–22 and 26–28 are
+#                    Twenty-five checks, per render: 1–20, 22–26. Numbers 21 and 27–28 are
 #                    DESIGN.md Section 7's for commands the toolkit does not have yet, and are
 #                    taken when they arrive (24 then gains `cues` and `real` beside `where`).
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
-#                         exercises the media_*.py modules, and card.py). A self-test reads only
+#                         exercises the media_*.py modules, card.py and transcribe.py). A self-test reads only
 #                         the toolkit, so one result serves every render whose toolkit/ is
 #                         byte-identical (it says so). card.py's exit 2 with its own SKIP lines
 #                         (no Playwright, Chromium or fc-match) is a named SKIP in its words, and
@@ -138,9 +138,16 @@
 #                         and calls, never credits; a re-roll numbers across both layouts and clears
 #                         approval and archive. The voice join is mono 16-bit in register order with
 #                         pauses, refuses unapproved segments, and levels are finite working JSON only.
+#                     22. Stdlib word-alignment fixtures reject unsafe text, compare word sequences,
+#                         map respelling parts, report empty segments and heard-word disagreements,
+#                         and make captions at word boundaries. A prepared user interpreter aligns
+#                         an espeak-ng fixture; otherwise that live part SKIPs by name. Never fetches
+#                         weights, installs WhisperX or invokes uv on transcribe.py.
 #                     23. The D66 writer replaces a committed clean named timing copy atomically;
 #                         dirty, staged, untracked and outside-Git copies, and unrelated files,
 #                         are refused without changing their bytes.
+#                     26. Missing WhisperX is an optional setup note naming transcribe fetch;
+#                         Rhubarb's dictionary probe arrives with check 21.
 #                     24. `where` on a fixture piece prints its files Git tracks or would track
 #                         across scripts/, production/ and publishing/, its timing file among
 #                         them, names its three ignored per-piece folders, each existing or
@@ -470,7 +477,8 @@ smoke() { # $1 = tree — fills $RESULTS
           why="$(card_skips "$st" "$OUT/selftest.$k.log")"
         fi
       else
-        tk "selftest.$k" --self-test || st=$?
+        (cd "$T" && PYTHONDONTWRITEBYTECODE=1 python3 "toolkit/$k" --self-test) \
+          >"$OUT/selftest.$k.log" 2>&1 || st=$?
       fi
       if [[ -n "$why" ]]; then
         skip_step 1 "$k --self-test" "$why"; cache+="$k=skip;"; SELFTEST_TAIL["$hash/$k"]="$why"; continue
@@ -690,6 +698,7 @@ SHIM
 
   # ── 24. where ──
   smoke_where
+  smoke_timing
   if $HAVE_FFMPEG; then smoke_voice
   else
     rec skip.20 'the voice tools on tone takes (no ffmpeg or ffprobe)'
@@ -1635,6 +1644,101 @@ smoke_where() {
 # 0.480 s (the fourth still's start, frame 14) until 0.800 s (frame 24), and a tone running past
 # the picture (DESIGN.md Section 6.4). Then the master is encoded to a video deliverable with
 # sound: its sound ends no later than its picture, and encode's own check passes.
+smoke_timing() {
+  local st=0 live why
+  PYTHONDONTWRITEBYTECODE=1 python3 - "$T" "$OUT" "$RESULTS" "$HAVE_FFMPEG" \
+    >"$OUT/timing-fixture.log" 2>&1 <<'PY' || st=$?
+import json, os, subprocess, sys, tempfile
+from pathlib import Path
+from unittest.mock import patch
+root, out, receipt = map(Path, sys.argv[1:4])
+sys.path.insert(0, str(root / 'toolkit'))
+import media_common as C
+import media_audio as A
+import media_captions as K
+import media_repo as R
+import transcribe as T
+C.ROOT = root
+def record(key, good):
+    with receipt.open('a') as f: f.write(key + '\t' + ('yes' if good else 'no') + '\n')
+segment = {'id':'s01', 'text':'A ferry crosses.', 'request':'A feh-ree crosses.', 'start':0.0, 'end':3.0}
+prepared = T.prepare([segment], {'ferry':'feh-ree'})
+alignment = {'segments':[{'words':[
+    {'word':'A','start':0.1,'end':0.3,'score':0.8},
+    {'word':'feh','start':0.4,'end':0.7,'score':0.6},
+    {'word':'ree','start':0.8,'end':1.1,'score':0.4},
+    {'word':'crosses','start':1.2,'end':2.5,'score':0.9}]}]}
+reply = T.result('917-smoke-words', prepared, [alignment], 'A ferry crosses.')
+record('timing.parts', prepared[0]['align_text'] == 'A feh ree crosses'
+       and reply['words'][1] == {'word':'ferry','start':0.4,'end':1.1,'score':0.4,'segment':'s01'})
+rejected = 0
+for text in ('A 2 ferry', 'A £ ferry', '[quiet] A ferry'):
+    try: T.prepare([{**segment,'text':text}], {})
+    except T.BadText: rejected += 1
+record('timing.text', rejected == 3)
+different = {'segments':[{'words':[{**w,'word':'Else'} if i == 0 else w
+                                 for i,w in enumerate(alignment['segments'][0]['words'])]}]}
+record('timing.sequence', T.result('917-smoke-words',prepared,[different],None)['exit'] == 1)
+empty = T.result('917-smoke-words',prepared,[{'segments':[{'words':[]}]}],None)
+record('timing.empty', empty['exit'] == 1 and 'returned no words' in empty['check'])
+record('timing.heard', T.result('917-smoke-words',prepared,[alignment],'A boat crosses.')['exit'] == 1
+       and reply['exit'] == 0)
+record('timing.report', 'low score 0.400' in reply['check'] and 'request: A feh-ree crosses.' in reply['check']
+       and 'disabled with --no-cross-check' in T.result('917-smoke-words',prepared,[alignment],None)['check'])
+with tempfile.TemporaryDirectory() as folder:
+    p = Path(folder)
+    absent = {'weights':p/'missing', 'punkt_files':[p/'absent'], 'snapshot':None}
+    record('timing.cache', len(T.missing_cache(absent)) == 3 and len(T.missing_cache(absent,False)) == 2)
+words = root / C.TIMING / '917-smoke-words.words.json'
+words.parent.mkdir(parents=True,exist_ok=True)
+words.write_text(json.dumps(reply['words']))
+caption = out / 'words.srt'
+proc = subprocess.run([sys.executable,str(root/'toolkit/media.py'),'captions','from-words',str(words),
+                       '--deliverable','youtube.short','-o',str(caption)],cwd=root,capture_output=True,text=True)
+cues = K.read_srt(caption) if caption.is_file() else []
+record('timing.captions', proc.returncode == 0 and len(cues) == 1 and cues[0].start == 0.1
+       and cues[0].end == 2.5 and cues[0].text == 'A ferry crosses.')
+with patch.dict(os.environ, {'MEDIA_TRANSCRIBE_PYTHON':''}), patch.object(A,'transcribe_python',return_value=''):
+    rows, findings = R.setup_report(root)
+record('setup.transcribe', any('WhisperX interpreter absent' in row and 'transcribe fetch' in row for row in rows)
+       and not any('WhisperX interpreter absent' in row for row in findings))
+python = os.environ.get('MEDIA_TRANSCRIBE_PYTHON','').strip()
+reason = ''
+if not python: reason = 'MEDIA_TRANSCRIBE_PYTHON is not set; no audit builds WhisperX'
+elif T.missing_cache(T.cache_paths(),False): reason = 'alignment cache absent; the author must run transcribe fetch'
+elif sys.argv[4] != 'true': reason = 'ffmpeg is absent'
+elif not __import__('shutil').which('espeak-ng'): reason = 'espeak-ng fixture voice is absent'
+if reason:
+    with receipt.open('a') as f: f.write('timing.live\tskip\ntiming.live.reason\t' + reason + '\n')
+else:
+    piece = '918-smoke-live'
+    takes = root / C.VO_GENERATED / piece / 'takes'
+    takes.mkdir(parents=True,exist_ok=True)
+    take = takes / (piece + '.s01.t1.wav')
+    subprocess.run(['espeak-ng','-s','130','-w',str(take),'A ferry crosses.'],check=True,capture_output=True)
+    register = root / C.VOICEOVER / (piece + '.toml')
+    register.write_text('[voiceover]\npiece = "918-smoke-live"\noutput_format = "pcm_22050"\n'
+                        '[[segment]]\nid = "s01"\nstatus = "approved"\ntext = "A ferry crosses."\n'
+                        'request = "A ferry crosses."\nfile = "generated/' + piece + '/takes/' + take.name + '"\n')
+    def cli(*args):
+        return subprocess.run([sys.executable,str(root/'toolkit/media.py'),*args],cwd=root,
+                              capture_output=True,text=True)
+    joined = cli('voice','join',piece)
+    aligned = cli('transcribe',piece,'--no-cross-check') if joined.returncode == 0 else joined
+    print(aligned.stdout); print(aligned.stderr)
+    working = root / C.PROD_RENDERS / piece / 'timing' / (piece + '.words.json')
+    timed = json.loads(working.read_text()) if working.is_file() else []
+    record('timing.live', aligned.returncode == 0 and [w['word'] for w in timed] == ['A','ferry','crosses.']
+           and all(w['start'] is not None and w['end'] is not None for w in timed))
+PY
+  rec timing.status "$st"
+  live="$(awk -F '\t' '$1 == "timing.live" {print $2}' "$RESULTS")"
+  if [[ "$live" == skip ]]; then
+    why="$(awk -F '\t' '$1 == "timing.live.reason" {print $2}' "$RESULTS")"
+    skip_step 22 "WhisperX live alignment" "$why"
+  fi
+}
+
 smoke_voice() {
   local p="916-smoke-voice" gen="$T/production/src/voiceover/generated"
   mkdir -p "$gen/$p/takes"
@@ -2210,6 +2314,19 @@ run_checks() {
     fi
   done
 
+  # 22 and the WhisperX half of 26 (Rhubarb arrives with check 21).
+  if [[ -n "${RES[timing.status]:-}" && "${RES[timing.status]}" != 0 ]]; then
+    finding "check 22 — $L timing fixture could not run (exit ${RES[timing.status]})"
+  fi
+  for feature in parts text sequence empty heard report cache captions live; do
+    if [[ -n "${RES[timing.$feature]:-}" && "${RES[timing.$feature]}" != yes && "${RES[timing.$feature]}" != skip ]]; then
+      finding "check 22 — $L word timing failed $feature (${RES[timing.$feature]})"
+    fi
+  done
+  if [[ -n "${RES[setup.transcribe]:-}" && "${RES[setup.transcribe]}" != yes ]]; then
+    finding "check 26 — $L missing WhisperX was not an optional note naming transcribe fetch"
+  fi
+
   # 24
   if [[ -n "${RES[where.status]:-}" ]]; then
     if [[ "${RES[where.status]}" != 0 ]]; then finding "check 24 — $L where $P_WHERE failed (exit ${RES[where.status]}): ${RES[where.tail]:-}"
@@ -2254,6 +2371,7 @@ write_clean_results() { # $1 = file
 answers	ok
 selftest.media.py	0
 selftest.card.py	0
+selftest.transcribe.py	0
 deliverables	4
 first_video	youtube.long
 cut.youtube.long.status	0
@@ -2468,6 +2586,17 @@ voice.take	yes
 voice.join	yes
 voice.pending	yes
 voice.levels	yes
+timing.status	0
+timing.parts	yes
+timing.text	yes
+timing.sequence	yes
+timing.empty	yes
+timing.heard	yes
+timing.report	yes
+timing.cache	yes
+timing.captions	yes
+timing.live	yes
+setup.transcribe	yes
 guard.clean	yes
 guard.dirty	yes
 guard.staged	yes
@@ -2506,6 +2635,7 @@ self_test() {
   mut selftest.media.py 1;                probe "check 1 fires when media.py --self-test fails" "check 1 — [fixture] python3 toolkit/media.py --self-test failed"
   mut selftest.media.py missing;          probe "check 1 fires when media.py is missing" "check 1 — [fixture] toolkit/media.py is missing"
   mut selftest.card.py 2;                 probe "check 1 fires when card.py --self-test exits 2 and names no skip" "toolkit/card.py --self-test failed (exit 2)"
+  mut selftest.transcribe.py 1;           probe "check 1 fires when the stdlib transcription self-test fails" "toolkit/transcribe.py --self-test failed"
   mut cut.youtube.short.status 2;         probe "check 2 fires when a cut fails" "check 2 — [fixture] cut --deliverable youtube.short failed"
   mut cut.youtube.short.facts "1080 1080 h264 yuv420p aac 48000 2 4.000"
   probe "check 2 fires on a cut at the wrong size" "check 2 — [fixture] cut --deliverable youtube.short does not match its preset: picture 1080x1080"
@@ -2616,6 +2746,11 @@ self_test() {
   for feature in clean dirty staged untracked outside other; do
     mut "guard.$feature" no; probe "check 23 fires when timing guard $feature fails" "check 23 — [fixture] tracked timing guard failed $feature"
   done
+  for feature in parts text sequence empty heard report cache captions live; do
+    mut "timing.$feature" no; probe "check 22 fires when word timing $feature fails" "check 22 — [fixture] word timing failed $feature"
+  done
+  mut timing.status 2;                   probe "check 22 fires when its fixture could not run" "check 22 — [fixture] timing fixture could not run"
+  mut setup.transcribe no;               probe "check 26 fires when absent WhisperX is not an optional setup note" "check 26 — [fixture] missing WhisperX"
   mut where.hidden "production/src/renders/914-smoke-where/914-smoke-where.master.mp4"; probe "check 24 fires when where lists inside an ignored folder" "check 24 — [fixture] where 914-smoke-where named what is inside an ignored per-piece folder"
   mut where.folders "production/src/renders/914-smoke-where/=exists"; probe "check 24 fires when where does not name all three folders" "check 24 — [fixture] where 914-smoke-where did not name its three ignored per-piece folders"
   mut where.bad 0;                        probe "check 24 fires when where accepts a name with no piece folder" "check 24 — [fixture] where with a name that has no piece folder"

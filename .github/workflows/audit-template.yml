@@ -97,6 +97,8 @@ jobs:
       # toolkit-smoke.sh gets --require-ffmpeg: a missing ffmpeg is an error here, never a skip.
       # Playwright's Chromium is not installed (slow, and the card renders are proved locally);
       # toolkit-smoke.sh names the thumbnail and card checks it skipped, never passes them.
+      # No audit builds WhisperX or fetches models: transcribe.py's stdlib self-test runs as
+      # python3, and live alignment SKIPs by name unless a prepared interpreter is supplied.
       - name: Install ffmpeg
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg

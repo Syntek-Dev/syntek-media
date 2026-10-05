@@ -541,6 +541,7 @@ always        f  toolkit/media_repo.py
 always        f  toolkit/media_image.py
 always        f  toolkit/media_feed.py
 always        f  toolkit/card.py
+always        f  toolkit/transcribe.py
 always        f  toolkit/data/platforms.toml
 always        f  toolkit/templates/thumbnail.html
 always        f  toolkit/templates/card.html
