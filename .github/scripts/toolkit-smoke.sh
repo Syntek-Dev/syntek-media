@@ -15,7 +15,7 @@
 #                    ElevenLabs call: a "take" is a tone or a few fake bytes, and the toolkit's
 #                    handling of the files around a call is what is proved (credits).
 #
-#                    Twenty-five checks, per render: 1–20, 22–26. Numbers 21 and 27–28 are
+#                    Twenty-six checks, per render: 1–26. Numbers 27–28 are
 #                    DESIGN.md Section 7's for commands the toolkit does not have yet, and are
 #                    taken when they arrive (24 then gains `cues` and `real` beside `where`).
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
@@ -138,6 +138,10 @@
 #                         and calls, never credits; a re-roll numbers across both layouts and clears
 #                         approval and archive. The voice join is mono 16-bit in register order with
 #                         pauses, refuses unapproved segments, and levels are finite working JSON only.
+#                     21. Rhubarb gets plain dialogue and all nine native shapes; resources resolve
+#                         beside the linked executable, fatal errors exit 2, soundFile is relative,
+#                         and tracked mouth files refuse edits made before or during recognition.
+#                         The real recogniser runs on an espeak-ng voice, or SKIPs by name.
 #                     22. Stdlib word-alignment fixtures reject unsafe text, compare word sequences,
 #                         map respelling parts, report empty segments and heard-word disagreements,
 #                         and make captions at word boundaries. A prepared user interpreter aligns
@@ -147,7 +151,8 @@
 #                         dirty, staged, untracked and outside-Git copies, and unrelated files,
 #                         are refused without changing their bytes.
 #                     26. Missing WhisperX is an optional setup note naming transcribe fetch;
-#                         Rhubarb's dictionary probe arrives with check 21.
+#                         absent Rhubarb is a note naming lipsync, but an executable whose version
+#                         succeeds without its dictionary is broken and reports a finding.
 #                     24. `where` on a fixture piece prints its files Git tracks or would track
 #                         across scripts/, production/ and publishing/, its timing file among
 #                         them, names its three ignored per-piece folders, each existing or
@@ -699,6 +704,7 @@ SHIM
   # ── 24. where ──
   smoke_where
   smoke_timing
+  smoke_lipsync
   if $HAVE_FFMPEG; then smoke_voice
   else
     rec skip.20 'the voice tools on tone takes (no ffmpeg or ffprobe)'
@@ -1739,6 +1745,74 @@ PY
   fi
 }
 
+# ── 21 and 26. native mouth cues and optional/broken Rhubarb setup ──
+smoke_lipsync() {
+  local st=0 why
+  PYTHONDONTWRITEBYTECODE=1 python3 - "$T" "$OUT" "$RESULTS" "$HAVE_FFMPEG" \
+    >"$OUT/lipsync-fixture.log" 2>&1 <<'PY' || st=$?
+import os, shutil, sys, tempfile
+from pathlib import Path
+from unittest.mock import patch
+root, out, receipt = map(Path, sys.argv[1:4])
+sys.path.insert(0, str(root / 'toolkit'))
+import media as M
+import media_common as C
+import media_repo as R
+C.ROOT = root
+def record(key, value):
+    with receipt.open('a') as f: f.write(key + '\t' + value + '\n')
+original = shutil.which
+with patch.object(shutil, 'which', lambda name, *a, **k: None if name == 'rhubarb' else original(name,*a,**k)):
+    rows, findings = R.setup_report(root)
+record('setup.rhubarb.absent', 'yes' if any('rhubarb absent: lipsync' in r for r in rows)
+       and not any('rhubarb absent' in r for r in findings) else 'no')
+with tempfile.TemporaryDirectory() as folder:
+    exe = Path(folder) / 'release/rhubarb'
+    exe.parent.mkdir()
+    exe.write_text('#!/bin/sh\nprintf "Rhubarb Lip Sync version 1.14.0\\n"\n')
+    exe.chmod(0o755)
+    link = Path(folder) / 'rhubarb'
+    link.symlink_to(exe)
+    with patch.object(shutil, 'which', lambda name,*a,**k: str(link) if name == 'rhubarb' else original(name,*a,**k)):
+        rows, findings = R.setup_report(root)
+    record('setup.rhubarb.broken', 'yes' if any('rhubarb for lipsync' in r and 'cmudict-en-us.dict' in r
+           for r in findings) else 'no')
+if sys.argv[4] != 'true':
+    record('mouth.live','skip')
+    record('mouth.live.reason','ffmpeg or ffprobe is absent')
+else:
+    # Use the same generated dialogue, fatal-exit and Git-edit fixtures as the toolkit's
+    # self-test. Run them afresh in this render; the live recogniser is never mocked.
+    results = {}
+    labels = {
+        'lipsync passes pocketSphinx and all extended shapes with plain text, never respellings':'dialogue',
+        'lipsync keeps native cues and makes soundFile repository-relative':'native',
+        'Rhubarb resources are beside the executable through its link':'resources',
+        'Rhubarb fatal exit 1 becomes exit 2 with its message and no changed output':'fatal',
+        'lipsync refuses non-finite native JSON without changing output':'finite',
+        'live Rhubarb recognises the joined espeak voice and stores a relative soundFile':'live',
+    }
+    def verdict(label, good, detail=''):
+        print(('ok ' if good else 'FAIL ') + label, flush=True)
+        if not good: print(detail, flush=True)
+        key = labels.get(label,'guards')
+        results[key] = results.get(key,True) and good
+    def skip(label, reason):
+        record('mouth.live','skip'); record('mouth.live.reason',reason)
+    def cli(*args):
+        code, stdout, stderr = M.cli_split(*args)
+        return code, stdout + stderr
+    with M.hermetic_git(out / 'mouth-gitconfig'):
+        M.test_lipsync(verdict,skip,cli,root,True)
+    for key, good in results.items(): record('mouth.' + key,'yes' if good else 'no')
+PY
+  rec mouth.status "$st"
+  if [[ "$(awk -F '\t' '$1 == "mouth.live" {print $2}' "$RESULTS")" == skip ]]; then
+    why="$(awk -F '\t' '$1 == "mouth.live.reason" {print $2}' "$RESULTS")"
+    skip_step 21 "Rhubarb live lip sync" "$why"
+  fi
+}
+
 smoke_voice() {
   local p="916-smoke-voice" gen="$T/production/src/voiceover/generated"
   mkdir -p "$gen/$p/takes"
@@ -2314,7 +2388,22 @@ run_checks() {
     fi
   done
 
-  # 22 and the WhisperX half of 26 (Rhubarb arrives with check 21).
+  # 21 and the Rhubarb half of 26.
+  if [[ -n "${RES[mouth.status]:-}" && "${RES[mouth.status]}" != 0 ]]; then
+    finding "check 21 — $L mouth fixture could not run (exit ${RES[mouth.status]})"
+  fi
+  for feature in dialogue native resources fatal finite guards live; do
+    if [[ -n "${RES[mouth.$feature]:-}" && "${RES[mouth.$feature]}" != yes && "${RES[mouth.$feature]}" != skip ]]; then
+      finding "check 21 — $L lip sync failed $feature (${RES[mouth.$feature]})"
+    fi
+  done
+  for feature in absent broken; do
+    if [[ -n "${RES[setup.rhubarb.$feature]:-}" && "${RES[setup.rhubarb.$feature]}" != yes ]]; then
+      finding "check 26 — $L Rhubarb setup failed $feature (${RES[setup.rhubarb.$feature]})"
+    fi
+  done
+
+  # 22 and the WhisperX half of 26.
   if [[ -n "${RES[timing.status]:-}" && "${RES[timing.status]}" != 0 ]]; then
     finding "check 22 — $L timing fixture could not run (exit ${RES[timing.status]})"
   fi
@@ -2597,6 +2686,16 @@ timing.cache	yes
 timing.captions	yes
 timing.live	yes
 setup.transcribe	yes
+mouth.status	0
+mouth.dialogue	yes
+mouth.native	yes
+mouth.resources	yes
+mouth.fatal	yes
+mouth.finite	yes
+mouth.guards	yes
+mouth.live	yes
+setup.rhubarb.absent	yes
+setup.rhubarb.broken	yes
 guard.clean	yes
 guard.dirty	yes
 guard.staged	yes
@@ -2748,6 +2847,13 @@ self_test() {
   done
   for feature in parts text sequence empty heard report cache captions live; do
     mut "timing.$feature" no; probe "check 22 fires when word timing $feature fails" "check 22 — [fixture] word timing failed $feature"
+  done
+  for feature in dialogue native resources fatal finite guards live; do
+    mut "mouth.$feature" no; probe "check 21 fires when lip sync $feature fails" "check 21 — [fixture] lip sync failed $feature"
+  done
+  mut mouth.status 2;                    probe "check 21 fires when its fixture could not run" "check 21 — [fixture] mouth fixture could not run"
+  for feature in absent broken; do
+    mut "setup.rhubarb.$feature" no; probe "check 26 fires when Rhubarb setup $feature fails" "check 26 — [fixture] Rhubarb setup failed $feature"
   done
   mut timing.status 2;                   probe "check 22 fires when its fixture could not run" "check 22 — [fixture] timing fixture could not run"
   mut setup.transcribe no;               probe "check 26 fires when absent WhisperX is not an optional setup note" "check 26 — [fixture] missing WhisperX"

@@ -37,6 +37,7 @@ Usage:
     python3 toolkit/media.py levels PIECE [--window S]
     python3 toolkit/media.py transcribe PIECE [--no-cross-check] [-o WORDS]
     python3 toolkit/media.py transcribe fetch
+    python3 toolkit/media.py lipsync PIECE [-o FILE]
     python3 toolkit/media.py feed new SHOW --feed-url URL [--site SLUG] [--rekey]
     python3 toolkit/media.py feed add SHOW --piece PIECE
     python3 toolkit/media.py feed tag SHOW --piece PIECE
@@ -83,8 +84,8 @@ register, feed, chapters and file tags). card.py renders HTML and CSS to PNG and
 uv: uv run toolkit/card.py --help.
 
 Standard library only; Python 3.11+; ffmpeg and ffprobe for every command that touches media,
-run from argument lists, never a shell string. No command calls ElevenLabs or any network
-service. Exit codes: 0 = done and verified, or clean; 1 = a finding (a check failed, or an
+run from argument lists, never a shell string. No command calls ElevenLabs. Network access is
+limited to the author-run transcribe fetch and uv package setup. Exit codes: 0 = done and verified, or clean; 1 = a finding (a check failed, or an
 output failed its verification); 2 = could not run (bad arguments, a missing input, a missing
 tool, named with its install hint, or the tool itself failed).
 """
@@ -364,6 +365,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('--no-cross-check', action='store_true', help='disable the heard-word cross-check, recorded in the check')
     out(p, 'the words JSON path (default: production/src/renders/<piece>/timing/<piece>.words.json); its check is beside it')
     p.set_defaults(func=A.cmd_transcribe)
+
+    p = sub.add_parser('lipsync', help='Rhubarb mouth shapes from approved plain text and the joined voice')
+    p.add_argument('piece')
+    out(p, 'the mouth JSON path (default: production/src/renders/<piece>/timing/<piece>.mouth.json)')
+    p.set_defaults(func=A.cmd_lipsync)
 
     p = sub.add_parser("captions", help="check, from-segments, from-words, align, retime, rewrap, vtt, transcript, burn")
     cs = p.add_subparsers(dest="sub", metavar="action")
@@ -911,9 +917,11 @@ def self_test() -> int:
                                lambda: test_feed(verdict, skip, cli, root, saved_zone if rendered_zone else None)))
                 groups.append(('transcribe launcher and paired output guards',
                                lambda: test_transcribe(verdict, cli, root, have_git)))
+                groups.append(('Rhubarb dialogue, resources, exits and tracked mouth guards',
+                               lambda: test_lipsync(verdict, skip, cli, root, have_git)))
             else:
                 skip("every ffmpeg probe (cut, burn-in, loudness, assemble, align, audiobook, image, GIF, "
-                     "the podcast feed)", "ffmpeg or ffprobe is not installed")
+                     "the podcast feed, transcribe launcher and lipsync)", "ffmpeg or ffprobe is not installed")
             for label, group in groups:
                 try:
                     group()
@@ -1720,6 +1728,14 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
 
 
 def test_words(verdict, cli, root: Path) -> None:
+    from unittest.mock import patch
+    with patch.dict(os.environ, {'MEDIA_TRANSCRIBE_PYTHON': str(root / 'missing-python')}):
+        try:
+            A.run_transcribe(['status'])
+            correct = False
+        except C.Fatal as error:
+            correct = 'MEDIA_TRANSCRIBE_PYTHON' in str(error) and 'uv is not installed' not in str(error)
+        verdict('missing named transcription interpreter gets its own hint', correct)
     import transcribe as T
     verdict('transcribe worker standard-library self-test', T.self_test() == 0)
     rows = [{'word': 'A', 'start': 0.1, 'end': 0.3, 'score': 0.8, 'segment': 's01'},
@@ -1765,6 +1781,200 @@ def test_words(verdict, cli, root: Path) -> None:
         code, out = cli('captions', 'from-words', source, '--deliverable', 'youtube.short')
         verdict('from-words: directions and tags refuse output ' + word,
                 code == 1 and destination.read_bytes() == before, out)
+
+
+def test_lipsync(verdict, skip, cli, root: Path, have_git: bool) -> None:
+    import wave
+    from unittest.mock import patch
+    piece = '036-mouth-fixture'
+    takes = root / C.VO_GENERATED / piece / 'takes'
+    takes.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for number, text in enumerate(('A ferry crosses.', 'Home again.'), 1):
+        take = takes / f'{piece}.s{number:02d}.t1.wav'
+        with wave.open(str(take), 'wb') as audio:
+            audio.setnchannels(1); audio.setsampwidth(2); audio.setframerate(8000)
+            audio.writeframes(b'\0\0' * 4800)
+        rows.append(f'[[segment]]\nid = "s{number:02d}"\nstatus = "approved"\ntext = "{text}"\n'
+                    f'request = "[quiet] feh-ree"\npause_after = {number / 10}\n'
+                    f'file = "generated/{piece}/takes/{take.name}"\n')
+    register = root / C.VOICEOVER / f'{piece}.toml'
+    write(register, f'[voiceover]\npiece = "{piece}"\noutput_format = "pcm_8000"\n' + ''.join(rows))
+    code, out = cli('voice', 'join', piece)
+    verdict('lipsync fixture uses the real approved voice join with pauses', code == 0, out)
+    release = root / 'tool-fixture' / 'release' / 'rhubarb'
+    write(release, '#!/usr/bin/env python3\nimport sys\n'
+                   'if sys.argv[1:] == ["--version"]:\n'
+                   '    print("Rhubarb Lip Sync version 1.14.0")\n'
+                   'else:\n'
+                   '    print("synthetic recogniser failure", file=sys.stderr)\n'
+                   '    raise SystemExit(1)\n')
+    release.chmod(0o755)
+    linked = root / 'tool-fixture' / 'bin' / 'rhubarb'
+    linked.parent.mkdir(parents=True, exist_ok=True)
+    linked.symlink_to(release)
+    dictionary = C.rhubarb_dictionary(linked)
+    write(dictionary, 'fixture\n')
+    verdict('Rhubarb resources are beside the executable through its link',
+            dictionary == release.parent / 'res/sphinx/cmudict-en-us.dict')
+    original_which, original_run = shutil.which, C.run
+    def which(name, *args, **kwargs):
+        return str(linked) if name == 'rhubarb' else original_which(name, *args, **kwargs)
+    body = {'metadata': {'soundFile': str(A.joined_voice(piece)), 'duration': 1.5},
+            'mouthCues': [{'start': n / 10, 'end': (n + 1) / 10, 'value': shape}
+                          for n, shape in enumerate('ABCDEFGHX')]}
+    calls = []
+    def recogniser(argv, **kwargs):
+        if str(argv[0]) != str(linked):
+            return original_run(argv, **kwargs)
+        calls.append(([str(a) for a in argv], Path(argv[argv.index('-d') + 1]).read_text()))
+        return subprocess.CompletedProcess(argv, 0, json.dumps(body), '')
+    with patch.object(shutil, 'which', which), patch.object(C, 'run', recogniser), \
+            patch.object(A, 'pronunciations', return_value={'ferry': 'feh-ree'}):
+        code, out = cli('lipsync', piece)
+        working = A.joined_voice(piece).parent / 'timing' / f'{piece}.mouth.json'
+        made = json.loads(working.read_text()) if working.is_file() else {}
+        verdict('lipsync passes pocketSphinx and all extended shapes with plain text, never respellings',
+                code == 0 and calls[-1][0][1:7] == ['-r','pocketSphinx','--extendedShapes','GHX','-f','json']
+                and calls[-1][1] == 'A ferry crosses.\nHome again.\n', out)
+        verdict('lipsync keeps native cues and makes soundFile repository-relative',
+                made.get('mouthCues') == body['mouthCues'] and made.get('metadata', {}).get('soundFile') ==
+                f'{C.PROD_RENDERS}/{piece}/{piece}.voice.wav' and '9 mouth cues' in out, out)
+        # Keep the repository's logical input name even when the joined WAV is a link
+        # to user storage: resolving that link must not put a home path in tracked JSON.
+        voice = A.joined_voice(piece)
+        with tempfile.TemporaryDirectory(prefix='media-mouth-audio-') as folder:
+            external = Path(folder) / 'joined.wav'
+            shutil.copyfile(voice, external)
+            voice.unlink()
+            voice.symlink_to(external)
+            try:
+                code, out = cli('lipsync', piece)
+                linked_body = json.loads(working.read_text())
+                verdict('linked joined audio still records its logical repository-relative soundFile',
+                        code == 0 and linked_body['metadata']['soundFile'] ==
+                        f'{C.PROD_RENDERS}/{piece}/{piece}.voice.wav', out)
+            finally:
+                voice.unlink()
+                shutil.copyfile(external, voice)
+        before = working.read_bytes()
+        dictionary.unlink()
+        code, out = cli('lipsync', piece)
+        verdict('lipsync refuses a missing dictionary without changing output', code == 2
+                and 'cmudict-en-us.dict' in out and working.read_bytes() == before, out)
+        setup_rows, setup_findings = R.setup_report(root)
+        verdict('setup marks the dictionary missing even when Rhubarb --version succeeds',
+                any('rhubarb for lipsync' in line for line in setup_findings))
+        write(dictionary, 'fixture\n')
+        setup_rows, setup_findings = R.setup_report(root)
+        verdict('setup accepts the dictionary beside the linked executable\'s real path',
+                any('rhubarb for lipsync' in line and 'ready' in line for line in setup_rows)
+                and not any('rhubarb for lipsync' in line for line in setup_findings))
+        with patch.object(C, 'run', original_run):
+            code, out = cli('lipsync', piece)
+        verdict('Rhubarb fatal exit 1 becomes exit 2 with its message and no changed output',
+                code == 2 and 'exit 1' in out and 'synthetic recogniser failure' in out
+                and working.read_bytes() == before, out)
+        body['metadata']['duration'] = float('nan')
+        code, out = cli('lipsync', piece)
+        verdict('lipsync refuses non-finite native JSON without changing output',
+                code == 2 and working.read_bytes() == before, out)
+        body['metadata']['duration'] = 1.5
+        for field, invalid in (('value', 'Z'), ('start', -0.1), ('end', None)):
+            old = body['mouthCues'][0][field]
+            body['mouthCues'][0][field] = invalid
+            code, out = cli('lipsync', piece)
+            verdict(f'lipsync refuses invalid native cue {field} without changing output',
+                    code == 2 and working.read_bytes() == before, out)
+            body['mouthCues'][0][field] = old
+        held_register = register.read_text()
+        register.write_text(held_register.replace('status = "approved"', 'status = "generated"', 1))
+        count = len(calls)
+        code, out = cli('lipsync', piece)
+        verdict('lipsync refuses an unapproved take before recognition', code == 1
+                and len(calls) == count and working.read_bytes() == before, out)
+        register.write_text(held_register)
+        held_voice = voice.read_bytes()
+        with wave.open(str(voice), 'wb') as audio:
+            audio.setnchannels(1); audio.setsampwidth(2); audio.setframerate(8000)
+            audio.writeframes(b'\0\0' * 800)
+        code, out = cli('lipsync', piece)
+        verdict('lipsync refuses a joined voice whose duration no longer matches the takes',
+                code == 2 and len(calls) == count and working.read_bytes() == before, out)
+        voice.write_bytes(held_voice)
+        voice.rename(voice.with_suffix('.held.wav'))
+        code, out = cli('lipsync', piece)
+        verdict('lipsync names voice join when joined audio is missing',
+                code == 2 and 'voice join' in out and len(calls) == count, out)
+        voice.with_suffix('.held.wav').rename(voice)
+        target = root / C.TIMING / f'{piece}.mouth.json'
+        code, out = cli('lipsync', piece, '-o', target)
+        verdict('lipsync first explicit -o accepts the tracked mouth file', code == 0 and target.is_file(), out)
+        if have_git:
+            with tempfile.TemporaryDirectory(prefix='media-mouth-git-') as folder:
+                saved = C.ROOT
+                try:
+                    C.ROOT = Path(folder)
+                    shutil.copytree(root / C.VOICEOVER, C.ROOT / C.VOICEOVER)
+                    voice = A.joined_voice(piece)
+                    voice.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(root / C.PROD_RENDERS / piece / f'{piece}.voice.wav', voice)
+                    target = C.ROOT / C.TIMING / f'{piece}.mouth.json'
+                    write(target, 'old mouth\n')
+                    C.run(['git','init','-q'], cwd=C.ROOT)
+                    C.run(['git','config','user.name','Fixture'], cwd=C.ROOT)
+                    C.run(['git','config','user.email','fixture@example.com'], cwd=C.ROOT)
+                    C.run(['git','add','-A'], cwd=C.ROOT)
+                    C.run(['git','commit','-qm','fixture'], cwd=C.ROOT)
+                    code, out = cli('lipsync', piece, '-o', target)
+                    verdict('lipsync replaces a committed clean tracked mouth file', code == 0
+                            and json.loads(target.read_text())['mouthCues'] == body['mouthCues'], out)
+                    C.run(['git','add','-A'], cwd=C.ROOT)
+                    C.run(['git','commit','-qm','accepted mouths'], cwd=C.ROOT)
+                    target.write_text('author edit\n')
+                    count = len(calls)
+                    code, out = cli('lipsync', piece, '-o', target)
+                    verdict('dirty mouth output refuses before recognition', code == 2
+                            and len(calls) == count and target.read_text() == 'author edit\n', out)
+                    C.run(['git','restore',str(target.relative_to(C.ROOT))], cwd=C.ROOT)
+                    def editing_recogniser(argv, **kwargs):
+                        if str(argv[0]) == str(linked):
+                            target.write_text('edited during recognition\n')
+                        return recogniser(argv, **kwargs)
+                    with patch.object(C, 'run', editing_recogniser):
+                        code, out = cli('lipsync', piece, '-o', target)
+                    verdict('mouth guard rechecks author edits during recognition', code == 2
+                            and target.read_text() == 'edited during recognition\n', out)
+                finally:
+                    C.ROOT = saved
+    with patch.object(shutil, 'which', lambda name, *a, **k: None if name == 'rhubarb'
+                      else original_which(name, *a, **k)):
+        setup_rows, setup_findings = R.setup_report(root)
+        verdict('absent Rhubarb is a setup note naming lipsync, never a finding',
+                any('rhubarb absent: lipsync' in line for line in setup_rows)
+                and not any('rhubarb absent' in line for line in setup_findings))
+        code, out = cli('lipsync', piece)
+        verdict('missing Rhubarb blocks only lipsync with its install hint',
+                code == 2 and 'res/ folder' in out, out)
+    if not original_which('rhubarb'):
+        skip('Rhubarb live lip sync', 'rhubarb is absent')
+    elif not original_which('espeak-ng'):
+        skip('Rhubarb live lip sync', 'espeak-ng fixture voice is absent')
+    else:
+        live = '037-mouth-live'
+        take = root / C.VO_GENERATED / live / 'takes' / f'{live}.s01.t1.wav'
+        take.parent.mkdir(parents=True, exist_ok=True)
+        C.run(['espeak-ng','-v','en-gb','-s','130','-w',take,'A ferry crosses.'])
+        write(root / C.VOICEOVER / f'{live}.toml', f'[voiceover]\npiece = "{live}"\n'
+              'output_format = "pcm_22050"\n[[segment]]\nid = "s01"\nstatus = "approved"\n'
+              f'text = "A ferry crosses."\nfile = "generated/{live}/takes/{take.name}"\n')
+        code, out = cli('voice','join',live)
+        code, out = cli('lipsync',live) if code == 0 else (code, out)
+        file = A.joined_voice(live).parent / 'timing' / f'{live}.mouth.json'
+        actual = json.loads(file.read_text()) if file.is_file() else {}
+        verdict('live Rhubarb recognises the joined espeak voice and stores a relative soundFile',
+                code == 0 and bool(actual.get('mouthCues')) and actual.get('metadata', {}).get('soundFile') ==
+                f'{C.PROD_RENDERS}/{live}/{live}.voice.wav', out)
 
 
 def test_transcribe(verdict, cli, root: Path, have_git: bool) -> None:

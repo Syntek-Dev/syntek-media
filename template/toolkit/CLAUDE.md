@@ -118,6 +118,11 @@ deliverable is one line and a failed render says exactly what failed.
   `feed add`, `feed tag`) and its tracked feed (`feed write -o`).
 - **New modules:** `media_<area>.py`, standard library only, imported by `media.py` and covered by
   its `--self-test`; never a second command line.
+- **Lip sync:** `media.py lipsync <piece>` uses the approved joined voice and plain segment
+  `text`, never respellings or request tags. Preserve Rhubarb's native cues and centisecond
+  timings, with `soundFile` repository-relative even for linked audio. Rhubarb's fatal exit 1
+  becomes exit 2; its dictionary belongs beside its real executable through any link. Missing
+  Rhubarb is an optional setup note naming `lipsync`, a broken installed copy a finding.
 - **Known-word alignment:** `media.py transcribe <piece>` reads approved segments on the joined
   WAV, prints the words check and writes ignored working timing; `-o` accepts words/check into
   `production/src/timing/`, both committed and unchanged before replacement. Cross-check is on

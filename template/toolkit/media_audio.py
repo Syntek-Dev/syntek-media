@@ -744,6 +744,61 @@ def cmd_transcribe(args) -> int:
     return proc.returncode
 
 
+def cmd_lipsync(args) -> int:
+    """Rhubarb's native JSON, with plain dialogue and a portable soundFile (DESIGN D68)."""
+    import media_video as V
+    voice = joined_voice(args.piece)
+    if not voice.is_file():
+        raise C.Fatal(f'{C.shown(voice)} is missing: run media.py voice join {args.piece}')
+    rhubarb = C.need('rhubarb')
+    if not C.rhubarb_dictionary(rhubarb).is_file():
+        raise C.Fatal('rhubarb is missing res/sphinx/cmudict-en-us.dict beside its real path: '
+                      + C.INSTALL['rhubarb'])
+    segments = V.voice_segments(args.piece)
+    dialogue = '\n'.join(str(row.get('text', '')).strip() for _file, _duration, _pause, row in segments)
+    if not dialogue.strip():
+        raise C.Fatal('lipsync needs the approved segments\' plain spoken text')
+    rate = voice_sample_rate(args.piece)
+    samples = 0
+    for _file, duration, pause, _row in segments:
+        if not math.isfinite(pause) or pause < 0:
+            raise C.Fatal('pause_after must be finite and nonnegative')
+        samples += math.floor((duration + pause) * rate + 0.5)
+    if abs(C.duration(C.probe(voice)) - samples / rate) > 1 / rate + 0.001:
+        raise C.Fatal(f'{C.shown(voice)} no longer matches the approved takes and pauses; run voice join again')
+    out = C.output_path(C.piece_folder(C.PROD_RENDERS, args.piece, 'timing') / f'{args.piece}.mouth.json',
+                        args.o, inputs=[voice, C.path(C.VOICEOVER) / f'{args.piece}.toml'],
+                        tracked_timing=(args.piece, 'mouth.json'))
+    with tempfile.TemporaryDirectory(prefix='media-lipsync-') as folder:
+        dialog = Path(folder) / 'dialogue.txt'
+        dialog.write_text(dialogue + '\n', encoding='utf-8')
+        proc = C.run([rhubarb, '-r', 'pocketSphinx', '--extendedShapes', 'GHX', '-f', 'json',
+                      '-d', dialog, voice], cwd=C.ROOT, what='rhubarb lipsync')
+    try:
+        body = json.loads(proc.stdout)
+        body['metadata']['soundFile'] = voice.relative_to(C.ROOT).as_posix()
+        cues = body['mouthCues']
+        if not isinstance(cues, list) or not cues:
+            raise ValueError('no mouth cues')
+        for cue in cues:
+            if cue.get('value') not in set('ABCDEFGHX') or any(
+                    not isinstance(cue.get(k), (int, float)) or isinstance(cue[k], bool)
+                    or not math.isfinite(cue[k]) for k in ('start', 'end')) \
+                    or not 0 <= cue['start'] < cue['end']:
+                raise ValueError('invalid mouth cue')
+        encoded = (json.dumps(body, ensure_ascii=False, indent=2, allow_nan=False) + '\n').encode('utf-8')
+    except (ValueError, KeyError, TypeError, AttributeError):
+        raise C.Fatal('rhubarb returned unreadable mouth JSON; nothing written') from None
+    C.output_path(out, str(out) if args.o else None, tracked_timing=(args.piece, 'mouth.json'))
+    C.replace_file(out, encoded)
+    print(f'lipsync: {args.piece} — {len(cues)} mouth cues, shapes ' +
+          ''.join(sorted({cue['value'] for cue in cues})))
+    print('pocketSphinx is US English; British-voice accuracy beyond tried takes is UNCONFIRMED.')
+    print('Centisecond timings are estimates; check the mouths at M4.stills.')
+    print(f'wrote {C.shown(out)}; soundFile: {body["metadata"]["soundFile"]}')
+    return 0
+
+
 def _footnotes(text: str, mode: str) -> str:
     defs, kept, current = {}, [], None
     for line in text.split("\n"):

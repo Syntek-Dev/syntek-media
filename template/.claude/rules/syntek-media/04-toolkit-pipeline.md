@@ -61,6 +61,7 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 | `captions from-segments` | `REGISTER --deliverable KEY [--offset TC] [-o SRT]` | cues from approved voiceover segments, each segment's duration shared by character count; joins exact | 0 · 1 · 2 |
 | `captions from-words` | `WORDS --deliverable KEY [--offset TC] [-o SRT]` | cues from first/last aligned word boundaries; short gaps are findings, words never trimmed | 0 · 1 · 2 |
 | `transcribe` | `PIECE [--no-cross-check] [-o WORDS]` or `fetch` | offline WhisperX 3.8.6 alignment of approved segments on the joined voice, cross-check on by default; prints the words check; fetch is author-run once | 0 · 1 · 2 |
+| `lipsync` | `PIECE [-o FILE]` | CPU Rhubarb on the joined voice with plain segment text; native nine-shape mouth cues and repository-relative soundFile, fatal recogniser errors exit 2 | 0 · 1 · 2 |
 | `captions align` | `TEXT AUDIO [--lines B.L-B.L] [--anchors] [--noise DB] [--min-silence S] [-o SRT]` | cues spread over the speech that `silencedetect` finds, beat by beat with `--anchors`, one cut's lines with `--lines`; to standard output without `-o` | 0 · 1 · 2 |
 | `captions retime` | `SRT (--in TC --out TC \| --edl EDL --source FID) [-o SRT]` | master timing to a cut's, or recording timing to the master's through the edit decision list; to standard output without `-o` | 0 · 2 |
 | `captions rewrap` | `SRT --deliverable KEY [-o SRT]` | re-chunks to the deliverable's line width; to standard output without `-o` | 0 · 1 · 2 |
@@ -160,6 +161,7 @@ and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
 | `python3` (3.11 or later) and `git` | every `media.py` command; the repository root and what Git ignores |
 | `uv`, with Playwright's Chromium | `toolkit/card.py`, and the card PNGs `assemble` renders |
 | WhisperX 3.8.6 and its fetched English weights, punkt_tab and cross-check model (optional) | `transcribe`; the author runs `transcribe fetch` once, no skill downloads models |
+| Rhubarb Lip Sync 1.14.0 (optional), unzipped at user scope and linked onto PATH | `lipsync`; keep res/sphinx/cmudict-en-us.dict beside the real executable, never copy the binary alone |
 | `git-lfs` | large design exports in `brand/src/exports/large/` |
 | ffmpeg's libwebp, an AV1 encoder (libaom-av1 or libsvtav1) and the `avif` muxer (optional) | `media.py image` to WebP and AVIF; JPEG and PNG need none |
 | `pandoc` (optional) | cleaner chapter text in `audiobook text`, which works without it |
@@ -168,5 +170,6 @@ and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
 
 `python3 toolkit/media.py check --setup` reports every one of them, the allow, ask and deny
 entries of `.claude/settings.json`, and whether the ElevenLabs server's base path contains the
-project (`brand/workflows/06-check-the-setup/`). If a tool is missing, say which one and which
-command it blocks. Never report a command as passed when it could not run.
+project (`brand/workflows/06-check-the-setup/`). Optional tools' absence is a note naming the commands blocked; an installed tool that is broken
+is a finding with its fix. Rhubarb's version alone cannot prove its dictionary is present.
+If a tool is missing, say which one and which command it blocks. Never report a command as passed when it could not run.

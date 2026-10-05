@@ -632,6 +632,17 @@ def setup_report(root: Path) -> tuple:
                   'faster-whisper large-v3-turbo in the default Hugging Face cache'):
         item(None if label in missing else True, f'transcribe cache: {label}'
              + (' absent; run transcribe fetch once yourself' if label in missing else ' ready'))
+    rhubarb = shutil.which('rhubarb')
+    if not rhubarb:
+        item(None, 'rhubarb absent: lipsync needs the release with its resources', C.INSTALL['rhubarb'])
+    else:
+        try:
+            version = subprocess.run([rhubarb, '--version'], capture_output=True, text=True, timeout=10)
+            works = version.returncode == 0 and C.rhubarb_dictionary(rhubarb).is_file()
+        except (OSError, subprocess.TimeoutExpired):
+            works = False
+        item(works, 'rhubarb for lipsync: ' + ('dictionary ready beside its real path' if works else
+                   'broken executable or missing res/sphinx/cmudict-en-us.dict'), C.INSTALL['rhubarb'])
     cache = playwright_cache()
     found = [d.name for d in cache.glob(f"chromium*-{PLAYWRIGHT_REVISION}")] if cache.is_dir() else []
     item(bool(found), f"Chromium for Playwright 1.62.0 ({', '.join(found) or 'not installed'})",

@@ -15,6 +15,7 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ### Added
 
+- **Stage 4 — offline lip sync** (D20, D49, D66, D68, Section 4.2). `lipsync` runs CPU Rhubarb on the approved joined voice with plain segment text, preserves its nine native mouth shapes and centisecond timings, and makes `soundFile` repository-relative. Working and accepted tracked copies use the timing output guards. Setup checks the dictionary beside the executable's real path through symlinks; missing Rhubarb is optional, a broken installation is a finding, and a fatal recogniser error maps to exit 2. Mouth review belongs at `M4.stills`; smoke checks 21 and 26 prove these behaviours with generated fixtures.
 - **Stage 3 — offline known-word alignment and caption route four** (D20, D22, D49, D67, Sections 4.2 and 6.9). The pinned WhisperX worker aligns approved segments on the joined voice, maps respelling parts back to their script word and cross-checks heard words by default. The author alone fetches models; subsequent runs verify the user caches before heavy imports and run offline. Words and their printed check use D66's paired tracked-output guards. `captions from-words` preserves word boundaries; the maintainer confirmed low-score warnings below 0.5, minimum part scores, CUDA float16/CPU int8 cross-check selection and short-gap findings instead of trimmed words.
 - **Stage 2 — offline voice preparation** (D21, Section 4.2). `speak plan` prints model-specific requests, character limits and calls without spending credits or writing a rate; it creates only the piece's takes folder, or a named trial folder. Delivery directions come from the original script lines; v3, v4 and v4_turbo take tags, as confirmed by the maintainer.
 - **`voice join` and `levels`** (D64, D66, Section 4.2). Approved takes join in register order with their pauses as mono 16-bit WAV at the register's rate, using the same join as `assemble`. RMS windows default to 0.1 seconds, retain ACX's 0.5-second default, floor silence at -120 dBFS and end the final short window at the actual duration. Levels have no tracked-output option; the maintainer confirmed their JSON schema.
@@ -31,6 +32,7 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ### Fixed
 
+- **A missing named transcription interpreter gets its own setup hint** (D20, D67). A missing `MEDIA_TRANSCRIBE_PYTHON` executable no longer reports that uv is missing; its standard-library regression test runs without model imports.
 - **Gated audiobook output folders exclude all contents at any depth** while keeping their own README only when the gate is open (F1, D19, Sections 3.5 and 10). README negations sit above every gate. New audit probes reject misplaced or widened negations and stray rendered output; toolkit smoke checks prove the per-piece paths, both take layouts, `where`, and frame-exact stills and overlays (Section 7, checks 8, 9, 11, 24 and 25).
 
 ## [0.2.2] - 05/10/2026

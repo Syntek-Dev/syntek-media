@@ -132,6 +132,8 @@ INSTALL = {
                "git-lfs; macOS: brew install git-lfs)",
     "pandoc": "optional: install pandoc for a cleaner plain-text conversion",
     "espeak-ng": "optional: install espeak-ng for a scratch timing track (sudo apt install espeak-ng)",
+    'rhubarb': 'optional: unzip the Rhubarb Lip Sync 1.14.0 release at user scope, keeping its '
+               'res/ folder beside the executable; link rhubarb onto PATH, never copy the binary alone',
     'whisperx': 'optional: run python3 toolkit/media.py transcribe fetch once yourself; or set '
                 'MEDIA_TRANSCRIBE_PYTHON at user scope to an environment with whisperx==3.8.6',
 }
@@ -768,6 +770,11 @@ def need(tool: str) -> str:
     return found
 
 
+def rhubarb_dictionary(executable) -> Path:
+    """Rhubarb looks beside its real executable, through a link (DESIGN D49, D68)."""
+    return Path(executable).resolve().parent / 'res/sphinx/cmudict-en-us.dict'
+
+
 def run(cmd: list, cwd=None, what: str = "", input_text=None) -> subprocess.CompletedProcess:
     """Run a tool from an argument list; raise Fatal with the end of its log when it fails."""
     cmd = [str(c) for c in cmd]
@@ -974,7 +981,8 @@ def _run_until(cmd: list, cwd, capture: bool, deadline: float, label: str, timeo
         proc = subprocess.Popen(cmd, cwd=cwd, stdout=pipe, stderr=pipe, text=True, encoding="utf-8",
                                 errors="replace", start_new_session=os.name == "posix")
     except FileNotFoundError:
-        raise Fatal(f"uv is not installed: {INSTALL['uv']}") from None
+        fix = INSTALL['uv'] if Path(cmd[0]).stem == 'uv' else hint
+        raise Fatal(f"{label} could not start {cmd[0]}{': ' + fix if fix else ''}") from None
     try:
         out, err = proc.communicate(timeout=max(left, 0.01))
     except subprocess.TimeoutExpired:

@@ -98,7 +98,9 @@ file in it. The exact command is in `production/docs/reference/elevenlabs.md`.
 and mp3lame; `uv`, for Copier and for `toolkit/card.py`, with Playwright's Chromium
 (`uv run --with playwright==1.62.0 playwright install chromium`); `git-lfs`, if you keep large
 design exports; and `espeak-ng` (optional, for a scratch voice track). `check --setup` reports
-each one. Optional word alignment uses WhisperX 3.8.6 in `toolkit/transcribe.py`, under
+each one. Optional lip sync needs Rhubarb Lip Sync 1.14.0, unzipped with its resources at user
+scope and linked onto PATH; `lipsync` checks its dictionary beside the real executable.
+Optional word alignment uses WhisperX 3.8.6 in `toolkit/transcribe.py`, under
 `MEDIA_TRANSCRIBE_PYTHON` at user scope or offline uv. Run `python3 toolkit/media.py transcribe
 fetch` once yourself for its English weights, tokenizer data and cross-check model; skills never
 fetch models. Author-edited data stays TOML; tool-written timing is finite JSON.

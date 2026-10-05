@@ -20,7 +20,7 @@ toolkit/
 ├── media.py            ← the one command: python3 toolkit/media.py <command>; --help lists them all
 ├── media_common.py     ← shared: TOML, timecodes, presets and the brand's overrides, paths, the ffmpeg runner (thread-capped)
 ├── media_video.py      ← assemble, cut, encode, frame, still-video
-├── media_audio.py      ← extract-audio, loudness, audiobook, take add
+├── media_audio.py      ← extract-audio, loudness, audiobook, take add, voice plans, join, timing
 ├── media_captions.py   ← captions (check, from-segments, align, retime, rewrap, vtt, transcript, burn) and script time
 ├── media_repo.py       ← footage, tokens, flags, check, where
 ├── media_image.py      ← image, and the GIF pass of cut (a newsletter's preview GIF)
@@ -36,7 +36,7 @@ toolkit/
 - `media.py` — **the only entry point.** Every render, check and register write goes through
   `python3 toolkit/media.py <command>`: probe, presets, script time, assemble, cut, encode, frame,
   image, still-video, extract-audio, captions, loudness, audiobook, take add, speak plan, voice join,
-  levels, transcribe, feed, footage,
+  levels, transcribe, lipsync, feed, footage,
   tokens, flags, where and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
   shapes Playwright and VHS write (WebM, MP4, animated GIF, none with sound), SRT, TOML, a show
   register and a git repository at run time and exercises every module; a probe that needs
@@ -67,6 +67,11 @@ toolkit/
   otherwise offline uv. Only the author runs `transcribe fetch` once; the worker's self-test
   needs no dependency. Working words/check files land in the piece's ignored timing folder;
   accepted tracked copies are written together through `-o`, both Git-clean for replacement.
+- **Lip sync:** `media.py lipsync <piece>` runs CPU Rhubarb on the joined voice with plain
+  segment text. It preserves native mouth cues and writes repository-relative `soundFile`,
+  first to working timing JSON, then to an accepted tracked mouth file through `-o`. Keep the
+  dictionary beside the executable's real path; a version check alone cannot prove readiness.
+  Review its centisecond estimates at `M4.stills`.
 - `data/platforms.toml` — the template's platform data, refreshed by `copier update`; the
   brand's confirmed corrections are `[[override]]` tables in `brand/src/platforms/overrides.toml`,
   which every command applies and prints.
