@@ -2,7 +2,7 @@
 
 **A Copier template that adds audio and video production to a repository — brand, scripts, production and publishing layers, a small ffmpeg toolkit and a Claude Code skill suite — for a business or an author.**
 
-![Version](https://img.shields.io/badge/version-0.2.1-blue)
+![Version](https://img.shields.io/badge/version-0.2.2-blue)
 ![Template: Copier](https://img.shields.io/badge/template-copier-blue)
 
 ```bash

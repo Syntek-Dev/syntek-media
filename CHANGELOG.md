@@ -1,6 +1,6 @@
 # Changelog
 
-**Last Updated**: 04/10/2026 **Version**: 0.2.1 **Maintained By**: Syntek Studio
+**Last Updated**: 05/10/2026 **Version**: 0.2.2 **Maintained By**: Syntek Studio
 **Language**: British English (en_GB)
 
 All notable changes to syntek-media are documented here.
@@ -12,6 +12,12 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 ---
 
 ## [Unreleased]
+
+## [0.2.2] - 05/10/2026
+
+A fix release for the toolkit and `copier.yml`: a long list of stills no longer exhausts memory in `assemble`, every clip and overlay lands on the master's frame grid, and a deliverable's sound ends with its picture. It changes what a generated project receives (the toolkit, two guides, rules 04 and `copier.yml`); no path moves, so a 0.2.x project needs no migration.
+
+**syntek-author baseline.** Released against syntek-author `9a65902` (its v0.3.0 release), read on 05/10/2026 with a clean working tree: `run-all.sh` passed in full against it with this release's scripts (34 PASS, 0 FINDINGS, 0 ERROR, 0 SKIP), `coexist-test.sh` included, and `.github/scripts/syntek-author-names.txt` is unchanged since 0.2.0.
 
 ### Fixed
 
