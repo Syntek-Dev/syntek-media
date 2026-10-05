@@ -1,9 +1,9 @@
 # CONTEXT.md — production/src/edits/
 
 One edit decision list per piece, from which `python3 toolkit/media.py assemble` builds the
-master. The list is the record of every cut; the master in `production/src/renders/` is generated
-from it and from the logged footage, the cards and the approved voiceover, so a change is made
-here and assembled again, never by editing a render.
+master. The list is the record of every cut; the master, in the piece's own folder in
+`production/src/renders/`, is generated from it and from the logged footage, the cards and the
+approved voiceover, so a change is made here and assembled again, never by editing a render.
 
 ## Directory Tree
 

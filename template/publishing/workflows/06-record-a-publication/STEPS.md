@@ -62,10 +62,10 @@ Only where the post is a feed episode of a show the project serves itself, and o
 author reports the feed live: set the episode's row in the show register to `published`, then run
 `python3 toolkit/media.py feed write SHOW --as-of '<the upload's time>' -o` with the show's
 tracked feed (the `<show>.feed.xml` beside its register, in the podcast folder) as its target.
-Compare the result with the upload copy in `publishing/src/renders/`: they must match byte for
-byte, and any difference (the register changed after the upload) is reported to the author at
-once. A refusal is fixed in the register, never in a feed. The podcast-feed guide, where the
-project has it, gives the detail. _Mechanical._
+Compare the result with the upload copy at the top of `publishing/src/renders/`, which no piece
+owns: they must match byte for byte, and any difference (the register changed after the upload)
+is reported to the author at once. A refusal is fixed in the register, never in a feed. The
+podcast-feed guide, where the project has it, gives the detail. _Mechanical._
 
 ## 6. Compare what was set with the package
 

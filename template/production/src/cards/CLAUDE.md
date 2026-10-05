@@ -39,5 +39,8 @@ on a file made somewhere else.
 
 - **Written by skills:** `<piece>.<card>.html`, by `cut-for-platform`, with `<card>` a kebab-case
   word (`title`, `end`).
-- **Generated (never hand-edit):** `<piece>.<card>.<W>x<H>.png` in `production/src/renders/`,
-  rendered by `assemble` through `uv run toolkit/card.py render`.
+- **Generated (never hand-edit):** `<piece>.<card>.<W>x<H>.png` in
+  `production/src/renders/<piece>/cards/`, rendered by `assemble` through
+  `uv run toolkit/card.py render`, and `<piece>.<card>.<W>x<H>.transparent.png` beside it for a
+  card laid over the picture, so a card used as a clip and as an overlay at one size keeps both
+  renders.

@@ -13,6 +13,22 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Added
+
+- **Stage 1 — per-piece output folders** (D64, D65, Section 6.16). The toolkit writes a piece's production renders, card PNGs, voiceover takes and publishing renders into its own ignored folder. Names without a leading piece key stay at the output folder's top; audiobook output stays flat. The tracked `production/src/timing/` and `production/src/scenes/` folders ship everywhere with their governance pairs.
+- **`media.py where <piece>`** lists the piece's tracked or trackable files and names its three ignored output folders without listing their contents (D50, D64). `flags --piece` gathers timing and scene files too.
+- **One uv-script helper** chooses `UV_PYTHON`, or the system interpreter matching the script's Python range, and stops a timed-out run and its child processes (D20). A user-cache lock is required on every run, including rebuilds after cache removal; lock failure exits 2. `check --setup` reports a mislinked virtual-environment interpreter with its fix (D49). These implementation choices were confirmed by the maintainer on 05/10/2026.
+
+### Changed
+
+- **Voiceover takes remain readable across both layouts** (D65, Section 6.6). `take add` honours the register's file path, numbers after takes in both layouts and the register's current take, refuses voice trials, and resets a re-roll's approval and archive fields. Trial audio goes to `generated/voice-trials/<name>/`; scratch tracks sit beside a piece's takes folder. Brand proofs have their own dated folder (D21, D44, D64).
+- **Cards keep opaque and transparent variants separately**, with per-variant freshness checks, in the piece's cards folder (D47, Section 6.16). The toolkit defaults, skills, guides, workflow paths, index pairs and output READMEs follow the per-piece layout. The fallback thumbnail layout names a tracked production asset.
+- **A feed episode is checked across both layouts**: `feed check` reads a legacy flat render or artwork with a warning when the per-piece copy is absent; `feed tag` requires the per-piece render and otherwise names the encode needed (D65).
+
+### Fixed
+
+- **Gated audiobook output folders exclude all contents at any depth** while keeping their own README only when the gate is open (F1, D19, Sections 3.5 and 10). README negations sit above every gate. New audit probes reject misplaced or widened negations and stray rendered output; toolkit smoke checks prove the per-piece paths, both take layouts, `where`, and frame-exact stills and overlays (Section 7, checks 8, 9, 11, 24 and 25).
+
 ## [0.2.2] - 05/10/2026
 
 A fix release for the toolkit and `copier.yml`: a long list of stills no longer exhausts memory in `assemble`, every clip and overlay lands on the master's frame grid, and a deliverable's sound ends with its picture. It changes what a generated project receives (the toolkit, two guides, rules 04 and `copier.yml`); no path moves, so a 0.2.x project needs no migration.

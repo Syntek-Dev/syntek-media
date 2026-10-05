@@ -55,4 +55,5 @@ packaged and logged the same way every time, whoever runs it.
 
 - **Folders:** `NN-verb-first-kebab-name/`, four files each. Nothing here is generated.
 - **Procedures produce nothing here.** Their output lands in `publishing/src/`, with renders in
+  the piece's own `publishing/src/renders/<piece>/`; only what no piece owns sits at the top of
   `publishing/src/renders/`.

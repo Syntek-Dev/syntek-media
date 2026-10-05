@@ -8,7 +8,7 @@ words and shown in its colours, with nothing on the image the business could not
 - **Unit:** one piece; a cut with its own thumbnail is briefed as `<piece>--cNN`.
 - **Procedure:** `publishing/workflows/04-brief-a-thumbnail/`.
 - **Brief and layout:** `publishing/src/thumbnails/<piece>[--cNN].md` and `.html`; renders in
-  `publishing/src/renders/`.
+  `publishing/src/renders/<piece>/`.
 - **Brand:** `brand/src/design-system/` (the tokens and the layout); syntek-author's brand guide
   and brand voice, where present (by default in standards/brand/; its project settings file,
   00-project.md, names the brand folder).

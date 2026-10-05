@@ -24,10 +24,10 @@ Nothing here is rendered, and nothing here writes under `template/`.
 ├── line-cap.sh               ← 300 lines for every instructional .md
 ├── scrub.sh                  ← personal data, secrets, voice IDs, Claude Design links, absolute paths
 ├── dev-isolation.sh          ← template skills denied in the root settings; CLAUDE.md excludes
-├── shipped-seeds.sh          ← seeds wired and empty; examples and shared files copy-only; the D13 settings seed
+├── shipped-seeds.sh          ← seeds wired and empty; copy-only files; D13 settings; output README negations above gates
 ├── skill-conformance.sh      ← DESIGN.md Section 5's contract for every skill and mode file; the ElevenLabs guard
 ├── generate-all.sh           ← renders every BRAND_KIND × profile from a snapshot, and each over syntek-author
-├── shipped-brands.sh         ← a render carries exactly its brand: skills, modes, gated paths, no syntek-author name
+├── shipped-brands.sh         ← skills, modes, gates, no syntek-author name; output folders ship only their README
 ├── byte-identity.sh          ← shared files identical in every standalone render that ships them
 ├── doc-references.sh         ← every cited path and skill exists in that render; companions and syntek-author paths in prose
 ├── toolkit-smoke.sh          ← the toolkit's self-tests and commands on synthetic clips; ignore and LFS rules; no ElevenLabs call

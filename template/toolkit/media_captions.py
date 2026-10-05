@@ -35,10 +35,12 @@ lower case; NOTE cues and braced directions dropped; and 'As recorded on DD/MM/Y
 --date or, for a recorded piece's transcript.md, its recording's recorded date in the
 manifest. What the picture shows and the words leave out is added by hand.
 
-Where the output goes: from-segments writes to publishing/src/renders/ unless -o names a path;
-align, retime, rewrap, vtt and transcript write to the path -o names, or else to stdout, with
-every report line on stderr, because their files belong in the tracked publishing/src/captions/,
-where the toolkit never chooses a path itself. burn writes its render to publishing/src/renders/.
+Where the output goes: from-segments writes to its piece's publishing/src/renders/<piece>/ unless
+-o names a path; align, retime, rewrap, vtt and transcript write to the path -o names, or else to
+stdout, with every report line on stderr, because their files belong in the tracked
+publishing/src/captions/, where the toolkit never chooses a path itself. burn writes its render
+to the piece's publishing/src/renders/<piece>/ too. The piece is the leading NNN-kebab-title of
+the output's name; a name with none stays at the top of publishing/src/renders/ (DESIGN D64).
 
 script time reads each beat heading's '(target MM:SS)' as that beat's own duration, never a
 running time: it compares every beat with its own target, sums the beat targets for the piece,
@@ -441,7 +443,9 @@ def note(text: str) -> None:
 
 
 def default_srt(name: str) -> Path:
-    return C.path(C.PUB_RENDERS) / name
+    """Where a caption file named name goes without -o: its piece's publishing/src/renders/<piece>/,
+    or the folder's top for a name with no piece key (DESIGN D64, Section 6.16)."""
+    return C.piece_folder(C.PUB_RENDERS, name) / name
 
 
 def write_out(out: Path, text: str) -> None:
@@ -1059,8 +1063,8 @@ def cmd_burn(args) -> int:
     w, h = int(video[0]["width"]), int(video[0]["height"])
     cues = read_srt(args.srt)
     burn_check(cues, width_for(table), C.shown(args.srt))
-    stem = src.name.rsplit(".", 1)[0]
-    out = C.output_path(C.path(C.PUB_RENDERS) / f"{stem}.burned.mp4", args.o, inputs=[src])
+    name = f"{src.name.rsplit('.', 1)[0]}.burned.mp4"
+    out = C.output_path(C.piece_folder(C.PUB_RENDERS, name) / name, args.o, inputs=[src])
     with tempfile.TemporaryDirectory(prefix="media-burn-") as tmp:
         tmp = Path(tmp)
         ass, family = caption_ass(cues, w, h, table)

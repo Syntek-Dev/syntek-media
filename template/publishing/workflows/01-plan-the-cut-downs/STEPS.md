@@ -23,8 +23,8 @@ names the skill and guide it uses. **Run in order** — the ordering is load-bea
 > **Skill:** `repurpose` · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
 Read the piece's brief, `scripts/src/pieces/<piece>/brief.md`. Its `verified` must date M4: the
-master exists, probes clean and the author has watched it through. Find the master in
-`production/src/renders/`; a missing render is remade by
+master exists, probes clean and the author has watched it through. Find the master in the
+piece's own folder, `production/src/renders/<piece>/`; a missing render is remade by
 `production/workflows/03-assemble-the-master/`, never stood in for. **Without a master there is
 nothing to time a cut against: stop.** _Mechanical._
 

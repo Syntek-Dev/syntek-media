@@ -20,8 +20,9 @@ max_size are findings, a weight over max_size_mobile a warning. A PNG already at
 size, asked for as png with no -o, is verified where it stands and nothing is written. A table
 with no width and height (a size no platform publishes) is refused: render it with card.py
 --size. A missing encoder is exit 2, named, as check --setup reports it. Default output:
-publishing/src/renders/<stem>.<platform>-<format>.<ext>, <stem> being the source's name up to
-its first '.' (DESIGN Section 6.16).
+publishing/src/renders/<piece>/<stem>.<platform>-<format>.<ext>, <stem> being the source's name
+up to its first '.' and <piece> its leading piece key; a stem with none, such as a show cover's
+design export, at the folder's top (DESIGN D64, Section 6.16).
 
 The GIF pass (a kind = "image" table whose only format is gif: newsletter.preview_gif) is run
 by thumbnail-brief towards M7, never at M5, because its overlay comes from the piece's
@@ -36,8 +37,9 @@ plays floor(max_seconds / its own seconds) times, written as the gif muxer's -lo
 or -1 (no loop extension) for one play, so the motion stops within max_seconds; a range longer
 than max_seconds renders nothing (exit 1). Over max_size it is made again with every second
 frame kept (the delay doubled, the duration unchanged), then every fourth, and otherwise fails,
-naming its size. A GIF has no sound. gif_facts reads a GIF's size, frames, delays and loop count
-from its own blocks, which is how its play time is verified.
+naming its size. A GIF has no sound; it is written, as every deliverable is, to its piece's
+publishing/src/renders/<piece>/ unless -o names a path. gif_facts reads a GIF's size, frames,
+delays and loop count from its own blocks, which is how its play time is verified.
 
 Standard library only; Python 3.11+.
 """
@@ -206,9 +208,8 @@ def cmd_image(args) -> int:
             and not flatten and at is None):
         print(f"image {C.shown(src)}: already a {w}x{h} PNG; verified where it stands, nothing written")
         return finish(src, verify_image(src, table, "png"), "image")
-    stem = src.name.split(".")[0]
-    out = C.output_path(C.path(C.PUB_RENDERS) / f"{stem}.{C.file_form(key)}{C.IMAGE_FORMATS[fmt]}",
-                        args.o, inputs=[src])
+    name = f"{src.name.split('.')[0]}.{C.file_form(key)}{C.IMAGE_FORMATS[fmt]}"
+    out = C.output_path(C.piece_folder(C.PUB_RENDERS, name) / name, args.o, inputs=[src])
     graph = V.reframe("0:v", "rf", sw, sh, w, h, args.frame or "crop", None, "0")
     last = "rf"
     if flatten:
@@ -348,7 +349,7 @@ def cut_gif(args, table: dict, src: Path, info: dict, a: float, b: float) -> int
     base = max(2, math.ceil(100 / target - 1e-9))   # hundredths of a second a frame (2 is the shortest browsers keep)
     colours = max(2, min(256, int(table.get("colours_max") or 256)))
     burned = bool(args.captions)
-    out = C.output_path(C.path(C.PUB_RENDERS) / V.deliverable_name(src, key, args.cut, burned, ".gif"),
+    out = C.output_path(V.deliverable_path(src, key, args.cut, burned, ".gif"),
                         args.o, inputs=[src] + ([overlay] if overlay else []))
     budget = C.max_bytes(table.get("max_size"))
     found = []

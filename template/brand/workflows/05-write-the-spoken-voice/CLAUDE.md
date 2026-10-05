@@ -35,7 +35,9 @@ voiceover uses the same narrator, settings and pronunciations.
 
 - **Never generate here.** Listing models and voices is free; hearing one costs credits, and a
   trial runs only on the author's word, through the voiceover procedure, which states the cost
-  and waits for a yes (`.claude/rules/syntek-media/03-production-ethics.md` Section 4).
+  and waits for a yes (`.claude/rules/syntek-media/03-production-ethics.md` Section 4). Its
+  audio goes to `production/src/voiceover/generated/voice-trials/<name>/`, made by
+  `python3 toolkit/media.py speak plan --trial <name>`, never by `mkdir`.
 - **No clone without recorded consent.** A cloned voice, the owner's own included, needs a
   cleared `voice-consent` row before it is made or used
   (`.claude/rules/syntek-media/03-production-ethics.md` Section 6).

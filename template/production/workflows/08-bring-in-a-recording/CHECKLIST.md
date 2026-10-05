@@ -26,7 +26,7 @@ model: opus
 
 - [ ] Logged with `footage add` (copied, never moved), with its rights ID where it shows other people; a recording already in the manifest not logged again. · _sonnet_
 - [ ] Its footage ID added to the brief's `source_media`. · _sonnet_
-- [ ] Its audio extracted with `extract-audio` to `production/src/renders/<stem>.wav`. · _sonnet_
+- [ ] Its audio extracted with `extract-audio … -o production/src/renders/<piece>/<stem>.wav`, into the piece's own folder. · _sonnet_
 
 **The words**
 

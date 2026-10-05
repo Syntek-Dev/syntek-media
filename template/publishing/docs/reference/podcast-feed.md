@@ -23,9 +23,8 @@ them. Limits are cited by key (`[platform.podcast]`, `podcast.feed_audio`), read
 - `<show>.feed.xml` beside it is the feed as last published, written after the author reports it
   live, so every public change is a reviewed diff; `feed write` and `feed check` refuse a GUID
   gone from it, or a changed length under an unchanged URL.
-- **A corrected file** gets a new URL (a `-v2` before its extension) and keeps its GUID: Spotify
-  fetches again only when a path changes. A feed a site's own code builds from the register is
-  checked offline with `feed check --feed FILE`.
+- **A corrected file** gets a new URL (`-v2` before its extension), keeping its GUID: Spotify
+  refetches only a new path. Check a site-built feed with `feed check --feed FILE`.
 
 ## Two routes to an episode, the hosted route, and YouTube
 
@@ -42,8 +41,9 @@ them. Limits are cited by key (`[platform.podcast]`, `podcast.feed_audio`), read
 ## Upload order and the hosting tests
 
 - **The files first, then the feed, at `pub_date` and not before:** a static feed has no clock,
-  and Spotify fetches every file it names. The upload copy is `feed write --as-of '<pub_date>'`,
-  written into `publishing/src/renders/`; it is written again if another episode is `ready` first.
+  and Spotify fetches every file it names. An episode's audio and chapters sit in
+  `publishing/src/renders/<piece>/`, and the upload copy (`feed write --as-of '<pub_date>'`) at
+  that folder's top, written again if another episode is `ready` first.
 - The author tests the host on the first episode; the toolkit never fetches:
 
 ```text

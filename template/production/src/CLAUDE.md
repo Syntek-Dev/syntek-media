@@ -25,6 +25,8 @@ what each piece may use, what each take cost, and how each master is cut.
 <: endif :>| `rights-register.md` | `storyboard` opens rows; the author clears them | `production/workflows/07-clear-the-rights/` |
 | `credits-log.md` | `media.py take add`; `captions` for speech-to-text | the procedure that spent the credit |
 | a recording's footage row and its captions | `captions` | `production/workflows/08-bring-in-a-recording/` |
+| `timing/` | `captions` (the words and the words check) and `voiceover` (the mouth cues), through `-o` | the procedure timing a scene piece's voice, in `production/workflows/CLAUDE.md` |
+| `scenes/` | `storyboard` (the cue index, through `-o`); `cut-for-platform` (the scene file, and the real index through `-o`) | the scene piece's procedures, in `production/workflows/CLAUDE.md` |
 
 - **Model:** **Opus** for every judgement (which take, which cut, whether a permission covers a
   use); the mechanical tier for adding a row the author has already decided and for running the
@@ -50,6 +52,12 @@ what each piece may use, what each take cost, and how each master is cut.
   (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
 - **Never commit a render or generated audio**, and never force one past
   `production/src/.gitignore`.
+- **Never put a tracked file in a per-piece folder.** A piece's folder sits inside a git-ignored
+  output folder, so a file there is never committed and no session reads it; a tracked file stays
+  flat in its tracked folder under its `<piece>.` name.
+- **A timing or scene file is replaced only through `-o`**, by the command that makes it, while
+  Git holds the old version committed and unchanged; its working copy in the piece's renders
+  folder is never opened.
 - **Never overwrite** a register, a manifest row, an edit decision list or a source file without
   confirming with the author.
 
@@ -59,8 +67,14 @@ what each piece may use, what each take cost, and how each master is cut.
   once and is never replaced by `copier update`; if deleted, the next update restores it empty.
 - **Written by skills and the toolkit:** `voiceover/<piece>.toml`, `edits/<piece>.toml`,
   `cards/<piece>.<card>.html`<: if 'audiobook' in MEDIA_KINDS :>, `audiobook/<piece>.md` and its two credits files<: endif :>,
-  each named for the piece's folder.
+  `scenes/<piece>.scene.py`, each named for the piece's folder.
+- **Written by the toolkit through `-o`, once the author accepts a run:**
+  `timing/<piece>.words.json`, `<piece>.words-check.md` and `<piece>.mouth.json`;
+  `scenes/<piece>.cues.json` and `<piece>.real.json`.
 - **Template-owned:** `.gitignore`, and the `README.md` of each git-ignored folder;
   `copier update` keeps them current, so never edit them here.
 - **Generated (never hand-edit):** everything in `renders/` and in each folder named `generated`;
-  `production/src/.gitignore` ignores them.
+  `production/src/.gitignore` ignores them. A piece's output sits in a folder named for it there,
+  `renders/<piece>/` and `voiceover/generated/<piece>/`, which carries no pair and no README; what
+  no piece owns stays at the folder's top, brand-kit proofs and voice trials in folders of their
+  own (`.claude/rules/syntek-media/08-naming-and-memory.md` Section 1).

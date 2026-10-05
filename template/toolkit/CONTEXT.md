@@ -21,7 +21,7 @@ toolkit/
 ├── media_video.py      ← assemble, cut, encode, frame, still-video
 ├── media_audio.py      ← extract-audio, loudness, audiobook, take add
 ├── media_captions.py   ← captions (check, from-segments, align, retime, rewrap, vtt, transcript, burn) and script time
-├── media_repo.py       ← footage, tokens, flags, check
+├── media_repo.py       ← footage, tokens, flags, check, where
 ├── media_image.py      ← image, and the GIF pass of cut (a newsletter's preview GIF)
 ├── media_feed.py       ← feed: a self-hosted podcast's register, RSS feed, chapters and file tags
 ├── card.py             ← HTML and CSS to PNG in headless Chromium (uv run; Playwright 1.62.0, pinned)
@@ -34,7 +34,7 @@ toolkit/
 - `media.py` — **the only entry point.** Every render, check and register write goes through
   `python3 toolkit/media.py <command>`: probe, presets, script time, assemble, cut, encode, frame,
   image, still-video, extract-audio, captions, loudness, audiobook, take add, feed, footage,
-  tokens, flags and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
+  tokens, flags, where and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
   shapes Playwright and VHS write (WebM, MP4, animated GIF, none with sound), SRT, TOML, a show
   register and a git repository at run time and exercises every module; a probe that needs
   ffmpeg, or an encoder this ffmpeg lacks, is skipped by name, never passed.
@@ -70,20 +70,33 @@ toolkit/
   install hint, or the tool itself failed).
 - **Outputs go to a renders or generated folder** (`production/src/renders/`,
   `publishing/src/renders/`, `production/src/voiceover/generated/` and the audiobook folder's,
-  where the project makes audiobooks), named as the house names them; nothing is written
-  elsewhere unless `-o` names a path, and nothing outside those folders is ever overwritten.
-  `captions align`, `retime`, `rewrap`, `vtt` and `transcript` write to the path `-o` names, or
-  else to stdout, because their home, `publishing/src/captions/`, is tracked; so does
-  `feed write`, whose tracked home is the show registers' folder.
-- **One tracked file the toolkit replaces:** a show's tracked feed, `<show>.feed.xml` beside its
-  register, written only by `feed write -o` once the author reports the feed live, after its GUID
-  comparison passes, through a temporary file renamed over it. The registers it writes (`take
-  add`, `footage add`, and `feed new`, `feed add` and `feed tag` for a show's register) are edited
-  line by line, and a value the author set is never rewritten.
+  where the project makes audiobooks), a piece's into a folder named for it there
+  (`production/src/renders/<piece>/`, `publishing/src/renders/<piece>/` and
+  `production/src/voiceover/generated/<piece>/takes/`), picked from the leading piece key of the
+  file's name; a name with no piece key stays at the folder's top, and the audiobook folder's
+  stay flat. Nothing is written elsewhere unless `-o` names a path, and nothing outside those
+  folders is ever overwritten but the tracked files named below. `captions align`, `retime`,
+  `rewrap`, `vtt` and `transcript` write to the path `-o` names, or else to stdout, because
+  their home, `publishing/src/captions/`, is tracked; so does `feed write`, whose tracked home is
+  the show registers' folder. A piece's timing and scene data is written first as a working copy
+  in its `production/src/renders/<piece>/timing/`, and in `production/src/timing/` or
+  `production/src/scenes/` only where `-o` names the file.
+- **The tracked files the toolkit replaces, and only these:** a show's tracked feed,
+  `<show>.feed.xml` beside its register, written only by `feed write -o` once the author reports
+  the feed live, after its GUID comparison passes, through a temporary file renamed over it; and
+  a piece's tracked timing and scene files, which only the command that makes each replaces,
+  with `-o` naming it, only while Git reports no uncommitted change to it (an uncommitted change,
+  an untracked copy or a project outside a Git work tree is refused, exit 2, changing nothing),
+  through a temporary file renamed over it. The registers it writes (`take add`, `footage add`,
+  and `feed new`, `feed add` and `feed tag` for a show's register) are edited line by line, and a
+  value the author set is never rewritten, except that `take add` resets a re-rolled segment's
+  `status` and `archived`.
 - **Nothing here reads a file Git ignores.** `flags` and the large-file scan of `check` list only
   what Git tracks or would track; `footage verify`, `take add` and `audiobook` open an ignored
   media file only by the path a manifest, register or argument names, and print its name and hash,
-  never its content. Outside a git work tree every file is read.
+  never its content. `where <piece>` lists a piece's tracked files and names its ignored
+  per-piece folders, saying whether each exists, never listing what is inside. Outside a git
+  work tree every file is read.
 - **Nothing here spends.** No command calls ElevenLabs or any other network service; `take add`
   names and logs a file a skill has already generated with the author's yes.
 

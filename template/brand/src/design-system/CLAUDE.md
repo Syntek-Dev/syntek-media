@@ -21,8 +21,9 @@ Design can sync, so a brand change is made once and every later piece follows.
   (`.claude/rules/syntek-media/05-model-allocation.md`).
 - **Concrete steps:** read the guide → change one token group or one card with the author →
   `python3 toolkit/media.py tokens` → `uv run toolkit/card.py check` on every card the change
-  touches → render a proof at a landscape and a vertical size into `production/src/renders/` →
-  the author approves → commit before any sync.
+  touches → render a proof at a landscape and a vertical size, `-o` naming a file in
+  `production/src/renders/proofs/<what>-DD-MM-YYYY/` → the author approves → commit before any
+  sync.
 - **Definition of done:** every required token is present and parses; every card passes
   `card.py check`; the author has seen a proof; no `AUTHOR TO CONFIRM` slot is left in a token
   group a layout uses.
@@ -48,5 +49,5 @@ Design can sync, so a brand change is made once and every later piece follows.
 - **Copied from here by skills:** `previews/thumbnail.html` to `publishing/src/thumbnails/`
   (`thumbnail-brief`) and `previews/card.html` to `production/src/cards/` (`cut-for-platform`),
   each copy fixing its relative path to `tokens.css`.
-- **Generated (never hand-edit):** nothing here; proofs go to the git-ignored
-  `production/src/renders/`.
+- **Generated (never hand-edit):** nothing here; proofs go, through `-o`, to the git-ignored
+  `production/src/renders/proofs/<what>-DD-MM-YYYY/`, which no piece owns.

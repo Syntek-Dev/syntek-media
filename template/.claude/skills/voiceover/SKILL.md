@@ -4,7 +4,7 @@ description: >-
   Voice a piece through the user-scope ElevenLabs MCP server, only when the author asks: one
   segment per spoken sentence or beat of the approved script, with the narrator, model and
   pronunciations of brand/src/voice/voice.md; the cost stated before any call; one call at a time
-  into the ignored generated/ folder, each take logged at once with 'media.py take add' and
+  into the piece's ignored takes/ folder, each take logged at once with 'media.py take add' and
   archived once approved; an espeak-ng scratch track as the fallback. Use when the author says
   'voice the script', 'make the voiceover for the trailer', 'take segment 4 again', 'choose a
   narrator for the trailer' or 'archive the approved takes'. Not captions (`captions`). Not the
@@ -80,11 +80,14 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
    call `mcp__elevenlabs__list_models` and find the Eleven v4 model's ID (never assume it: without
    a `model_id` the server falls back to its default model); list candidate voices with
    `mcp__elevenlabs__search_voices`; and let the author choose one voice, saying first that every
-   trial listen costs credits too. A cloned voice, the owner's own included, is chosen only when
-   its `voice-consent` row in `production/src/rights-register.md` is `cleared`, and that row's ID
-   goes in the Consent column. Record the voice name, voice ID, model ID, settings (stability,
-   similarity, style, speed), output format and the date chosen in the row. Keep one narrator per
-   use: a second voice makes one brand sound like two.
+   trial listen costs credits too. A trial is never a take: its `output_directory` is the absolute
+   `production/src/voiceover/generated/voice-trials/<name>/`, it keeps the server's name, enters no
+   register, and its credits-log row, written by this skill, reads `—` for the piece. A cloned
+   voice, the owner's own included, is chosen only when its `voice-consent` row in
+   `production/src/rights-register.md` is `cleared`, and that row's ID goes in the Consent column.
+   Record the voice name, voice ID, model ID, settings (stability, similarity, style, speed),
+   output format and the date chosen in the row. Keep one narrator per use: a second voice makes
+   one brand sound like two.
    *Complete when:* `voice.md` records a voice and a model ID for the use, the author has chosen
    the installed fallback or to stop, or the setup steps are given and the run has stopped.
 
@@ -119,10 +122,11 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
 
 7. **Generate, one call at a time.** Call `mcp__elevenlabs__text_to_speech` once per segment with
    its `request`, the recorded voice, `model_id` and settings, the `output_format`, and
-   `output_directory` set to the **absolute** path of `production/src/voiceover/generated/` under
-   the repository root (resolve the root with `git rev-parse --show-toplevel`). Without it the
-   server saves to its own base path or the desktop. Straight after each call, before the next,
-   run `python3 toolkit/media.py take add FILE --piece PIECE --segment sNN`, FILE being the path the
+   `output_directory` set to the **absolute** path of the piece's takes folder,
+   `production/src/voiceover/generated/<piece>/takes/`, under the repository root (resolve the
+   root with `git rev-parse --show-toplevel`). Without it the server saves to its own base path or
+   the desktop. Straight after each call, before the next, run
+   `python3 toolkit/media.py take add FILE --piece PIECE --segment sNN`, FILE being the path the
    result names: it renames the take to `<piece>.sNN.tN.mp3` (`.pcm` for a `pcm_*` format),
    because the server names files by the second and can overwrite one, and writes the segment's
    `take` and `file` and the credits-log row. Never rename a take with a shell `mv`. Set the
@@ -134,11 +138,11 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
 
 8. **Fall back to espeak-ng when ElevenLabs is unavailable.** Only if the author agrees and step 3
    found `espeak-ng` installed: with each pronunciation's respelling substituted (espeak-ng takes
-   no IPA), write each segment in `production/src/voiceover/generated/` with
-   `espeak-ng -v en-gb -s <wpm> -w <piece>.sNN.scratch.wav "<text>"`, the speed being the brief's
-   `words_per_minute`. Label the result approximate: a scratch and timing track for hearing the
-   rhythm and checking the length, never a take. It gets no `take`, is never approved, and never
-   reaches a master or a deliverable.
+   no IPA), write each segment in `production/src/voiceover/generated/<piece>/`, never in its
+   takes subfolder, with `espeak-ng -v en-gb -s <wpm> -w <piece>.sNN.scratch.wav "<text>"`, the speed
+   being the brief's `words_per_minute`. Label the result approximate: a scratch and timing track
+   for hearing the rhythm and checking the length, never a take. It gets no `take`, is never
+   approved, and never reaches a master or a deliverable.
    *Complete when:* each file exists and is labelled approximate.
 
 9. **Listen, approve and archive.** The author listens to every take. Set `status` to `approved` or
@@ -186,9 +190,11 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
 ## Cross-references
 
 - `production/src/voiceover/` — the segment registers; takes land in the git-ignored
-  `production/src/voiceover/generated/`, which `production/src/.gitignore` keeps out of Git.
+  `production/src/voiceover/generated/<piece>/takes/`, which `production/src/.gitignore` keeps
+  out of Git.
 - `brand/src/voice/voice.md` — narrators per use, their settings, and every pronunciation.
-- `production/src/credits-log.md` — one row per call, written by `take add`.
+- `production/src/credits-log.md` — one row per call, written by `take add`, or by this skill for
+  a trial.
 - `production/src/footage/manifest.toml` — where approved takes are archived.
 - `production/docs/reference/elevenlabs.md` — the guide this skill applies.
 - `captions` — its first route times captions from this register's approved segments.

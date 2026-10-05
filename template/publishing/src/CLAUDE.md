@@ -45,7 +45,8 @@ log) current, consistent with each other and true to what the author did.
 - **No invented entries.** A row records something the author agreed or reported. Never fill a
   seed with plausible examples, and never write a log row, a URL or a disclosure the author did
   not report.
-- **Renders are generated.** Never hand-edit, commit or force-add anything in `renders/`.
+- **Renders are generated.** Never hand-edit, commit or force-add anything in `renders/`, and
+  never put a tracked file in a piece's folder there: it would never be committed.
 - **Never overwrite** a plan, a caption file, a layout, a package or a row without confirming
   with the author; correct the log by a dated note, never by editing history.
 
@@ -54,12 +55,14 @@ log) current, consistent with each other and true to what the author did.
 - **Hand-written (with the author):** plans, briefs, layouts and packages, named `<piece>` and,
   for one cut, `<piece>--cNN`.
 - **Written by skills:** captions; schedule and log rows.
-- **Generated (never hand-edit):** everything in `renders/`, named
+- **Generated (never hand-edit):** everything in `renders/`. A piece's renders sit in a folder
+  named for it, `renders/<piece>/`, which carries no pair and no README:
   `<piece>[--cNN].<platform>-<format>[.burned].<ext>` for a deliverable,
   `<html-stem>.<platform>-<format>.png` for a thumbnail, `<stem>.<platform>-<format>.<ext>` for
   an image `media.py image` encoded, `<piece>[--cNN].newsletter-preview-gif.gif` for a GIF,
-  `<piece>.chapters.json` for an episode's chapters and `<show>.feed.xml` for a feed's upload
-  copy.
+  `<piece>.podcast-feed-audio.mp3` for a feed episode's audio and `<piece>.chapters.json` for its
+  chapters. What no piece owns stays at the folder's top: an image encoded from a source whose
+  name has no piece key (a show's cover) and `<show>.feed.xml` for a feed's upload copy.
 - **Placements** on the brand's own channels are written `<platform>:<slug>` in the schedule, the
   log and a package's H2.
 - **Template-owned:** this pair, `.gitignore` and `renders/README.md`.

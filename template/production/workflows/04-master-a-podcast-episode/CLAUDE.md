@@ -43,6 +43,6 @@ and have the author approve it whole.
 ## Output & naming
 
 - **Produces:** `production/src/edits/<piece>.toml` and, git-ignored,
-  `production/src/renders/<piece>.master.wav`.
+  `production/src/renders/<piece>/<piece>.master.wav`.
 - **Also writes:** the brief's `verified` entries for M3 and M4, and its `status`.
 - **Does not touch:** the transcript, the script, the footage or any take.

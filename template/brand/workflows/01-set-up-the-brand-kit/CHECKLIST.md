@@ -39,7 +39,7 @@ model: opus
 - [ ] `thumbnail.html` and `card.html` adapted with the author, using tokens only, line 1 unchanged. · _opus_
 - [ ] Layout contract kept: one file for every aspect ratio, text inside the safe-zone variables, nothing over the network, the card's background transparent. · _sonnet_
 - [ ] `uv run toolkit/card.py check` exits 0 on all seven cards. · _sonnet_
-- [ ] Landscape and vertical proofs of each layout, and a vertical proof of the captions card, rendered into `production/src/renders/` and approved by the author. · _opus_
+- [ ] Landscape and vertical proofs of each layout, and a vertical proof of the captions card, rendered with `-o` into `production/src/renders/proofs/brand-kit-DD-MM-YYYY/` and approved by the author. · _opus_
 
 **Record**
 

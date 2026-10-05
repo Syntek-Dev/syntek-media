@@ -9,8 +9,8 @@ explainers, cut into clips that each carry one idea with its reasons and its sou
   `scripts/src/pieces/NNN-kebab-title/`. **Cut:** one idea, one question answered, or one story
   told whole.
 - **Procedure:** `publishing/workflows/01-plan-the-cut-downs/`.
-- **Master:** `production/src/renders/<piece>.master.mp4`, or `.wav` for an audio-only episode.
-  **Plan:** `publishing/src/cut-downs/<piece>.md`.
+- **Master:** `production/src/renders/<piece>/<piece>.master.mp4`, or `.wav` for an audio-only
+  episode. **Plan:** `publishing/src/cut-downs/<piece>.md`.
 - **Sources:** the book's argument and its sources, in syntek-author's content and research
   layers, where present; read, never edited.
 - **Guides:** `publishing/docs/reference/cut-downs.md`; the podcast-episode, long-video and

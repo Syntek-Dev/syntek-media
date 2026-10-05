@@ -21,7 +21,7 @@ card is copied from.
 - **Concrete steps:** change one card with the author → `uv run toolkit/card.py check` on it →
   for a layout, render a proof at a landscape and a vertical size with
   `uv run toolkit/card.py render` (`--size`, and `-o` naming a file in the git-ignored
-  `production/src/renders/`) → the author approves → commit.
+  `production/src/renders/proofs/<what>-DD-MM-YYYY/`) → the author approves → commit.
 - **Definition of done:** the card passes `card.py check`, its line 1 is its `@dsCard` comment,
   and the author has approved a proof of any layout change.
 

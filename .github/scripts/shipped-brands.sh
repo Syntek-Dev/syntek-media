@@ -20,7 +20,7 @@
 #                     Sections 3–5 transcribed), evaluated against the answers the render
 #                     recorded in .copier-answers.syntek-media.yml.
 #
-#                     Eleven checks:
+#                     Twelve checks:
 #                       1. The answers file records BRAND_KIND, PLATFORMS and MEDIA_KINDS.
 #                       2. Every skill the gates open is present, with its SKILL.md.
 #                       3. No shut-gate media skill, and no skill DESIGN.md Section 5.1 does not
@@ -49,13 +49,23 @@
 #                          (.claude, .claude/rules, .claude/skills), are shared by design. A path
 #                          check 5 already reported is not reported again. The file is read on
 #                          every run: a missing one is exit 2, never a SKIP.
+#                      12. No file but its README.md in any generated/, renders/ or raw/ folder,
+#                          at any depth: no stray render, no per-piece output folder and nothing
+#                          in one (DESIGN.md D19, D42, D64). Copier's _exclude takes everything
+#                          below each output folder and negates its README.md back in above
+#                          every gated line (shipped-seeds.sh check 16), so the audiobook
+#                          folder's generated/ and renders/ ship only their READMEs where the
+#                          gate is open and nothing where it is shut (check 6); this check is
+#                          the render's proof. Each entry directly inside an output folder is
+#                          reported once, a folder with the count of files it holds.
 #
 #                     Numbers are stable identifiers. Append, never renumber.
 #
 #                     Over-author scope (DESIGN.md Section 7): on a <kind>--over-author tree,
 #                     whose <tree>.owned lists the files media's copy added, checks 5 and 8 are
 #                     skipped (syntek-author's paths are there by design; coexist-test.sh check 6
-#                     proves ownership), and checks 3, 7, 9 and 11 read media-owned paths only.
+#                     proves ownership), and checks 3, 7, 9, 11 and 12 read media-owned paths
+#                     only.
 #
 #                     What it CANNOT check: a file's CONTENT — a gated row inside an index file
 #                     that names an absent path is doc-references.sh's, and a shared file that
@@ -279,6 +289,32 @@ run_checks() {
     [[ -n "${reported5[.claude/skills/$e]:-}" ]] && continue
     finding "check 11 — the skill folder $e is a syntek-author skill (syntek-author-names.txt)"
   done
+
+  # ── 12. An output folder ships its README.md and nothing else, at any depth ──
+  # The outermost generated/, renders/ or raw/ on each path is the output folder; whatever else
+  # sits in it — a stray render, a per-piece folder (D64), a README.md in one — is reported once,
+  # by the entry directly inside the output folder, with what it holds.
+  local -a outs=()
+  local o seen_out n_in
+  while IFS= read -r d; do
+    d="${d#./}"; seen_out=false
+    for o in "${outs[@]}"; do [[ "$d" == "$o"/* ]] && { seen_out=true; break; }; done
+    $seen_out || outs+=("$d")
+  done < <(cd "$TREE" && find . -name .git -prune -o -type d \( -name generated -o -name renders -o -name raw \) -print | LC_ALL=C sort)
+  for o in "${outs[@]}"; do
+    while IFS= read -r e; do
+      e="${e#./}"; rel="$o/$e"
+      if [[ -d "$TREE/$rel" && ! -L "$TREE/$rel" ]]; then
+        if $SM_OWNED_MODE && [[ -z "${SM_OWNED_DIRS[$rel]:-}" ]]; then continue; fi
+        n_in="$(find "$TREE/$rel" -type f | wc -l | tr -d ' ')"
+        finding "check 12 — $rel/ ships inside $o/ ($n_in file(s) in it), which ships its README.md and nothing else: a per-piece output folder or anything in one never ships (D19, D42, D64)"
+      else
+        [[ "$e" == README.md ]] && continue
+        is_owned_file "$rel" || continue
+        finding "check 12 — $rel ships inside $o/, which ships its README.md and nothing else (D19, D42)"
+      fi
+    done < <(cd "$TREE/$o" && find . -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
+  done
 }
 
 # ── Self-test ────────────────────────────────────────────────────────────────
@@ -394,6 +430,22 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   probe "check 11 fires on a .claude/ path that is not a shared container" "check 11 — .claude/design is a syntek-author name"
   rm -rf "$TREE/.claude/design"; cp "$tmp/names.held" "$SM_AUTHOR_NAMES_FILE"; require_author_names
 
+  # 12: an output folder ships its README.md alone, at any depth.
+  mkdir -p "$TREE/production/src/renders/003-ferry/cards"; printf 'x\n' > "$TREE/production/src/renders/003-ferry/cards/003-ferry.title.1920x1080.png"
+  probe "check 12 fires on a per-piece output folder holding a card render" "check 12 — production/src/renders/003-ferry/ ships inside production/src/renders/ (1 file(s) in it)"
+  rm -f "$TREE/production/src/renders/003-ferry/cards/003-ferry.title.1920x1080.png"
+  probe "check 12 fires on an empty per-piece output folder" "check 12 — production/src/renders/003-ferry/ ships inside production/src/renders/ (0 file(s) in it)"
+  printf 'x\n' > "$TREE/production/src/renders/003-ferry/README.md"; rmdir "$TREE/production/src/renders/003-ferry/cards"
+  probe "check 12 fires on a README.md inside a per-piece output folder" "check 12 — production/src/renders/003-ferry/ ships inside"
+  rm -rf "$TREE/production/src/renders/003-ferry"
+  mkdir -p "$TREE/production/src/voiceover/generated/003-ferry/takes"; printf 'x\n' > "$TREE/production/src/voiceover/generated/003-ferry/takes/003-ferry.s01.t1.mp3"
+  probe "check 12 fires on a take in a piece's takes/ folder" "check 12 — production/src/voiceover/generated/003-ferry/ ships inside production/src/voiceover/generated/"
+  rm -rf "$TREE/production/src/voiceover/generated/003-ferry"
+  printf 'x\n' > "$TREE/publishing/src/renders/003-ferry.youtube-short.mp4"
+  probe "check 12 fires on a flat render beside the README.md" "check 12 — publishing/src/renders/003-ferry.youtube-short.mp4 ships inside publishing/src/renders/"
+  rm -f "$TREE/publishing/src/renders/003-ferry.youtube-short.mp4"
+  probe_clean "each output folder holding its README.md alone ships clean"
+
   # The over-author scope: syntek-author's files beside media's, and .owned listing media's.
   f="$tmp/oa"; TREE="$f"; build_tree "$TREE"
   mkdir -p "$f/.claude/skills/spelling" "$f/manuscript" "$f/.claude/hooks"
@@ -407,6 +459,11 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   load_owned "$TREE"
   st_baseline "an over-author tree: syntek-author's Makefile, layer and skill beside media's paths"
   probe_clean "syntek-author's skills are skipped and counted, never flagged, over syntek-author"
+  mkdir -p "$f/production/src/footage/raw"; printf 'x\n' > "$f/production/src/footage/raw/cam-a.mov"
+  probe_clean "a file syntek-author's side left in an output folder is not media's, over syntek-author"
+  printf 'production/src/footage/raw/cam-a.mov\n' >> "$f.owned"; load_owned "$TREE"
+  probe "check 12 fires on a media-owned file in an output folder, over syntek-author" "check 12 — production/src/footage/raw/cam-a.mov ships inside production/src/footage/raw/"
+  rm -f "$f/production/src/footage/raw/cam-a.mov"; sed -i '/cam-a.mov/d' "$f.owned"; load_owned "$TREE"
   mkdir -p "$f/standards"; printf 'x\n' > "$f/standards/notes.md"; printf 'standards/notes.md\n' >> "$f.owned"
   printf 'top standards\n' >> "$SM_AUTHOR_NAMES_FILE"; require_author_names; load_owned "$TREE"
   probe "check 11 fires on a media-owned path syntek-author also names, over syntek-author" "check 11 — the top-level path standards"

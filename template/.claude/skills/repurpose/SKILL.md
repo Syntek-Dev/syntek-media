@@ -58,7 +58,7 @@ cuts this kind never makes.
 
 1. **Fix the piece and its master.** Confirm the piece by its folder in `scripts/src/pieces/` and
    read its `brief.md`: `kind`, `origin`, `status`, `deliverables` and `parent`. Probe the master,
-   `production/src/renders/<piece>.master.mp4` (`.wav` for an audio master), with
+   `production/src/renders/<piece>/<piece>.master.mp4` (`.wav` for an audio master), with
    `python3 toolkit/media.py probe`. If `publishing/src/cut-downs/<piece>.md` exists, this is a
    revision: read it, and never overwrite it without the author's word. Without a master the plan
    can still name lines, hooks and framing, but every In and Out stays empty and no cut can be

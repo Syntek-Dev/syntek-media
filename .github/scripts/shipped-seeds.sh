@@ -15,9 +15,11 @@
 #                    deleted comes back from media's copy inside syntek-author's project
 #                    (Section 10). And the author-owned folders ship their pair and nothing else
 #                    (Section 3.3), because anything else in them is the template writing into
-#                    the author's space.
+#                    the author's space — and the output folders ship their README.md alone,
+#                    which only a `!` negation listed above every gated _exclude line can
+#                    promise, because Copier obeys the last pattern that matches (D19, Section 3.5).
 #
-#                    Fifteen checks:
+#                    Sixteen checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
 #                         _skip_if_exists.
 #                      2. Every _skip_if_exists entry names a file under template/.
@@ -42,7 +44,10 @@
 #                         or a sub-folder that is not itself pair-only, an example, or a
 #                         README-only generated/, renders/ or raw/ folder. The show registers'
 #                         folder, publishing/src/podcast/ (D59), is one: a register or a feed
-#                         that a toolkit run inside template/ left there would ship.
+#                         that a toolkit run inside template/ left there would ship. So are the
+#                         tracked timing and scene folders, production/src/timing/ and
+#                         production/src/scenes/ (D64): a piece's words, mouth cues, cue index or
+#                         scene code left there would ship.
 #                     12. .claude/settings.json breaks DESIGN.md D13: model opus,
 #                         autoCompactEnabled false, no hooks key, exactly the three denies, the
 #                         six allows and the nine ElevenLabs asks of _common.sh's lists, and no
@@ -56,10 +61,17 @@
 #                         voice.md, a platform profile) has no open `AUTHOR TO CONFIRM` slot:
 #                         every brand fact is the author's call, so a brand seed with none left
 #                         has shipped somebody's brand.
+#                     16. A `!` negation in _exclude brings back anything but an output folder's
+#                         own README.md (anchored, no glob, the folder a generated/, renders/ or
+#                         raw/), or is listed below the first gated line, or sits inside a gated
+#                         line (DESIGN.md Section 3.5, Section 10, D19). Copier obeys the last
+#                         pattern that matches a path, so a negation after a shut gate brings
+#                         its path back: the audiobook folder's two READMEs would ship to a brand
+#                         that makes no audiobooks. shipped-brands.sh check 12 proves the renders.
 #
-#                    Checks 1–4 and 8 read copier.yml and template/ (static, once). Checks 5–7
-#                    and 9–15 read every tree given — template/ by default, or renders — and skip
-#                    a seed the tree does not ship.
+#                    Checks 1–4, 8 and 16 read copier.yml and template/ (static, once). Checks
+#                    5–7 and 9–15 read every tree given — template/ by default, or renders — and
+#                    skip a seed the tree does not ship.
 #
 #                    Over-author scope (DESIGN.md Section 7): on a <kind>--over-author tree,
 #                    whose <tree>.owned lists the files media's copy added, checks 5, 6, 10, 12
@@ -220,6 +232,30 @@ static_checks() {
   done
   for s in "${!update_gated[@]}"; do
     is_shared "$s" || finding "check 8 — /$s carries the shared files' update gate ($SM_SHARED_GATE) but is not one of the ten (DESIGN.md D11): it would never reach a project by update"
+  done
+
+  # ── 16. Negations: an output folder's own README.md, above every gated line ──
+  # Copier obeys the last pattern that matches a path, so a `!` line listed after a gate brings
+  # its path back with the gate shut (DESIGN.md Section 3.5, Section 10, D19).
+  local item n=0 first_gated=0 d
+  local -a negs=()
+  while IFS= read -r item; do
+    n=$((n + 1))
+    if [[ "$item" == *'<:'* ]]; then
+      [[ "$first_gated" -eq 0 ]] && first_gated=$n
+      path="$(split_gated_item "$item" | cut -f2)"
+      [[ "$path" == '!'* ]] && finding "check 16 — a gated _exclude line negates ${path#!} back in; a negation is never gated, and is listed above every gated line (DESIGN.md Section 3.5)"
+    elif [[ "$item" == '!'* ]]; then
+      negs+=("$n"$'\t'"${item#!}")
+    fi
+  done < <(yaml_list _exclude "$COPIER")
+  for item in "${negs[@]}"; do
+    n="${item%%$'\t'*}"; path="${item#*$'\t'}"; d="${path%/README.md}"
+    if [[ "$path" != /*/README.md || "$path" == *[*?[]* || " $SM_README_ONLY_DIRS " != *" ${d##*/} "* ]]; then
+      finding "check 16 — _exclude negates $path back in, which is not an output folder's own README.md: only the README.md of a generated/, renders/ or raw/ folder, anchored, ever is (DESIGN.md Section 3.5, D42)"
+    elif [[ "$first_gated" -gt 0 && "$n" -gt "$first_gated" ]]; then
+      finding "check 16 — _exclude negates $path back in at item $n, after the first gated line (item $first_gated): a negation listed after a gate brings its path back with the gate shut — list it above every gated line (DESIGN.md Section 3.5, Section 10)"
+    fi
   done
 }
 
@@ -387,7 +423,7 @@ write_fixture() { # $1 = repo root
   banner='> **This file is a seeded stub, and it is deliberately unfinished.** It ships so the skills that route here point at something real.'
   mkdir -p "$t"
   {
-    printf '_exclude:\n  - .git\n'
+    printf '_exclude:\n  - .git\n  - /production/src/renders/**\n  - "!/production/src/renders/README.md"\n'
     for s in $SM_SHARED; do printf '  - "<: if _copier_operation == %supdate%s :>/%s<: endif :>"\n' "$q" "$q" "$s"; done
     printf '  - "<: if not (%syoutube%s in PLATFORMS) :>/brand/src/platforms/youtube.md<: endif :>"\n' "$q" "$q"
     for s in $SM_EXAMPLES; do printf '  - "<: if %s :>/%s<: endif :>"\n' "$SM_EXAMPLE_GATE" "$s"; done
@@ -440,7 +476,7 @@ write_fixture() { # $1 = repo root
   printf '* filter=lfs diff=lfs merge=lfs -text\n' > "$t/brand/src/exports/large/.gitattributes"
   printf '# raw/\n' > "$t/production/src/footage/raw/README.md"
   printf '# generated/\n' > "$t/production/src/voiceover/generated/README.md"
-  for d in brand/src/exports brand/src/exports/large production/src/footage production/src/voiceover publishing/src/posts publishing/src/podcast; do
+  for d in brand/src/exports brand/src/exports/large production/src/footage production/src/voiceover production/src/timing production/src/scenes publishing/src/posts publishing/src/podcast; do
     mkdir -p "$t/$d"
     printf '# CONTEXT.md — %s/\n' "$d" > "$t/$d/CONTEXT.md"
     printf '@./CONTEXT.md\n' > "$t/$d/CLAUDE.md"
@@ -508,6 +544,8 @@ self_test() {
   probe "check 11 fires on a file in a pair-only folder" "check 11 — production/src/voiceover/003-ferry.s01.t1.mp3"; rm -f "$t/production/src/voiceover/003-ferry.s01.t1.mp3"
   printf '[show]\nshow = "harbour-lane-talks"\n' > "$t/publishing/src/podcast/harbour-lane-talks.toml"
   probe "check 11 fires on a show register left in the podcast folder" "check 11 — publishing/src/podcast/harbour-lane-talks.toml"; rm -f "$t/publishing/src/podcast/harbour-lane-talks.toml"
+  printf '{"segments": []}\n' > "$t/production/src/timing/003-ferry.words.json"
+  probe "check 11 fires on a timing file left in the timing folder" "check 11 — production/src/timing/003-ferry.words.json"; rm -f "$t/production/src/timing/003-ferry.words.json"
   mkdir -p "$t/publishing/src/posts/drafts"
   probe "check 11 fires on a sub-folder in a pair-only folder" "check 11 — publishing/src/posts/drafts/"; rmdir "$t/publishing/src/posts/drafts"
   probe_clean "the LFS attributes file and the README-only raw/ and generated/ folders are declared extras"
@@ -523,6 +561,19 @@ self_test() {
   f=brand/src/design-system/tokens.css; cp "$t/$f" "$tmp/h"
   sed -i 's#/\* AUTHOR TO CONFIRM: the background \*/#/* Harbour blue */#' "$t/$f"
   probe "check 15 fires on a brand seed with every slot filled" "check 15 — $f"; cp "$tmp/h" "$t/$f"
+
+  # 16: the fixture's one negation sits above every gated line; move it, widen it, gate it.
+  cp "$COPIER" "$tmp/c"
+  awk '/^  - "!\/production\/src\/renders\/README.md"$/ { held = $0; next } { print } /youtube.md<: endif :>"$/ { print held }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 16 fires on a negation listed after a gated line" "check 16 — _exclude negates /production/src/renders/README.md back in at item"
+  sed 's#"!/production/src/renders/README.md"#"!/production/src/renders/003-ferry/README.md"#' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 16 fires on a negation of a README inside a per-piece output folder" "check 16 — _exclude negates /production/src/renders/003-ferry/README.md back in, which is not an output folder's own"
+  sed 's#"!/production/src/renders/README.md"#"!/production/src/cards/README.md"#' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 16 fires on a negation of anything but an output folder's README" "check 16 — _exclude negates /production/src/cards/README.md back in, which is not"
+  awk -v q="'" '/youtube.md<: endif :>"$/ { print; print "  - \"<: if not (" q "audiobook" q " in MEDIA_KINDS) :>!/production/src/audiobook/renders/README.md<: endif :>\""; next } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 16 fires on a negation inside a gated line" "check 16 — a gated _exclude line negates /production/src/audiobook/renders/README.md"
+  cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
+  probe_clean "an output folder's own README.md, negated above every gated line, is the one negation allowed"
 
   # The over-author scope: the shared files are syntek-author's, so checks 5, 6, 10, 12 and 13
   # do not read them; media's own seeds are still held to their contract.

@@ -107,14 +107,14 @@ are the procedure of record — do not restate them at length here.
 
 5. **Assemble the master.** Run
    `python3 toolkit/media.py assemble production/src/edits/<piece>.toml`. It writes
-   `production/src/renders/<piece>.master.mp4` (`.wav` for an audio master), first rendering any
-   card that is missing or older than its HTML or `tokens.css` with `uv run toolkit/card.py`, and
-   exits 2 naming uv or Chromium when it cannot. If a tool is
-   missing, say which one and which command it blocks; never report a command as passed when it
-   could not run. Exit 1 is a failed verification: report it, and never run it again with changed
-   settings to force a pass. Probe the master (`python3 toolkit/media.py probe`), measure it
-   (`python3 toolkit/media.py loudness measure`), and report both against the target. The author
-   watches or hears it through.
+   `production/src/renders/<piece>/<piece>.master.mp4` (`.wav` for an audio master), first
+   rendering any card that is missing or older than its HTML or `tokens.css` into that folder's
+   cards subfolder with `uv run toolkit/card.py`, and exits 2 naming uv or Chromium when it cannot. If a
+   tool is missing, say which one and which command it blocks; never report a command as passed
+   when it could not run. Exit 1 is a failed verification: report it, and never run it again with
+   changed settings to force a pass. Probe the master (`python3 toolkit/media.py probe`), measure
+   it (`python3 toolkit/media.py loudness measure`), and report both against the target. The
+   author watches or hears it through.
    *Complete when:* the master exists, probes clean, its loudness is within the target, and the
    author has been through it.
 
@@ -136,9 +136,9 @@ are the procedure of record — do not restate them at length here.
    deliverable, untagged and needing no register: from the audio master, or, for a talk published
    whole as an episode, from the picture master, whose sound alone it takes; its tags and chapters
    are written at M7 by `feed tag`, never here. A poster, a share, featured or preview image and a
-   GIF preview are `thumbnail-brief`'s, never made at M5. Outputs land in
-   `publishing/src/renders/`, named `<piece>[--cNN].<platform>-<format>[.burned].<ext>`. Never call
-   ffmpeg or ffprobe directly to make a deliverable, and never cut with `-c copy`.
+   GIF preview are `thumbnail-brief`'s, never made at M5. Outputs land in the piece's folder,
+   `publishing/src/renders/<piece>/`, named `<piece>[--cNN].<platform>-<format>[.burned].<ext>`.
+   Never call ffmpeg or ffprobe directly to make a deliverable, and never cut with `-c copy`.
    *Complete when:* every deliverable in hand has one output, or a named failure.
 
 7. **Verify every output.** Each command checks its output against the preset (size, codecs,
@@ -180,8 +180,8 @@ are the procedure of record — do not restate them at length here.
 
 - `production/src/edits/` — the edit decision lists, the record every master rebuilds from.
 - `production/src/cards/` — each piece's title and end cards, copied from the brand's layout.
-- `production/src/renders/` and `publishing/src/renders/` — masters, card images and
-  deliverables, all git-ignored and regenerable.
+- `production/src/renders/` and `publishing/src/renders/` — each piece's folder of masters, card
+  images and deliverables, all git-ignored and regenerable.
 - `production/src/footage/manifest.toml` — every source by its footage ID.
 - `toolkit/data/platforms.toml` and `brand/src/platforms/overrides.toml` — the presets, and the
   brand's confirmed corrections to them.

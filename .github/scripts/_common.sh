@@ -481,6 +481,8 @@ always        d  production/src/edits
 always        d  production/src/cards
 always        d  production/src/voiceover
 always        f  production/src/voiceover/generated/README.md
+always        d  production/src/timing
+always        d  production/src/scenes
 k:audiobook   d  production/src/audiobook
 k:audiobook   f  production/src/audiobook/generated/README.md
 k:audiobook   f  production/src/audiobook/renders/README.md
@@ -644,8 +646,10 @@ unset _sm_x
 # Author-owned, pair-only folders (DESIGN.md Section 3.3). Globs are bash patterns on
 # tree-relative directory paths. publishing/src/podcast (gated 'podcast' in PLATFORMS, D59) is
 # listed by hand, so shipped-seeds.sh check 11 polices it: a show register or a feed left there
-# by a toolkit run inside template/ would otherwise ship into every project.
-SM_PAIR_ONLY_GLOBS="*/docs/project */workflows/local brand/src/design-system/fonts brand/src/exports brand/src/exports/large brand/src/voice brand/src/platforms scripts/src/pieces production/src/footage production/src/assets production/src/edits production/src/cards production/src/voiceover production/src/audiobook publishing/src/cut-downs publishing/src/captions publishing/src/thumbnails publishing/src/posts publishing/src/podcast"
+# by a toolkit run inside template/ would otherwise ship into every project. So are
+# production/src/timing and production/src/scenes (D64, 0.3.0), for the same reason: a piece's
+# tracked timing or scene file written there by a toolkit run inside template/ would ship.
+SM_PAIR_ONLY_GLOBS="*/docs/project */workflows/local brand/src/design-system/fonts brand/src/exports brand/src/exports/large brand/src/voice brand/src/platforms scripts/src/pieces production/src/footage production/src/assets production/src/edits production/src/cards production/src/voiceover production/src/timing production/src/scenes production/src/audiobook publishing/src/cut-downs publishing/src/captions publishing/src/thumbnails publishing/src/posts publishing/src/podcast"
 
 # The folder pair's exceptions (DESIGN.md D42): syntek-author's, verbatim — build/, .git/,
 # audio/, __pycache__/, node_modules/, .claude/rules/, the inside of each skill folder, each

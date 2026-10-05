@@ -19,21 +19,31 @@ the Podcasting 2.0 namespace ead4c236-bf58-58c6-a2c6-a6b28d128cb6, and each epis
 recomputed, except by 'feed new --rekey', which rewrites the feed URL and every GUID, and only
 while no row is published and no tracked feed exists.
 
-'feed tag' re-muxes an episode's M5 render, publishing/src/renders/<piece>.podcast-feed-audio.mp3,
-without re-encoding (-c:a copy), its old tags and chapters dropped: ID3v2.3 title, the show's
-author and title, the track number, the chapters (CTOC and CHAP, each ending at the next start,
-the last at the end) and the show's id3_cover; it changes nothing, exit 1, while the row's words,
-its chapters or the show's title or author are not ready, and writes render, bytes and seconds
-back into the row. 'feed write' writes the feed of every ready or published episode whose
-pub_date is not after --as-of, newest first, in the project's timezone; the same register and
---as-of always give the same bytes. Before it writes anything it compares the new feed with the
-show's tracked copy, publishing/src/podcast/<show>.feed.xml, where one exists, and refuses (exit
-1) a changed podcast:guid, a GUID that vanished while its row is not withdrawn, or an enclosure
-whose length changed under the same URL; -o that tracked copy replaces it through a temporary
-file (the one tracked file the toolkit ever overwrites), and without -o the feed goes to stdout.
-'feed chapters' writes Podcasting 2.0 JSON chapters; 'feed check' proves the register (or, with
---feed, any saved feed) offline against Section 6.17 and the [platform.podcast] keys of
-toolkit/data/platforms.toml, never numbers of its own.
+'feed tag' re-muxes an episode's M5 render,
+publishing/src/renders/<piece>/<piece>.podcast-feed-audio.mp3, without re-encoding (-c:a copy),
+its old tags and chapters dropped: ID3v2.3 title, the show's author and title, the track number,
+the chapters (CTOC and CHAP, each ending at the next start, the last at the end) and the show's
+id3_cover; it changes nothing, exit 1, while the row's words, its chapters or the show's title or
+author are not ready, and writes render, bytes and seconds back into the row. It reads the
+render in the piece's own folder only (DESIGN D64, D65): one an earlier release left flat at the
+top of publishing/src/renders/ is never tagged, and feed tag exits 2 naming the encode that makes
+it, and the flat file where there is one. A render's name alone goes into the row; every reader
+finds it in its piece's folder, and a name with no piece key (a show's cover encodes, a feed's
+upload copy) at the top of publishing/src/renders/.
+
+'feed write' writes the feed of every ready or published episode whose pub_date is not after
+--as-of, newest first, in the project's timezone; the same register and --as-of always give the
+same bytes. Before it writes anything it compares the new feed with the show's tracked copy,
+publishing/src/podcast/<show>.feed.xml, where one exists, and refuses (exit 1) a changed
+podcast:guid, a GUID that vanished while its row is not withdrawn, or an enclosure whose length
+changed under the same URL; -o that tracked copy replaces it through a temporary file (the one
+tracked file the toolkit ever overwrites), and without -o the feed goes to stdout.
+'feed chapters' writes Podcasting 2.0 JSON chapters, to publishing/src/renders/<piece>/ unless -o
+names a path; 'feed check' proves the register (or, with --feed, any saved feed) offline against
+Section 6.17 and the [platform.podcast] keys of toolkit/data/platforms.toml, never numbers of its
+own. Where an episode's render, or its art, is missing from its piece's folder, feed check reads a
+flat one an earlier release left at the top of publishing/src/renders/ and names it in a warning,
+so a published episode is never silently left unchecked (DESIGN D65).
 
 The register is edited line by line (as 'take add' edits its register): the author's comments
 and values survive every write, and a value the author set is never rewritten.
@@ -697,27 +707,52 @@ def image_findings(p: Path, table: dict, label: str) -> list:
     return found
 
 
+def render_path(name: str) -> Path:
+    """Where a render named name lives: its piece's publishing/src/renders/<piece>/, or the folder's
+    top for a name with no piece key, such as a show's cover encodes (DESIGN D64, Section 6.16)."""
+    name = Path(name).name
+    return C.piece_folder(C.PUB_RENDERS, name) / name
+
+
+def local_render(name: str, warns: list):
+    """The render named name as feed check reads it (DESIGN D65): in its piece's folder, or, where
+    that has none, flat at the top of publishing/src/renders/ where an earlier release left it,
+    named in a warning, so a published episode is never silently left unchecked. None where
+    neither exists."""
+    p = render_path(name)
+    if p.is_file():
+        return p
+    flat = C.path(C.PUB_RENDERS) / Path(name).name
+    if flat != p and flat.is_file():
+        warns.append(f"{flat.name} is not in {C.shown(p.parent)}/: the flat {C.shown(flat)} an earlier release "
+                     f"left is checked in its place; move it into {C.shown(p.parent)}/ or make it again there, "
+                     "where the toolkit reads it from this release on")
+        return flat
+    return None
+
+
 def file_findings(data: dict, items: list, presets: dict) -> tuple:
-    """(findings, notes): the renders, cover and art against the register, where they are local."""
-    found, notes = [], []
-    renders = C.path(C.PUB_RENDERS)
+    """(findings, warnings, notes): the renders, cover and art against the register, where they are
+    local: each in its piece's folder, or a flat one an earlier release left, with a warning."""
+    found, warns, notes = [], [], []
     s = data["show"]
     for key, name, label in (("podcast.cover", s.get("cover", ""), "the cover"),
                              ("podcast.id3_cover", s.get("id3_cover", ""), "the ID3 cover")):
         name = str(name or "").strip()
         if not name or re.match(r"^https?://", name):
             continue
-        p = renders / Path(name).name
-        if p.is_file():
+        p = local_render(name, warns)
+        if p:
             found += image_findings(p, C.preset(key, presets), label)
         else:
-            notes.append(f"{label} {name} is not in {C.PUB_RENDERS}/: its size and alpha are not checked here")
+            notes.append(f"{label} {name} is not in {C.shown(render_path(name).parent)}/: its size and alpha are "
+                         "not checked here")
     for i in items:
         e = i["row"]
         render = str(e.get("render", "") or "").strip()
         if render:
-            p = renders / render
-            if p.is_file():
+            p = local_render(render, warns)
+            if p:
                 if p.stat().st_size != i["length"]:
                     found.append(f"{i['piece']}: bytes is {i['length']}; {render} is {p.stat().st_size} bytes "
                                  "(tagged or encoded again since: run feed tag)")
@@ -728,14 +763,14 @@ def file_findings(data: dict, items: list, presets: dict) -> tuple:
                 except C.Fatal as err:
                     notes.append(f"{i['piece']}: {err}")
             else:
-                notes.append(f"{i['piece']}: {render} is not in {C.PUB_RENDERS}/ (renders are not kept): bytes and "
-                             "seconds are not checked against it")
+                notes.append(f"{i['piece']}: {render} is not in {C.shown(render_path(render).parent)}/ (renders are "
+                             "not kept): bytes and seconds are not checked against it")
         art = str(e.get("art", "") or "").strip()
         if art and not re.match(r"^https?://", art):
-            p = renders / Path(art).name
-            if p.is_file():
+            p = local_render(art, warns)
+            if p:
                 found += image_findings(p, C.preset("podcast.episode_art", presets), f"{i['piece']}'s art")
-    return found, notes
+    return found, warns, notes
 
 
 # ── Commands ────────────────────────────────────────────────────────────────────────────
@@ -848,10 +883,15 @@ def cmd_tag(args) -> int:
     if str(row.get("status", "")) == "withdrawn":
         raise C.Fatal(f"{piece} is withdrawn: it leaves the feed, and its file is never tagged again")
     table = C.preset(FEED_AUDIO)
-    render = C.path(C.PUB_RENDERS) / f"{piece}.{C.file_form(FEED_AUDIO)}.mp3"
+    render = render_path(f"{piece}.{C.file_form(FEED_AUDIO)}.mp3")
     if not render.is_file():
+        # Only the piece's folder is read (DESIGN D65): a flat render an earlier release left is named,
+        # never tagged, because the register's render is found in the piece's folder from now on.
+        flat = C.path(C.PUB_RENDERS) / render.name
         raise C.Fatal(f"{C.shown(render)} does not exist: encode it at M5 (publishing/workflows/02-cut-for-a-platform/: "
-                      f"media.py encode <master> --deliverable {FEED_AUDIO})")
+                      f"media.py encode <master> --deliverable {FEED_AUDIO})"
+                      + (f"; the flat {C.shown(flat)} an earlier release left is not read: move it into "
+                         f"{C.shown(render.parent)}/ or encode it again" if flat.is_file() else ""))
     s, pt = data["show"], platform_podcast()
     info = C.probe(render)
     a = C.streams(info, "audio")
@@ -871,7 +911,7 @@ def cmd_tag(args) -> int:
     cover = None
     if str(s.get("id3_cover", "") or "").strip():
         name = str(s["id3_cover"]).strip()
-        cover = C.path(name) if "/" in name else C.path(C.PUB_RENDERS) / name
+        cover = C.path(name) if "/" in name else render_path(name)
         if not cover.is_file():
             raise C.Fatal(f"[show] id3_cover names {name}, and {C.shown(cover)} does not exist: encode it with "
                           "media.py image <the cover's design export> --deliverable podcast.id3_cover")
@@ -1033,7 +1073,7 @@ def cmd_chapters(args) -> int:
         doc["fileName"] = str(row["render"])
     doc["chapters"] = [{"startTime": round(C.parse_tc(c["start"]), 3), "title": str(c.get("title", ""))}
                        for c in chapters]
-    out = C.output_path(C.path(C.PUB_RENDERS) / f"{piece}.chapters.json", args.o)
+    out = C.output_path(render_path(f"{piece}.chapters.json"), args.o)
     out.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"feed chapters {piece}: wrote {C.shown(out)} ({len(chapters)} chapter(s), JSON chapters version 1.2)")
     return 0
@@ -1110,8 +1150,9 @@ def cmd_check(args) -> int:
         f, w = value_findings(data, C.read_text(reg), items, pt, show)
         found += f
         warns += w
-        f, n = file_findings(data, items, presets)
+        f, w, n = file_findings(data, items, presets)
         found += f
+        warns += w
         notes += n
         new = model_of(data, items)
         untagged = [str(e.get("piece")) for e in episodes(data) if str(e.get("status", "planned")) == "planned"

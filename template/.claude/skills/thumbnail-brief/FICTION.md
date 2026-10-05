@@ -9,7 +9,7 @@ book's own look where its artwork is licensed for it, and nothing that gives the
   briefed as `<piece>--cNN`.
 - **Procedure:** `publishing/workflows/04-brief-a-thumbnail/`.
 - **Brief and layout:** `publishing/src/thumbnails/<piece>[--cNN].md` and `.html`; renders in
-  `publishing/src/renders/`.
+  `publishing/src/renders/<piece>/`.
 - **Artwork:** the book's cover and any commissioned or licensed art, as tracked files in
   `production/src/assets/` or the brand's exports, `brand/src/exports/`, each with its `artwork`
   row in `production/src/rights-register.md`.

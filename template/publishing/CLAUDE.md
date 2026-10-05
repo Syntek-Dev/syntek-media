@@ -26,7 +26,8 @@ true record of what the author scheduled and posted, without ever posting anythi
   1. Read the piece's brief (`scripts/src/pieces/<piece>/brief.md`) for its `status`, its
      deliverables and its disclosure plan; never work from memory of an earlier session.
   2. Read the guide for each platform a deliverable goes to, in `publishing/docs/reference/`.
-  3. Run the procedure; output lands in `publishing/src/`, renders in `publishing/src/renders/`.
+  3. Run the procedure; output lands in `publishing/src/`, renders in the piece's own
+     `publishing/src/renders/<piece>/`.
   4. Record the gate the procedure passed in the brief, and hand back.
 - **Definition of done:** every deliverable the brief and the cut-down plan name is rendered,
   verified and seen by the author; its captions and thumbnail are approved; its post package is
@@ -59,7 +60,8 @@ true record of what the author scheduled and posted, without ever posting anythi
 - **Hand-written (with the author):** everything in `src/` except `src/renders/`; the files and
   their names are listed in `publishing/src/CONTEXT.md`.
 - **Generated (never hand-edit):** deliverables, burned versions, thumbnail PNGs and every other
-  image, GIF, chapters file and feed upload copy in `publishing/src/renders/`, made by
+  image, GIF and chapters file, in the piece's own `publishing/src/renders/<piece>/`, and what no
+  piece owns, such as a feed's upload copy, at the top of `publishing/src/renders/`; all made by
   `python3 toolkit/media.py` and `uv run toolkit/card.py`.
 - **Not here:** the master and its edit decision list (`production/`), the brief and the script
   (`scripts/`), the brand's layouts and platform profiles (`brand/`).

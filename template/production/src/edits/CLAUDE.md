@@ -79,5 +79,5 @@ role = "voice"              # voice | music | effect
 duck = false                # music: true ducks it under the voice
 ```
 
-- **Generated (never hand-edit):** nothing here; masters and card PNGs land in
-  `production/src/renders/`.
+- **Generated (never hand-edit):** nothing here; the master lands in
+  `production/src/renders/<piece>/`, and its card PNGs in that folder's `cards`.

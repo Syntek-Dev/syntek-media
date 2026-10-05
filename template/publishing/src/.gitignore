@@ -7,7 +7,10 @@
 # Rendered deliverables, burned versions and thumbnail PNGs
 # ----------------------------------------------------------------------------
 # Made by the toolkit from the master, the captions and the thumbnail layouts on request:
-# regenerable, and too large for plain Git. The folder's README stays tracked, so the folder
-# and its explanation exist in every checkout. Never force a render past this rule.
+# regenerable, and too large for plain Git. Each piece's renders sit in a folder named for it
+# (renders/<piece>/), and only what no piece owns (a feed's upload copy, a show's cover
+# encodes) at the folder's top; the pattern below ignores every folder inside renders/ whole,
+# so a per-piece folder needs no pattern of its own. The folder's README stays tracked, so the
+# folder and its explanation exist in every checkout. Never force a render past this rule.
 /renders/*
 !/renders/README.md

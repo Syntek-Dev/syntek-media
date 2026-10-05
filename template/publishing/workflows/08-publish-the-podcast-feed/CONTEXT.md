@@ -39,8 +39,8 @@ register and no feed here (`publishing/docs/reference/podcast.md`).
 
 - **The show register** `publishing/src/podcast/<show>.toml`, opened once, and the episode's row
   in it, `ready`, with its words, chapters, `pub_date`, render, bytes and seconds.
-- **The tagged audio** `publishing/src/renders/<piece>.podcast-feed-audio.mp3`, tagged in place,
-  and its chapters file `publishing/src/renders/<piece>.chapters.json`.
+- **The tagged audio** `publishing/src/renders/<piece>/<piece>.podcast-feed-audio.mp3`, tagged in place,
+  and its chapters file `publishing/src/renders/<piece>/<piece>.chapters.json`.
 - **The upload copy of the feed** `publishing/src/renders/<show>.feed.xml`.
 - **A hand-back:** the files to upload, in order, the time the feed goes up, the tests and the
   hand steps.

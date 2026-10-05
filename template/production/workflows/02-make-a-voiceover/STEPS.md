@@ -48,7 +48,11 @@ list candidate voices with `mcp__elevenlabs__search_voices`, and let the author 
 the voice, its ID, the model ID, the settings, the output format and the date; a cloned voice
 also needs its `cleared` voice-consent row in `production/src/rights-register.md`, cited in the
 narrator's row, before it speaks. Choosing a voice by listening costs credits too; say so before
-any trial. _Substantive._
+any trial. A trial runs only on the author's word, costed and agreed as step 6 says and one call
+at a time, into `production/src/voiceover/generated/voice-trials/<name>/`, which
+`python3 toolkit/media.py speak plan --trial <name>` makes before the first call (never
+`mkdir`). It is never a take and gets no `take add`: it keeps the server's name, enters no
+register, and its credits-log row has `—` for the piece. _Substantive._
 
 ## 4. Split the script into segments
 
@@ -81,20 +85,25 @@ _Mechanical._
 
 > **Skill:** `voiceover` · **Guide:** `production/docs/reference/elevenlabs.md`
 
-For each segment in turn, call `mcp__elevenlabs__text_to_speech` with the recorded voice,
-`model_id`, settings and `output_format`, and an absolute `output_directory`: the output of
-`git rev-parse --show-toplevel` followed by `/production/src/voiceover/generated`. Straight after
-the call, and before the next, run `python3 toolkit/media.py take add` on the file the result
-names, with `--piece` and `--segment`: it renames the take, writes the register's `take` and
-`file`, and appends the credits-log row. Never rename a take with a shell `mv`. Stop at the first
-error and report it, rather than retrying into spent credits. _Mechanical._
+Before the first call, run `python3 toolkit/media.py speak plan <piece>`: offline, it makes the
+piece's takes folder, because the server refuses, before any spend, a folder whose parent is
+missing; never make it with `mkdir`. For each segment in turn, call
+`mcp__elevenlabs__text_to_speech` with the recorded voice, `model_id`, settings and
+`output_format`, and an absolute `output_directory`: the output of
+`git rev-parse --show-toplevel` followed by `/production/src/voiceover/generated/<piece>/takes`.
+Straight after the call, and before the next, run `python3 toolkit/media.py take add` on the
+file the result names, with `--piece` and `--segment`: it renames the take, writes the
+register's `take` and `file`, and appends the credits-log row. Never rename a take with a shell
+`mv`. Stop at the first error and report it, rather than retrying into spent credits.
+_Mechanical._
 
 ## 8. Fall back to espeak-ng when ElevenLabs is unavailable
 
 > **Skill:** `voiceover` · **Guide:** `production/docs/reference/elevenlabs.md`
 
 Only if the author agrees and step 2 found `espeak-ng` installed: make a scratch track from each
-segment's `text`, for timing only, in `production/src/voiceover/generated/`, and label it
+segment's `text`, for timing only, named `<piece>.sNN.scratch.wav`, in the piece's
+`production/src/voiceover/generated/<piece>/` and never in its takes folder, and label it
 approximate. It is never approved and never reaches a deliverable. _Mechanical._
 
 ## 9. Listen, approve and archive

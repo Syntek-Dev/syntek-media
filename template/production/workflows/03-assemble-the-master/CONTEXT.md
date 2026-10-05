@@ -34,8 +34,9 @@ narrate-audiobook skill, where the project makes audiobooks).
 
 - **The edit decision list** `production/src/edits/<piece>.toml`, with the author.
 - **Cards** `production/src/cards/<piece>.<card>.html`, copied from the brand's component.
-- **The master** `production/src/renders/<piece>.master.mp4` (`.wav` for an audio master) and
-  each card's PNG, git-ignored and regenerable.
+- **The master** `production/src/renders/<piece>/<piece>.master.mp4` (`.wav` for an audio
+  master), in the piece's own folder, and each card's PNG in
+  `production/src/renders/<piece>/cards/`, git-ignored and regenerable.
 - **Master-timed captions** `publishing/src/captions/<piece>.en-GB.srt`, for a recorded piece.
 - **The brief's** `verified` entry for M4 and its `status`, on the author's word.
 

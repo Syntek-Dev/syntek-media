@@ -47,6 +47,7 @@ approve them in proof, so that no piece improvises the brand.
 - **Produces:** the decided `tokens.css`; the brand's fonts; the adapted `thumbnail.html` and
   `card.html`.
 - **Also writes:** a `font` row per licence in `production/src/rights-register.md`; dated
-  decisions in `.claude/MEMORY.md`; proofs in the git-ignored `production/src/renders/`.
+  decisions in `.claude/MEMORY.md`; proofs, through `-o`, in the git-ignored
+  `production/src/renders/proofs/brand-kit-DD-MM-YYYY/`.
 - **Does not touch:** any piece's thumbnail or card, `toolkit/templates/`, or the Claude Design
   project (that is `brand/workflows/02-sync-with-claude-design/`).

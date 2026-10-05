@@ -41,7 +41,7 @@ The written voice and brand guide stay syntek-author's, where present, cited and
 | `.claude/` | config | The manual, these rules in `.claude/rules/syntek-media/`, `MEMORY.md`, settings, and media's skills beside any other template's |
 | `brand/` | production | Design tokens and preview cards (the thumbnail and card layouts among them), design exports and their register, the spoken voice, one profile per platform |
 | `scripts/` | production | One folder per piece: brief, script or transcript, storyboard, shot list; the piece register |
-| `production/` | production | Source media and its manifest, voiceover segments, edit decision lists, cards, rights and credits<: if 'audiobook' in MEDIA_KINDS :>, audiobook chapter registers<: endif :> |
+| `production/` | production | Source media and its manifest, voiceover segments, edit decision lists, cards, a piece's timing (`production/src/timing/`) and a scene piece's files (`production/src/scenes/`), rights and credits<: if 'audiobook' in MEDIA_KINDS :>, audiobook chapter registers<: endif :> |
 | `publishing/` | production | Cut-down plans, captions and published transcripts, thumbnails and other images, post packages, the schedule and the publish log<: if 'podcast' in PLATFORMS :>, and the show registers and feeds of a self-hosted podcast (`publishing/src/podcast/`)<: endif :> |
 | `toolkit/` | supporting | `media.py` and `card.py`, the platform data and the fallback layouts; every render runs through it |
 
@@ -121,7 +121,10 @@ The exceptions are syntek-author's, unchanged, then media's:
 - The inside of each `.claude/skills/<skill>/` folder: a skill is its own manual.
 - Each `drafts` and `.base` folder carries only a `README.md`; its parent's pair governs it.
 - Each `generated`, `renders` and `raw` folder carries only a tracked `README.md`; everything else
-  in it is git-ignored, and its parent's pair governs it.
+  in it is git-ignored, and its parent's pair governs it. **A folder inside one carries nothing at
+  all**: a piece's output folder and its `takes`, `cards`, `timing`, `scene` or `stills` folder,
+  and a proofs or voice-trials folder, because Git ignores it whole and nothing ignored is read
+  in a session (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
 - A handoffs folder these rules create without syntek-author carries no pair, and Claude never
   writes one there: its pair is syntek-author's, and one written here would collide with it.
 - **Every piece folder carries its own pair**, written when the piece is opened

@@ -18,18 +18,23 @@ this file is reported as stale. Media has no root Makefile; one that exists is s
 brand/src/design-system/tokens.css ──► HTML layouts (the brand's previews, else toolkit/templates/)
         └──► uv run toolkit/card.py render ──► card and thumbnail PNGs
 footage (manifest + local mirror), cards, the voice track
-        └──► media.py assemble production/src/edits/<piece>.toml ──► master (production/src/renders/)
-                └──► media.py cut / encode / still-video ──► deliverables (publishing/src/renders/)
+        └──► media.py assemble production/src/edits/<piece>.toml ──► master (production/src/renders/<piece>/)
+                └──► media.py cut / encode / still-video ──► deliverables (publishing/src/renders/<piece>/)
                         └──► media.py captions burn (or a sidecar .srt and .vtt)
 card PNGs, renders and design exports ──► media.py image ──► JPEG, WebP, AVIF; posters (--at)
 the overlay PNG (card.py --transparent) + the master ──► media.py cut --overlay ──► a GIF preview
 a show register (publishing/src/podcast/) ──► media.py feed tag, chapters, check, write ──► the feed
-ElevenLabs (MCP) ──► generated/ (absolute output_directory) ──► media.py take add
+ElevenLabs (MCP) ──► generated/<piece>/takes/ (absolute output_directory) ──► media.py take add
         └──► the segment or chapter register, and a credits-log row
 ```
 
-`assemble` renders any card PNG that is missing or older than its HTML or `tokens.css` first, so a
-master always rebuilds from tracked files.
+`assemble` renders any card PNG that is missing or older than its HTML or `tokens.css` first, into
+the piece's `production/src/renders/<piece>/cards/`, so a master always rebuilds from tracked
+files. **A piece's output sits in a folder named for it** inside each output folder, picked from
+the leading piece key of the file's name; a name with none (an extract of a footage file, a
+show's cover encodes, a feed's upload copy) stays at the folder's top, and the audiobook folder's
+generated and renders folders stay flat. Tracked files stay flat in their tracked folders, under
+their `<piece>.` names.
 
 ---
 
@@ -51,7 +56,7 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 | `frame` | `SRC --at TC [-o OUT]` | one PNG still, for a thumbnail background | 0 · 2 |
 | `image` | `SRC --deliverable KEY [--at TC] [--format jpg\|png\|webp\|avif] [--frame crop\|pad] [-o OUT]` | an image deliverable from a PNG or still, or from a video at `--at` (a poster): scaled to the table's size, in its first `formats` entry or `--format`, flattened where `alpha = false`, verified for size, format and `max_size`; never a GIF (that is `cut`'s) | 0 · 1 · 2 |
 | `still-video` | `IMAGE AUDIO --deliverable KEY [-o OUT]` | a still under audio as video | 0 · 1 · 2 |
-| `extract-audio` | `SRC [--in TC --out TC] [--rate HZ] [-o OUT]` | mono 16-bit WAV of a file or a range, for speech-to-text or alignment; by default `production/src/renders/<stem>[.<in>-<out>].wav` | 0 · 2 |
+| `extract-audio` | `SRC [--in TC --out TC] [--rate HZ] [-o OUT]` | mono 16-bit WAV of a file or a range, for speech-to-text or alignment; by default `production/src/renders/<piece>/<stem>[.<in>-<out>].wav`, or at the folder's top for a stem with no piece key, such as a footage file's | 0 · 2 |
 | `captions check` | `SRT [--deliverable KEY] [--script SCRIPT]` | the caption limits, overlaps and gaps; with `--script`, the words against a script or transcript | 0 · 1 · 2 |
 | `captions from-segments` | `REGISTER --deliverable KEY [--offset TC] [-o SRT]` | cues from approved voiceover segments, each segment's duration shared by character count; joins exact | 0 · 1 · 2 |
 | `captions align` | `TEXT AUDIO [--lines B.L-B.L] [--anchors] [--noise DB] [--min-silence S] [-o SRT]` | cues spread over the speech that `silencedetect` finds, beat by beat with `--anchors`, one cut's lines with `--lines`; to standard output without `-o` | 0 · 1 · 2 |
@@ -65,17 +70,18 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 | `audiobook text` | `SOURCE --piece PIECE --chapter chNN [--footnotes drop\|inline] [--limit CHARS]` | chapter text with syntek-author's markup stripped and pronunciations applied, every unspoken word listed, chunked into the audiobook's generated folder; a chunk ends at every pause, recorded in the chapter's `<piece>.chNN.chunks.toml` | 0 · 1 · 2 |
 | `audiobook master` | `CHUNKS… --piece PIECE --chapter chNN [--head S] [--tail S] [-o OUT]` | joins takes with the pauses the chunk sidecar records, adds room tone, masters to the ACX profile | 0 · 1 · 2 |
 | `audiobook check` | `FILE…` | the ACX checks: RMS, peak, noise floor, sample rate, constant bitrate, channels, length, room tone | 0 · 1 · 2 |
-| `take add` | `FILE --piece PIECE (--segment sNN \| --chapter chNN --part pNN)` | renames a fresh ElevenLabs file to its name (`.pcm` for a `pcm_*` format), writes the register's `take` and `file`, appends the credits-log row | 0 · 2 |
+| `take add` | `FILE --piece PIECE (--segment sNN \| --chapter chNN --part pNN)` | renames a fresh ElevenLabs file to its name (`.pcm` for a `pcm_*` format) where it landed, a voiceover's in the piece's `generated/<piece>/takes/` (or the flat folder an earlier release used), numbered after the highest take in either; writes the register's `take` and `file`, and for a segment resets `status` to `generated` and `archived` to empty; appends the credits-log row | 0 · 2 |
 | `feed new` | `SHOW --feed-url URL [--site SLUG] [--rekey]` | writes a show register from its skeleton with the show's identity, once; `--rekey` corrects the feed URL and every GUID only while nothing is published; refuses a project without the show-register folder | 0 · 2 |
 | `feed add` | `SHOW --piece PIECE` | appends an episode's row, `planned`, its GUID written once | 0 · 2 |
-| `feed tag` | `SHOW --piece PIECE` | re-muxes the episode's M5 render without re-encoding, with the row's ID3 tags, chapters and the show's cover; writes `render`, `bytes` and `seconds` into the row; refuses an empty title or description and bad chapters | 0 · 1 · 2 |
+| `feed tag` | `SHOW --piece PIECE` | re-muxes the episode's M5 render, `publishing/src/renders/<piece>/<piece>.podcast-feed-audio.mp3`, without re-encoding, with the row's ID3 tags, chapters and the show's cover; writes `render`, `bytes` and `seconds` into the row; refuses an empty title or description and bad chapters; a render missing from the piece's folder is exit 2, naming the workflow that encodes it | 0 · 1 · 2 |
 | `feed write` | `SHOW --as-of 'DD/MM/YYYY HH:MM' [-o FILE]` | the show's RSS feed of every `ready` or `published` episode due by `--as-of`, the same bytes for the same input; compares with the tracked feed first and writes nothing when a GUID vanished or a length changed under an old URL; to standard output without `-o` | 0 · 1 · 2 |
-| `feed chapters` | `SHOW --piece PIECE [-o OUT]` | the episode's JSON chapters, by default into `publishing/src/renders/` | 0 · 1 · 2 |
-| `feed check` | `SHOW [--feed FILE] [--previous FILE]` | offline: required values, no flag left, unique GUIDs and enclosures, the tracked-feed comparison, the render's size and length, the cover and art, the chapter keys | 0 · 1 · 2 |
+| `feed chapters` | `SHOW --piece PIECE [-o OUT]` | the episode's JSON chapters, by default `publishing/src/renders/<piece>/<piece>.chapters.json` | 0 · 1 · 2 |
+| `feed check` | `SHOW [--feed FILE] [--previous FILE]` | offline: required values, no flag left, unique GUIDs and enclosures, the tracked-feed comparison, the render's size and length (in the piece's folder, or flat where an earlier release left it, which a warning names), the cover and art, the chapter keys | 0 · 1 · 2 |
 | `footage add` | `FILE --kind KIND --location LABEL [--rights RRNNNN]` | copies a file into the mirror (never moves it), hashes and probes it, appends the next `F` ID; refuses a duplicate | 0 · 2 |
 | `footage verify` | `[--manifest PATH]` | the local mirror against the manifest | 0 · 1 · 2 |
 | `tokens` | `[--tokens PATH]` | every required custom property present and parseable | 0 · 1 · 2 |
 | `flags` | `[PATH…] [--piece PIECE] [--strict]` | both flags, in every form, over the files Git tracks or would track; `--piece` gathers one piece's files across the scripts, production and publishing layers | 0 · 1 · 2 |
+| `where` | `PIECE` | the piece's tracked files across the scripts, production and publishing layers, gathered as `flags --piece` gathers them, then its ignored folders by name (`production/src/renders/<piece>/`, `production/src/voiceover/generated/<piece>/`, `publishing/src/renders/<piece>/`), each said to exist or not, never listed | 0 · 2 |
 | `check` | `[--strict] [--setup]` | the large-file and Git LFS guard and the nested ignore rules; `--setup` adds the readiness report, the optional image encoders among it | 0 · 1 · 2 |
 | `--self-test` | — | fixtures written at run time; exercises every module; probes that need ffmpeg skip by name | 0 · 1 · 2 |
 
@@ -97,16 +103,28 @@ and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
   author watches or listens: a render that succeeded is not a deliverable that was checked.
 - **Never `-c copy` for a frame-accurate cut**: a stream copy cuts on the nearest keyframe and
   drifts every caption after it.
-- **Outputs go to a renders or generated folder**, named as
-  `.claude/rules/syntek-media/08-naming-and-memory.md` Section 1 says; nothing is written elsewhere
-  unless `-o` names the path, and nothing outside those folders is overwritten. The commands that
-  make tracked files (`captions align`, `retime`, `rewrap`, `vtt` and `transcript`, and
-  `feed write`) write to standard output unless `-o` names the file, so always pass `-o`.
+- **Outputs go to a renders or generated folder**, a piece's into its own folder there
+  (`production/src/renders/<piece>/`, `production/src/voiceover/generated/<piece>/takes/`,
+  `publishing/src/renders/<piece>/`), named and placed as
+  `.claude/rules/syntek-media/08-naming-and-memory.md` Section 1 says; nothing is written
+  elsewhere unless `-o` names the path, and no tracked file is overwritten except through the
+  named exceptions below. The commands that make tracked files (`captions align`, `retime`,
+  `rewrap`, `vtt` and `transcript`, and `feed write`) write to standard output unless `-o` names
+  the file, so always pass `-o`. A piece's timing and scene data is written first as a working
+  copy in `production/src/renders/<piece>/timing/`, and its tracked copy only where `-o` names
+  it, once the author has accepted the run.
 - **The exceptions are named.** The registers and the manifest are written only by `take add`,
   `footage add` and, for a show register, `feed new`, `feed add` and `feed tag`, none of which
-  rewrites a value the author set. A show's tracked feed, `<show>.feed.xml` beside its register,
-  is the one tracked file the toolkit overwrites: only `feed write -o`, after its GUID comparison,
-  through a temporary file, once the author reports the feed live.
+  rewrites a value the author set, except that `take add` resets a re-rolled segment's `status`
+  and `archived`, because its new take is unheard and unarchived. A show's tracked feed,
+  `<show>.feed.xml` beside its register, is overwritten only by `feed write -o`, after its GUID
+  comparison, through a temporary file, once the author reports the feed live. A piece's tracked
+  timing and scene files (`production/src/timing/<piece>.words.json`, `<piece>.words-check.md`
+  and `<piece>.mouth.json`; `production/src/scenes/<piece>.cues.json` and `<piece>.real.json`)
+  are overwritten only by the command that makes each, with `-o` naming it, only while Git
+  reports no uncommitted change to it, through a temporary file renamed over it: an uncommitted
+  change, an untracked copy or a project outside a Git work tree is refused (exit 2). Every other
+  tracked file is never overwritten.
 - **Platform numbers live in `toolkit/data/platforms.toml`**, which an update refreshes. A
   confirmed difference is an `[[override]]` in `brand/src/platforms/overrides.toml`, never an edit
   of the data file (`publishing/workflows/07-refresh-the-platform-specs/`).
@@ -116,7 +134,10 @@ and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
   `brand/src/exports/large/`. Never add a root `.gitattributes` or run `git lfs track`.
 - **Nothing reads what Git ignores**: `flags` and `check` filter through `git check-ignore`, and an
   ignored media file is opened only by the path a manifest, register or argument names, its name
-  and hash printed, never its content (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
+  and hash printed, never its content; `where` names a piece's ignored folders without listing
+  them, and a working copy in a piece's `timing` folder is never opened, because the command
+  that wrote it printed what it found
+  (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
 - **Keep the toolkit minimal**: the Python standard library only (3.11 or later) and TOML data,
   with one exception, `toolkit/card.py`, which declares Playwright inline and runs through `uv run`.
 

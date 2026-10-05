@@ -11,7 +11,7 @@ its terms the same way every time.
 - **Voiced lines:** the script's `VO:` lines. An `ON:` line is the speaker's own, on camera, and
   is never voiced, even to patch a fluffed take.
 - **Register:** `production/src/voiceover/<piece>.toml`; takes in
-  `production/src/voiceover/generated/` (git-ignored).
+  `production/src/voiceover/generated/<piece>/takes/` (git-ignored).
 - **Narrator:** the `voiceover` row of `brand/src/voice/voice.md`.
 - **Written voice:** syntek-author's brand voice, standards/brand/brand-voice.md, where present;
   the spoken style in `voice.md` follows it and never restates it.
@@ -62,12 +62,12 @@ script_lines = "1.1"
 text = "Booking a slot at Harbour Lane takes under a minute."
 request = "Booking a slot at Harbour Lane takes under a minute."
 take = 2
-file = "generated/007-booking-a-studio-slot.s01.t2.mp3"
+file = "generated/007-booking-a-studio-slot/takes/007-booking-a-studio-slot.s01.t2.mp3"
 characters = 52
 pause_after = 0.4
 status = "approved"
 archived = "F0012"
 ```
 
-Take 1 was rejected for a rushed 'Harbour Lane'; the old file stays in the generated folder, and
-only take 2 is archived.
+Take 1 was rejected for a rushed 'Harbour Lane'; the old file stays in the piece's takes folder,
+and only take 2 is archived.

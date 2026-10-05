@@ -28,9 +28,11 @@ render  Opens HTML in headless Chromium through Playwright 1.62.0 (pinned: an un
         overlay (media.py cut --overlay). A PNG to deliver in another format (JPEG, WebP, AVIF) is
         encoded from this render with media.py image. The PNG is read back
         and must be exactly the size asked for, and within the deliverable's max_size (over its
-        max_size_mobile is a warning). Default output: production/src/renders/ for a
-        card under production/src/cards/, publishing/src/renders/ otherwise, named
-        <html-stem>.<platform>-<format>.png (--deliverable) or <html-stem>.<W>x<H>.png (--size).
+        max_size_mobile is a warning). Default output: the piece's own folder (DESIGN D64),
+        production/src/renders/<piece>/cards/ for a card under production/src/cards/ and
+        publishing/src/renders/<piece>/ otherwise (a name with no piece key at the renders
+        folder's top), named <html-stem>.<platform>-<format>.png (--deliverable) or
+        <html-stem>.<W>x<H>.png (--size), a card's overlay render with .transparent before .png.
 check   The layout contract of DESIGN Section 6.11: <!doctype html> and <html lang="en-GB">;
         a stylesheet link to tokens.css by relative path that resolves; every required token
         resolves on :root; every @font-face loads (a brand font in fonts/ beside tokens.css);
@@ -230,10 +232,15 @@ def parse_size(text: str) -> tuple:
     return int(m.group(1)), int(m.group(2))
 
 
-def default_png(html: Path, suffix: str) -> Path:
-    cards = C.path(C.CARDS).resolve()
-    folder = C.PROD_RENDERS if cards == html.resolve().parent else C.PUB_RENDERS
-    return C.path(folder) / f"{html.stem}.{suffix}.png"
+def default_png(html: Path, suffix: str, transparent: bool = False) -> Path:
+    """Where render writes without -o (DESIGN D47, D64, Section 6.16): a card under
+    production/src/cards/ to its piece's production/src/renders/<piece>/cards/, an overlay's render
+    named .transparent before .png, as assemble names it; any other layout (a thumbnail) to its
+    piece's publishing/src/renders/<piece>/; a name with no piece key at its renders folder's top."""
+    if C.path(C.CARDS).resolve() == html.resolve().parent:
+        return C.piece_folder(C.PROD_RENDERS, html.name, "cards") / \
+            f"{html.stem}.{suffix}{'.transparent' if transparent else ''}.png"
+    return C.piece_folder(C.PUB_RENDERS, html.name) / f"{html.stem}.{suffix}.png"
 
 
 def render(html: Path, w: int, h: int, table, transparent: bool, out: Path) -> tuple:
@@ -285,7 +292,7 @@ def cmd_render(args) -> int:
     else:
         size = parse_size(args.size)
         suffix = f"{size[0]}x{size[1]}"
-    out = C.output_path(default_png(html, suffix), args.o, inputs=[html])
+    out = C.output_path(default_png(html, suffix, args.transparent), args.o, inputs=[html])
     found, _ = render(html, size[0], size[1], table, args.transparent, out)
     weight = out.stat().st_size
     print(f"wrote {C.shown(out)}: {size[0]}x{size[1]}{' with alpha' if args.transparent else ''}, "

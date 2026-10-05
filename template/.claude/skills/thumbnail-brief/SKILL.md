@@ -129,11 +129,12 @@ it never puts on one.
 7. **Check and render.** Run `uv run toolkit/card.py check` on the copy and fix what it reports,
    in the copy. Then render each deliverable with
    `uv run toolkit/card.py render <html> --deliverable <platform>.<format>`, passing `-o` with its
-   name in `publishing/src/renders/`, `<html-stem>.<platform>-<format>.png`. A deliverable whose
-   table has no `width` and `height` renders with `--size` at a size the author agrees, flagged
-   `VERIFY`. If `card.py` exits 2 (no uv, or no Chromium), report the install line it prints and
-   stop: never report a thumbnail as rendered when it could not run. Then make every other file
-   through the toolkit, never ffmpeg by hand: each format a table lists beyond PNG with
+   name in `publishing/src/renders/<piece>/` (a cut's brief too, never a folder of its own),
+   `<html-stem>.<platform>-<format>.png`. A deliverable whose table has no `width` and `height`
+   renders with `--size` at a size the author agrees, flagged `VERIFY`. If `card.py` exits 2 (no
+   uv, or no Chromium), report the install line it prints and stop: never report a thumbnail as
+   rendered when it could not run. Then make every other file through the toolkit, never ffmpeg
+   by hand: each format a table lists beyond PNG with
    `python3 toolkit/media.py image <png> --deliverable KEY [--format FMT]`; each poster with
    `media.py image <video render> --deliverable KEY --at TC`, no layout needed; the GIF preview by
    rendering the layout's overlay with

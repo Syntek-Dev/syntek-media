@@ -61,5 +61,6 @@ with `CHECKLIST.md` open.
 - **Hand-written:** nothing here by the author; template procedures are template-owned and
   replaced by `copier update`. The author's procedures go in `brand/workflows/local/`.
 - **Folders:** `<NN>-<verb-first-name>/`, four files each, always.
-- **Procedures produce nothing here.** Their output lands in `brand/src/`, and a proof in the
-  git-ignored `production/src/renders/`.
+- **Procedures produce nothing here.** Their output lands in `brand/src/`, and a proof, through
+  `-o`, in the git-ignored `production/src/renders/proofs/<what>-DD-MM-YYYY/`, which no piece
+  owns.

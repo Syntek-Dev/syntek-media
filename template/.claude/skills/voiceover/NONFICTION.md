@@ -11,7 +11,7 @@ and the sound of a technical, Greek or Hebrew term carry the argument.
 - **Voiced lines:** the script's `VO:` and `NARRATOR:` lines, and `HOST:` lines where the author
   has chosen a synthetic host voice for an introduction or a close.
 - **Register:** `production/src/voiceover/<piece>.toml`; takes in
-  `production/src/voiceover/generated/` (git-ignored).
+  `production/src/voiceover/generated/<piece>/takes/` (git-ignored).
 - **Narrators:** the `voiceover` row of `brand/src/voice/voice.md`, or its `podcast-host` row.
 - **Written voice:** syntek-author's voice notes, standards/style/voice-notes.md, where present;
   the spoken style in `voice.md` follows them and never restates them.

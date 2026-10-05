@@ -29,8 +29,7 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
 
 ## Cost before spend
 
-- **Never generate unasked**: not as a demonstration, not to test a setting, not as a helpful
-  extra after another job. Trying voices costs credits too.
+- **Never generate unasked**, not even as a demonstration or a test: trying voices costs too.
 - Before any batch, state the characters (or audio minutes for speech-to-text), the number of
   calls and the estimated credits, and wait for a yes; `mcp__elevenlabs__check_subscription`
   gives the balance. Stop at the first error, rather than retrying into spent credits, and log
@@ -40,8 +39,11 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
 
 - Find the model with `mcp__elevenlabs__list_models` (currently `eleven_v4`) and record it per
   use in `brand/src/voice/voice.md`; never assume it.
-- Pass `output_directory` as an **absolute** path to the git-ignored generated folder, built from
-  `git rev-parse --show-toplevel`; a relative path resolves against the base path.
+- Pass `output_directory` as an **absolute** path, from `git rev-parse --show-toplevel`, to a
+  piece's `production/src/voiceover/generated/<piece>/takes/` or a trial's
+  `production/src/voiceover/generated/voice-trials/<name>/`, made by `media.py speak plan` before
+  the first call (the server refuses a folder whose parent is missing; never `mkdir` it). A trial
+  is never a take: it keeps the server's name and enters no register.
 - The server names a file by the second and can overwrite one, so run
   `python3 toolkit/media.py take add` straight after each call: it renames the take and writes its
   register and credits-log rows. Never rename a take with a shell `mv`.
@@ -52,13 +54,12 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
 
 ## Speech-to-text, and the scratch fallback
 
-- `mcp__elevenlabs__speech_to_text` returns text, no timestamps. Run it only when asked, on a WAV
+- `mcp__elevenlabs__speech_to_text` returns text, no timestamps: run it only when asked, on a WAV
   from `media.py extract-audio`, with `save_transcript_to_file: false` and
   `return_transcript_to_client_directly: true`; on 'outside of allowed directory', re-add the
   server with a base path containing `git rev-parse --show-toplevel`, never copying audio away.
-- Without ElevenLabs, and only with the author's agreement, `espeak-ng` makes a scratch or timing
-  track: check `command -v espeak-ng` first; with neither route, give the install hint (the system
-  package `espeak-ng`) and the setup command, and stop. Label it approximate; it never ships.
+- On the author's word, `espeak-ng` (after `command -v espeak-ng`) makes an approximate scratch
+  track, never a take, never shipped; with no route, give its install hint and stop.
 
 ## How we apply it here
 
@@ -72,8 +73,7 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
 
 - **Workflows:** `production/workflows/02-make-a-voiceover/`,
   `production/workflows/08-bring-in-a-recording/` and `publishing/workflows/03-caption-a-piece/`.
-- **Skills:** `voiceover` makes takes; `captions` makes transcripts. Narration follows the same
-  discipline where the project makes audiobooks.
+- **Skills:** `voiceover` (takes) and `captions` (transcripts); audiobook narration follows suit.
 
 ## Governing standard
 

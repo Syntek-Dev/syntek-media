@@ -4,11 +4,15 @@
 # No inline comments in this file: Git reads a # after a pattern as part of the pattern.
 
 # ----------------------------------------------------------------------------
-# Masters and card renders
+# Masters, card renders and working copies
 # ----------------------------------------------------------------------------
-# Built by the toolkit from the tracked edit decision lists, cards, footage manifest and
-# voiceover registers: regenerable, and too large for plain Git. The README stays tracked, so
-# the folder and its note on what lands in it survive a fresh clone.
+# Built by the toolkit from the tracked edit decision lists, cards, footage manifest, voiceover
+# registers and timing and scene files: regenerable, and too large for plain Git. Each piece's
+# renders sit in a folder named for it (renders/<piece>/, with its cards/, timing/, scene/ and
+# stills/), and brand-kit proofs in renders/proofs/; the pattern below ignores every folder
+# inside renders/ whole, so a per-piece folder needs no pattern of its own. The README stays
+# tracked, so the folder and its note on what lands in it survive a fresh clone. The tracked
+# timing/ and scenes/ folders beside renders/ are never ignored: no rule here touches them.
 /renders/*
 !/renders/README.md
 
@@ -24,7 +28,10 @@
 # Generated voiceover
 # ----------------------------------------------------------------------------
 # ElevenLabs takes: paid for, impossible to make again identically, and too large for plain
-# Git. An approved take is archived as source media, never committed.
+# Git. An approved take is archived as source media, never committed. A piece's takes sit in
+# voiceover/generated/<piece>/takes/ and its scratch tracks in <piece>/, and voice trials in
+# voice-trials/<name>/; the pattern below ignores every folder inside generated/ whole. Takes
+# an earlier release left flat at the folder's top are ignored the same way.
 /voiceover/generated/*
 !/voiceover/generated/README.md
 

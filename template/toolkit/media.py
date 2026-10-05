@@ -41,6 +41,7 @@ Usage:
     python3 toolkit/media.py footage verify [--manifest PATH]
     python3 toolkit/media.py tokens [--tokens PATH]
     python3 toolkit/media.py flags [PATH...] [--piece PIECE] [--strict]
+    python3 toolkit/media.py where PIECE
     python3 toolkit/media.py check [--strict] [--setup]
     python3 toolkit/media.py --self-test
 
@@ -49,11 +50,14 @@ podcast.apple_rss_audio) or audiobook.<store> (audiobook.acx); the brand's confi
 in brand/src/platforms/overrides.toml are applied and printed. TC is a timecode, HH:MM:SS.mmm.
 Every path is relative to the working folder; defaults are relative to the repository root.
 
-Outputs go to a renders/ or generated/ folder by default (production/src/renders/ for masters,
-cards and extracts; publishing/src/renders/ for deliverables, images, GIFs, burned captions,
-timed captions from segments, stills, a feed episode's audio and JSON chapters), named as the
-house names them; nothing is written elsewhere unless -o names a path, and nothing outside
-those folders is ever overwritten. captions align, retime, rewrap, vtt and transcript, and feed
+Outputs go to a renders/ or generated/ folder by default, a piece's into its own folder there,
+named for the leading piece key of the output's name (production/src/renders/<piece>/ for
+masters, cards and extracts; publishing/src/renders/<piece>/ for deliverables, images, GIFs,
+burned captions, timed captions from segments, stills, a feed episode's audio and JSON
+chapters); a name with no piece key stays at the top of its folder, and the audiobook folder's
+generated/ and renders/ stay flat. Each is named as the house names it (DESIGN D64,
+Section 6.16); nothing is written elsewhere unless -o names a path, and nothing outside those
+folders is ever overwritten. captions align, retime, rewrap, vtt and transcript, and feed
 write, write to -o or, without it, to stdout (report lines go to stderr): their files belong in
 tracked folders, where the toolkit never chooses a path. The exceptions, each written only by
 the commands named for it: the registers and the manifest (take add, footage add, and a
@@ -65,7 +69,7 @@ it. Every render is probed before it is reported.
 The modules beside this file do the work and have no command of their own: media_common.py
 (TOML, timecodes, presets and overrides, paths, the ffmpeg runner), media_video.py (assemble,
 cut, encode, frame, still-video), media_audio.py (extract-audio, loudness, audiobook, take),
-media_captions.py (captions, script time), media_repo.py (footage, tokens, flags, check),
+media_captions.py (captions, script time), media_repo.py (footage, tokens, flags, where, check),
 media_image.py (image, and the GIF pass of cut) and media_feed.py (a self-hosted podcast's
 register, feed, chapters and file tags). card.py renders HTML and CSS to PNG and runs through
 uv: uv run toolkit/card.py --help.
@@ -270,7 +274,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("assemble", help="build a master from an edit decision list")
     p.add_argument("edl")
-    out(p)
+    out(p, "the output path (default: production/src/renders/<piece>/<piece>.master.mp4, or .master.wav for an "
+           "audio master)")
     p.set_defaults(func=V.cmd_assemble)
 
     p = sub.add_parser("cut", help="trim, reframe and encode one deliverable")
@@ -284,7 +289,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--captions", metavar="SRT", help="burn these captions in the same pass")
     p.add_argument("--overlay", metavar="PNG", help="lay this transparent PNG (card.py render --transparent, at "
                    "the deliverable's own size; any other size is refused) over every frame, the first included")
-    out(p)
+    out(p, "the output path (default: publishing/src/renders/<piece>/<piece>[--cNN].<platform>-<format>[.burned]"
+           ".<ext>; a source whose name has no piece key, at the folder's top)")
     p.set_defaults(func=V.cmd_cut)
 
     p = sub.add_parser("encode", help="encode a whole file to a deliverable, loudness included")
@@ -293,13 +299,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--frame", choices=("crop", "pad"),
                    help="how a picture of another shape fills the deliverable's frame; required when the "
                         "shapes differ (encode never crops unasked)")
-    out(p)
+    out(p, "the output path (default: publishing/src/renders/<piece>/<piece>.<platform>-<format>.<ext>; a source "
+           "whose name has no piece key, at the folder's top)")
     p.set_defaults(func=V.cmd_encode)
 
     p = sub.add_parser("frame", help="one PNG still")
     p.add_argument("src")
     p.add_argument("--at", required=True, metavar="TC")
-    out(p)
+    out(p, "the output path (default: publishing/src/renders/<piece>/<stem>.<HH-MM-SS-mmm>.png; a source whose "
+           "name has no piece key, at the folder's top)")
     p.set_defaults(func=V.cmd_frame)
 
     p = sub.add_parser("image", help="encode one image deliverable from a still or a frame of a video",
@@ -311,8 +319,9 @@ def build_parser() -> argparse.ArgumentParser:
                        "max_size_mobile is a warning. A source of another shape needs --frame; a GIF is cut's; a table "
                        "with no width and height renders with card.py --size. A PNG already at the size, asked for as "
                        "png with no -o, is verified where it stands and nothing is written. Default output: "
-                       "publishing/src/renders/<stem>.<platform>-<format>.<ext>, <stem> the source's name up to its "
-                       "first '.'.")
+                       "publishing/src/renders/<piece>/<stem>.<platform>-<format>.<ext>, <stem> the source's name up "
+                       "to its first '.' and <piece> its leading piece key (a stem with none, such as a show cover's "
+                       "design export, at the folder's top).")
     p.add_argument("src")
     p.add_argument("--deliverable", required=True, metavar="KEY")
     p.add_argument("--at", metavar="TC", help="the frame of a video source (required for a video)")
@@ -328,7 +337,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("image")
     p.add_argument("audio")
     p.add_argument("--deliverable", required=True, metavar="KEY")
-    out(p)
+    out(p, "the output path (default: publishing/src/renders/<piece>/<piece>.<platform>-<format>.mp4, the piece "
+           "from AUDIO's name; an AUDIO whose name has no piece key, at the folder's top)")
     p.set_defaults(func=V.cmd_still_video)
 
     p = sub.add_parser("extract-audio", help="mono 16-bit WAV for speech-to-text or alignment")
@@ -336,7 +346,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--in", dest="cut_in", metavar="TC")
     p.add_argument("--out", dest="cut_out", metavar="TC")
     p.add_argument("--rate", type=int, default=16000, metavar="HZ")
-    out(p, "the output path (default: production/src/renders/<stem>[.<in>-<out>].wav)")
+    out(p, "the output path (default: production/src/renders/<piece>/<stem>[.<in>-<out>].wav, <piece> the "
+           "stem's leading piece key, or the folder's top for a stem with none, such as a footage file's)")
     p.set_defaults(func=A.cmd_extract)
 
     p = sub.add_parser("captions", help="check, from-segments, align, retime, rewrap, vtt, transcript, burn")
@@ -350,7 +361,7 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("register")
     q.add_argument("--deliverable", required=True, metavar="KEY")
     q.add_argument("--offset", metavar="TC", help="where the voice track starts on the master")
-    out(q, "the output path (default: publishing/src/renders/<piece>.<platform>-<format>.en-GB.srt)")
+    out(q, "the output path (default: publishing/src/renders/<piece>/<piece>.<platform>-<format>.en-GB.srt)")
     q.set_defaults(func=K.cmd_from_segments)
     q = cs.add_parser("align", help="captions spread over the speech silencedetect finds")
     q.add_argument("text", help="a script.md or a transcript.md")
@@ -397,7 +408,8 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("src")
     q.add_argument("srt")
     q.add_argument("--deliverable", required=True, metavar="KEY")
-    out(q)
+    out(q, "the output path (default: publishing/src/renders/<piece>/<stem>.burned.mp4; a source whose name has "
+           "no piece key, at the folder's top)")
     q.set_defaults(func=K.cmd_burn)
 
     p = sub.add_parser("loudness", help="measure, normalise")
@@ -453,7 +465,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("take", help="take add")
     ts = p.add_subparsers(dest="sub", metavar="add")
-    q = ts.add_parser("add", help="name a fresh ElevenLabs take; register and credits-log rows")
+    q = ts.add_parser("add", help="name a fresh ElevenLabs take; register and credits-log rows",
+                      description="Renames a fresh ElevenLabs file where it lies, to its house name: a voiceover "
+                      "take in production/src/voiceover/generated/<piece>/takes/, or flat in generated/ where an "
+                      "earlier release kept takes, numbered after the segment's highest take in either; an "
+                      "audiobook part's in the audiobook folder's generated/. Writes the register's take and "
+                      "file, and for a segment resets status to generated and archived to empty (a re-roll); "
+                      "appends the credits-log row. A voice trial (generated/voice-trials/<name>/) is never a "
+                      "take, and is refused.")
     q.add_argument("file")
     q.add_argument("--piece", required=True)
     q.add_argument("--segment", metavar="sNN")
@@ -487,13 +506,15 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--piece", required=True, metavar="PIECE")
     q.set_defaults(func=F.cmd_add)
     q = fe.add_parser("tag", help="write the episode's ID3 tags, chapters and cover into its M5 render",
-                      description="Re-muxes publishing/src/renders/<PIECE>.podcast-feed-audio.mp3 without re-encoding "
-                      "(-c:a copy), old tags and chapters dropped: ID3v2.3 title, the show's author and title, the "
-                      "number, the chapters (CTOC and CHAP) and the show's id3_cover; verifies the audio stream "
-                      "unchanged and the tags present, then writes render, bytes and seconds into the row. Exit 1, "
-                      "changing nothing, while the row's title or description is empty, its chapters break the "
+                      description="Re-muxes publishing/src/renders/<PIECE>/<PIECE>.podcast-feed-audio.mp3 without "
+                      "re-encoding (-c:a copy), old tags and chapters dropped: ID3v2.3 title, the show's author and "
+                      "title, the number, the chapters (CTOC and CHAP) and the show's id3_cover; verifies the audio "
+                      "stream unchanged and the tags present, then writes render, bytes and seconds into the row. Exit "
+                      "1, changing nothing, while the row's title or description is empty, its chapters break the "
                       "[platform.podcast] rules, or the show has no title or author; exit 2 for a withdrawn row or "
-                      "a missing render (encode it at M5: publishing/workflows/02-cut-for-a-platform/).")
+                      "a render missing from the piece's folder (encode it at M5: "
+                      "publishing/workflows/02-cut-for-a-platform/); a flat render an earlier release left at the "
+                      "top of publishing/src/renders/ is named, never tagged.")
     q.add_argument("show", metavar="SHOW")
     q.add_argument("--piece", required=True, metavar="PIECE")
     q.set_defaults(func=F.cmd_tag)
@@ -512,17 +533,20 @@ def build_parser() -> argparse.ArgumentParser:
     q.set_defaults(func=F.cmd_write)
     q = fe.add_parser("chapters", help="the episode's Podcasting 2.0 JSON chapters",
                       description="JSON chapters (version 1.2, startTime in float seconds) from the row's "
-                      "[[episode.chapter]] tables; default publishing/src/renders/<PIECE>.chapters.json.")
+                      "[[episode.chapter]] tables; default publishing/src/renders/<PIECE>/<PIECE>.chapters.json.")
     q.add_argument("show", metavar="SHOW")
     q.add_argument("--piece", required=True, metavar="PIECE")
-    q.add_argument("-o", metavar="FILE", help="the output path (default: publishing/src/renders/<piece>.chapters.json)")
+    q.add_argument("-o", metavar="FILE",
+                   help="the output path (default: publishing/src/renders/<piece>/<piece>.chapters.json)")
     q.set_defaults(func=F.cmd_chapters)
     q = fe.add_parser("check", help="the register, or a saved feed, offline",
                       description="Offline, never fetching: the register (or, with --feed, a saved or CMS-made feed) "
                       "against the register's rules and the [platform.podcast] keys: every required value set and no "
                       "AUTHOR TO CONFIRM flag left; GUIDs and enclosure URLs unique; the comparison feed write makes, "
                       "against the tracked feed or --previous; bytes and seconds against the render where it is "
-                      "local; the cover and episode art against podcast.cover and podcast.episode_art; the chapter "
+                      "local, in the episode's piece folder or, failing that, flat where an earlier release left it, "
+                      "which a warning names; the cover and episode art against podcast.cover and "
+                      "podcast.episode_art; the chapter "
                       "rules (a chapter under chapter_min_seconds warns); no '<' or '>' in a title or description; "
                       "ASCII URLs; a warning where site is empty while the website profile exists, and where the "
                       "owner address looks like a person's own.")
@@ -551,9 +575,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("paths", nargs="*", metavar="PATH")
     p.add_argument("--piece", metavar="PIECE", help="only that piece's files: its folder under "
                    "scripts/src/pieces/ and every file in scripts/, production/ and publishing/ (or "
-                   "under the PATHs given) named <piece>.… or <piece>--cNN.… (M7 needs zero)")
+                   "under the PATHs given) named <piece>.… or <piece>--cNN.…, its timing/ and scenes/ "
+                   "files included (M7 needs zero)")
     p.add_argument("--strict", action="store_true", help="exit 1 when any flag is open")
     p.set_defaults(func=R.cmd_flags)
+
+    p = sub.add_parser("where", help="a piece's files across the layers, and its ignored folders by name",
+                       description="Prints the piece's files git tracks or would track across scripts/, "
+                       "production/ and publishing/, gathered as flags --piece gathers them (its timing and "
+                       "scene files included), then names its ignored per-piece folders, "
+                       "production/src/renders/<piece>/, production/src/voiceover/generated/<piece>/ and "
+                       "publishing/src/renders/<piece>/, each said to exist or not and never listed (DESIGN "
+                       "D50, D64).")
+    p.add_argument("piece", metavar="PIECE")
+    p.set_defaults(func=R.cmd_where)
 
     p = sub.add_parser("check", help="the repository guard; --setup adds the readiness report")
     p.add_argument("--strict", action="store_true", help="warnings count as findings")
@@ -810,8 +845,11 @@ def self_test() -> int:
             write_fixture(root)
             groups = [("presets, timecodes and tokens", lambda: test_common(verdict, cli)),
                       ("captions and script time", lambda: test_captions(verdict, cli, root)),
-                      ("footage, takes, audiobook text, flags and check",
-                       lambda: test_repo(verdict, skip, cli, root, have_git, have_ff))]
+                      ("footage, takes in both layouts, audiobook text, flags, where and check",
+                       lambda: test_repo(verdict, skip, cli, root, have_git, have_ff)),
+                      ("uv scripts: the interpreter, the timeout, the first-run lock, card renders and the "
+                       "setup row", lambda: test_uv(verdict, skip, cli, root)),
+                      ("default output paths: each piece's own folder", lambda: test_piece_defaults(verdict))]
             if have_ff:
                 groups.append(("cut, burn-in, loudness, assemble, align and the audiobook master",
                                lambda: test_media(verdict, skip, cli, root)))
@@ -985,6 +1023,245 @@ def test_common(verdict, cli) -> None:
     verdict("tokens: a missing token and a caption size not in vh fail",
             code == 1 and "--radius is missing" in out and "--caption-size" in out, out)
     write(C.path(C.TOKENS), good)
+
+
+FAKE_UV = '''#!PYTHON
+"""A fake uv for media.py --self-test: answers --version, 'python find' and 'run', logging each."""
+import json, os, sys, time
+args = sys.argv[1:]
+
+
+def note(**fields):
+    with open(os.environ["FAKE_UV_LOG"], "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(fields) + "\\n")
+
+
+if args[:1] == ["--version"]:
+    print("uv 0.0.0 (self-test fixture)")
+elif args[:2] == ["python", "find"]:
+    note(find=args[2:], downloads=os.environ.get("UV_PYTHON_DOWNLOADS", ""),
+         offline=os.environ.get("UV_OFFLINE", ""))
+    request = [a for a in args[2:] if not a.startswith("-")]
+    found = request[0] if request and os.path.isabs(request[0]) else \\
+        os.environ.get("FAKE_UV_SYSTEM" if "--system" in args else "FAKE_UV_PLAIN", "")
+    if not found:
+        sys.exit("error: no interpreter found")
+    print(found)
+elif args[:1] == ["run"]:
+    start = time.time()
+    time.sleep(float(os.environ.get("FAKE_UV_SLEEP") or 0))
+    if "-o" in args:
+        with open(args[args.index("-o") + 1], "wb") as fh:
+            fh.write(b"fixture png")
+    note(run=args[1:], start=start, end=time.time())
+    sys.exit(int(os.environ.get("FAKE_UV_EXIT") or 0))
+else:
+    sys.exit(2)
+'''
+UV_SCRIPT = '# /// script\n# requires-python = ">=3.11,<3.99"\n# dependencies = []\n# ///\nprint("fixture")\n'
+
+
+def fake_python(p: Path, version: list, base: str, venv: bool) -> Path:
+    """An interpreter that answers check --setup's -c probe with a fixed version and base."""
+    answer = json.dumps({"version": version, "base": base, "venv": venv})
+    write(p, f"#!/bin/sh\necho '{answer}'\n").chmod(0o755)
+    return p
+
+
+def test_uv(verdict, skip, cli, root: Path) -> None:
+    """D20's uv helper, card renders in the piece's cards/ folder (D47, D64) and check --setup's
+    interpreter row (D49), all against a fake uv on PATH: no environment is built, nothing fetched."""
+    import threading
+    import time
+    renders = C.path(C.PROD_RENDERS)
+    verdict("an output's piece folder is keyed on the leading piece key, a name with none stays at the top, "
+            "and timing/ and scenes/ are tracked folders of production/src/ (D64)",
+            C.piece_folder(C.PROD_RENDERS, "003-why-the-ferry-runs-late--c01.youtube-short.mp4")
+            == renders / "003-why-the-ferry-runs-late"
+            and C.piece_folder(C.PUB_RENDERS, "003-a.chapters.json", "x") == C.path(C.PUB_RENDERS) / "003-a" / "x"
+            and C.piece_folder(renders, "talk-cam-a.wav", "cards") == renders
+            and C.piece_key("talk-cam-a.wav") is None and C.piece_of("talk-cam-a.wav") == "talk-cam-a"
+            and V.card_name(Path("title.html"), 640, 360, True) == renders / "title.640x360.transparent.png"
+            and (C.TIMING, C.SCENES) == ("production/src/timing", "production/src/scenes"))
+    if os.name != "posix":
+        skip("the uv helper, card renders and the setup row with a fake uv", "the fake uv is a POSIX script")
+        return
+    work = Path(str(root) + "-uv")
+    log = work / "uv.log"
+    write(work / "bin" / "uv", FAKE_UV.replace("PYTHON", sys.executable, 1)).chmod(0o755)
+    venv = work / "venv"
+    env = {"PATH": f"{work / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}", "FAKE_UV_LOG": str(log),
+           "FAKE_UV_SYSTEM": "/fixture/system/python3", "FAKE_UV_PLAIN": str(venv / "bin" / "python3"),
+           "VIRTUAL_ENV": str(venv), "HOME": str(work / "home")}
+    plain = ["UV_PYTHON", "FAKE_UV_SLEEP", "FAKE_UV_EXIT"]
+
+    def calls(kind):
+        lines = log.read_text(encoding="utf-8").splitlines() if log.is_file() else []
+        return [c for c in (json.loads(x) for x in lines) if kind in c]
+
+    def uv_run(script, timeout=60, **values):
+        log.unlink(missing_ok=True)
+        with held_env(drop=plain, **dict(env, **values)), contextlib.redirect_stderr(io.StringIO()) as said:
+            try:
+                return C.uv_script(script, ["--self-test"], timeout=timeout), said.getvalue()
+            except C.Fatal as err:
+                return err, said.getvalue()
+
+    saved_locks, C.UV_LOCKS = C.UV_LOCKS, work / "locks"
+    try:
+        script = write(work / "fixture-script.py", UV_SCRIPT)
+        proc, _ = uv_run(script)
+        run, finds = calls("run"), calls("find")
+        verdict("a uv script runs under the interpreter 'uv python find --system' gives for its requires-python, "
+                "never the active virtual environment's, and the lookup fetches nothing (D20)",
+                getattr(proc, "returncode", None) == 0 and [f["find"] for f in finds] == [["--system", ">=3.11,<3.99"]]
+                and all(f["downloads"] == "never" and f["offline"] == "1" for f in finds) and len(run) == 1
+                and run[0]["run"] == ["--quiet", "--python", "/fixture/system/python3", str(script.resolve()),
+                                      "--self-test"], log.read_text(encoding="utf-8") if log.is_file() else proc)
+        proc, _ = uv_run(script, UV_PYTHON="/fixture/named/python3")
+        run = calls("run")
+        verdict("UV_PYTHON, where it is set, is the interpreter, and nothing is looked up (D20)",
+                getattr(proc, "returncode", None) == 0 and not calls("find") and len(run) == 1
+                and run[0]["run"][:3] == ["--quiet", "--python", "/fixture/named/python3"], run or proc)
+        err, _ = uv_run(script, FAKE_UV_SYSTEM="")
+        verdict("no Python outside a virtual environment in the script's range is exit 2, naming the fix",
+                isinstance(err, C.Fatal) and ">=3.11,<3.99" in str(err) and "UV_PYTHON" in str(err)
+                and not calls("run"), err)
+        began = time.monotonic()
+        err, _ = uv_run(script, timeout=1, FAKE_UV_SLEEP="6")
+        verdict("a uv script that outlives its timeout is stopped, with every process it started (exit 2)",
+                isinstance(err, C.Fatal) and "did not finish within 1 s" in str(err)
+                and time.monotonic() - began < 5 and not calls("run"), err)
+
+        first = write(work / "fixture-first-run.py", UV_SCRIPT)
+        log.unlink(missing_ok=True)
+
+        def together(n=2):
+            done = []
+            threads = [threading.Thread(target=lambda: done.append(C.uv_script(first, [], timeout=60)))
+                       for _ in range(n)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            return done
+
+        def apart(a, b):
+            return a["start"] >= b["end"] - 0.05 or b["start"] >= a["end"] - 0.05
+        with held_env(drop=plain, **dict(env, FAKE_UV_SLEEP="0.8")), \
+                contextlib.redirect_stderr(io.StringIO()) as said:
+            done = together()
+            spans = calls("run")
+            later = together()
+            spans_later = calls("run")[2:]
+        verdict("two first runs of one script never overlap: the second waits while the first builds its "
+                "environment (D20's first-run lock)",
+                [p.returncode for p in done] == [0, 0] and len(spans) == 2 and apart(*spans)
+                and "waiting for another run of fixture-first-run.py" in said.getvalue(), (spans, said.getvalue()))
+        verdict("later runs also hold the lock, so a deleted environment is rebuilt without racing",
+                [p.returncode for p in later] == [0, 0] and len(spans_later) == 2 and apart(*spans_later),
+                spans_later)
+        verdict("the per-script lock sits at user scope, never in the project",
+                any(C.UV_LOCKS.glob("fixture-first-run-*.lock"))
+                and not any(root.rglob("*.lock")) and not any(root.rglob("*.built")), sorted(C.UV_LOCKS.iterdir()))
+        failing = write(work / "fixture-failing.py", UV_SCRIPT)
+        proc, _ = uv_run(failing, FAKE_UV_EXIT="1")
+        verdict("a run that fails records no environment, so the next first run still takes the lock",
+                getattr(proc, "returncode", None) == 1 and not any(C.UV_LOCKS.glob("fixture-failing-*.built")), proc)
+        C.UV_LOCKS = write(work / "not-a-folder", "a file, where the lock folder would go\n") / "locks"
+        proc, said = uv_run(write(work / "fixture-unlocked.py", UV_SCRIPT))
+        verdict("where the lock directory cannot be written, exit 2 without starting uv",
+                isinstance(proc, C.Fatal) and "cannot take its first-run lock" in str(proc)
+                and not calls("run"), proc)
+        C.UV_LOCKS = work / "locks"
+
+        html = write(C.path(C.CARDS) / "019-cards.title.html", "<!doctype html><html lang=\"en-GB\"></html>\n")
+        cards = renders / "019-cards" / "cards"
+        log.unlink(missing_ok=True)
+        with held_env(drop=plain, **env), contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
+            clip = V.card_png(html, 640, 360, transparent=False)
+            over = V.card_png(html, 640, 360, transparent=True)
+        run = [c["run"] for c in calls("run")]
+        verdict("a card renders into its piece's cards/ folder, an overlay's named .transparent, so the clip's and "
+                "the overlay's at one size are both kept (D47, D64); card.py starts with D20's interpreter",
+                clip == cards / "019-cards.title.640x360.png" and over == cards / "019-cards.title.640x360.transparent.png"
+                and clip.is_file() and over.is_file() and len(run) == 2
+                and run[0][:4] == ["--quiet", "--python", "/fixture/system/python3", str((C.TOOLKIT / "card.py").resolve())]
+                and "--transparent" not in run[0] and run[1][-1] == "--transparent", run)
+        now = time.time()
+        for p, age in ((C.path(C.TOKENS), 300), (clip, 200), (html, 100), (over, 0)):
+            os.utime(p, (now - age, now - age))
+        log.unlink(missing_ok=True)
+        with held_env(drop=plain, **env), contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
+            V.card_png(html, 640, 360, transparent=False)
+            V.card_png(html, 640, 360, transparent=True)
+        run = [c["run"] for c in calls("run")]
+        verdict("each variant is judged fresh on its own: a clip render older than its HTML is made again, a "
+                "newer overlay render is kept", len(run) == 1 and "--transparent" not in run[0], run)
+
+        base_py = fake_python(work / "base" / "python3", [3, 12, 3], "", False)
+        own_py = fake_python(work / "base" / "python3.14", [3, 14, 8], "", False)
+        fake_python(venv / "bin" / "python3", [3, 14, 8], str(base_py), True)
+        log.unlink(missing_ok=True)
+        with held_env(drop=plain, **dict(env, FAKE_UV_SYSTEM=str(base_py))):
+            rows = R.uv_interpreter_rows(root)
+            finds = calls("find")
+            code, out = cli("check", "--setup")
+        verdict("check --setup fails a plain 'uv run' that would take a virtual environment's Python on another "
+                "Python's base, naming UV_PYTHON and the interpreter media.py takes (D49)",
+                rows and rows[0][0] is False and "Python 3.14.8 whose base" in rows[0][1] and "Python 3.12.3" in rows[0][1]
+                and "UV_PYTHON" in rows[0][2] and str(base_py) in rows[0][2]
+                and code == 1 and "FAIL  uv's interpreter for " in out and "fix: set UV_PYTHON at user scope" in out,
+                (rows, out))
+        verdict("the interpreter row asks only 'uv python find', with downloads and the network off, and builds "
+                "no environment", finds and all(f["downloads"] == "never" and f["offline"] == "1" for f in finds)
+                and not calls("run"), log.read_text(encoding="utf-8") if log.is_file() else "")
+        with held_env(drop=plain, **dict(env, UV_PYTHON=str(base_py))):
+            named = R.uv_interpreter_rows(root)
+        fake_python(venv / "bin" / "python3", [3, 14, 8], str(own_py), True)
+        with held_env(drop=plain, **dict(env, FAKE_UV_SYSTEM=str(base_py))):
+            own = R.uv_interpreter_rows(root)
+        verdict("check --setup passes UV_PYTHON naming an interpreter outside a virtual environment, and a virtual "
+                "environment on a base of its own version",
+                named and named[0][0] is True and "UV_PYTHON names" in named[0][1]
+                and own and own[0][0] is True and "same version" in own[0][1], (named, own))
+    finally:
+        C.UV_LOCKS = saved_locks
+
+
+def test_piece_defaults(verdict) -> None:
+    """Where the commands' default outputs land (DESIGN D64, Section 6.16), worked out without a
+    render: the piece's own folder inside the right renders/ folder, keyed on the leading piece key
+    of the output's name, and the folder's top for a name with none. The commands themselves are
+    proved writing there in the ffmpeg groups (cut, encode, frame, still-video, assemble, image,
+    the GIF, captions, the feed)."""
+    import card as CARD
+    prod, pub = C.path(C.PROD_RENDERS), C.path(C.PUB_RENDERS)
+    piece = "003-why-the-ferry-runs-late"
+    card = C.path(C.CARDS) / f"{piece}.title.html"
+    thumb = C.path("publishing/src/thumbnails") / f"{piece}--c02.html"
+    proof = C.path("brand/src/design-system/previews") / "thumbnail.html"
+    verdict("card.py render's default: a card in its piece's cards/ folder, named as assemble names it, an "
+            "overlay's .transparent; a thumbnail in its piece's folder of publishing/src/renders/; a layout whose "
+            "name has no piece key at that folder's top (D47, D64)",
+            CARD.default_png(card, "640x360") == V.card_name(card, 640, 360, False)
+            == prod / piece / "cards" / f"{piece}.title.640x360.png"
+            and CARD.default_png(card, "640x360", True) == V.card_name(card, 640, 360, True)
+            and CARD.default_png(thumb, "youtube-short") == pub / piece / f"{piece}--c02.youtube-short.png"
+            and CARD.default_png(proof, "youtube-thumbnail") == pub / "thumbnail.youtube-thumbnail.png",
+            [CARD.default_png(card, "640x360"), CARD.default_png(thumb, "youtube-short"),
+             CARD.default_png(proof, "youtube-thumbnail")])
+    got = [V.deliverable_path(Path(f"{piece}.master.mp4"), "youtube.short", "c01", True, ".mp4"),
+           V.deliverable_path(Path("talk-cam-a.mp4"), "youtube.short", None, False, ".mp4"),
+           K.default_srt(f"{piece}.youtube-long.en-GB.srt"), K.default_srt("talk-cam-a.youtube-long.en-GB.srt"),
+           F.render_path(f"{piece}.podcast-feed-audio.mp3"), F.render_path("fixture-show.podcast-cover.jpg")]
+    verdict("a deliverable, timed captions and a feed episode's render default to the piece's folder of "
+            "publishing/src/renders/, and a name with no piece key to its top (D64)",
+            got == [pub / piece / f"{piece}--c01.youtube-short.burned.mp4", pub / "talk-cam-a.youtube-short.mp4",
+                    pub / piece / f"{piece}.youtube-long.en-GB.srt", pub / "talk-cam-a.youtube-long.en-GB.srt",
+                    pub / piece / f"{piece}.podcast-feed-audio.mp3", pub / "fixture-show.podcast-cover.jpg"], got)
 
 
 def test_captions(verdict, cli, root: Path) -> None:
@@ -1174,6 +1451,7 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
             and "Output format of the narration row" in out
             and "| ch00 | Opening credits | 008-fixture-voice-format.ch00.md | ai | p01.t1 |" in reg,
             out + reg)
+    test_takes(verdict, cli)
     chapter = root / "manuscript/src/01-the-ford/01-the-ford.md"
     A.USE_PANDOC = False
     try:
@@ -1252,6 +1530,12 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
                 and [c["pause_after"] for c in side] == [2.0, 2.0, 0.0], chunk + str(side))
     else:
         skip("audiobook text through pandoc", "pandoc is not installed")
+    alt = Path(str(root) + "-where")   # a project outside any work tree: where's plain list, filtered
+    C.ROOT = alt
+    try:
+        test_where(verdict, cli, alt, False)
+    finally:
+        C.ROOT = root
     if not have_git:
         skip("flags, check and check --setup in a git repository", "git is not installed")
         return
@@ -1298,6 +1582,7 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
     code, out = cli("flags", root / "publishing", "--piece", "001-fixture")
     verdict("flags PATH --piece keeps the piece's files under that path",
             code == 0 and "VERIFY: 1" in out and "AUTHOR TO CONFIRM: 0" in out, out)
+    test_where(verdict, cli, root, True)
     code, out = cli("check")
     verdict("check is clean on a fresh repository", code == 0, out)
     verdict("the project root is the toolkit's parent, never git's top level", C._find_root() == C.TOOLKIT.parent)
@@ -1380,6 +1665,174 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
             os.environ["HOME"] = saved_home
 
 
+def voice_register(piece: str, rows: list) -> str:
+    """A segment register for the take fixtures: one [[segment]] per (id, take, file, status, archived)."""
+    text = (f'[voiceover]\npiece = "{piece}"\nvoice_use = "voiceover"\nmodel_id = "eleven_v4"\n'
+            'output_format = "mp3_44100_128"\nper_cue = false\n')
+    for sid, take, file, status, archived in rows:
+        text += (f'\n[[segment]]\nid = "{sid}"\nscript_lines = "1.1"\ntext = "The ferry is late again."\n'
+                 f'request = "The ferry is late again."\ntake = {take}\nfile = "{file}"\ncharacters = 24\n'
+                 f'pause_after = 0.3\nstatus = "{status}"\narchived = "{archived}"\n')
+    return text
+
+
+def test_takes(verdict, cli) -> None:
+    """take add across both layouts (DESIGN D64, D65, Section 6.6): a take in the piece's takes/
+    folder, a re-roll after a flat take an earlier release left and back, a mixed register, and the
+    refusals (a voice trial, the piece's own folder beside takes/, another piece's takes/)."""
+    gen = C.path(C.VO_GENERATED)
+    piece = "003-fixture-mp3"   # its s01 holds a flat t1, named by test_repo's first take add
+    reg = C.path(C.VOICEOVER) / f"{piece}.toml"
+    write(reg, C.read_text(reg).replace('status = "generated"', 'status = "approved"')
+          .replace('archived = ""', 'archived = "F0042"'))   # t1 heard, approved and archived
+    takes = gen / piece / "takes"
+    fresh = write(takes / "tts_The_f_20261005_090000.mp3", "fake re-roll")
+    code, out = cli("take", "add", fresh, "--piece", piece, "--segment", "s01")
+    seg = C.load_toml(reg)["segment"][0]
+    verdict("take add names a take where it lies in the piece's takes/ folder, a re-roll after a flat take an "
+            "earlier release left numbered t2, and resets status to generated and archived to empty (D64, D65, "
+            "Section 6.6)",
+            code == 0 and (takes / f"{piece}.s01.t2.mp3").is_file() and (gen / f"{piece}.s01.t1.mp3").is_file()
+            and not fresh.exists() and seg["take"] == 2
+            and seg["file"] == f"generated/{piece}/takes/{piece}.s01.t2.mp3"
+            and seg["status"] == "generated" and seg["archived"] == "", out + C.read_text(reg))
+    fresh = write(gen / "tts_The_f_20261005_090100.mp3", "fake flat re-roll")
+    code, out = cli("take", "add", fresh, "--piece", piece, "--segment", "s01")
+    seg = C.load_toml(reg)["segment"][0]
+    verdict("take add still names a take flat in generated/ where it lies, numbered after the takes/ folder's "
+            "t2, and says where new calls write (D65)",
+            code == 0 and (gen / f"{piece}.s01.t3.mp3").is_file() and not (takes / f"{piece}.s01.t3.mp3").exists()
+            and seg["take"] == 3 and seg["file"] == f"generated/{piece}.s01.t3.mp3"
+            and f"{C.VO_GENERATED}/{piece}/takes/" in out, out)
+    homes = (takes, gen)
+    verdict("next_take numbers after the highest take in either layout and after the register's own take, "
+            "per segment", A.next_take(homes, f"{piece}.s01") == 4 and A.next_take(homes, f"{piece}.s01", 7) == 8
+            and A.next_take(homes, f"{piece}.s02") == 1 and A.next_take(takes, f"{piece}.s01") == 3,
+            [A.next_take(homes, f"{piece}.s01"), A.next_take(homes, f"{piece}.s01", 7)])
+    mixed = "006-fixture-mixed"
+    write(gen / f"{mixed}.s01.t1.mp3", "fake flat take")
+    # s02's t2 was rejected and archived, and its local copy is gone: only the register remembers it
+    mreg = write(C.path(C.VOICEOVER) / f"{mixed}.toml", voice_register(mixed, [
+        ("s01", 1, f"generated/{mixed}.s01.t1.mp3", "approved", "F0007"),
+        ("s02", 2, f"generated/{mixed}/takes/{mixed}.s02.t2.mp3", "rejected", "F0008")]))
+    fresh = write(gen / mixed / "takes" / "tts_Every_20261005_090200.mp3", "fake take")
+    code, out = cli("take", "add", fresh, "--piece", mixed, "--segment", "s02")
+    rows = C.load_toml(mreg)["segment"]
+    verdict("a mixed register: take add writes s02's take in its takes/ folder, numbered after the register's "
+            "own take where that take's local copy is gone (t3), and leaves s01's flat file, take, status and "
+            "archived as they were (D65)",
+            code == 0 and rows[0]["file"] == f"generated/{mixed}.s01.t1.mp3" and rows[0]["take"] == 1
+            and rows[0]["status"] == "approved" and rows[0]["archived"] == "F0007" and rows[1]["take"] == 3
+            and rows[1]["file"] == f"generated/{mixed}/takes/{mixed}.s02.t3.mp3" and rows[1]["status"] == "generated"
+            and rows[1]["archived"] == "", out + C.read_text(mreg))
+    # a flat raw-PCM t1 the register no longer records (restored from Git), then an MP3 re-roll in takes/
+    lost = "007-fixture-restored"
+    write(gen / f"{lost}.s01.t1.pcm", "fake flat pcm take")
+    lreg = write(C.path(C.VOICEOVER) / f"{lost}.toml", voice_register(lost, [("s01", 0, "", "", "")]))
+    fresh = write(gen / lost / "takes" / "tts_The_f_20261005_090250.mp3", "fake take")
+    code, out = cli("take", "add", fresh, "--piece", lost, "--segment", "s01")
+    seg = C.load_toml(lreg)["segment"][0]
+    verdict("take add numbers a re-roll after every take of its segment in both layouts, by name, whatever the "
+            "extension, where the register no longer records the flat one (t2 after a flat t1.pcm; D65)",
+            code == 0 and seg["take"] == 2 and seg["file"] == f"generated/{lost}/takes/{lost}.s01.t2.mp3"
+            and (gen / f"{lost}.s01.t1.pcm").is_file(), out + C.read_text(lreg))
+    before, logged = C.read_text(reg), C.read_text(C.path(C.CREDITS_LOG))
+    trial = write(gen / "voice-trials" / "warm-narrator" / "tts_Hello_20261005_090300.mp3", "fake trial")
+    code, out = cli("take", "add", trial, "--piece", piece, "--segment", "s01")
+    verdict("take add refuses a voice trial, which is never a take (exit 2: nothing renamed, no register or "
+            "credits-log row; D21)", code == 2 and "never a take" in out and trial.is_file()
+            and C.read_text(reg) == before and C.read_text(C.path(C.CREDITS_LOG)) == logged, out)
+    scratch = write(gen / piece / "tts_The_f_20261005_090400.mp3", "fake")
+    other = write(gen / "004-fixture-pcm" / "takes" / "tts_The_f_20261005_090500.mp3", "fake")
+    code1, out1 = cli("take", "add", scratch, "--piece", piece, "--segment", "s01")
+    code2, out2 = cli("take", "add", other, "--piece", piece, "--segment", "s01")
+    verdict("take add refuses a file in the piece's own folder beside takes/, where scratch tracks sit, and one "
+            "in another piece's takes/ (exit 2, nothing renamed)",
+            code1 == 2 and code2 == 2 and scratch.is_file() and other.is_file() and f"{piece}/takes" in out1
+            and C.read_text(reg) == before, out1 + out2)
+
+
+WHERE_PIECE = "010-fixture-where"
+
+
+def where_fixture(base: Path) -> tuple:
+    """A piece's files in every layer and in its ignored per-piece folders, written under base:
+    (the tracked or trackable paths where must print, the ignored files it must never name)."""
+    p = WHERE_PIECE
+    tracked = [f"scripts/src/pieces/{p}/brief.md", f"production/src/edits/{p}.toml",
+               f"production/src/voiceover/{p}.toml", f"production/src/timing/{p}.words.json",
+               f"production/src/timing/{p}.words-check.md", f"production/src/timing/{p}.mouth.json",
+               f"production/src/scenes/{p}.cues.json", f"production/src/scenes/{p}.scene.py",
+               f"publishing/src/posts/{p}.md"]
+    ignored = [f"production/src/renders/{p}/{p}.master.mp4", f"production/src/renders/{p}/{p}.voice.wav",
+               f"production/src/renders/{p}/timing/{p}.levels.json",
+               f"production/src/renders/{p}/timing/{p}.words-check.md",
+               f"production/src/renders/{p}.flat-extract.wav",
+               f"production/src/voiceover/generated/{p}/takes/{p}.s01.t1.mp3",
+               f"production/src/voiceover/generated/{p}/{p}.s01.scratch.wav",
+               f"production/src/footage/raw/{p}.recording.wav"]
+    text = {"words-check.md": "<!-- AUTHOR TO CONFIRM: the word 'Tharvel' -->\n",
+            "scene.py": "# VERIFY: the walk's speed\n"}
+    for rel in tracked:
+        write(base / rel, next((t for end, t in text.items() if rel.endswith(end)), "{}\n"))
+    for rel in ignored:
+        write(base / rel, "<!-- VERIFY: never read -->\n")
+    write(base / "production/src/timing/011-other.words.json", "{}\n")
+    return tracked, ignored
+
+
+def where_lines(out: str) -> tuple:
+    """(the file lines, {folder: state}) of where's output."""
+    files, folders, section = [], {}, "files"
+    for line in out.splitlines():
+        if line.startswith("ignored per-piece folders"):
+            section = "folders"
+        elif line.startswith("  ") and not line.strip().startswith("note:"):
+            if section == "files":
+                files.append(line.strip())
+            else:
+                name, state = line.split()[0], line.split()[-1]
+                folders[name] = state
+    return files, folders
+
+
+def test_where(verdict, cli, root: Path, in_tree: bool) -> None:
+    """where PIECE (DESIGN D50, D64): the piece's files, gathered as flags --piece gathers them, then
+    its three ignored per-piece folders by name, each said to exist or not; never a file inside an
+    output folder or the footage mirror, inside a Git work tree (in_tree: root is the self-test's
+    repository, with its ignore rules) or outside one, where the plain list is filtered."""
+    p = WHERE_PIECE
+    tracked, ignored = where_fixture(root)
+    code, out = cli("where", p)
+    files, folders = where_lines(out)
+    names = {Path(rel).name for rel in tracked}   # a working copy may share a tracked file's name
+    leaked = [rel for rel in ignored if rel in out or (Path(rel).name in out and Path(rel).name not in names)]
+    state = "inside a Git work tree" if in_tree else "outside a Git work tree"
+    verdict(f"where lists the piece's tracked files across the layers, timing/ and scenes/ among them, and "
+            f"names its ignored per-piece folders, existing or not, never listing what is inside them ({state})",
+            code == 0 and sorted(files) == sorted(tracked) and not leaked and "011-other" not in out
+            and folders == {f"{C.PROD_RENDERS}/{p}/": "exists", f"{C.VO_GENERATED}/{p}/": "exists",
+                            f"{C.PUB_RENDERS}/{p}/": "absent"}
+            and (in_tree or C.in_work_tree(root) or "not inside a Git work tree" in out),
+            out + f"\nleaked: {leaked}")
+    if not in_tree:
+        return
+    notes = write(root / f"scripts/src/pieces/{p}/ignored-notes.md", "<!-- VERIFY: never read -->\n")
+    code, out = cli("where", p)
+    verdict("where leaves out a file Git ignores in the piece's own folder (D50)",
+            code == 0 and "ignored-notes" not in out and notes.is_file(), out)
+    code, out = cli("flags", "--piece", p, "--strict")
+    verdict("flags --piece gathers the piece's files in production/src/timing/ and production/src/scenes/, and "
+            "never the working copies in its ignored timing/ folder (D50, D64)",
+            code == 1 and "AUTHOR TO CONFIRM: 1" in out and "VERIFY: 1" in out
+            and f"production/src/timing/{p}.words-check.md:1" in out
+            and f"production/src/scenes/{p}.scene.py:1" in out and "never read" not in out, out)
+    code1, out1 = cli("where", "012-no-such-piece")
+    code2, out2 = cli("where", "Fixture")
+    verdict("where refuses a piece with no folder and a name that is not a piece's (exit 2)",
+            code1 == 2 and "no piece folder" in out1 and code2 == 2 and "not a piece name" in out2, out1 + out2)
+
+
 def lavfi(*args) -> None:
     subprocess.run(["ffmpeg", "-v", "error", "-y"] + [str(a) for a in args], check=True)
 
@@ -1396,13 +1849,18 @@ def test_media(verdict, skip, cli, root: Path) -> None:
     info = json.loads(out2) if code2 == 0 else {}
     verdict("footage add reads a video's duration; probe --json reports it", code == 0 and code2 == 0
             and abs(info.get("duration", 0) - 3.0) < 0.1, out + out2)
+    # A master an earlier release left flat (DESIGN D65): a source like any other, whose outputs
+    # still go to the piece's own folders (D64).
     master = C.path(C.PROD_RENDERS) / "001-fixture.master.mp4"
     shutil.copy2(src, master)
+    pub = C.path(C.PUB_RENDERS) / "001-fixture"
     code, out = cli("cut", master, "--deliverable", "youtube.short", "--in", "00:00:00.500", "--out",
                     "00:00:02.500", "--cut", "c01")
-    made = C.path(C.PUB_RENDERS) / "001-fixture--c01.youtube-short.mp4"
-    verdict("cut makes youtube.short at 1080x1920, H.264, moov first, frame-accurate length",
-            code == 0 and made.is_file() and "verified" in out, out)
+    made = pub / "001-fixture--c01.youtube-short.mp4"
+    verdict("cut makes youtube.short at 1080x1920, H.264, moov first, frame-accurate length, in the piece's "
+            "folder of publishing/src/renders/ (D64)",
+            code == 0 and made.is_file() and "verified" in out
+            and not (C.path(C.PUB_RENDERS) / made.name).exists(), out)
     code, out = cli("cut", master, "--deliverable", "instagram.reel", "--in", "0", "--out", "3",
                     "--frame", "pad", "--cut", "c02")
     verdict("cut --frame pad fills 9:16 over a blurred copy", code == 0, out)
@@ -1410,7 +1868,7 @@ def test_media(verdict, skip, cli, root: Path) -> None:
     verdict("an over-long cut fails before it renders", code == 1 and "nothing rendered" in out, out)
     code, out = cli("cut", master, "--deliverable", "instagram.reel", "--in", "0", "--out", "2", "--cut", "c08")
     verdict("a cut under min_seconds fails before it renders", code == 1 and "min_seconds" in out
-            and "nothing rendered" in out and not (C.path(C.PUB_RENDERS) / "001-fixture--c08.instagram-reel.mp4").exists(), out)
+            and "nothing rendered" in out and not (pub / "001-fixture--c08.instagram-reel.mp4").exists(), out)
     with contextlib.redirect_stdout(io.StringIO()):
         found = V.verify(master, C.preset("youtube.short", quiet=True))
     verdict("a wrong aspect fails the deliverable's verification", any("640x360" in f for f in found), found)
@@ -1418,12 +1876,13 @@ def test_media(verdict, skip, cli, root: Path) -> None:
                 K.srt_text([K.Cue(0.6, 1.9, ["The ferry is late again."]), K.Cue(2.0, 2.4, ["Late."])]))
     code, out = cli("cut", master, "--deliverable", "youtube.short", "--in", "00:00:00.500", "--out",
                     "00:00:02.500", "--cut", "c01", "--captions", srt)
-    burned = C.path(C.PUB_RENDERS) / "001-fixture--c01.youtube-short.burned.mp4"
+    burned = pub / "001-fixture--c01.youtube-short.burned.mp4"
     verdict("cut --captions burns in the cutting pass (-copyts) with the caption font found",
             code == 0 and burned.is_file(), out)
-    code, out = cli("captions", "burn", made, srt, "--deliverable", "youtube.short", "-o",
-                    C.path(C.PUB_RENDERS) / "burn-ok.mp4")
-    verdict("captions burn writes the ASS at the output size and keeps the font", code == 0, out)
+    burned.unlink(missing_ok=True)
+    code, out = cli("captions", "burn", made, srt, "--deliverable", "youtube.short")
+    verdict("captions burn writes the ASS at the output size and keeps the font, its render named <stem>.burned "
+            "in the piece's folder (D64)", code == 0 and burned.is_file(), out)
     good = C.read_text(C.path(C.TOKENS))
     write(C.path(C.TOKENS), good.replace("--caption-font:", "--caption-font: NoSuchBrandFont, "))
     code, out = cli("captions", "burn", made, srt, "--deliverable", "youtube.short", "-o",
@@ -1440,25 +1899,46 @@ def test_media(verdict, skip, cli, root: Path) -> None:
         got = A.ebur128(C.path(C.PROD_RENDERS) / f"001-fixture.master.{target}.mp4")["I"]
         verdict(f"loudness normalise lands within 1 LU of {target} ({want:g})", code == 0 and abs(got - want) <= 1.0, out)
     code, out = cli("extract-audio", master, "--in", "00:00:01.000", "--out", "00:00:02.500")
-    wav = C.path(C.PROD_RENDERS) / "001-fixture.master.00-00-01-000-00-00-02-500.wav"
+    wav = C.path(C.PROD_RENDERS) / "001-fixture" / "001-fixture.master.00-00-01-000-00-00-02-500.wav"
     info = C.probe(wav) if wav.is_file() else {}
     a = C.streams(info, "audio")
-    verdict("extract-audio writes mono 16 kHz WAV of the range", code == 0 and a and a[0]["channels"] == 1
+    verdict("extract-audio writes mono 16 kHz WAV of the range, in the piece's folder of production/src/renders/ "
+            "(D64)", code == 0 and a and a[0]["channels"] == 1
             and a[0]["sample_rate"] == "16000" and abs(C.duration(info) - 1.5) < 0.05, out)
+    footage = C.path(C.RAW) / src.name   # a footage file's stem carries no piece key
+    code, out = cli("extract-audio", footage)
+    pinned = C.path(C.PROD_RENDERS) / "001-fixture" / "camera clip.wav"
+    code2, out2 = cli("extract-audio", footage, "-o", pinned)
+    verdict("extract-audio writes a stem with no piece key at the top of production/src/renders/, and -o wins "
+            "(production/workflows/08-bring-in-a-recording/ passes the piece's folder; D64, ruling T5)",
+            code == 0 and (C.path(C.PROD_RENDERS) / "camera clip.wav").is_file() and code2 == 0
+            and pinned.is_file() and not (C.path(C.PROD_RENDERS) / "camera clip").exists(), out + out2)
+    keyed = work / "001-fixture.room.wav"   # outside every output folder, its name keyed to a piece
+    lavfi("-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=3,volume=0.2", keyed)
+    code, out = cli("loudness", "normalise", keyed, "--target", "social")
+    verdict("loudness normalise writes a source from outside the output folders into its piece's folder of "
+            "production/src/renders/ (D64)", code == 0
+            and (C.path(C.PROD_RENDERS) / "001-fixture" / "001-fixture.room.social.wav").is_file(), out)
     code, out = cli("frame", master, "--at", "00:00:01.000")
-    verdict("frame writes one PNG still", code == 0 and (C.path(C.PUB_RENDERS) /
-                                                          "001-fixture.master.00-00-01-000.png").is_file(), out)
+    verdict("frame writes one PNG still, in the piece's folder", code == 0
+            and (pub / "001-fixture.master.00-00-01-000.png").is_file(), out)
     still = work / "still.png"
     lavfi("-f", "lavfi", "-i", "testsrc2=size=800x600:rate=1:duration=1", "-frames:v", "1", still)
     tone = work / "episode.wav"
     lavfi("-f", "lavfi", "-i", "sine=frequency=330:sample_rate=48000:duration=2", tone)
     code, out = cli("still-video", still, tone, "--deliverable", "youtube.long")
-    verdict("still-video puts a still under audio at the deliverable's size", code == 0, out)
+    code2, out2 = cli("frame", src, "--at", "00:00:01.000")
+    top = C.path(C.PUB_RENDERS)
+    verdict("still-video puts a still under audio at the deliverable's size; it, and frame, write a name with no "
+            "piece key (episode.wav, camera clip.mp4) at the top of publishing/src/renders/ (D64)",
+            code == 0 and (top / "episode.youtube-long.mp4").is_file() and code2 == 0
+            and (top / "camera clip.00-00-01-000.png").is_file(), out + out2)
     code, out = cli("encode", master, "--deliverable", "podcast.apple_rss_audio")
-    verdict("encode makes an audio deliverable at the podcast loudness", code == 0 and "podcast target" in out, out)
+    verdict("encode makes an audio deliverable at the podcast loudness, in the piece's folder",
+            code == 0 and "podcast target" in out and (pub / "001-fixture.podcast-apple-rss-audio.m4a").is_file(), out)
     code, out = cli("cut", master, "--deliverable", "podcast.apple_rss_audio", "--in", "00:00:00.500",
                     "--out", "00:00:02.000", "--cut", "c03")
-    clip = C.path(C.PUB_RENDERS) / "001-fixture--c03.podcast-apple-rss-audio.m4a"
+    clip = pub / "001-fixture--c03.podcast-apple-rss-audio.m4a"
     info = C.probe(clip) if clip.is_file() else {}
     verdict("cut makes an audio deliverable: trimmed, sound only, AAC",
             code == 0 and not C.streams(info, "video") and abs(C.duration(info) - 1.5) < 0.1, out)
@@ -1517,11 +1997,15 @@ def test_assemble(verdict, skip, cli, root: Path, work: Path) -> None:
     talk = work / "talk.wav"
     lavfi("-f", "lavfi", "-i", "sine=frequency=200:sample_rate=48000:duration=3", talk)
     cli("footage", "add", talk, "--kind", "audio", "--location", "Recorder B")
+    # a mixed register (DESIGN D65): s01's take flat in generated/, as an earlier release left it, and
+    # s02's in the piece's generated/<piece>/takes/ (D64); every reader opens the path its row names
     gen = C.path(C.VO_GENERATED)
+    takes = gen / "005-assembly" / "takes"
+    takes.mkdir(parents=True, exist_ok=True)
     lavfi("-f", "lavfi", "-i", "sine=frequency=250:sample_rate=44100:duration=4", "-c:a", "libmp3lame",
           "-b:a", "128k", gen / "005-assembly.s01.t1.mp3")
     lavfi("-f", "lavfi", "-i", "sine=frequency=300:sample_rate=22050:duration=5", "-f", "s16le", "-ac", "1",
-          gen / "005-assembly.s02.t1.pcm")
+          takes / "005-assembly.s02.t1.pcm")
     write(C.path(C.VOICEOVER) / "005-assembly.toml", """[voiceover]
 piece = "005-assembly"
 voice_use = "voiceover"
@@ -1547,7 +2031,7 @@ script_lines = "2.1-2.2"
 text = "So the timetable is a promise. The sea never signed it, and nobody asked."
 request = "So the timetable is a promise. The sea never signed it, and nobody asked."
 take = 1
-file = "generated/005-assembly.s02.t1.pcm"
+file = "generated/005-assembly/takes/005-assembly.s02.t1.pcm"
 characters = 73
 pause_after = 0.3
 status = "approved"
@@ -1556,10 +2040,12 @@ archived = ""
     w, h = 640, 360
     html = write(C.path(C.CARDS) / "005-assembly.title.html", "<!doctype html><html lang=\"en-GB\"></html>\n")
     endcard = write(C.path(C.CARDS) / "005-assembly.end.html", "<!doctype html><html lang=\"en-GB\"></html>\n")
-    lavfi("-f", "lavfi", "-i", f"color=c=0x1c232b:s={w}x{h}", "-frames:v", "1",
-          C.path(C.PROD_RENDERS) / f"005-assembly.title.{w}x{h}.png")
-    lavfi("-f", "lavfi", "-i", f"color=c=white@0.5:s={w}x{h},format=rgba", "-frames:v", "1",
-          C.path(C.PROD_RENDERS) / f"005-assembly.end.{w}x{h}.png")
+    # the card PNGs assemble would render, already fresh in the piece's cards/ folder: the title as a
+    # clip, the end card as an overlay, whose render is named .transparent (D47, D64)
+    title_png, end_png = V.card_name(html, w, h, False), V.card_name(endcard, w, h, True)
+    title_png.parent.mkdir(parents=True, exist_ok=True)
+    lavfi("-f", "lavfi", "-i", f"color=c=0x1c232b:s={w}x{h}", "-frames:v", "1", title_png)
+    lavfi("-f", "lavfi", "-i", f"color=c=white@0.5:s={w}x{h},format=rgba", "-frames:v", "1", end_png)
     C.path(C.ASSETS).mkdir(parents=True, exist_ok=True)
     shutil.copy2(work / "still.png", C.path(C.ASSETS) / "harbour.png")
     video, bed = kind_id("video"), kind_id("music")
@@ -1620,22 +2106,26 @@ duck = true
 """)
     total = 2.0 + 3.0 - 0.5 + 1.0 + 1.5 - 0.4
     code, out = cli("assemble", edl)
-    master = C.path(C.PROD_RENDERS) / "005-assembly.master.mp4"
+    master = C.path(C.PROD_RENDERS) / "005-assembly" / "005-assembly.master.mp4"
     info = C.probe(master) if master.is_file() else {}
-    verdict("assemble: a clip, a push-in still with a fade, a colour clip, a card, an overlay, a voice "
-            "register and a ducked, trimmed, faded bed", code == 0 and abs(C.duration(info) - total) < 0.1, out)
+    verdict("assemble: a clip, a push-in still with a fade, a colour clip, a card, an overlay, a mixed voice "
+            "register (one take flat, one in its piece's takes/, each read by its row's file, D65) and a "
+            "ducked, trimmed, faded bed, the master in its piece's folder (D64)",
+            code == 0 and abs(C.duration(info) - total) < 0.1, out)
     if master.is_file():
         got = A.ebur128(master)["I"]
         verdict("assemble lands the master within 1 LU of the social target", abs(got - (-14.0)) <= 1.0, got)
     code, out = cli("captions", "from-segments", C.path(C.VOICEOVER) / "005-assembly.toml", "--deliverable",
                     "youtube.long", "--offset", "00:00:00.200")
-    cues = K.read_srt(C.path(C.PUB_RENDERS) / "005-assembly.youtube-long.en-GB.srt")
+    timed = C.path(C.PUB_RENDERS) / "005-assembly" / "005-assembly.youtube-long.en-GB.srt"
+    cues = K.read_srt(timed) if timed.is_file() else []
     d1 = K.segment_duration(C.path(C.VO_GENERATED) / "005-assembly.s01.t1.mp3")
     starts = [round(c.start, 3) for c in cues]
     join = round(0.2 + d1 + 0.4, 3)
-    verdict("from-segments: several cues per segment, each segment's first cue exactly on its join",
+    verdict("from-segments: several cues per segment, each segment's first cue exactly on its join, written to "
+            "the piece's folder in publishing/src/renders/ (D64)",
             code == 0 and len(cues) >= 4 and starts[0] == 0.2 and join in starts
-            and abs(cues[-1].end - (join + K.segment_duration(C.path(C.VO_GENERATED) / "005-assembly.s02.t1.pcm"))) < 0.002,
+            and abs(cues[-1].end - (join + K.segment_duration(takes / "005-assembly.s02.t1.pcm"))) < 0.002,
             out + str(starts))
     rec = write(C.path(C.CAPTIONS) / "005-assembly.F0001.en-GB.srt",
                 K.srt_text([K.Cue(0.6, 1.8, ["On the recording."]), K.Cue(3.0, 3.8, ["Outside the clip."])]))
@@ -1646,10 +2136,11 @@ duck = true
             code == 0 and len(moved) == 1 and abs(moved[0].start - 0.1) < 1e-6, K.srt_text(moved))
     register = C.path(C.VOICEOVER) / "005-assembly.toml"
     held = C.read_text(register)
-    code, out = cli("footage", "add", C.path(C.VO_GENERATED) / "005-assembly.s02.t1.pcm", "--kind", "generated",
+    code, out = cli("footage", "add", takes / "005-assembly.s02.t1.pcm", "--kind", "generated",
                     "--location", "Archive drive A")
     seg = C.load_toml(register)["segment"][1]
-    verdict("footage add --kind generated writes the take's F ID into its segment's archived",
+    verdict("footage add --kind generated writes the take's F ID into its segment's archived, the take in "
+            "its piece's takes/ folder (D64)",
             code == 0 and re.fullmatch(r"F\d{4}", seg.get("archived", "")) is not None
             and f'wrote archived = "{seg.get("archived")}"' in out, out + C.read_text(register))
     write(register, held.replace('status = "approved"\narchived = ""', 'status = "generated"\narchived = ""'))
@@ -1742,7 +2233,7 @@ in = "00:00:00.000"
 out = "00:00:01.000"
 """)
     code, out = cli("assemble", vfr)
-    made = C.path(C.PROD_RENDERS) / "013-vfr.master.mp4"
+    made = C.path(C.PROD_RENDERS) / "013-vfr" / "013-vfr.master.mp4"
     v = C.streams(C.probe(made), "video") if made.is_file() else []
     verdict("assemble snaps a variable-rate first clip to a standard rate, and says so",
             code == 0 and v and V.is_standard(C.rate(v[0].get("avg_frame_rate"))) and "not a standard rate" in out,
@@ -1760,14 +2251,16 @@ out = "00:00:01.000"
         write(C.path(C.TOKENS), C.read_text(C.path(C.TOKENS)))
         os.utime(real, None)
         try:
-            with contextlib.redirect_stdout(io.StringIO()):
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                 png = V.card_png(real, w, h, transparent=False)
-            verdict("a stale card is rendered again with card.py", png.is_file() and
-                    png.stat().st_mtime >= real.stat().st_mtime)
+            verdict("a stale card is rendered again with card.py, into its piece's cards/ folder", png.is_file()
+                    and png.stat().st_mtime >= real.stat().st_mtime
+                    and png.parent == C.path(C.PROD_RENDERS) / "005-assembly" / "cards", png)
         except (C.Fatal, C.Finding) as err:
-            verdict("a stale card is rendered again with card.py", False, err)
+            verdict("a stale card is rendered again with card.py, into its piece's cards/ folder", False, err)
     else:
-        skip("a stale card is rendered again with card.py", "uv or Playwright's Chromium is not installed")
+        skip("a stale card is rendered again with card.py, into its piece's cards/ folder",
+             "uv or Playwright's Chromium is not installed")
     audio_edl = write(C.path(C.EDITS) / "006-podcast.toml", f"""[edit]
 piece = "006-podcast"
 size = ""
@@ -1797,9 +2290,9 @@ fade_out = 0.5
 role = "music"
 """)
     code, out = cli("assemble", audio_edl)
-    wav = C.path(C.PROD_RENDERS) / "006-podcast.master.wav"
+    wav = C.path(C.PROD_RENDERS) / "006-podcast" / "006-podcast.master.wav"
     info = C.probe(wav) if wav.is_file() else {}
-    verdict("an audio master (size = \"\") is sound only, cut from clips under a faded bed",
+    verdict("an audio master (size = \"\") is sound only, cut from clips under a faded bed, in its piece's folder",
             code == 0 and not C.streams(info, "video") and abs(C.duration(info) - (1.0 + 1.0 - 0.3)) < 0.05, out)
     bad = write(C.path(C.EDITS) / "007-missing.toml", '[edit]\npiece = "007-missing"\nsize = "640x360"\n\n'
                 '[[clip]]\nid = "c01"\nsource = "F0099"\nin = "0"\nout = "2"\n')
@@ -1824,7 +2317,7 @@ def test_stills(verdict, cli) -> None:
                 'loudness = "none"\n' + "".join(f'\n[[clip]]\nsource = "production/src/assets/stills/{n}"\n'
                                                  "seconds = 0.16\n" for n in names))
     code, out, stage = spied_assemble(cli, edl)
-    master = C.path(C.PROD_RENDERS) / "014-stills.master.mp4"
+    master = C.path(C.PROD_RENDERS) / "014-stills" / "014-stills.master.mp4"
     seen = frame_colours(master) if code == 0 and master.is_file() else []
     bounds = [(48 * k + 5) // 10 for k in range(41)]   # round(0.16 k x 30), half up
     want = [k for k in range(40) for _ in range(bounds[k + 1] - bounds[k])]
@@ -1861,7 +2354,7 @@ def test_stills(verdict, cli) -> None:
                 + src.format("j1.jpg") + 'seconds = 0.2\nframe = "crop"\n\n[[clip]]\n' + src.format("j2.jpg")
                 + 'seconds = 0.2\nframe = "crop"\n')
     code, out, stage = spied_assemble(cli, edl)
-    master = C.path(C.PROD_RENDERS) / "015-mixed.master.mp4"
+    master = C.path(C.PROD_RENDERS) / "015-mixed" / "015-mixed.master.mp4"
     seen = frame_colours(master) if code == 0 and master.is_file() else []
     # Ends at 0.37, 0.62, 1.14, 1.39 (from 0.94: a 0.2 s fade), 1.56, 1.96, 2.16, 2.36 s: frames 11, 19, 34, 42
     # (from 28), 47, 59, 65 and 71. Per-clip rounding (0.37 s as 12 frames) puts the colour on frame 12.
@@ -1907,7 +2400,7 @@ def test_still_sources(verdict, cli, stills: Path) -> None:
         body += f'\n[[clip]]\nsource = "production/src/assets/stills/src-{name}"\nseconds = 0.2\nframe = "{frame}"\n'
     edl = write(C.path(C.EDITS) / "018-sources.toml", body)
     code, out, stage = spied_assemble(cli, edl)
-    master = C.path(C.PROD_RENDERS) / "018-sources.master.mp4"
+    master = C.path(C.PROD_RENDERS) / "018-sources" / "018-sources.master.mp4"
     seen = frame_colours(master, "16:16:152:82") if code == 0 and master.is_file() else []
     off = [(f, seen[f]) for f in range(len(seen)) if f // 6 < len(plan) and max(
         abs(x - y) for x, y in zip(seen[f], bytes.fromhex(plan[f // 6][2]))) > 12]
@@ -1943,7 +2436,7 @@ def test_overlays(verdict, cli) -> None:
             + 'at = "00:00:00.370"\nuntil = "00:00:00.620"\n')
     edl = write(C.path(C.EDITS) / "016-overlays.toml", text)
     code, out = cli("assemble", edl)
-    master = C.path(C.PROD_RENDERS) / "016-overlays.master.mp4"
+    master = C.path(C.PROD_RENDERS) / "016-overlays" / "016-overlays.master.mp4"
     made = code == 0 and master.is_file()
     halves = {"left": frame_colours(master, "16:16:8:10") if made else [],
               "right": frame_colours(master, "16:16:40:10") if made else []}
@@ -2000,7 +2493,7 @@ def test_held_sound(verdict, cli, work: Path) -> None:
                     + src.format("a.png") + "seconds = 2.0\n\n[[clip]]\n" + src.format("b.png")
                     + f"seconds = {second}\n\n[[audio]]\n" + src.format("tone.wav") + 'role = "music"\n')
         code, out = cli("assemble", edl)
-        return code, out, C.path(C.PROD_RENDERS) / f"{piece}.master.mp4"
+        return code, out, C.path(C.PROD_RENDERS) / piece / f"{piece}.master.mp4"
 
     def ends(p: Path) -> dict:
         """Where each stream of a render ends, from its own probe: {"video": s, "audio": s}."""
@@ -2245,9 +2738,10 @@ def test_audiobook(verdict, cli, root: Path, work: Path) -> None:
     verdict("audiobook master --room-tone FILE loops a recording of the room for the gaps, and passes",
             code == 0 and "room tone: --room-tone" in out and "passes the ACX check" in out, out)
     code, out = cli("cut", mp3, "--deliverable", "audiobook.acx", "--in", "00:00:01.000", "--out", "00:00:06.000")
-    sample = C.path(C.PUB_RENDERS) / "002-fixture-book.audiobook-acx.mp3"
+    sample = C.path(C.PUB_RENDERS) / "002-fixture-book" / "002-fixture-book.audiobook-acx.mp3"
     a = C.streams(C.probe(sample), "audio") if sample.is_file() else []
-    verdict("cut makes an audiobook retail sample: sound only, MP3, 44.1 kHz, mono, held to sample_max_seconds",
+    verdict("cut makes an audiobook retail sample: sound only, MP3, 44.1 kHz, mono, held to sample_max_seconds, "
+            "in the piece's folder of publishing/src/renders/ (the audiobook folder's renders/ stays flat)",
             code == 0 and a and a[0]["codec_name"] == "mp3" and a[0]["sample_rate"] == "44100"
             and a[0]["channels"] == 1 and "sample_max_seconds 300" in out, out)
     overrides = C.path(C.OVERRIDES)
@@ -2351,7 +2845,7 @@ source = "{ids['slide.gif']}"
 seconds = 0.5
 """)
     code, out = cli("assemble", only)
-    master = C.path(C.PROD_RENDERS) / "010-gif.master.mp4"
+    master = C.path(C.PROD_RENDERS) / "010-gif" / "010-gif.master.mp4"
     info = C.probe(master) if master.is_file() else {}
     v = C.streams(info, "video")
     verdict("assemble cuts an animated GIF by in and out and holds a one-frame GIF (never -loop on the gif "
@@ -2385,7 +2879,7 @@ fade_out = 0.5
 role = "music"
 """)
     code, out = cli("assemble", edl)
-    master = C.path(C.PROD_RENDERS) / "011-screen.master.mp4"
+    master = C.path(C.PROD_RENDERS) / "011-screen" / "011-screen.master.mp4"
     info = C.probe(master) if master.is_file() else {}
     verdict("assemble: screen recordings with no sound (WebM VP8 and VP9, MP4, GIF) and a one-frame GIF, "
             "with fades, under a music bed, to the social loudness",
@@ -2436,16 +2930,20 @@ def test_web(verdict, skip, cli, root: Path) -> None:
     work = Path(str(root) + "-web")
     work.mkdir()
     renders = C.path(C.PUB_RENDERS)
-    master = C.path(C.PROD_RENDERS) / "021-web.master.mp4"
+    web = renders / "021-web"   # the piece's own folder, where every default of its outputs lands (D64)
+    master = C.path(C.PROD_RENDERS) / "021-web" / "021-web.master.mp4"
+    for folder in (master.parent, web):
+        folder.mkdir(parents=True, exist_ok=True)
     lavfi("-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30:duration=3", "-f", "lavfi", "-i",
           "sine=frequency=440:sample_rate=48000:duration=3", "-c:v", "libx264", "-preset", "ultrafast",
           "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", master)
-    card = renders / "021-web.blog-featured-image.png"   # what card.py render writes for the key
+    card = web / "021-web.blog-featured-image.png"   # what card.py render writes for the key (default_png)
     lavfi("-f", "lavfi", "-i", "testsrc2=size=1920x1080:rate=1:duration=1", "-frames:v", "1", card)
     have = {fmt: C.image_encoder(fmt) for fmt in ("webp", "avif")}
     code, out = cli("image", card, "--deliverable", "blog.featured_image")
-    got = C.streams(C.probe(renders / "021-web.blog-featured-image.jpg"), "video") if code == 0 else []
-    verdict("image encodes a PNG into the table's first format (jpg) at its size, named <stem>.<platform>-<format>",
+    got = C.streams(C.probe(web / "021-web.blog-featured-image.jpg"), "video") if code == 0 else []
+    verdict("image encodes a PNG into the table's first format (jpg) at its size, named <stem>.<platform>-<format>, "
+            "in the piece's folder (D64)",
             code == 0 and got and got[0]["codec_name"] == "mjpeg" and (got[0]["width"], got[0]["height"]) == (1920, 1080),
             out)
     for fmt, codec in (("webp", "webp"), ("avif", "av1")):
@@ -2453,19 +2951,20 @@ def test_web(verdict, skip, cli, root: Path) -> None:
             skip(f"image --format {fmt}", f"this ffmpeg lacks {'libwebp' if fmt == 'webp' else 'an AV1 encoder or the avif muxer'}")
             continue
         code, out = cli("image", card, "--deliverable", "blog.featured_image", "--format", fmt)
-        made = renders / f"021-web.blog-featured-image.{fmt}"
+        made = web / f"021-web.blog-featured-image.{fmt}"
         got = C.streams(C.probe(made), "video") if made.is_file() else []
         verdict(f"image --format {fmt} writes {codec} at the table's size", code == 0 and got
                 and got[0]["codec_name"] == codec and int(got[0]["width"]) == 1920, out)
     code, out = cli("image", card, "--deliverable", "website.poster", "--format", "png")
     verdict("image refuses a format the table does not list (exit 2)", code == 2 and "not one of" in out, out)
-    share = renders / "021-web.website-og-image.png"
+    share = web / "021-web.website-og-image.png"
     lavfi("-f", "lavfi", "-i", "testsrc2=size=1200x630:rate=1:duration=1", "-frames:v", "1", share)
     held = share.read_bytes()
     code, out = cli("image", share, "--deliverable", "website.og_image", "--format", "png")
     verdict("image of a PNG already at the size, asked for as png, verifies it where it stands and writes nothing",
             code == 0 and "nothing written" in out and share.read_bytes() == held
-            and len(list(renders.glob("021-web.website-og-image*"))) == 1, out)
+            and len(list(web.glob("021-web.website-og-image*"))) == 1
+            and not list(renders.glob("021-web.website-og-image*")), out)
     clear = work / "cover-export.png"   # a design export with transparency
     lavfi("-f", "lavfi", "-i", "color=c=0x204060@0.5:s=3000x3000,format=rgba", "-frames:v", "1", clear)
     code, out = cli("image", clear, "--deliverable", "podcast.id3_cover", "-o", renders / "fixture-show.podcast-id3-cover.jpg")
@@ -2473,8 +2972,10 @@ def test_web(verdict, skip, cli, root: Path) -> None:
     verdict("image flattens a transparent export where alpha = false (podcast.id3_cover, 1400x1400 JPEG)",
             code == 0 and "flattened" in out and got and (got[0]["width"], got[0]["height"]) == (1400, 1400), out)
     code, out = cli("image", clear, "--deliverable", "podcast.cover")
-    got = C.streams(C.probe(renders / "cover-export.podcast-cover.png"), "video") if code == 0 else []
-    verdict("image keeps a PNG cover opaque where alpha = false (no alpha channel)",
+    cover = renders / "cover-export.podcast-cover.png"
+    got = C.streams(C.probe(cover), "video") if code == 0 and cover.is_file() else []
+    verdict("image keeps a PNG cover opaque where alpha = false (no alpha channel), and writes a design export "
+            "whose name has no piece key at the top of publishing/src/renders/ (D64)",
             code == 0 and got and not C.has_alpha(got[0].get("pix_fmt")), out)
     code, out = cli("image", card, "--deliverable", "podcast.cover")
     verdict("image refuses a source of another shape without --frame (exit 2), naming crop and pad",
@@ -2482,7 +2983,7 @@ def test_web(verdict, skip, cli, root: Path) -> None:
     code, out = cli("image", card, "--deliverable", "podcast.cover", "--frame", "crop", "--format", "jpg")
     verdict("image --frame crop fills another shape", code == 0 and "3000x3000" in out, out)
     code, out = cli("image", master, "--deliverable", "website.poster", "--at", "00:00:01.000")
-    poster = renders / "021-web.website-poster.jpg"
+    poster = web / "021-web.website-poster.jpg"
     got = C.streams(C.probe(poster), "video") if poster.is_file() else []
     verdict("image takes a poster from a video at --at, at the poster's size",
             code == 0 and got and (got[0]["width"], got[0]["height"]) == (1920, 1080), out)
@@ -2497,15 +2998,16 @@ def test_web(verdict, skip, cli, root: Path) -> None:
     verdict("image fails an output over max_size (a max_size mutation, exit 1)",
             code == 1 and "over newsletter.preview_image max_size" in out, out)
     # The GIF preview: an overlay rendered at the deliverable's size, a red square at its centre.
-    overlay = renders / "021-web.newsletter-preview-gif.png"
+    overlay = web / "021-web.newsletter-preview-gif.png"
     lavfi("-f", "lavfi", "-i", "color=c=black@0.0:s=600x338,format=rgba", "-vf",
           "drawbox=x=280:y=149:w=40:h=40:color=red@1.0:t=fill:replace=1", "-frames:v", "1", overlay)
     code, out = cli("cut", master, "--deliverable", "newsletter.preview_gif", "--in", "0", "--out", "3",
                     "--overlay", overlay)
-    gif = renders / "021-web.newsletter-preview-gif.gif"
+    gif = web / "021-web.newsletter-preview-gif.gif"
     facts = I.gif_facts(gif) if gif.is_file() else {}
     red = pixel(gif, 300, 169) if gif.is_file() else (0, 0, 0)
-    verdict("cut to newsletter.preview_gif: a GIF at 600x338 within fps_max, the overlay on its first frame",
+    verdict("cut to newsletter.preview_gif: a GIF at 600x338 within fps_max, the overlay on its first frame, in "
+            "the piece's folder",
             code == 0 and facts.get("width") == 600 and facts.get("height") == 338
             and facts["frames"] / facts["seconds"] <= 15.0 and red[0] > 180 and red[1] < 80 and red[2] < 80,
             f"{out}\n{facts}\n{red}")
@@ -2513,7 +3015,7 @@ def test_web(verdict, skip, cli, root: Path) -> None:
             facts.get("loop") is None and facts.get("plays") == 1 and facts.get("play_seconds", 9) <= 5.0, facts)
     code, out = cli("cut", master, "--deliverable", "newsletter.preview_gif", "--in", "0", "--out", "2",
                     "--cut", "c02", "--overlay", overlay)
-    two = renders / "021-web--c02.newsletter-preview-gif.gif"
+    two = web / "021-web--c02.newsletter-preview-gif.gif"
     facts2 = I.gif_facts(two) if two.is_file() else {}
     verdict("a 2-second GIF plays twice (loop count 1), its play time read from the loop extension and the "
             "frame delays within max_seconds",
@@ -2550,7 +3052,7 @@ def test_web(verdict, skip, cli, root: Path) -> None:
     verdict("--overlay lays a PNG over a video cut, and website.video keeps its index at the front",
             code == 0 and "verified" in out and red[0] > 160 and red[1] < 90 and "moov first" in out, f"{out}\n{red}")
     code, out = cli("cut", master, "--deliverable", "website.hero_loop", "--in", "0", "--out", "2", "--cut", "c09")
-    loop = renders / "021-web--c09.website-hero-loop.mp4"
+    loop = web / "021-web--c09.website-hero-loop.mp4"
     info = C.probe(loop) if loop.is_file() else {}
     verdict("cut to website.hero_loop (audio_tracks = 0) writes no sound track from a source with sound",
             code == 0 and C.streams(info, "video") and not C.streams(info, "audio"), out)
@@ -2641,15 +3143,17 @@ def test_feed(verdict, skip, cli, root: Path, project_zone) -> None:
     # M5: the feed audio, encoded from a picture master (a talk as an episode), untagged.
     renders = C.path(C.PUB_RENDERS)
     for piece, hz in (("031-episode-one", 330), ("032-episode-two", 440)):
+        master = C.path(C.PROD_RENDERS) / piece / f"{piece}.master.mp4"
+        master.parent.mkdir(parents=True, exist_ok=True)
         lavfi("-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25:duration=3", "-f", "lavfi", "-i",
               f"sine=frequency={hz}:sample_rate=48000:duration=3", "-c:v", "libx264", "-preset", "ultrafast",
-              "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", "-metadata", "title=master title",
-              C.path(C.PROD_RENDERS) / f"{piece}.master.mp4")
-        code, out = cli("encode", C.path(C.PROD_RENDERS) / f"{piece}.master.mp4", "--deliverable", "podcast.feed_audio")
-    audio = renders / "031-episode-one.podcast-feed-audio.mp3"
+              "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", "-metadata", "title=master title", master)
+        code, out = cli("encode", master, "--deliverable", "podcast.feed_audio")
+    audio = renders / "031-episode-one" / "031-episode-one.podcast-feed-audio.mp3"
     info = C.probe(audio) if audio.is_file() else {}
     tags = {k.lower(): v for k, v in info.get("format", {}).get("tags", {}).items()}
-    verdict("encode to podcast.feed_audio from a picture master: sound only, MP3, untagged, at the podcast target",
+    verdict("encode to podcast.feed_audio from a picture master: sound only, MP3, untagged, at the podcast target, "
+            "in the piece's folder of publishing/src/renders/ (D64)",
             code == 0 and info and not C.streams(info, "video") and C.streams(info, "audio")[0]["codec_name"] == "mp3"
             and "title" not in tags and "podcast target" in out and F.id3_version_of(audio) == 3, out + str(tags))
     # The show's covers: design exports encoded with image (test_web made them, or make them now).
@@ -2694,8 +3198,9 @@ def test_feed(verdict, skip, cli, root: Path, project_zone) -> None:
             and row["render"] == audio.name and abs(row["seconds"] - C.duration(tagged)) < 0.01, out + str(row))
     cli("feed", "tag", show, "--piece", "032-episode-two")
     code, out = cli("feed", "chapters", show, "--piece", "031-episode-one")
-    doc = json.loads(C.read_text(renders / "031-episode-one.chapters.json")) if code == 0 else {}
-    verdict("feed chapters writes Podcasting 2.0 JSON chapters (startTime in float seconds)",
+    chapters = renders / "031-episode-one" / "031-episode-one.chapters.json"
+    doc = json.loads(C.read_text(chapters)) if code == 0 and chapters.is_file() else {}
+    verdict("feed chapters writes Podcasting 2.0 JSON chapters (startTime in float seconds), in the piece's folder",
             code == 0 and doc.get("version") == "1.2" and [c["startTime"] for c in doc.get("chapters", [])]
             == [0.0, 1.0, 2.0], out)
     code, out = cli("feed", "check", show)
@@ -2790,6 +3295,30 @@ def test_feed(verdict, skip, cli, root: Path, project_zone) -> None:
            lambda t: t.replace("[show]\n", "[show]\n# AUTHOR TO CONFIRM: the category\n"), "AUTHOR TO CONFIRM")
     code, out = cli("feed", "check", show, "--feed", tracked)
     verdict("feed check --feed validates a saved feed offline", code == 0 and "nothing is fetched" in out, out)
+    # A render an earlier release left flat (DESIGN D65): feed check reads it, naming it in a warning;
+    # feed tag never tags it, and exits 2 naming the encode that makes it in the piece's folder.
+    flat, kept = renders / audio.name, C.read_text(reg)
+    os.replace(audio, flat)
+    try:
+        code, out = cli("feed", "check", show)
+        verdict("feed check reads an episode's render an earlier release left flat, where the piece's folder has "
+                "none, and names it in a warning (D65)",
+                code == 0 and "warning:" in out and f"the flat {C.shown(flat)}" in out, out)
+        size = flat.stat().st_size
+        write(reg, kept.replace(f"bytes = {size}", f"bytes = {size + 7}"))
+        code, out = cli("feed", "check", show)
+        verdict("feed check compares bytes with that flat render, so a published episode is never left unchecked",
+                code == 1 and f"is {size} bytes" in out and f"the flat {C.shown(flat)}" in out, out)
+        write(reg, kept)
+        before = flat.read_bytes()
+        code, out = cli("feed", "tag", show, "--piece", "031-episode-one")
+        verdict("feed tag refuses a render missing from the piece's folder (exit 2), naming the encode that makes "
+                "it and the flat file, which it never tags (D65)",
+                code == 2 and "--deliverable podcast.feed_audio" in out and f"the flat {C.shown(flat)}" in out
+                and flat.read_bytes() == before and C.read_text(reg) == kept and not audio.exists(), out)
+    finally:
+        write(reg, kept)
+        os.replace(flat, audio)
 
 
 if __name__ == "__main__":

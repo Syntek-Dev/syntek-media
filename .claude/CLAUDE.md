@@ -66,7 +66,7 @@ Every file under `template/` is rendered (`_templates_suffix: ""`) with the hous
 
 ## 6. House formats (the owner is `DESIGN.md`; this is the checklist)
 
-- **Every directory under `template/` has a `CONTEXT.md` and `CLAUDE.md` pair**, except syntek-author's exceptions (`build/`, `.git/`, `audio/`, `__pycache__/`, `node_modules/`, `.claude/rules/`, the inside of each skill folder, each `drafts/` and each `.base/`), the template root (`CONTEXT.md` only), and media's own (D42): each `generated/`, `renders/` and `raw/` folder carries only its `README.md`, and a `handoffs/` folder created in a standalone project carries no pair at all. Every piece folder carries its own pair.
+- **Every directory under `template/` has a `CONTEXT.md` and `CLAUDE.md` pair**, except syntek-author's exceptions (`build/`, `.git/`, `audio/`, `__pycache__/`, `node_modules/`, `.claude/rules/`, the inside of each skill folder, each `drafts/` and each `.base/`), the template root (`CONTEXT.md` only), and media's own (D42): each `generated/`, `renders/` and `raw/` folder carries only its `README.md`, and a folder inside one carries nothing at all (D64). A `handoffs/` folder created in a standalone project carries no pair at all. Every piece folder carries its own pair.
 - **Metadata header** on guides, rules, STEPS, CHECKLIST and seeds: `**Last Updated**: <%DATE%> **Version**: 0.1.0 **Maintained By**: <%OWNER_NAME%>`, then `**Language**: British English (en_GB)`.
 - **Workflow folders** hold `CONTEXT.md`, `CLAUDE.md`, `STEPS.md` and `CHECKLIST.md`, with routing frontmatter (`workflow`, `phase`, `skills`, `model`; no `agent` key). STEPS steps open `> **Skill:** … · **Guide:** …` and end `_Substantive._` or `_Mechanical._`; CHECKLIST items end ` · _opus_` or ` · _sonnet_`. Every CHECKLIST's `> **See**` line names its guide and the ladder gate it serves, as `M2 (briefed → scripted)`, or the fixed gate-less form of DESIGN.md D17.
 - **Guides** follow DESIGN.md Section 4.3 (54–82 lines; `skills:` lists only skills that ship whenever the guide does). **Skills** follow DESIGN.md Section 5, moded skills carry the mode paragraph verbatim, and mode files use the four H2s of D7.
@@ -104,6 +104,11 @@ Never type a line in that block; `--check` fails CI when the block and the files
 2. Add one line to the right block of `copier.yml`: `"<: if not (GATE) :>/path<: endif :>"`, `GATE` copied verbatim, its item single-quoted and with no parentheses inside it. A membership test on `PLATFORMS` or `MEDIA_KINDS` needs no `BRAND_KIND` test (D15); a gate on a list question hidden by `when:` does, because a hidden question keeps its default in the render context.
 3. Wrap every index row, tree line and cross-reference that names the path in `<: if GATE :>…<: endif :>`, or name it in prose.
 4. If the path is also a seed or an example, it needs its gate line **and** its seed or seed-once line.
+
+Never negate anything back in under a gated directory except a README-only output folder's own
+`README.md` (D42), with that negation above every gated line (D19, Sections 3.5 and 10).
+Copier obeys the last matching pattern, so a negation below a shut gate would reopen its path.
+`shipped-seeds.sh` check 16 checks the order; `shipped-brands.sh` check 12 checks the renders.
 
 **7.4 Add a workflow.** Numbers are frozen and append-only, unique within a layer across every brand kind, platform and media kind (D32). Take the next unused number, write all four files, add the row to the layer's `workflows/CLAUDE.md` table and `workflows/CONTEXT.md` (gated if the workflow is), and gate the folder in `copier.yml` if it is gated. Cite it everywhere by its full folder name.
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""media_repo.py: source media, tokens, flags and the repository guard for media.py.
+"""media_repo.py: source media, tokens, flags, where and the repository guard for media.py.
 
-Not run directly: python3 toolkit/media.py footage …, tokens, flags and check call it, and
-media.py's self-test exercises it.
+Not run directly: python3 toolkit/media.py footage …, tokens, flags, where and check call it,
+and media.py's self-test exercises it.
 
 Source media (DESIGN D19, D46, D52): every recorded or licensed source file, music beds and
 archived generated takes included, is a row of production/src/footage/manifest.toml (ID,
@@ -19,20 +19,30 @@ configured, a file over 10 MB outside the ignored and LFS folders, and a missing
 rule. 'check --setup' adds the readiness report of DESIGN D49: ffmpeg and ffprobe with libass,
 x264 and mp3lame, the optional encoders 'image' needs (libwebp for WebP; an AV1 encoder and the
 avif muxer for AVIF), each named with the formats its absence blocks and never a finding,
-Python, uv, the pinned Playwright's Chromium, git-lfs where large exports exist, the optional
-espeak-ng, pandoc and fontconfig's fc-match (card.py --self-test's brand-font probe), the allow,
-ask and deny entries of .claude/settings.json (D13's two deny entries keep hand edits out of
-renders/ and generated/), and whether the user-scope ElevenLabs server's base path contains this
+Python, uv and whether the interpreter a plain 'uv run' of card.py or scene.py would choose here
+is a virtual environment's whose base is another Python version (DESIGN D20's mislink, found
+with 'uv python find' and the interpreter's own -c answer, so no environment is built and the
+network is never reached), the pinned Playwright's Chromium, git-lfs where large exports exist,
+the optional espeak-ng, pandoc and fontconfig's fc-match (card.py --self-test's brand-font
+probe), the allow, ask and deny entries of .claude/settings.json (D13's two deny entries keep
+hand edits out of renders/ and generated/), and whether the user-scope ElevenLabs server's base path contains this
 repository. It reads only that one key of ~/.claude.json and prints no other value from it.
 
 'flags' lists both flags (DESIGN D37) across the media layers or the paths given; --piece keeps
 one piece's files: its folder under scripts/src/pieces/ and every file in scripts/, production/
 and publishing/ (or under the paths given) named <piece>.… or <piece>--cNN.… (DESIGN Section
-6.16), which M7 needs clear.
+6.16), its tracked timing and scene files in production/src/timing/ and production/src/scenes/
+among them (D64), which M7 needs clear.
 
-Nothing here reads a file git ignores (DESIGN D50): flags and the large-file scan list only what
-git tracks or would track; footage verify opens a mirrored file only by the path the manifest
-names, and prints names and hashes, never content.
+'where PIECE' (DESIGN D64) prints the piece's files gathered as flags --piece gathers them, then
+names its three ignored per-piece folders, production/src/renders/<piece>/,
+production/src/voiceover/generated/<piece>/ and publishing/src/renders/<piece>/, each said to
+exist or not and never listed; no file inside an output folder or the footage mirror is ever
+named, even outside a Git work tree, where the list is otherwise the plain one.
+
+Nothing here reads a file git ignores (DESIGN D50): flags, where and the large-file scan list
+only what git tracks or would track; footage verify opens a mirrored file only by the path the
+manifest names, and prints names and hashes, never content.
 
 Standard library only; Python 3.11+.
 """
@@ -282,11 +292,24 @@ def is_text(p: Path) -> bool:
 
 
 PIECE_LAYERS = ("scripts", "production", "publishing")
+PIECE_RE = re.compile(r"\d{3}-[a-z0-9][a-z0-9-]*")   # NNN-kebab-title (DESIGN D17, Section 6.16)
+PIECE_OUTPUTS = (C.PROD_RENDERS, C.VO_GENERATED, C.PUB_RENDERS)   # where a piece's own ignored folder sits (D64)
+
+
+def piece_name(piece: str, what: str = "--piece") -> str:
+    """piece, once it is a piece name with its folder under scripts/src/pieces/ (exit 2 otherwise)."""
+    if not PIECE_RE.fullmatch(piece or ""):
+        raise C.Fatal(f"{what} {piece!r} is not a piece name (NNN-kebab-title)")
+    if not (C.path(C.PIECES) / piece).is_dir():
+        raise C.Fatal(f"no piece folder {C.PIECES}/{piece}/")
+    return piece
 
 
 def piece_files(files: list, piece: str) -> list:
     """The files of one piece by the names of DESIGN Section 6.16: its folder under
-    scripts/src/pieces/, and every file in the three layers named <piece>.… or <piece>--cNN.…"""
+    scripts/src/pieces/, and every file in the three layers named <piece>.… or <piece>--cNN.…,
+    its tracked timing and scene files in production/src/timing/ and production/src/scenes/
+    among them (D64); they stay flat there, so the name finds them as it finds edits/ and cards/."""
     folder = C.path(C.PIECES).resolve() / piece
     out = []
     for f in files:
@@ -297,7 +320,7 @@ def piece_files(files: list, piece: str) -> list:
 
 
 def cmd_flags(args) -> int:
-    if args.piece and not re.fullmatch(r"\d{3}-[a-z0-9][a-z0-9-]*", args.piece):
+    if args.piece and not PIECE_RE.fullmatch(args.piece):
         raise C.Fatal(f"--piece {args.piece!r} is not a piece name (NNN-kebab-title)")
     layers = PIECE_LAYERS if args.piece else MEDIA_LAYERS
     targets = [C.path(d).resolve() for d in layers if C.path(d).exists()]
@@ -312,9 +335,7 @@ def cmd_flags(args) -> int:
     hits = {"AUTHOR TO CONFIRM": [], "VERIFY": []}
     files = tracked_or_trackable(targets)
     if args.piece:
-        if not (C.path(C.PIECES) / args.piece).is_dir():
-            raise C.Fatal(f"no piece folder {C.PIECES}/{args.piece}/")
-        files = piece_files(files, args.piece)
+        files = piece_files(files, piece_name(args.piece))
     for f in files:
         if not is_text(f):
             continue
@@ -332,6 +353,43 @@ def cmd_flags(args) -> int:
     scope = f" of {args.piece}" if args.piece else ""
     print(f"flags: {total} open across {len(files)} file(s){scope} git tracks or would track")
     return 1 if args.strict and total else 0
+
+
+# ── where ───────────────────────────────────────────────────────────────────────────────
+
+def in_ignored_folder(f: Path) -> bool:
+    """True for a file inside an output folder (renders/, generated/, at any depth) or the footage
+    mirror, judged from the project root, so where never names one even outside a work tree."""
+    try:
+        rel = Path(f).resolve().relative_to(C.ROOT.resolve())
+    except ValueError:
+        return False
+    raw = Path(C.RAW).parts
+    return any(part in C.OUTPUT_FOLDERS for part in rel.parts[:-1]) or rel.parts[:len(raw)] == raw
+
+
+def cmd_where(args) -> int:
+    """A piece's files across the three layers, gathered as flags --piece gathers them, then its
+    ignored per-piece folders by name, each said to exist or not, never listed (DESIGN D50, D64)."""
+    piece = piece_name(args.piece, "PIECE")
+    root = C.ROOT
+    targets = [C.path(d).resolve() for d in PIECE_LAYERS if C.path(d).exists()]
+    files = [f for f in piece_files(tracked_or_trackable(targets), piece) if not in_ignored_folder(f)]
+    order = {layer: k for k, layer in enumerate(PIECE_LAYERS)}
+    files.sort(key=lambda f: (order.get(Path(C.shown(f)).parts[0], len(order)), C.shown(f)))
+    print(f"where {piece}: {len(files)} file(s) git tracks or would track, across "
+          f"{', '.join(d + '/' for d in PIECE_LAYERS)}")
+    if not C.in_work_tree(root):
+        print("  note: not inside a Git work tree, so every file under the layers is listed; no file inside "
+              "an output folder or the footage mirror ever is")
+    for f in files:
+        print(f"  {C.shown(f)}")
+    print("ignored per-piece folders, named and never listed (D50, D64):")
+    width = max(len(f"{top}/{piece}/") for top in PIECE_OUTPUTS)
+    for top in PIECE_OUTPUTS:
+        folder = C.piece_folder(top, piece)
+        print(f"  {f'{top}/{piece}/':<{width}}  {'exists' if folder.is_dir() else 'absent'}")
+    return 0
 
 
 # ── check ───────────────────────────────────────────────────────────────────────────────
@@ -435,6 +493,97 @@ def suggested_base(root: Path) -> str:
     return str(p if p.parent != p else root.parent)
 
 
+UV_SCRIPTS = ("card.py", "scene.py")   # the scripts an author or a skill may start with a plain 'uv run' (D20)
+PYTHON_PROBE = ("import json, sys; print(json.dumps({'version': list(sys.version_info[:3]), "
+                "'base': getattr(sys, '_base_executable', '') or '', 'venv': sys.prefix != sys.base_prefix}))")
+
+
+def python_info(python: str):
+    """{version, base, venv} from an interpreter's own answer to -c (its base being the interpreter
+    uv would link a new environment to), or None where it cannot be run. Nothing is installed."""
+    try:
+        proc = subprocess.run([python, "-I", "-c", PYTHON_PROBE], capture_output=True, text=True, timeout=30)
+        said = proc.stdout.strip().splitlines() if proc.returncode == 0 else []
+        info = json.loads(said[-1]) if said else None
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        return None
+    ok = isinstance(info, dict) and isinstance(info.get("version"), list) and len(info["version"]) >= 2
+    return info if ok else None
+
+
+def same_file(a: str, b: str) -> bool:
+    try:
+        return Path(a).resolve().samefile(Path(b).resolve())
+    except OSError:
+        return a == b
+
+
+def uv_interpreter_rows(root: Path) -> list:
+    """(ok, label, fix) for each requires-python range among the uv scripts here (DESIGN D20, D49):
+    whether the interpreter a plain 'uv run' would choose from the project root (UV_PYTHON where it
+    is set, else 'uv python find' for the range, an active virtual environment, its bin on PATH and
+    a .venv here all counted) is a virtual environment's whose base is another Python version. uv
+    would record one version and link the other, and the script's packages would not import. The
+    check asks 'uv python find' with downloads and the network off and runs each interpreter with
+    -c only, so it builds no environment and fetches nothing. A FAIL names the interpreter media.py
+    itself takes ('uv python find --system'), which never mislinks."""
+    uv = shutil.which("uv")
+    if not uv:
+        return [(None, "uv's interpreter: not checked, because uv is not installed", "")]
+    ranges: dict = {}
+    for name in UV_SCRIPTS:
+        script = C.TOOLKIT / name
+        if script.is_file():
+            try:
+                want = str(C.script_metadata(script).get("requires-python", "") or "").strip()
+            except C.Fatal:
+                want = ""
+            ranges.setdefault(want, []).append(name)
+    named = os.environ.get("UV_PYTHON", "").strip()
+    install = ("install a Python in that range (for example 'uv python install 3.12', or your system's package), "
+               "or set UV_PYTHON at user scope to one")
+    rows = []
+    for want, names in ranges.items():
+        head = f"uv's interpreter for {' and '.join(names)}{f' ({want})' if want else ''}: "
+        chosen = C.uv_find(uv, named or want, cwd=root)
+        system = "" if named else C.uv_find(uv, want, system=True, cwd=root)
+        who = f"UV_PYTHON names {named}, and a plain 'uv run' takes " if named else "a plain 'uv run' here takes "
+        if named:
+            fix = ("point UV_PYTHON at an interpreter outside any virtual environment "
+                   "('uv python find --system' lists one), which media.py then takes too")
+        else:
+            to = f" to {system}, the interpreter media.py itself takes" if system else ""
+            fix = (f"set UV_PYTHON at user scope (in your shell profile){to}, or run with no virtual "
+                   "environment active, its bin off PATH and no .venv in the project root")
+        if not chosen:
+            rows.append((False, head + (f"UV_PYTHON names {named}, which uv cannot find" if named
+                                        else "no Python here meets the range"), install))
+            continue
+        info = python_info(chosen)
+        if info is None:
+            rows.append((False, head + who + f"{chosen}, which could not be run", fix))
+            continue
+        version = ".".join(str(n) for n in info["version"][:3])
+        base = str(info.get("base") or "")
+        if info.get("venv") and base and not same_file(base, chosen):
+            known = python_info(base)
+            if known is None or known["version"][:2] != info["version"][:2]:
+                was = f"Python {'.'.join(str(n) for n in known['version'][:3])}" if known else "missing or broken"
+                rows.append((False, head + who + f"{chosen}, a virtual environment's Python {version} whose base, "
+                             f"{base}, is {was}: uv would record one version and link the other, and the "
+                             "script's packages would not import", fix))
+                continue
+            label = f"{chosen}, a virtual environment's Python {version} on a base of the same version"
+        else:
+            label = f"{chosen} (Python {version}{', a virtual environment' if info.get('venv') else ''})"
+        if not named and not system:
+            rows.append((False, head + who + label + "; but no Python outside a virtual environment meets the "
+                         "range, so media.py cannot start the script", install))
+            continue
+        rows.append((True, head + who + label, ""))
+    return rows
+
+
 def setup_report(root: Path) -> tuple:
     """(rows, findings): one row per readiness item, each finding with its fix."""
     rows, findings = [], []
@@ -459,6 +608,8 @@ def setup_report(root: Path) -> tuple:
     item(sys.version_info >= (3, 11), f"Python {sys.version.split()[0]} (3.11 or later)")
     uv = shutil.which("uv")
     item(bool(uv), "uv" if uv else "uv is not installed (card.py runs through it)", C.INSTALL["uv"])
+    for ok, label, fix in uv_interpreter_rows(root):
+        item(ok, label, fix)
     cache = playwright_cache()
     found = [d.name for d in cache.glob(f"chromium*-{PLAYWRIGHT_REVISION}")] if cache.is_dir() else []
     item(bool(found), f"Chromium for Playwright 1.62.0 ({', '.join(found) or 'not installed'})",

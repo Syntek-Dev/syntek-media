@@ -39,8 +39,12 @@ has agreed, with every take named, logged and kept.
   request text exactly as it will be sent.
 - **One call at a time, renamed at once.** Run `take add` straight after each call, before the
   next; stop at the first error.
-- **An absolute `output_directory`, always,** inside `production/src/voiceover/generated/` and
-  built from `git rev-parse --show-toplevel`, so no file ever lands outside the project.
+- **An absolute `output_directory`, always,** built from `git rev-parse --show-toplevel`, so no
+  file ever lands outside the project: the piece's
+  `production/src/voiceover/generated/<piece>/takes/`, which
+  `python3 toolkit/media.py speak plan <piece>` makes before the first call, or a voice trial's
+  `production/src/voiceover/generated/voice-trials/<name>/`, which `speak plan --trial <name>`
+  makes. Never make either with `mkdir`.
 - **One narrator per use.** Use the voice and model recorded for the voiceover use in
   `brand/src/voice/voice.md`; changing either is the author's decision, recorded with the date.
   A cloned voice speaks only with a `cleared` voice-consent row.
@@ -52,7 +56,9 @@ has agreed, with every take named, logged and kept.
 ## Output & naming
 
 - **Produces:** `production/src/voiceover/<piece>.toml` and its takes in
-  `production/src/voiceover/generated/`, named `<piece>.sNN.tN.mp3` (or `.pcm`).
+  `production/src/voiceover/generated/<piece>/takes/`, named `<piece>.sNN.tN.mp3` (or `.pcm`).
 - **Also writes:** credits-log rows (through `take add`), the narrator record the first time, and
-  a footage-manifest row for each archived take.
+  a footage-manifest row for each archived take; a scratch track in `generated/<piece>/`, beside
+  its takes folder. A voice trial is never a take: it keeps the server's name in
+  `voice-trials/<name>/`, enters no register, and its credits-log row has `—` for the piece.
 - **Does not touch:** the script, the brief's gates, or any render.

@@ -15,7 +15,9 @@
 #                    ElevenLabs call: a "take" is a tone or a few fake bytes, and the toolkit's
 #                    handling of the files around a call is what is proved (credits).
 #
-#                    Nineteen checks, per render:
+#                    Twenty-one checks, per render: 1–19, 24 and 25. Numbers 20–23 and 26–28 are
+#                    DESIGN.md Section 7's for commands the toolkit does not have yet, and are
+#                    taken when they arrive (24 then gains `cues` and `real` beside `where`).
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
 #                         exercises the media_*.py modules, and card.py). A self-test reads only
 #                         the toolkit, so one result serves every render whose toolkit/ is
@@ -45,17 +47,25 @@
 #                         while a clean SRT passes, so the failures mean something.
 #                      8. In the Git copy: `git check-ignore` succeeds for a sample output in
 #                         every generated/, renders/ and raw/ folder and in toolkit/__pycache__/,
-#                         and fails for each folder's README.md; `git check-attr filter` reports
+#                         and in a piece's own folders (D64: a take in generated/<piece>/takes/,
+#                         a master, a card render and a timing working copy in renders/<piece>/,
+#                         a deliverable in publishing/src/renders/<piece>/), and fails for each
+#                         folder's README.md and for a piece's tracked files in production/src/
+#                         timing/ and production/src/scenes/; `git check-attr filter` reports
 #                         `lfs` under brand/src/exports/large/ and not for its pair; `media.py
 #                         check` is clean on the fresh copy, then flags a plain-blob LFS file, and
 #                         flags an LFS-marked file when a fake git-lfs on PATH prints a version but
 #                         no filter.lfs.* is configured; with the tripwire of copier.yml applied
 #                         (DESIGN.md D19), `git add` of that file fails.
 #                      9. A synthetic edit decision list end to end: a lavfi clip, a still with
-#                         push-in, a colour clip, a card clip and a card overlay (cards SKIP by
-#                         name without Chromium), a fade, a voiceover register of two tone
-#                         segments each carrying several cues, and a ducked music bed trimmed and
-#                         faded — `assemble` (length and social loudness), `cut` for every video
+#                         push-in, a colour clip, one card as a clip and as an overlay at one size
+#                         (cards SKIP by name without Chromium), a fade, a voiceover register of
+#                         two tone segments each carrying several cues, one take flat in
+#                         generated/ where an earlier release left it and one in the piece's
+#                         takes/ (D65), and a ducked music bed trimmed and faded — `assemble`
+#                         (the master in production/src/renders/<piece>/ by default, both card
+#                         renders kept in its cards/, the overlay's named .transparent, D47, D64;
+#                         length and social loudness), `cut` for every video
 #                         deliverable in the answers, `captions from-segments` (cue times exact at
 #                         the offset, at the segment join and at the last segment's end) and
 #                         `retime` to a cut, then `burn` onto that cut.
@@ -64,8 +74,10 @@
 #                     11. `script time` on a fixture script reports its total; `footage add`
 #                         copies (never moves) and refuses a duplicate hash; `footage verify`
 #                         passes, then fails on a changed byte; `take add` renames a fake .mp3
-#                         take and a fake pcm_* take (to .pcm) and writes their register and
-#                         credits-log rows.
+#                         take and a fake pcm_* take (to .pcm) in the piece's own takes/ folder,
+#                         writes their register rows naming that path and their credits-log rows,
+#                         and numbers the .mp3 take t2 after a flat t1 an earlier release left in
+#                         generated/, which it leaves where it was (D64, D65).
 #                     12. `audiobook text` on a chapter in syntek-author's markup strips section
 #                         markers, comments, citation keys, divs and spans, ends a chunk at the
 #                         scene break with 2 s recorded in the sidecar and never in the text
@@ -102,7 +114,9 @@
 #                         reproduces the Podcasting 2.0 specification's published podcast:guid
 #                         example and flags owner_email; `feed add` writes the episode guid as
 #                         the UUIDv5 of the piece; `encode --deliverable podcast.feed_audio`
-#                         from a picture master is sound only, untagged, at the podcast target;
+#                         from a picture master in its piece's renders folder, with no -o, is
+#                         sound only, untagged, at the podcast target, and lands in
+#                         publishing/src/renders/<piece>/, the one path feed tag reads (D64);
 #                         `feed tag` refuses an empty title changing nothing, then writes
 #                         ID3v2.3 title, author, album, three chapters and the cover, leaving the
 #                         audio stream as it was and the row's render, bytes and seconds true;
@@ -120,11 +134,25 @@
 #                         on-screen text as [On screen: …], drops a lone speaker's tags, NOTE:
 #                         cues, braced directions and every raw cue line, takes only the given
 #                         lines with --lines, and writes a file only with -o (D60).
+#                     24. `where` on a fixture piece prints its files Git tracks or would track
+#                         across scripts/, production/ and publishing/, its timing file among
+#                         them, names its three ignored per-piece folders, each existing or
+#                         absent, and never names anything inside them (D50, D64); a name with
+#                         no piece folder is exit 2.
+#                     25. 25 flat stills of 0.16 s at 30 fps (DESIGN.md Section 6.4): the master
+#                         is 120 frames, the frame nearest the edit's 4.000 s (still by still,
+#                         125), each still starting on the frame nearest its running total, read
+#                         from every frame's colour; an overlay with alpha from the fourth still's
+#                         start until a later boundary is on that still's first frame and off the
+#                         frame `until` falls on; `encode` of that master, its tone running past
+#                         the picture, to the first video deliverable with sound that 4 s fits,
+#                         passes its own checks and ends its sound with its picture (within half
+#                         a frame). With no such deliverable the encode is n/a.
 #
 #                    Numbers are stable identifiers. Append, never renumber.
 #
 #                    A check whose tool is absent is SKIPPED and named (SKIP — …), never passed:
-#                    no ffmpeg (checks 2, 3, 5–7, 9, 10, 13, 15–18), no uv or Chromium (check 4, card.py's
+#                    no ffmpeg (checks 2, 3, 5–7, 9, 10, 13, 15–18, 25), no uv or Chromium (check 4, card.py's
 #                    self-test, the cards of check 9), no fc-match (card.py's brand-font probe).
 #                    --require-ffmpeg (CI) turns a missing ffmpeg into exit 2; --skip-thumbnails
 #                    skips the Chromium steps by name. A step that does not apply to a render (no
@@ -198,6 +226,7 @@ HAVE_CHROMIUM=unknown
 # The names the smoke's fixtures use: invented, numbered past any real piece.
 P_EDIT="903-smoke-edit"; P_AUDIO="904-smoke-audio"; P_TAKE="905-smoke-take"; P_PCM="906-smoke-take-pcm"
 P_SCRIPT="907-smoke-script"; P_BOOK="908-smoke-book"; P_ALIGN="909-smoke-align"; P_TRANSCRIPT="913-smoke-transcript"
+P_WHERE="914-smoke-where"; P_FRAMES="915-smoke-frames"
 CONSTRUCTED="velunar"
 SECRET="smoke-secret-value-never-printed"
 SECRET_MAIL="robin@example.com"
@@ -588,7 +617,21 @@ SHIM
     [[ -f "$T/$d/README.md" ]] && tgit check-ignore -q -- "$d/README.md" && leaked+="$d/README.md "
   done < <(cd "$T" && find . -name .git -prune -o -type d \( -name generated -o -name renders -o -name raw \) -print | LC_ALL=C sort)
   tgit check-ignore -q -- toolkit/__pycache__/smoke.cpython.pyc || missing+="toolkit/__pycache__/smoke.cpython.pyc "
-  rec git.notignored "${missing% }"; rec git.readme.ignored "${leaked% }"
+  # A piece's output sits in a folder named for it inside its output folder (D64), which the same
+  # rules ignore whole; its tracked timing and scene files sit flat beside renders/, never ignored.
+  local tracked=""
+  for d in "production/src/voiceover/generated/$P_WHERE/takes/$P_WHERE.s01.t1.mp3" \
+           "production/src/renders/$P_WHERE/$P_WHERE.master.mp4" \
+           "production/src/renders/$P_WHERE/cards/$P_WHERE.title.1920x1080.transparent.png" \
+           "production/src/renders/$P_WHERE/timing/$P_WHERE.words.json" \
+           "publishing/src/renders/$P_WHERE/$P_WHERE.youtube-long.mp4"; do
+    tgit check-ignore -q -- "$d" || missing+="$d "
+  done
+  for d in "production/src/timing/$P_WHERE.words.json" "production/src/timing/$P_WHERE.mouth.json" \
+           "production/src/scenes/$P_WHERE.cues.json" "production/src/scenes/$P_WHERE.scene.py"; do
+    tgit check-ignore -q -- "$d" && tracked+="$d "
+  done
+  rec git.notignored "${missing% }"; rec git.readme.ignored "${leaked% }"; rec git.tracked.ignored "${tracked% }"
   rec git.attr.large "$(tgit check-attr filter -- brand/src/exports/large/smoke.png 2>/dev/null | sed 's/^.*: //')"
   rec git.attr.pair "$(for f in CONTEXT.md CLAUDE.md; do tgit check-attr filter -- "brand/src/exports/large/$f" | sed 's/^.*: //'; done | sort -u | paste -sd' ' -)"
   st=0; HOME="$GHOME" GIT_CONFIG_NOSYSTEM=1 tk gitfresh check || st=$?; rec git.fresh "$st"
@@ -613,6 +656,9 @@ SHIM
   # ── 9 and 10. The edit decision list, end to end; an audio master ──
   if $HAVE_FFMPEG; then smoke_edit "${videos[@]}"; fi
 
+  # ── 25. A run of stills on the frame grid; an overlay on a clip boundary; the held sound ──
+  if $HAVE_FFMPEG; then smoke_frames "${answered[@]}"; fi
+
   # ── 11. script time, footage, takes ──
   smoke_repo "$first_v"
 
@@ -634,6 +680,9 @@ SHIM
     smoke_feed
   fi
   smoke_transcript
+
+  # ── 24. where ──
+  smoke_where
 }
 
 manifest_id() { # $1 = kind → the first footage ID of that kind
@@ -646,8 +695,10 @@ PY
 }
 
 smoke_edit() { # $@ = the answered video deliverables
-  local st k gen="$T/production/src/voiceover/generated" cards=true expect d1 d2 join last cues first m
-  mkdir -p "$gen" "$T/production/src/assets" "$T/production/src/cards" "$T/production/src/edits"
+  local st k gen="$T/production/src/voiceover/generated" cards=true expect d1 d2 join last cues first m c miss
+  # s01's take sits flat in generated/, where an earlier release left takes, and s02's in the
+  # piece's takes/ folder (D64): every reader opens a take by its register row's file (D65).
+  mkdir -p "$gen/$P_EDIT/takes" "$T/production/src/assets" "$T/production/src/cards" "$T/production/src/edits"
   gen_av "$OUT/clip.mp4" 4 640x360
   gen_tone "$OUT/bed.wav" 8 48000 2 0.3
   gen_tone "$OUT/talk.wav" 4 48000 1 0.2
@@ -656,7 +707,7 @@ smoke_edit() { # $@ = the answered video deliverables
   tk faudio footage add "$OUT/talk.wav" --kind audio --location "Smoke recorder C" || true
   gen_still "$T/production/src/assets/smoke-harbour.png" 800x600
   gen_tone "$gen/$P_EDIT.s01.t1.mp3" 8 44100 1 0.2 -c:a libmp3lame -b:a 128k
-  gen_tone "$gen/$P_EDIT.s02.t1.pcm" 8 22050 1 0.2 -f s16le
+  gen_tone "$gen/$P_EDIT/takes/$P_EDIT.s02.t1.pcm" 8 22050 1 0.2 -f s16le
   cat > "$T/production/src/voiceover/$P_EDIT.toml" <<EOF
 [voiceover]
 piece = "$P_EDIT"
@@ -683,7 +734,7 @@ script_lines = "2.1-2.3"
 text = "So the timetable is a promise the sea never signed. Nobody asked the water, and the water never answered the letter."
 request = "So the timetable is a promise the sea never signed. Nobody asked the water, and the water never answered the letter."
 take = 1
-file = "generated/$P_EDIT.s02.t1.pcm"
+file = "generated/$P_EDIT/takes/$P_EDIT.s02.t1.pcm"
 characters = 116
 pause_after = 0.3
 status = "approved"
@@ -693,7 +744,6 @@ EOF
   elif ! $HAVE_UV || [[ "$HAVE_CHROMIUM" == false ]]; then cards=false; skip_step 9 "the edit's card clip and overlay" "no uv or no Chromium"; fi
   if $cards; then
     sed 's#href="../../brand/#href="../../../brand/#' "$T/toolkit/templates/card.html" > "$T/production/src/cards/$P_EDIT.title.html"
-    sed 's#href="../../brand/#href="../../../brand/#' "$T/toolkit/templates/card.html" > "$T/production/src/cards/$P_EDIT.end.html"
   fi
   {
     printf '[edit]\npiece = "%s"\nversion = 1\nsize = "640x360"\naudio_rate = 48000\nloudness = "social"\n\n' "$P_EDIT"
@@ -702,15 +752,25 @@ EOF
     printf '[[clip]]\nid = "c03"\ncolour = "#101418"\nseconds = 1.0\n\n'
     if $cards; then
       printf '[[clip]]\nid = "c04"\nsource = "production/src/cards/%s.title.html"\nseconds = 1.5\ntransition = "fade"\ntransition_seconds = 0.4\n\n' "$P_EDIT"
-      printf '[[overlay]]\nsource = "production/src/cards/%s.end.html"\nat = "00:00:01.000"\nuntil = "00:00:02.000"\n\n' "$P_EDIT"
+      printf '[[overlay]]\nsource = "production/src/cards/%s.title.html"\nat = "00:00:01.000"\nuntil = "00:00:02.000"\n\n' "$P_EDIT"
     fi
     printf '[[audio]]\nsource = "vo:%s"\nat = "00:00:00.200"\nrole = "voice"\n\n' "$P_EDIT"
     printf '[[audio]]\nsource = "%s"\nat = "00:00:00.000"\nin = "00:00:01.000"\nout = "00:00:07.000"\ngain_db = -6.0\nfade_in = 0.5\nfade_out = 1.0\nrole = "music"\nduck = true\n' "$(manifest_id music)"
   } > "$T/production/src/edits/$P_EDIT.toml"
   expect="4.5"; $cards && expect="5.6"
-  st=0; tk assemble assemble "production/src/edits/$P_EDIT.toml" -o "$OUT/c9.master.mp4" || st=$?
+  # The master and the card renders land in the piece's own folder by default (D47, D64): one
+  # card as a clip and as an overlay at one size keeps both renders, the overlay's .transparent.
+  st=0; tk assemble assemble "production/src/edits/$P_EDIT.toml" || st=$?
+  m="$T/production/src/renders/$P_EDIT/$P_EDIT.master.mp4"
   rec edl.status "$st"; rec edl.tail "$(tail_of assemble)"; rec edl.expect "$expect"
-  m="$OUT/c9.master.mp4"
+  rec edl.where "$([[ -f "$m" ]] && echo yes || echo no)"
+  if $cards && [[ "$st" == 0 ]]; then
+    miss=""
+    for c in "$P_EDIT.title.640x360.png" "$P_EDIT.title.640x360.transparent.png"; do
+      [[ -f "$T/production/src/renders/$P_EDIT/cards/$c" ]] || miss+="$c "
+    done
+    if [[ -z "$miss" ]]; then rec edl.cards ok; else rec edl.cards "missing from production/src/renders/$P_EDIT/cards/: ${miss% }"; fi
+  fi
   if [[ -f "$m" ]]; then
     rec edl.facts "$(probe_facts "$m")"; rec edl.lufs "$(lufs "$m")"
     for k in "$@"; do
@@ -723,7 +783,7 @@ EOF
   st=0; tk segs captions from-segments "production/src/voiceover/$P_EDIT.toml" --deliverable "$k" --offset 00:00:00.200 -o "$OUT/c9.segments.srt" || st=$?
   rec segs.status "$st"; rec segs.tail "$(tail_of segs)"
   d1="$(probe_facts "$gen/$P_EDIT.s01.t1.mp3" | awk '{ print $8 }')"
-  d2="$(awk -v b="$(stat -c %s "$gen/$P_EDIT.s02.t1.pcm")" 'BEGIN { printf "%.3f", b / (22050 * 2) }')"
+  d2="$(awk -v b="$(stat -c %s "$gen/$P_EDIT/takes/$P_EDIT.s02.t1.pcm")" 'BEGIN { printf "%.3f", b / (22050 * 2) }')"
   join="$(awk -v a="$d1" 'BEGIN { printf "%.3f", 0.2 + a + 0.4 }')"
   last="$(awk -v j="$join" -v b="$d2" 'BEGIN { printf "%.3f", j + b }')"
   rec segs.join "$join"; rec segs.lastwant "$last"
@@ -842,20 +902,27 @@ EOF
     printf 'toolkit-smoke footage bytes\n' > "$raw/smoke-cam.bin"
   fi
 
-  mkdir -p "$T/production/src/voiceover/generated"
+  # A call's take lands in its piece's generated/<piece>/takes/ (D21, D64), the folder the
+  # toolkit makes before the first call, made here by hand. The mp3 piece also keeps a flat t1 an
+  # earlier release left in generated/ and its register never recorded: the new take is t2 (D65).
+  local gen="$T/production/src/voiceover/generated" n flat="$P_TAKE.s01.t1.mp3"
+  mkdir -p "$gen"
+  printf 'a take an earlier release left flat\n' > "$gen/$flat"
   before="$(grep -c . "$T/production/src/credits-log.md" 2>/dev/null || echo 0)"
   for p in "$P_TAKE:mp3_44100_128" "$P_PCM:pcm_22050"; do
-    fmt="${p#*:}"; p="${p%%:*}"; ext=".mp3"; [[ "$fmt" == pcm* ]] && ext=".pcm"
+    fmt="${p#*:}"; p="${p%%:*}"; ext=".mp3"; n=2; [[ "$fmt" == pcm* ]] && { ext=".pcm"; n=1; }
     printf '[voiceover]\npiece = "%s"\nvoice_use = "voiceover"\nmodel_id = "eleven_v4"\noutput_format = "%s"\nper_cue = false\n\n[[segment]]\nid = "s01"\nscript_lines = "1.1"\ntext = "The ferry is late again."\nrequest = "The ferry is late again."\ntake = 0\nfile = ""\ncharacters = 24\npause_after = 0.3\nstatus = ""\narchived = ""\n' \
       "$p" "$fmt" > "$T/production/src/voiceover/$p.toml"
-    printf 'a fake take, never an ElevenLabs call\n' > "$T/production/src/voiceover/generated/tts_smoke_20270101_101010.mp3"
-    st=0; tk "take.$ext" take add production/src/voiceover/generated/tts_smoke_20270101_101010.mp3 --piece "$p" --segment s01 || st=$?
+    mkdir -p "$gen/$p/takes"
+    printf 'a fake take, never an ElevenLabs call\n' > "$gen/$p/takes/tts_smoke_20270101_101010.mp3"
+    st=0; tk "take.$ext" take add "production/src/voiceover/generated/$p/takes/tts_smoke_20270101_101010.mp3" --piece "$p" --segment s01 || st=$?
     rec "take${ext}.status" "$st"
-    rec "take${ext}.named" "$([[ -f "$T/production/src/voiceover/generated/$p.s01.t1$ext" && ! -e "$T/production/src/voiceover/generated/tts_smoke_20270101_101010.mp3" ]] && echo yes || echo no)"
-    rec "take${ext}.register" "$(grep -qF "file = \"generated/$p.s01.t1$ext\"" "$T/production/src/voiceover/$p.toml" && echo yes || echo no)"
+    rec "take${ext}.named" "$([[ -f "$gen/$p/takes/$p.s01.t$n$ext" && ! -e "$gen/$p/takes/tts_smoke_20270101_101010.mp3" ]] && echo yes || echo no)"
+    rec "take${ext}.register" "$(grep -qF "file = \"generated/$p/takes/$p.s01.t$n$ext\"" "$T/production/src/voiceover/$p.toml" && echo yes || echo no)"
     rec "take${ext}.credits" "$(grep -c "| $p |" "$T/production/src/credits-log.md" 2>/dev/null || echo 0)"
   done
   rec take.credits.before "$before"
+  rec take.flat "$([[ -f "$gen/$flat" && -f "$gen/$P_TAKE/takes/$P_TAKE.s01.t2.mp3" && ! -e "$gen/$P_TAKE/takes/$flat" ]] && echo yes || echo no)"
 }
 
 smoke_text() {
@@ -1333,7 +1400,7 @@ PY
 
 smoke_feed() {
   local st reg="$T/publishing/src/podcast/$FEED_SHOW.toml" tracked="$T/publishing/src/podcast/$FEED_SHOW.feed.xml"
-  local render="$T/publishing/src/renders/$FEED_PIECE.podcast-feed-audio.mp3" pg eg sum sumr bytes secs dur held="$W/feed.held"
+  local render="$T/publishing/src/renders/$FEED_PIECE/$FEED_PIECE.podcast-feed-audio.mp3" pg eg sum sumr bytes secs dur held="$W/feed.held"
   local url="https://example.com/podcast/$FEED_SHOW.xml"
   # feed new refuses a project without the folder, naming the update that adds it.
   if [[ -d "$T/publishing/src/podcast" ]]; then mv "$T/publishing/src/podcast" "$W/podcast.away"; fi
@@ -1364,11 +1431,13 @@ smoke_feed() {
   rec feed.add.guid "$([[ "$pg" != - && "$eg" == "$(uuid5_of "$pg" "$FEED_PIECE")" ]] && echo ok || echo "$eg")"
 
   # M5: the feed audio from a picture master — sound only, untagged, at the podcast target. Six
-  # minutes, so three chapters two minutes apart fit Apple's chapter rules.
-  mkdir -p "$T/production/src/renders" "$T/publishing/src/renders" "$T/publishing/src/captions"
+  # minutes, so three chapters two minutes apart fit Apple's chapter rules. The master sits in its
+  # piece's folder, where assemble writes it, and encode's default is the piece's publishing
+  # folder, the one path feed tag reads (D64, D65): no -o.
+  mkdir -p "$T/production/src/renders/$FEED_PIECE" "$T/publishing/src/renders" "$T/publishing/src/captions"
   ff -f lavfi -i "testsrc2=size=160x90:rate=5:duration=360" -f lavfi -i "sine=frequency=330:sample_rate=48000:duration=360,volume=0.2" \
-    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -ac 2 -shortest "$T/production/src/renders/$FEED_PIECE.master.mp4"
-  st=0; tk feed.encode encode "production/src/renders/$FEED_PIECE.master.mp4" --deliverable podcast.feed_audio -o "publishing/src/renders/$FEED_PIECE.podcast-feed-audio.mp3" || st=$?
+    -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -ac 2 -shortest "$T/production/src/renders/$FEED_PIECE/$FEED_PIECE.master.mp4"
+  st=0; tk feed.encode encode "production/src/renders/$FEED_PIECE/$FEED_PIECE.master.mp4" --deliverable podcast.feed_audio || st=$?
   rec feed.encode.status "$st"; rec feed.encode.tail "$(tail_of feed.encode)"
   [[ -f "$render" ]] || return 0
   rec feed.encode.facts "$(probe_facts "$render")"; rec feed.encode.lufs "$(lufs "$render")"
@@ -1524,6 +1593,98 @@ EOF
   rec tr.o.status "$st"; rec tr.o.written "$([[ -s "$T/$o" ]] && echo yes || echo no)"
 }
 
+# ── 0.3.0: where; the frame grid ─────────────────────────────────────────────
+
+# ── 24. where ──
+# A fixture piece with tracked files in three folders, its timing file among them, and ignored
+# output in two of its three per-piece folders: where lists the first and only names the second.
+smoke_where() {
+  local st p="$P_WHERE" f want="" got="" hidden=""
+  local -a tracked=("scripts/src/pieces/$p/brief.md" "production/src/edits/$p.toml" "production/src/timing/$p.words.json")
+  local -a ignored=("production/src/renders/$p/$p.master.mp4" "production/src/renders/$p/cards/$p.title.64x64.png"
+                    "production/src/voiceover/generated/$p/takes/$p.s01.t1.mp3")
+  for f in "${tracked[@]}" "${ignored[@]}"; do mkdir -p "$(dirname "$T/$f")"; printf 'smoke %s\n' "${f##*/}" > "$T/$f"; done
+  st=0; tko where where "$p" || st=$?
+  rec where.status "$st"; rec where.tail "$(tail_of where)"
+  for f in "${tracked[@]}"; do grep -qxF "  $f" "$OUT/where.out" 2>/dev/null || want+="$f "; done
+  rec where.listed "$([[ -z "$want" ]] && echo yes || echo "no: ${want% }")"
+  for f in "${ignored[@]}"; do grep -qF -e "${f##*/}" -e "$p/takes" -e "$p/cards" "$OUT/where.out" 2>/dev/null && hidden+="$f "; done
+  rec where.hidden "${hidden% }"
+  got="$(awk '/^ignored per-piece folders/ { on = 1; next } on { print $1 "=" $2 }' "$OUT/where.out" 2>/dev/null | paste -sd' ' -)"
+  want="production/src/renders/$p/=exists production/src/voiceover/generated/$p/=exists publishing/src/renders/$p/=absent"
+  rec where.folders "$([[ "$got" == "$want" ]] && echo yes || echo "${got:-none}")"
+  st=0; tk where.bad where 914-smoke-no-such-piece || st=$?; rec where.bad "$st"
+}
+
+# ── 25. a run of stills on the frame grid, an overlay on a clip boundary, the held sound ──
+# 25 flat stills of 0.16 s at 30 fps (4.8 frames each): each starts on the frame nearest its
+# running total (0, 5, 10, 14, 19 ...) and the master ends on the one nearest 4.000 s, 120 frames,
+# where rounding still by still would give 125. An overlay with alpha over the top half, from
+# 0.480 s (the fourth still's start, frame 14) until 0.800 s (frame 24), and a tone running past
+# the picture (DESIGN.md Section 6.4). Then the master is encoded to a video deliverable with
+# sound: its sound ends no later than its picture, and encode's own check passes.
+smoke_frames() { # $@ = the answered rows
+  local st a="$T/production/src/assets/smoke-frames" k e="" m="$T/production/src/renders/$P_FRAMES/$P_FRAMES.master.mp4" kind min max atr
+  mkdir -p "$a" "$T/production/src/edits"
+  ff -f lavfi -i "color=c=black:s=320x180:r=1,format=rgb24,geq=r='10+9*N':g='245-9*N':b='60+120*mod(N,2)'" -frames:v 25 "$a/s%02d.png"
+  ff -f lavfi -i "color=c=black@0.0:s=320x180,format=rgba,drawbox=x=0:y=0:w=320:h=90:color=0xf0f0f0@1.0:t=fill:replace=1" -frames:v 1 "$a/mark.png"
+  ff -f lavfi -i "sine=frequency=330:sample_rate=48000:duration=6" -ac 2 "$a/tone.wav"
+  {
+    printf '[edit]\npiece = "%s"\nsize = "320x180"\n' "$P_FRAMES"
+    for k in $(seq -w 1 25); do printf '\n[[clip]]\nsource = "production/src/assets/smoke-frames/s%s.png"\nseconds = 0.16\n' "$k"; done
+    printf '\n[[overlay]]\nsource = "production/src/assets/smoke-frames/mark.png"\nat = "00:00:00.480"\nuntil = "00:00:00.800"\n'
+    printf '\n[[audio]]\nsource = "production/src/assets/smoke-frames/tone.wav"\nrole = "music"\n'
+  } > "$T/production/src/edits/$P_FRAMES.toml"
+  st=0; tk frames assemble "production/src/edits/$P_FRAMES.toml" || st=$?
+  rec frames.status "$st"; rec frames.tail "$(tail_of frames)"
+  [[ -f "$m" ]] || return 0
+  { read -r k; rec frames.count "$k"; read -r k; rec frames.order "$k"; read -r k; rec frames.overlay "$k"; } < <(frame_grid "$m")
+  # The first video deliverable with sound that a 4-second master fits (min_seconds and max_seconds).
+  while IFS=$'\t' read -r k kind _ _ _ _ _ min max _ _ atr; do
+    [[ "$kind" == video && "$atr" != 0 ]] || continue
+    awk -v a="$min" -v b="$max" 'BEGIN { exit !((a == "-" || a <= 4) && (b == "-" || b >= 4)) }' && { e="$k"; break; }
+  done < <(printf '%s\n' "$@")
+  if [[ -z "$e" ]]; then na_step 25b "no video deliverable with sound that a 4-second master fits: the stills master is not encoded"; return 0; fi
+  st=0; tk frames.enc encode "$m" --deliverable "$e" --frame crop -o "$OUT/c25.encoded.mp4" || st=$?
+  rec frames.enc.key "$e"; rec frames.enc.status "$st"; rec frames.enc.tail "$(tail_of frames.enc)"
+  [[ -f "$OUT/c25.encoded.mp4" ]] && rec frames.enc.ends "$(stream_ends "$OUT/c25.encoded.mp4")"
+  return 0
+}
+
+# Three lines about a master of 25 stills of 0.16 s at 30 fps with an overlay from 0.480 s to
+# 0.800 s: its frame count; 'ok' or the first frame whose lower half shows another still than the
+# one its running total puts there; 'ok' or the frames whose upper half shows the overlay.
+frame_grid() { # $1 = master
+  python3 - "$1" <<'PY'
+import subprocess, sys
+m, n, secs, fps, at, until = sys.argv[1], 25, 0.16, 30, 0.48, 0.80
+def patches(crop):
+    p = subprocess.run(["ffmpeg", "-v", "error", "-i", m, "-vf", f"crop={crop},format=rgb24,scale=1:1:flags=area",
+                        "-fps_mode", "passthrough", "-f", "rawvideo", "-"], capture_output=True)
+    return [tuple(p.stdout[k:k + 3]) for k in range(0, len(p.stdout) - 2, 3)]
+near = lambda t: int(t * fps + 0.5 + 1e-9)
+colours = [(10 + 9 * k, 245 - 9 * k, 60 + 120 * (k % 2)) for k in range(n)]
+bounds = [near(secs * k) for k in range(n + 1)]
+due = [k for k in range(n) for _ in range(bounds[k + 1] - bounds[k])]
+low, top = patches("16:16:152:127"), patches("16:16:152:37")
+print(len(low))
+got = [min(range(n), key=lambda k: sum((a - b) ** 2 for a, b in zip(c, colours[k]))) for c in low]
+bad = next((f for f in range(min(len(got), len(due))) if got[f] != due[f]), None)
+print("ok" if bad is None and len(got) == len(due) else
+      f"frame {bad} shows still {got[bad] + 1} where still {due[bad] + 1} is due" if bad is not None
+      else f"{len(got)} frames for the {len(due)} the stills' running totals make")
+on = [f for f, c in enumerate(top) if max(abs(x - 240) for x in c) <= 24]
+a, b = near(at), near(until)
+print("ok" if on == list(range(a, b)) else
+      f"on frames {on[0]}-{on[-1]} ({len(on)} frames), wants {a}-{b - 1}" if on else f"on no frame, wants {a}-{b - 1}")
+PY
+}
+
+stream_ends() { # $1 = a render → "video_end audio_end", each from its stream's own start and duration
+  ffprobe -v error -show_entries stream=codec_type,start_time,duration -of csv=p=0 "$1" 2>/dev/null \
+    | awk -F, '$1 == "video" { v = $2 + $3 } $1 == "audio" { s = $2 + $3 } END { printf "%.3f %.3f", v, s }'
+}
+
 # ── The judging: reads RES, fills FINDINGS and NOTES ─────────────────────────
 
 NOTES=()
@@ -1638,6 +1799,7 @@ run_checks() {
   # 8
   [[ -z "${RES[git.notignored]:-}" ]] || finding "check 8 — $L Git would track generated output: ${RES[git.notignored]}"
   [[ -z "${RES[git.readme.ignored]:-}" ]] || finding "check 8 — $L Git ignores a folder's README.md: ${RES[git.readme.ignored]}"
+  [[ -z "${RES[git.tracked.ignored]:-}" ]] || finding "check 8 — $L Git ignores a piece's tracked timing or scene file, which stays flat beside renders/ and is committed (D64): ${RES[git.tracked.ignored]}"
   [[ "${RES[git.attr.large]:-}" == lfs ]] || finding "check 8 — $L git check-attr reports filter '${RES[git.attr.large]:-?}' under brand/src/exports/large/, not lfs"
   [[ "${RES[git.attr.pair]:-}" != *lfs* ]] || finding "check 8 — $L the pair of brand/src/exports/large/ is marked for LFS"
   if [[ "${RES[git.fresh]:-}" != 0 ]]; then finding "check 8 — $L media.py check is not clean on the fresh project (exit ${RES[git.fresh]:-?}), so its LFS findings prove nothing"
@@ -1652,6 +1814,9 @@ run_checks() {
   if [[ -n "${RES[edl.status]:-}" ]]; then
     if [[ "${RES[edl.status]}" != 0 ]]; then finding "check 9 — $L assemble failed on the synthetic edit (exit ${RES[edl.status]}): ${RES[edl.tail]:-}"
     else
+      [[ "${RES[edl.where]:-yes}" == yes ]] || finding "check 9 — $L assemble did not write the master to production/src/renders/$P_EDIT/$P_EDIT.master.mp4, its piece's own folder (D64)"
+      [[ -z "${RES[edl.cards]:-}" || "${RES[edl.cards]}" == ok ]] \
+        || finding "check 9 — $L one card used as a clip and as an overlay at one size did not keep both renders, the overlay's .transparent, in its piece's cards/ folder (D47, D64): ${RES[edl.cards]}"
       read -r _ _ _ _ _ _ _ dur <<< "${RES[edl.facts]:-- - - - - - - 0}"
       num_eq "$dur" "${RES[edl.expect]}" 0.1 || finding "check 9 — $L the assembled master lasts $dur s, not ${RES[edl.expect]}"
       num_eq "${RES[edl.lufs]:-nan}" "${RES[loud.social.target]:--14}" 1.0 || finding "check 9 — $L the assembled master measures ${RES[edl.lufs]:-nan} LUFS, not within 1 LU of the social target"
@@ -1695,9 +1860,11 @@ run_checks() {
   [[ "${RES[footage.changed]:-}" == 1 ]] || finding "check 11 — $L footage verify passed a mirror with a changed byte (exit ${RES[footage.changed]:-?})"
   for k in .mp3 .pcm; do
     if [[ "${RES[take$k.status]:-}" != 0 || "${RES[take$k.named]:-}" != yes || "${RES[take$k.register]:-}" != yes || "${RES[take$k.credits]:-0}" != 1 ]]; then
-      finding "check 11 — $L take add of a fake ${k#.} take did not rename it and write one register and one credits-log row (exit ${RES[take$k.status]:-?}; named ${RES[take$k.named]:-?}; register ${RES[take$k.register]:-?}; credits rows ${RES[take$k.credits]:-0})"
+      finding "check 11 — $L take add of a fake ${k#.} take did not rename it in its piece's takes/ folder and write one register row naming it there and one credits-log row (exit ${RES[take$k.status]:-?}; named ${RES[take$k.named]:-?}; register ${RES[take$k.register]:-?}; credits rows ${RES[take$k.credits]:-0})"
     fi
   done
+  [[ "${RES[take.flat]:-}" == yes ]] \
+    || finding "check 11 — $L take add did not number the take in $P_TAKE/takes/ t2, after the flat t1 an earlier release left in generated/, leaving that one where it was (D65)"
 
   # 12
   if [[ -n "${RES[abtext.status]:-}" ]]; then
@@ -1904,6 +2071,39 @@ run_checks() {
     [[ "${RES[tr.o.status]:-}" == 0 && "${RES[tr.o.written]:-}" == yes ]] \
       || finding "check 19 — $L captions transcript -o wrote no file (exit ${RES[tr.o.status]:-?})"
   fi
+
+  # 24
+  if [[ -n "${RES[where.status]:-}" ]]; then
+    if [[ "${RES[where.status]}" != 0 ]]; then finding "check 24 — $L where $P_WHERE failed (exit ${RES[where.status]}): ${RES[where.tail]:-}"
+    else
+      [[ "${RES[where.listed]:-}" == yes ]] || finding "check 24 — $L where $P_WHERE did not list every file of the piece Git tracks or would track (${RES[where.listed]:-?})"
+      [[ -z "${RES[where.hidden]:-}" ]] || finding "check 24 — $L where $P_WHERE named what is inside an ignored per-piece folder, which it names and never lists (D50, D64): ${RES[where.hidden]}"
+      [[ "${RES[where.folders]:-}" == yes ]] || finding "check 24 — $L where $P_WHERE did not name its three ignored per-piece folders, each existing or absent (read: ${RES[where.folders]:-?})"
+    fi
+    [[ "${RES[where.bad]:-}" == 2 ]] || finding "check 24 — $L where with a name that has no piece folder did not exit 2 (exit ${RES[where.bad]:-?})"
+  fi
+
+  # 25
+  local ve ae
+  if [[ -n "${RES[frames.status]:-}" ]]; then
+    if [[ "${RES[frames.status]}" != 0 ]]; then finding "check 25 — $L assemble failed on a run of 25 stills of 0.16 s (exit ${RES[frames.status]}): ${RES[frames.tail]:-}"
+    else
+      [[ "${RES[frames.count]:-}" == 120 ]] \
+        || finding "check 25 — $L 25 stills of 0.16 s at 30 fps assembled to ${RES[frames.count]:-?} frames, not 120, the frame nearest the edit's 4.000 s (rounding still by still gives 125)"
+      [[ "${RES[frames.order]:-}" == ok ]] || finding "check 25 — $L a still does not start on the frame nearest its running total (Section 6.4): ${RES[frames.order]:-?}"
+      [[ "${RES[frames.overlay]:-}" == ok ]] \
+        || finding "check 25 — $L an overlay from the fourth still's start (00:00:00.480) until 00:00:00.800 is not on that still's first frame (14) and off frame 24: ${RES[frames.overlay]:-?}"
+      if [[ -n "${RES[frames.enc.status]:-}" ]]; then
+        if [[ "${RES[frames.enc.status]}" != 0 ]]; then
+          finding "check 25 — $L encode of the stills master to ${RES[frames.enc.key]:-?} failed (exit ${RES[frames.enc.status]}): ${RES[frames.enc.tail]:-}"
+        else
+          read -r ve ae <<< "${RES[frames.enc.ends]:-0 999}"
+          awk -v v="$ve" -v a="$ae" 'BEGIN { exit !(a <= v + 1 / 60) }' \
+            || finding "check 25 — $L encode of the stills master to ${RES[frames.enc.key]:-?} gives sound to $ae s under $ve s of picture: its sound must end with its picture"
+        fi
+      fi
+    fi
+  fi
   return 0
 }
 
@@ -1966,10 +2166,13 @@ git.blob.said	yes
 git.fake	1
 git.fake.said	yes
 git.tripwire.add	128
+git.tracked.ignored
 edl.status	0
 edl.expect	5.6
 edl.facts	640 360 h264 yuv420p aac 48000 2 5.600
 edl.lufs	-14.1
+edl.where	yes
+edl.cards	ok
 ecut.youtube.long.status	0
 ecut.youtube.long.dur	4.000
 segs.status	0
@@ -2004,6 +2207,7 @@ take.pcm.status	0
 take.pcm.named	yes
 take.pcm.register	yes
 take.pcm.credits	1
+take.flat	yes
 abtext.status	1
 abtext.listed	yes
 abtext.clean	yes
@@ -2117,6 +2321,18 @@ tr.lines.has	yes
 tr.lines.extra	no
 tr.o.status	0
 tr.o.written	yes
+where.status	0
+where.listed	yes
+where.hidden
+where.folders	yes
+where.bad	2
+frames.status	0
+frames.count	120
+frames.order	ok
+frames.overlay	ok
+frames.enc.key	youtube.long
+frames.enc.status	0
+frames.enc.ends	4.000 4.000
 EOF
 }
 
@@ -2166,6 +2382,8 @@ self_test() {
   mut git.fresh 1;                        probe "check 8 fires when check is not clean on a fresh project" "check 8 — [fixture] media.py check is not clean"
   mut git.tripwire.add 0;                 probe "check 8 fires when the tripwire lets git add through" "check 8 — [fixture] with the copier.yml tripwire applied"
   mut git.tripwire.add none;              probe "check 8 fires when copier.yml has no tripwire task" "check 8 — [fixture] copier.yml carries no LFS tripwire"
+  mut git.notignored "production/src/voiceover/generated/914-smoke-where/takes/914-smoke-where.s01.t1.mp3"; probe "check 8 fires when a take in a piece's takes/ folder is not ignored" "check 8 — [fixture] Git would track generated output: production/src/voiceover/generated/914-smoke-where/takes/"
+  mut git.tracked.ignored "production/src/timing/914-smoke-where.words.json"; probe "check 8 fires when a tracked timing file is ignored" "check 8 — [fixture] Git ignores a piece's tracked timing or scene file"
   mut edl.facts "640 360 h264 yuv420p aac 48000 2 6.900"; probe "check 9 fires on a master of the wrong length" "check 9 — [fixture] the assembled master lasts 6.900"
   mut edl.lufs -20.0;                     probe "check 9 fires on a master off the social target" "check 9 — [fixture] the assembled master measures -20.0 LUFS"
   mut ecut.youtube.long.dur 3.2;          probe "check 9 fires on a cut of the master of the wrong length" "check 9 — [fixture] cut of the master for youtube.long lasts 3.2"
@@ -2173,6 +2391,8 @@ self_test() {
   mut segs.lastend 16.700;                probe "check 9 fires when the last cue overruns its segment" "check 9 — [fixture] from-segments cues are not exact"
   mut retime.inside no;                   probe "check 9 fires when retime leaves a cue outside the cut" "check 9 — [fixture] captions retime"
   mut eburn.status 1;                     probe "check 9 fires when the retimed burn fails" "check 9 — [fixture] the burn of the retimed captions"
+  mut edl.where no;                       probe "check 9 fires when the master is not in its piece's folder" "check 9 — [fixture] assemble did not write the master to production/src/renders/903-smoke-edit/"
+  mut edl.cards "missing from production/src/renders/903-smoke-edit/cards/: 903-smoke-edit.title.640x360.transparent.png"; probe "check 9 fires when the overlay's render replaces the clip's" "check 9 — [fixture] one card used as a clip and as an overlay"
   mut amaster.facts "640 360 h264 yuv420p aac 48000 2 1.700"; probe "check 10 fires when the audio master has a picture" "check 10 — [fixture] the audio master is not sound only"
   mut script.total no;                    probe "check 11 fires when script time reports no total" "check 11 — [fixture] script time"
   mut footage.kept no;                    probe "check 11 fires when footage add moves the file" "check 11 — [fixture] footage add did not copy"
@@ -2180,6 +2400,8 @@ self_test() {
   mut footage.changed 0;                  probe "check 11 fires when a changed byte passes verify" "check 11 — [fixture] footage verify passed a mirror with a changed byte"
   mut take.pcm.named no;                  probe "check 11 fires when a pcm take is not renamed .pcm" "check 11 — [fixture] take add of a fake pcm take"
   mut take.mp3.credits 0;                 probe "check 11 fires when a take writes no credits-log row" "check 11 — [fixture] take add of a fake mp3 take"
+  mut take.mp3.register no;               probe "check 11 fires when the register does not name the take in its takes/ folder" "check 11 — [fixture] take add of a fake mp3 take did not rename it in its piece's takes/ folder"
+  mut take.flat no;                       probe "check 11 fires when a take repeats the number of a flat take an earlier release left" "check 11 — [fixture] take add did not number the take in 905-smoke-take/takes/ t2"
   mut abtext.listed no;                   probe "check 12 fires when the constructed word is not listed" "check 12 — [fixture] audiobook text did not list"
   mut abtext.clean no;                    probe "check 12 fires when markup reaches a chunk" "check 12 — [fixture] audiobook text left markup"
   mut abtext.pause no;                    probe "check 12 fires when the scene break is not a 2 s sidecar pause" "check 12 — [fixture] audiobook text did not end a chunk"
@@ -2236,6 +2458,15 @@ self_test() {
   mut tr.wrote yes;                       probe "check 19 fires when the transcript is written without -o" "a file written without -o"
   mut tr.lines.extra yes;                 probe "check 19 fires when --lines takes other lines" "check 19 — [fixture] captions transcript --lines 2.1-2.2"
   mut tr.o.written no;                    probe "check 19 fires when -o writes nothing" "check 19 — [fixture] captions transcript -o wrote no file"
+  mut where.listed "no: production/src/timing/914-smoke-where.words.json"; probe "check 24 fires when where misses a tracked timing file" "check 24 — [fixture] where 914-smoke-where did not list every file"
+  mut where.hidden "production/src/renders/914-smoke-where/914-smoke-where.master.mp4"; probe "check 24 fires when where lists inside an ignored folder" "check 24 — [fixture] where 914-smoke-where named what is inside an ignored per-piece folder"
+  mut where.folders "production/src/renders/914-smoke-where/=exists"; probe "check 24 fires when where does not name all three folders" "check 24 — [fixture] where 914-smoke-where did not name its three ignored per-piece folders"
+  mut where.bad 0;                        probe "check 24 fires when where accepts a name with no piece folder" "check 24 — [fixture] where with a name that has no piece folder"
+  mut frames.count 125;                   probe "check 25 fires when stills are rounded one by one" "check 25 — [fixture] 25 stills of 0.16 s at 30 fps assembled to 125 frames"
+  mut frames.order "frame 14 shows still 3 where still 4 is due"; probe "check 25 fires when a still starts off its running total" "check 25 — [fixture] a still does not start on the frame nearest its running total"
+  mut frames.overlay "on frames 15-23 (9 frames), wants 14-23"; probe "check 25 fires when an overlay misses its clip's first frame" "check 25 — [fixture] an overlay from the fourth still's start"
+  mut frames.enc.ends "4.000 4.100";      probe "check 25 fires when an encode's sound runs past its picture" "check 25 — [fixture] encode of the stills master to youtube.long gives sound to 4.100 s under 4.000 s"
+  mut frames.enc.status 1;                probe "check 25 fires when an encode of the stills master fails its own check" "check 25 — [fixture] encode of the stills master to youtube.long failed"
   write_clean_results "$f"; printf 'na.12\tno audiobook folder\nskip.4\tcard renders (no Chromium)\nskip.1\tcard.py --self-test (no Chromium)\n' >> "$f"
   sed -i '/^abtext\./d; /^card\./d; /^selftest\.card\.py/d' "$f"; load_results "$f"
   probe_clean "a render with no audiobook folder and no Chromium is clean, its steps listed n/a and skipped"
@@ -2266,6 +2497,12 @@ self_test() {
   printf 'na.15\tno image deliverable\nna.16\tno GIF deliverable\nna.17\tno silent loop\nna.18\tno podcast folder\n' >> "$f"
   sed -i '/^img\./d; /^gif\./d; /^loop/d; /^web\./d; /^feed\.[a-mo-z]/d; /^feed\.new/d' "$f"; load_results "$f"
   probe_clean "a render without the own channels or a podcast folder is clean, feed new's refusal still judged"
+  write_clean_results "$f"; printf 'na.25b\tno video deliverable with sound\n' >> "$f"
+  sed -i '/^frames\.enc\./d' "$f"; load_results "$f"
+  probe_clean "a render with no video deliverable a 4-second master fits is clean, its encode n/a"
+  write_clean_results "$f"; printf 'skip.9\tthe card clip and overlay (no uv or no Chromium)\n' >> "$f"
+  sed -i '/^edl\.cards/d' "$f"; load_results "$f"
+  probe_clean "a render with no Chromium is clean, the card renders' folder unread"
   st_finish "a toolkit made to its presets from one that is not"
 }
 

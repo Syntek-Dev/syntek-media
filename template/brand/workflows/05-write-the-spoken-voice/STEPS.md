@@ -72,8 +72,13 @@ _Substantive._
 
 Hearing a candidate costs credits: say so before any trial. If the author asks for one, run it
 through `production/workflows/02-make-a-voiceover/` and its `voiceover` skill, which state the
-characters, calls and credits, wait for a yes, call one at a time and log the credits. Never
-generate from this procedure directly. _Substantive._
+characters, calls and credits, wait for a yes, call one at a time and log the credits. No piece
+owns a trial: its `output_directory` is `production/src/voiceover/generated/voice-trials/<name>/`
+(`<name>` a kebab slug for the trial, such as `warm-narrator`), which
+`python3 toolkit/media.py speak plan --trial <name>` makes before the first call; never make it
+with `mkdir`. A trial is never a take: it keeps the server's name, enters no register, and its
+credits-log row has `—` for the piece. Never generate from this procedure directly.
+_Substantive._
 
 ## 7. Record each narrator
 

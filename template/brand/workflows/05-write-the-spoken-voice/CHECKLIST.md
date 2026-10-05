@@ -32,7 +32,7 @@ model: opus
 - [ ] Model found with `mcp__elevenlabs__list_models`, never assumed. · _sonnet_
 - [ ] Candidates listed free, presented per use with a recommendation, output format and tier stated. · _opus_
 - [ ] **Every cloned voice has a cleared `voice-consent` row before it is made or used.** · _opus_
-- [ ] No audio generated from this procedure; any trial run through `production/workflows/02-make-a-voiceover/` on the author's word. · _sonnet_
+- [ ] No audio generated from this procedure; any trial run through `production/workflows/02-make-a-voiceover/` on the author's word, into `production/src/voiceover/generated/voice-trials/<name>/` made by `speak plan --trial <name>`, never `mkdir`. · _sonnet_
 - [ ] One row per use: voice, voice ID, model ID, settings, output format, consent, date chosen. · _sonnet_
 
 **Pronunciations and record**

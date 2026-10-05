@@ -135,7 +135,7 @@ the people they may show.
    description line and the spoken or on-screen line, or records that none is needed.
 
 8. **Attach the render, captions and thumbnail.** For each deliverable, name its render in
-   `publishing/src/renders/` and confirm it with `python3 toolkit/media.py probe`; name its
+   `publishing/src/renders/<piece>/` and confirm it with `python3 toolkit/media.py probe`; name its
    captions file in `publishing/src/captions/` and whether it is burned or a sidecar (a deliverable
    whose `caption_formats` is empty takes burned captions; a placement names its `.vtt` and its
    published transcript); and, where the platform takes one, its approved thumbnail or images.

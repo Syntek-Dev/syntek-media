@@ -32,15 +32,15 @@ syntek-media/
     ├── .claude/              ← CLAUDE.md, CONTEXT.md, MEMORY.md, settings.json (copy-only shared) · rules/syntek-media/ · skills/
     ├── brand/                ← the visual tokens and layouts, the spoken voice, one profile per platform
     ├── scripts/              ← pieces: briefs, scripts or transcripts, storyboards, shot lists
-    ├── production/           ← footage manifest, voiceover, edit decision lists, cards, masters, rights, credits; audiobook (gated)
+    ├── production/           ← footage manifest, voiceover, timing and scene files, edit decision lists, cards, masters, rights, credits; audiobook (gated)
     ├── publishing/           ← cut-downs, captions, thumbnails, post packages, schedule, publish log
-    └── toolkit/              ← supporting: media.py (ffmpeg), card.py (HTML → PNG), platform data, fallback layouts
+    └── toolkit/              ← supporting: media.py (ffmpeg; each piece's output in a folder of its own), card.py (HTML → PNG), platform data, fallback layouts
 ```
 
 ## What's here
 
-- `DESIGN.md` — the decisions (D1–D52), the questions, the ownership classes and gating table, the generated tree, the skills, the formats, the audits, applying over syntek-author and coexistence. **Read the sections your change touches before changing anything**; comments in `copier.yml` cite it by section.
-- `copier.yml` — the contract Copier executes. **Every gated path is one `_exclude` line whose gate is copied verbatim from DESIGN.md Section 3.5** (`'youtube' in PLATFORMS`, `'audiobook' in MEDIA_KINDS`), each of the ten shared root files has an update-gated `_exclude` line beside its `_skip_if_exists` line, and the mode-file block between its `BEGIN`/`END generated mode excludes` markers is written by `.github/scripts/gen-mode-excludes.sh`, never by hand.
+- `DESIGN.md` — the decisions (D1–D72), the questions, the ownership classes and gating table, the generated tree, the skills, the formats, the audits, applying over syntek-author and coexistence. **Read the sections your change touches before changing anything**; comments in `copier.yml` cite it by section.
+- `copier.yml` — the contract Copier executes. **Every gated path is one `_exclude` line whose gate is copied verbatim from DESIGN.md Section 3.5** (`'youtube' in PLATFORMS`, `'audiobook' in MEDIA_KINDS`), each of the ten shared root files has an update-gated `_exclude` line beside its `_skip_if_exists` line, the one path ever negated back in is an output folder's own `README.md`, listed above every gated line (DESIGN.md Section 3.5, D19), and the mode-file block between its `BEGIN`/`END generated mode excludes` markers is written by `.github/scripts/gen-mode-excludes.sh`, never by hand.
 - `template/` — the product. **Every file in it is rendered**, so the delimiters `<%`, `<:` and `<~` appear only where a token is meant (token discipline: `.claude/CLAUDE.md` Section 4), HTML, CSS, TOML and SRT included.
 - `.claude/` — the development manual. Its settings deny every skill under `template/.claude/skills/` and exclude the template's `CLAUDE.md` files from development sessions, so the product's instructions never steer the people building it.
 - `.github/scripts/` — the audits, each with a `--self-test`; `README.md` lists what each checks. CI runs all of them on every push. `syntek-author-names.txt` freezes the names media must never take (D27).

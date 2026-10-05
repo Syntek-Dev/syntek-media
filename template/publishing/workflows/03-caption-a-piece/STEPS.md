@@ -50,7 +50,7 @@ _Substantive._
 Write the result to `publishing/src/captions/<piece>.en-GB.srt` with `-o`: without it
 `captions align`, `retime`, `rewrap` and `vtt` write to the terminal. Route one, from the segment
 register; route two, a scripted piece, aligned on the master's own audio (`extract-audio` writes
-`production/src/renders/<stem>.wav` and prints the path):
+`<stem>.wav` into the piece's `production/src/renders/<piece>/` and prints the path):
 
 ```bash
 python3 toolkit/media.py captions from-segments production/src/voiceover/<piece>.toml --deliverable KEY -o <srt>

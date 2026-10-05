@@ -104,5 +104,6 @@ title = ""                    # within platform.podcast.chapter_title_max_chars;
   (the author's report) · `withdrawn`.
 - **Written by the toolkit, tracked:** `<show>.feed.xml`, by `feed write -o` only.
 - **Generated (never hand-edit), in `publishing/src/renders/`:** each episode's
-  `<piece>.podcast-feed-audio.mp3`, its `<piece>.chapters.json`, and the upload copy
-  `<show>.feed.xml`.
+  `<piece>.podcast-feed-audio.mp3` and `<piece>.chapters.json` in its piece's folder,
+  `publishing/src/renders/<piece>/`, and the upload copy `<show>.feed.xml` at the top, which no
+  piece owns.

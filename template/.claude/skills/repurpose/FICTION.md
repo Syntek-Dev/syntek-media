@@ -9,7 +9,7 @@ talks, cut into teasers that sell the story without spending it.
   in `scripts/src/pieces/NNN-kebab-title/`. **Cut:** one teaser, one passage read whole, or one
   answer.
 - **Procedure:** `publishing/workflows/01-plan-the-cut-downs/`.
-- **Master:** `production/src/renders/<piece>.master.mp4`. **Plan:**
+- **Master:** `production/src/renders/<piece>/<piece>.master.mp4`. **Plan:**
   `publishing/src/cut-downs/<piece>.md`.
 - **The spoiler line:** how much of the story the book's own blurb gives away. Read the blurb
   wherever the author keeps it (in syntek-author's proposal layer, where present); read, never

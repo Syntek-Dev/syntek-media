@@ -37,8 +37,8 @@ Design (`brand/workflows/02-sync-with-claude-design/`), an exported asset is to 
   `production/src/rights-register.md`.
 - **The two layouts**, `brand/src/design-system/previews/thumbnail.html` and
   `brand/src/design-system/previews/card.html`, adapted and approved in proof.
-- **Proofs** in the git-ignored `production/src/renders/`, and the decisions dated in
-  `.claude/MEMORY.md`.
+- **Proofs** in the git-ignored `production/src/renders/proofs/brand-kit-DD-MM-YYYY/`, and the
+  decisions dated in `.claude/MEMORY.md`.
 
 ## The failure this procedure exists to prevent
 

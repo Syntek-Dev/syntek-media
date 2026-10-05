@@ -87,9 +87,11 @@ an exported file is filed through `brand/workflows/03-record-a-design-export/`. 
 > **Skill:** none · **Guide:** `brand/docs/reference/the-brand-kit.md`
 
 Run `python3 toolkit/media.py tokens` and `uv run toolkit/card.py check` on the card that
-changed. For `thumbnail.html` or `card.html`, render a landscape and a vertical proof into
-`production/src/renders/` and tell the author that the change reaches every piece copied from
-now on, and no thumbnail or card already copied. _Mechanical._
+changed. For `thumbnail.html` or `card.html`, render a landscape and a vertical proof with
+`uv run toolkit/card.py render`, `-o` naming a file in
+`production/src/renders/proofs/<what>-DD-MM-YYYY/` (`<what>` the layout, `thumbnail` or `card`,
+and today's date), and tell the author that the change reaches every piece copied from now on,
+and no thumbnail or card already copied. _Mechanical._
 
 ## 8. Record
 

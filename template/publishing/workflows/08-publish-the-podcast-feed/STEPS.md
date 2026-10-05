@@ -24,11 +24,15 @@ is load-bearing — and tick `CHECKLIST.md` as you go.
 > **Skill:** `prepare-post` · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
 The brief lists `podcast.feed_audio`, and its `verified` dates M6. The M5 render
-`publishing/src/renders/<piece>.podcast-feed-audio.mp3` exists, and so do the master-timed `.vtt`
-and the published transcript in `publishing/src/captions/`. A missing render goes back to
+`publishing/src/renders/<piece>/<piece>.podcast-feed-audio.mp3`, in the piece's own folder,
+exists, and so do the master-timed `.vtt` and the published transcript in
+`publishing/src/captions/`. A missing render goes back to
 `publishing/workflows/02-cut-for-a-platform/`, and a missing caption file or transcript to
-`publishing/workflows/03-caption-a-piece/`; nothing is encoded or transcribed here.
-_Mechanical._
+`publishing/workflows/03-caption-a-piece/`; nothing is encoded or transcribed here. **A render an
+earlier release left flat**, at the top of `publishing/src/renders/`, is one `feed tag` never
+reads (exit 2, as for a missing render): before step 5, with the author's agreement, move it
+unchanged into the piece's folder, or encode it again through
+`publishing/workflows/02-cut-for-a-platform/`. _Mechanical._
 
 ## 2. Open the show, once
 
@@ -82,7 +86,7 @@ uploaded. _Mechanical._
 > **Skill:** `prepare-post` · **Guide:** `publishing/docs/reference/podcast-feed.md`
 
 Run `feed chapters SHOW --piece PIECE`, which writes
-`publishing/src/renders/<piece>.chapters.json` from the row's chapters. _Mechanical._
+`publishing/src/renders/<piece>/<piece>.chapters.json` from the row's chapters. _Mechanical._
 
 ## 7. Check, and mark the row ready
 
@@ -99,10 +103,10 @@ piece's other rows when M7 passes. _Mechanical._
 
 > **Skill:** `prepare-post` · **Guide:** `publishing/docs/reference/podcast-feed.md`
 
-Run `feed write SHOW --as-of '<pub_date>' -o publishing/src/renders/<show>.feed.xml`. It holds
-every `ready` or `published` episode due by then, and writes nothing while a GUID of the tracked
-feed has vanished or a length changed under an old URL: fix the register, never the feed.
-_Mechanical._
+Run `feed write SHOW --as-of '<pub_date>' -o publishing/src/renders/<show>.feed.xml`, at the
+folder's top, since no piece owns it. It holds every `ready` or `published` episode due by then,
+and writes nothing while a GUID of the tracked feed has vanished or a length changed under an
+old URL: fix the register, never the feed. _Mechanical._
 
 ## 9. Hand back
 

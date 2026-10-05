@@ -10,9 +10,11 @@
   brand/src/design-system/previews/thumbnail.html (the brand's own layout always wins).
   thumbnail-brief copies it to publishing/src/thumbnails/<piece>[--cNN].html, fixing the path
   to tokens.css, and changes only the copy: the words, and the picture, set on the frame as
-  style="--picture: url('../renders/<still>.png')". One file serves every aspect ratio:
-  1.91:1 share images, 16:9 thumbnails, posters and previews, 1:1 and 4:5 covers and 9:16
-  covers. uv run toolkit/card.py sets --safe-top, --safe-right, --safe-bottom and --safe-left
+  style="--picture: url('../../../production/src/assets/<still>.png')": a small committed still
+  in production/src/assets/ (a frame is extracted there with media.py frame -o), never a
+  git-ignored render, so the layout rebuilds from tracked files. One file serves every aspect
+  ratio: 1.91:1 share images, 16:9 thumbnails, posters and previews, 1:1 and 4:5 covers and
+  9:16 covers. uv run toolkit/card.py sets --safe-top, --safe-right, --safe-bottom and --safe-left
   (px) and --frame-width and --frame-height from the deliverable, and marks :root with
   data-deliverable and data-platform; every colour, face, weight and space comes from
   tokens.css, and nothing loads over the network.

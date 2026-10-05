@@ -3,11 +3,11 @@
 The procedure for an episode's audio master. An audio-only edit decision list (`size = ""`,
 `loudness = "podcast"`) is written with the author: clips from a recorded conversation or talk,
 or the approved voiceover of a scripted episode, with an intro and outro bed that fades and ducks
-under speech. `python3 toolkit/media.py assemble` makes `production/src/renders/<piece>.master.wav`,
-which is measured against the podcast target and heard through by the author; M3 is recorded as
-`n/a — no picture` and M4 is dated. It does not encode the feed files
-(`publishing/workflows/02-cut-for-a-platform/`) or write the episode's description
-(`publishing/workflows/05-prepare-a-post/`).
+under speech. `python3 toolkit/media.py assemble` makes
+`production/src/renders/<piece>/<piece>.master.wav`, which is measured against the podcast
+target and heard through by the author; M3 is recorded as `n/a — no picture` and M4 is dated.
+It does not encode the feed files (`publishing/workflows/02-cut-for-a-platform/`) or write the
+episode's description (`publishing/workflows/05-prepare-a-post/`).
 
 ## Directory Tree
 
@@ -34,7 +34,8 @@ Reach for a **different** procedure when the master has a picture
 ## What it produces, and where
 
 - **The audio edit decision list** `production/src/edits/<piece>.toml`, with the author.
-- **The master** `production/src/renders/<piece>.master.wav`, git-ignored and regenerable.
+- **The master** `production/src/renders/<piece>/<piece>.master.wav`, in the piece's own folder,
+  git-ignored and regenerable.
 - **The brief's** `verified` entries for M3 (`n/a — no picture`) and M4, and its `status`.
 
 ## The failure this procedure exists to prevent

@@ -11,7 +11,7 @@ reading and the audiobook.
 - **Voiced lines:** the script's `VO:` and `NARRATOR:` lines, and each character's lines under that
   character's upper-case name.
 - **Register:** `production/src/voiceover/<piece>.toml`; takes in
-  `production/src/voiceover/generated/` (git-ignored).
+  `production/src/voiceover/generated/<piece>/takes/` (git-ignored).
 - **Narrators:** the `voiceover` row of `brand/src/voice/voice.md`, and one `character:<name>` row
   for each character the author has chosen to voice separately.
 - **Constructed names:** the language's lexicon or the names register in syntek-author's world

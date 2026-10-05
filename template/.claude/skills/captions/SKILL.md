@@ -80,19 +80,20 @@ are the procedure of record — do not restate them at length here.
 
 3. **Make a recorded piece's transcript, when that is the job.** The recording is logged first
    (`media.py footage add`, which copies it and never moves it). Run
-   `python3 toolkit/media.py extract-audio SRC` for a mono 16-bit WAV; it writes
-   `production/src/renders/<stem>.wav` (git-ignored) and prints the path. Make the transcript by
-   hand with the author, or by speech-to-text when asked (step 4). Write `transcript.md` in the
-   piece folder, in the format of `scripts/docs/reference/writing-for-the-ear.md`: frontmatter
-   `piece`, `source` (the recording's footage ID), `made` and `approved`; one H2 per beat,
-   `## N. <Beat name> (at HH:MM:SS.mmm)`; spoken lines only, as said, with no braces; a word it
-   cannot settle written `[unclear]` and flagged `<!-- VERIFY: … -->`. Take each beat's anchor from
-   the author's timings, or from a first `captions align` pass without `--anchors` that the author
-   checks against the recording; never guess one. Run the fact-check skill (syntek-author), where
-   present, over its claims as a report, and the spelling and grammar skills (syntek-author), where
-   present, for mis-transcriptions only: a transcript's words are what was said. Check that
-   `.claude/skills/<skill>/SKILL.md` exists before naming each, and say which is missing. Set
-   `approved:` only on the author's word: that is M2 (briefed → scripted) for a recorded piece.
+   `python3 toolkit/media.py extract-audio SRC -o production/src/renders/<piece>/<stem>.wav` for a
+   mono 16-bit WAV in the piece's git-ignored folder, `<stem>` the recording's file stem; it prints
+   the path. Make the transcript by hand with the author, or by speech-to-text when asked (step 4).
+   Write `transcript.md` in the piece folder, in the format of
+   `scripts/docs/reference/writing-for-the-ear.md`: frontmatter `piece`, `source` (the recording's
+   footage ID), `made` and `approved`; one H2 per beat, `## N. <Beat name> (at HH:MM:SS.mmm)`;
+   spoken lines only, as said, with no braces; a word it cannot settle written `[unclear]` and
+   flagged `<!-- VERIFY: … -->`. Take each beat's anchor from the author's timings, or from a first
+   `captions align` pass without `--anchors` that the author checks against the recording; never
+   guess one. Run the fact-check skill (syntek-author), where present, over its claims as a report,
+   and the spelling and grammar skills (syntek-author), where present, for mis-transcriptions only:
+   a transcript's words are what was said. Check that `.claude/skills/<skill>/SKILL.md` exists
+   before naming each, and say which is missing. Set `approved:` only on the author's word: that is
+   M2 (briefed → scripted) for a recorded piece.
    *Complete when:* the transcript is approved, every beat is anchored and every finding decided,
    or the run has stopped for the author.
 
@@ -183,11 +184,11 @@ are the procedure of record — do not restate them at length here.
     brief asks, the captions are burned in: in the cutting pass (`cut --captions`,
     `cut-for-platform`) when the cut is still to be rendered, otherwise with
     `python3 toolkit/media.py captions burn SRC SRT --deliverable KEY`, which writes the `.burned`
-    render to `publishing/src/renders/`. A caption font that fell back to another is a failure:
-    report it, and never accept the substitute. Otherwise the file goes up beside the video as a
-    sidecar, and `prepare-post` names it in the post package. A video on a site of the website or
-    blog profile, whoever owns it, always takes its `.vtt` as a sidecar, loaded by `<track>`, never
-    burned; a feed episode's `.vtt` is the master-timed one, named in its show register.
+    render to `publishing/src/renders/<piece>/`. A caption font that fell back to another is a
+    failure: report it, and never accept the substitute. Otherwise the file goes up beside the video
+    as a sidecar, and `prepare-post` names it in the post package. A video on a site of the website
+    or blog profile, whoever owns it, always takes its `.vtt` as a sidecar, loaded by `<track>`,
+    never burned; a feed episode's `.vtt` is the master-timed one, named in its show register.
     *Complete when:* every deliverable with speech and picture has burned captions or a sidecar,
     and every burn passed.
 

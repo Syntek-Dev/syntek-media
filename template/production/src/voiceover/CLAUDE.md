@@ -55,12 +55,14 @@ script_lines = "1.1"         # beat.line, or a range: one sentence or one beat
 text = ""                    # as spoken, braces removed: the caption text
 request = ""                 # as sent: pronunciations substituted, directions as audio tags
 take = 1                     # written by take add
-file = ""                    # written by take add; relative to production/src/voiceover/
+file = ""                    # written by take add, relative to this folder: generated/<piece>/takes/<name>
 characters = 0               # of the request, as billed
 pause_after = 0.0            # seconds of silence before the next segment
 status = "generated"         # generated · approved · rejected
 archived = ""                # the footage ID once the approved take is archived
 ```
 
-- **Generated (never hand-edit):** the takes in `production/src/voiceover/generated/`, named
-  `<piece>.sNN.tN.mp3` (`.pcm` for a raw format).
+- **Generated (never hand-edit):** the takes in `production/src/voiceover/generated/<piece>/takes/`,
+  named `<piece>.sNN.tN.mp3` (`.pcm` for a raw format); a row written before the per-piece layout
+  keeps its flat `generated/<name>`, which every reader opens as the row names it. A piece's
+  folder carries no pair, and a tracked file never sits in it.

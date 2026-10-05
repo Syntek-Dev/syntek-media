@@ -22,8 +22,11 @@ more (a screen recording saved as a GIF) is moving media, cut by its in and out 
 and a moving WebP is refused, named, where ffmpeg cannot decode it (6.1 cannot). frame says how
 a source fills the master's size: fit (letterboxed), crop (to fill; x is the left edge in source
 pixels) or pad (over a blurred copy of itself). A card under production/src/cards/ is rendered
-to production/src/renders/ with 'uv run toolkit/card.py' whenever its PNG is missing or older
-than its HTML or tokens.css. [[overlay]] lays a card (rendered with alpha) or a still image over
+to its piece's production/src/renders/<piece>/cards/ by card.py, started through uv with DESIGN
+D20's interpreter and first-run lock, whenever its PNG is missing or older than its HTML or
+tokens.css; an overlay's render, with alpha, is named <card>.<W>x<H>.transparent.png, so a card
+used as a clip and as an overlay at one size keeps both, each judged fresh on its own.
+[[overlay]] lays a card (rendered with alpha) or a still image over
 the picture from the frame its at rounds to up to the frame its until rounds to, rounded as the
 clips' boundaries are, so one timed to a clip's start or end starts or ends with that clip; an
 overlay that would show on no frame is refused. [[audio]] places sound on the timeline:
@@ -67,6 +70,12 @@ silence, and refuses a source whose sound runs on more than a frame and 0.1 s pa
 toolkit held the sound, the deliverable's length is verified stream by stream, the picture and
 the sound each named, and the sound must end within a frame of its picture; cut and captions
 burn keep the source's own sound, and are verified by the file's length.
+
+Without -o, each output goes to its piece's own folder (DESIGN D64, Section 6.16): assemble's
+master to production/src/renders/<piece>/, and what cut, encode, frame and still-video make to
+publishing/src/renders/<piece>/, the piece being the leading NNN-kebab-title of the output's
+name (the edit's piece; the source's name, or still-video's audio's). A name with none, such as
+a footage file's, stays at the top of its renders folder.
 
 In an edit decision list, x = 0 (the skeleton's default) means a centred crop; a crop from a
 chosen left edge gives that edge in source pixels, 1 or more.
@@ -527,6 +536,13 @@ def deliverable_name(src: Path, key: str, cut: str | None, burned: bool, ext: st
     return f"{piece}{'--' + cut if cut else ''}.{C.file_form(key)}{'.burned' if burned else ''}{ext}"
 
 
+def deliverable_path(src: Path, key: str, cut: str | None, burned: bool, ext: str) -> Path:
+    """A deliverable's default path: its piece's publishing/src/renders/<piece>/, or the folder's
+    top where the name carries no piece key (DESIGN D64, Section 6.16)."""
+    name = deliverable_name(src, key, cut, burned, ext)
+    return C.piece_folder(C.PUB_RENDERS, name) / name
+
+
 def length_finding(seconds: float, table: dict, what: str, slack: float = 1e-6) -> str:
     """The finding when a length is outside the deliverable's min_seconds or max_seconds, else ''."""
     if table.get("max_seconds") and seconds > table["max_seconds"] + slack:
@@ -636,8 +652,7 @@ def cmd_cut(args) -> int:
         return 1
     if table.get("kind") != "video":
         ext = audio_ext(table)
-        out = C.output_path(C.path(C.PUB_RENDERS) / deliverable_name(src, table["key"], args.cut, False, ext),
-                            args.o, inputs=[src])
+        out = C.output_path(deliverable_path(src, table["key"], args.cut, False, ext), args.o, inputs=[src])
         render(["-y", "-ss", C.fmt_tc(a), "-to", C.fmt_tc(b)] + C.input_args(src)
                + ["-map", "0:a:0", "-vn"] + audio_codec_args(table) + untagged(table) + faststart(ext)
                + [str(out)], out, what="cut")
@@ -646,7 +661,7 @@ def cmd_cut(args) -> int:
     if overlay:
         import media_image as I
         overlay = I.overlay_size(overlay, size)
-    out = C.output_path(C.path(C.PUB_RENDERS) / deliverable_name(src, table["key"], args.cut, burned, ".mp4"),
+    out = C.output_path(deliverable_path(src, table["key"], args.cut, burned, ".mp4"),
                         args.o, inputs=[src] + ([overlay] if overlay else []))
     graph, tail, fps = picture_filters(info, table, args.frame, args.x)
     with tempfile.TemporaryDirectory(prefix="media-cut-") as tmp:
@@ -740,13 +755,12 @@ def cmd_encode(args) -> int:
         afilter = ["-af", pre + A.loudnorm_filter(A.loudnorm_measure(src, target, pre=pre), target) + ","
                    + held_sound(tick(lead[1] - snd[0], Fraction(rate)), rate)]
     if table.get("kind") != "video":
-        out = C.output_path(C.path(C.PUB_RENDERS) / deliverable_name(src, table["key"], None, False,
-                                                                     audio_ext(table)), args.o, inputs=[src])
+        out = C.output_path(deliverable_path(src, table["key"], None, False, audio_ext(table)), args.o,
+                            inputs=[src])
         render(["-y"] + C.input_args(src) + ["-map", "0:a:0", "-vn"] + afilter + audio_codec_args(table)
                + untagged(table) + faststart(out.suffix) + [str(out)], out, what="encode")
     else:
-        out = C.output_path(C.path(C.PUB_RENDERS) / deliverable_name(src, table["key"], None, False, ".mp4"),
-                            args.o, inputs=[src])
+        out = C.output_path(deliverable_path(src, table["key"], None, False, ".mp4"), args.o, inputs=[src])
         graph, tail, fps = picture_filters(info, table, args.frame or "crop", None)
         graph = graph + [tail + "format=yuv420p[v]"]
         cmd = ["-y"] + C.input_args(src) + ["-filter_complex", ";".join(graph), "-map", "[v]"]
@@ -771,8 +785,8 @@ def cmd_frame(args) -> int:
         raise C.Fatal(f"{C.shown(src)} has no picture")
     if at > C.duration(info):
         raise C.Fatal(f"--at {C.fmt_tc(at)} is past the end of {C.shown(src)}")
-    stem = src.name.rsplit(".", 1)[0]
-    out = C.output_path(C.path(C.PUB_RENDERS) / f"{stem}.{C.tc_name(at)}.png", args.o, inputs=[src])
+    name = f"{src.name.rsplit('.', 1)[0]}.{C.tc_name(at)}.png"
+    out = C.output_path(C.piece_folder(C.PUB_RENDERS, name) / name, args.o, inputs=[src])
     render(["-y", "-ss", C.fmt_tc(at), "-i", str(src), "-frames:v", "1", "-update", "1", str(out)], out,
            what="frame")
     v = C.streams(C.probe(out), "video")[0]
@@ -806,8 +820,7 @@ def cmd_still_video(args) -> int:
     # repeats the sized frame, so a 3000x3000 cover is never scaled thirty times a second.
     graph = reframe("0:v", "rf", int(iv[0]["width"]), int(iv[0]["height"]), size[0], size[1], "fit", None, "0")
     graph.append("[rf]fps=30,format=yuv420p[v]")
-    out = C.output_path(C.path(C.PUB_RENDERS) / deliverable_name(audio, table["key"], None, False, ".mp4"),
-                        args.o, inputs=[image, audio])
+    out = C.output_path(deliverable_path(audio, table["key"], None, False, ".mp4"), args.o, inputs=[image, audio])
     pre = "aformat=channel_layouts=stereo,"
     m = A.loudnorm_measure(audio, target, pre=pre)
     rate = audio_rate(table)   # the sound held to its own length: -t alone cut loudnorm's late stamps
@@ -825,23 +838,37 @@ def cmd_still_video(args) -> int:
 
 # ── assemble ────────────────────────────────────────────────────────────────────────────
 
+CARD_TIMEOUT = 600   # seconds for one card render, a first run's install of Playwright included
+
+
+def card_name(html: Path, w: int, h: int, transparent: bool) -> Path:
+    """Where a card's PNG at w x h lives (DESIGN D47, D64, Section 6.16): the piece's
+    production/src/renders/<piece>/cards/<piece>.<card>.<W>x<H>.png, with '.transparent' before
+    '.png' for an overlay's, so a card used as a clip and as an overlay at one size keeps both;
+    a card whose name carries no piece key renders at the top of production/src/renders/."""
+    folder = C.piece_folder(C.PROD_RENDERS, html.name, "cards")
+    return folder / f"{html.stem}.{w}x{h}{'.transparent' if transparent else ''}.png"
+
+
 def card_png(html: Path, w: int, h: int, transparent: bool) -> Path:
-    """The card's PNG at w x h, rendered with card.py when missing or older than its sources."""
+    """The card's PNG at w x h, rendered with card.py when missing or older than its HTML or
+    tokens.css. Each variant, the clip's and the overlay's, is its own file, judged fresh on its
+    own. card.py runs through C.uv_script: D20's interpreter, the first-run lock, a timeout."""
     if not html.is_file():
         raise C.Fatal(f"card not found: {C.shown(html)}")
-    png = C.path(C.PROD_RENDERS) / f"{html.stem}.{w}x{h}.png"
+    png = card_name(html, w, h, transparent)
     tokens = C.path(C.TOKENS)
     newest = max(html.stat().st_mtime, tokens.stat().st_mtime if tokens.is_file() else 0)
     if png.is_file() and png.stat().st_mtime >= newest:
         return png
-    uv = shutil.which("uv")
-    if not uv:
+    if not shutil.which("uv"):
         raise C.Fatal(f"uv is not installed, and {C.shown(html)} needs rendering: {C.INSTALL['uv']}")
     png.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [uv, "run", "--quiet", str(C.TOOLKIT / "card.py"), "render", str(html), "--size", f"{w}x{h}",
-           "-o", str(png)] + (["--transparent"] if transparent else [])
     print(f"  rendering {C.shown(html)} → {C.shown(png)}")
-    proc = subprocess.run(cmd, cwd=C.ROOT, capture_output=True, text=True)
+    proc = C.uv_script(C.TOOLKIT / "card.py", ["render", html, "--size", f"{w}x{h}", "-o", png]
+                       + (["--transparent"] if transparent else []), timeout=CARD_TIMEOUT, cwd=C.ROOT,
+                       hint="a first run fetches Playwright, which a slow network can delay; run "
+                            "'python3 toolkit/media.py check --setup', then assemble again")
     if proc.returncode == 1:
         raise C.Finding(f"card.py found problems in {C.shown(html)}:\n{proc.stdout.strip()}\n{proc.stderr.strip()}")
     if proc.returncode != 0:
@@ -1246,8 +1273,8 @@ def assemble(args, tmp: Path) -> int:
                      f"atrim=end_sample={total_samples}[aout]")
     else:
         graph.append(f"[{mix[0]}]atrim=end_sample={total_samples}[aout]")
-    ext = ".mp4" if size else ".wav"
-    out = C.output_path(C.path(C.PROD_RENDERS) / f"{piece}.master{ext}", args.o)
+    name = f"{piece}.master{'.mp4' if size else '.wav'}"
+    out = C.output_path(C.piece_folder(C.PROD_RENDERS, name) / name, args.o)
     print(f"assemble {C.shown(edl['path'])}: {len(clips)} clip(s), {len(edl['overlay'])} overlay(s), "
           f"{len(edl['audio'])} audio track(s), {total:.3f} s" + (f" at {w}x{h}, {fps_text} fps" if size else
                                                                    ", audio only"))

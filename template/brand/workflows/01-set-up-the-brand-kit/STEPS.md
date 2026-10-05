@@ -105,9 +105,11 @@ when the author calls it the brand's own. _Substantive._
 
 Run `uv run toolkit/card.py check` on each of the seven cards. Render each layout at a landscape
 and a vertical size with `uv run toolkit/card.py render <card> --size 1920x1080` and
-`--size 1080x1920`, each with `-o` naming a file in `production/src/renders/`, and the card once
-more with `--transparent`; render the captions card at the vertical size. Show every proof to the
-author. A missing browser is exit 2 with its install command: give it, and stop.
+`--size 1080x1920`, and the card once more with `--transparent`; render the captions card at the
+vertical size. Every render takes `-o` naming a file in today's proofs folder,
+`production/src/renders/proofs/brand-kit-DD-MM-YYYY/` (`thumbnail.1920x1080.png`, for example),
+which no piece owns and the command makes. Show every proof to the author. A missing browser is
+exit 2 with its install command: give it, and stop.
 _Mechanical (rendering); judging each proof with the author is substantive._
 
 ## 10. Record

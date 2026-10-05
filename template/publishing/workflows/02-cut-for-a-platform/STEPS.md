@@ -23,7 +23,7 @@ load-bearing — and tick `CHECKLIST.md` as you go.
 > **Skill:** `cut-for-platform` · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
 Read the brief, `scripts/src/pieces/<piece>/brief.md`: its `verified` dates M4. Find the master in
-`production/src/renders/`; a missing master is remade by
+the piece's own folder, `production/src/renders/<piece>/`; a missing master is remade by
 `production/workflows/03-assemble-the-master/` first. Where the piece has cuts, its plan in
 `publishing/src/cut-downs/` is `approved`. **Nothing is cut from an unapproved master or plan.**
 _Mechanical._
@@ -69,7 +69,8 @@ for a video platform is a still under its audio:
 `podcast.feed_audio`** is encoded the same way, untagged and needing no register, from the audio
 master or, for a talk published as an episode, from the picture master, whose sound alone it
 takes; its tags and chapters are written at M7, through the podcast-feed workflow where the
-project has it. _Mechanical._
+project has it. Every render, here and in step 6, lands in the piece's own folder,
+`publishing/src/renders/<piece>/`, where the toolkit puts it by default. _Mechanical._
 
 ## 6. Cut each approved cut
 

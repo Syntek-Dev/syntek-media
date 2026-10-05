@@ -34,8 +34,9 @@ Never run it unasked. Reach for a **different** procedure when the script is not
 
 - **The segment register** `production/src/voiceover/<piece>.toml`: one row per segment, with
   its script lines, words, request, take, file, characters, pause and status.
-- **Takes** in `production/src/voiceover/generated/`, named `<piece>.sNN.tN.mp3` (`.pcm` for a
-  raw format), git-ignored.
+- **Takes** in the piece's `production/src/voiceover/generated/<piece>/takes/`, named
+  `<piece>.sNN.tN.mp3` (`.pcm` for a raw format), git-ignored; a scratch track beside that
+  folder in `generated/<piece>/`, never among the takes.
 - **Credits-log rows** in `production/src/credits-log.md`, one per call, written by `take add`.
 - **The narrator record** in `brand/src/voice/voice.md`, the first time.
 - **Archived takes:** each approved take logged in `production/src/footage/manifest.toml`.

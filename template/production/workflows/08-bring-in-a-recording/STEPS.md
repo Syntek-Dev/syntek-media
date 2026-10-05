@@ -40,9 +40,11 @@ episode cut from a talk another piece recorded does. _Mechanical._
 
 > **Skill:** `captions` · **Guide:** `production/docs/reference/recorded-pieces.md`
 
-Run `python3 toolkit/media.py extract-audio` on the mirrored recording. It writes a mono WAV to
-`production/src/renders/<stem>.wav` (git-ignored, the recording's file stem), which
-speech-to-text accepts and `captions align` reads, and prints that path. _Mechanical._
+Run `python3 toolkit/media.py extract-audio` on the mirrored recording with
+`-o production/src/renders/<piece>/<stem>.wav`, `<stem>` being the recording's file stem: a
+footage file's name carries no piece key, so without `-o` the toolkit would leave the WAV at
+the top of `production/src/renders/`, which no piece owns. The mono WAV, git-ignored, is what
+speech-to-text accepts and `captions align` reads; the command prints its path. _Mechanical._
 
 ## 4. Choose how the transcript is made
 

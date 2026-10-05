@@ -16,7 +16,7 @@ publishing/src/
 ├── .gitignore        ← keeps renders/ out of Git, all but its README
 ├── schedule.md       ← seed: when each media deliverable goes out
 ├── publish-log.md    ← seed: every upload, as the author reported it
-├── renders/          ← deliverables, burned versions, images, GIFs, chapters files; git-ignored, README.md only
+├── renders/          ← <piece>/: its deliverables, burned versions, images, GIFs, chapters; git-ignored, README.md only
 ├── cut-downs/        ← <piece>.md: one cut-down plan per piece
 ├── captions/         ← <piece>[--cNN|.<FID>][.<platform>-<format>].en-GB.srt and .vtt; published transcripts
 ├── thumbnails/       ← <piece>[--cNN].md brief and .html layout, for every image deliverable
@@ -36,13 +36,14 @@ publishing/src/
 | A piece's post package | `posts/<piece>.md` | `prepare-post`, with the author |
 | The schedule | `schedule.md` | `prepare-post`, then the author's reports |
 | The publish log | `publish-log.md` | `prepare-post`, from the author's report only |
-| Rendered deliverables, images, GIFs, chapters files and a feed's upload copy | `renders/` | `cut-for-platform`, `captions`, `thumbnail-brief`, `prepare-post` |
+| A piece's rendered deliverables, images, GIFs and chapters file, in a folder named for it; at the top, what no piece owns (a feed's upload copy, a show's cover encodes) | `renders/` | `cut-for-platform`, `captions`, `thumbnail-brief`, `prepare-post` |
 
 - **The schedule and the log are the single source of truth** for what goes out when, and what
   went out. Where syntek-author's content calendar is present, it owns the plan, and every
   schedule row cites its calendar entry.
 - **`.gitignore` is template-owned** and ships with every project: it ignores everything in
-  `renders/` except the folder's README, so a render can never be committed by accident.
+  `renders/` except the folder's README, each piece's folder there included, so a render can
+  never be committed by accident.
 - A generated project may hold one worked example, a short plan, caption file, thumbnail and post
   package, where it was kept; delete them once you no longer need them, and they will not come
   back.
@@ -55,4 +56,5 @@ you delete and never touches one you have edited.
 - `publishing/docs/reference/CONTEXT.md` — the guides each part follows.
 - `publishing/workflows/CONTEXT.md` — the procedures that write each part.
 - `scripts/src/pieces/` — the briefs, scripts and transcripts every part here reads.
-- `production/src/renders/` — the masters every deliverable is cut or encoded from.
+- `production/src/renders/` — the masters every deliverable is cut or encoded from, each in its
+  piece's folder.

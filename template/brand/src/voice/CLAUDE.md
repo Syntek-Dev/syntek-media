@@ -48,4 +48,5 @@ narrator, settings and pronunciations without asking again.
 - **Hand-written (with the author):** `voice.md`, one sentence per line outside its tables.
 - **Written by skills:** a narrator row, the first time, by `voiceover`.
 - **Generated (never hand-edit):** nothing here; trial audio lands in the git-ignored
-  `production/src/voiceover/generated/`.
+  `production/src/voiceover/generated/voice-trials/<name>/`, created before the call by
+  `python3 toolkit/media.py speak plan --trial <name>`.

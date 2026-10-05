@@ -125,8 +125,9 @@ _exclude:
   # output (an SRT or VTT sidecar, an extract, a chunk's text). `/**` takes everything below
   # the folder at any depth, sub-folders included, and the quoted negation after it brings
   # back that folder's own README.md and no other: a README.md in a sub-folder stays out
-  # (Copier 9.18.2, pathspec 1.1.1, 05/10/2026). ANCHORED, never an unanchored `renders/**`:
-  # the audiobook folder's two are gated, and below that gate nothing is negated back in.
+  # (Copier 9.18.2, pathspec 1.1.1, 05/10/2026). So a per-piece output folder (D64) and
+  # anything in it never ships. ANCHORED, never an unanchored `renders/**`, which would reach
+  # past the six folders named here.
   - /production/src/renders/**
   - "!/production/src/renders/README.md"
   - /production/src/footage/raw/**
@@ -135,16 +136,19 @@ _exclude:
   - "!/production/src/voiceover/generated/README.md"
   - /publishing/src/renders/**
   - "!/publishing/src/renders/README.md"
-  # The audiobook folder's outputs sit under a gated directory, where nothing is negated back
-  # in (DESIGN.md Section 3.5, Section 10): a negation outlives a shut gate in Copier, so it
-  # would ship their READMEs to a brand that makes no audiobooks. They take no `/**` and no
-  # negation. `*/` takes everything inside a sub-folder at any depth (Copier still makes the
-  # empty sub-folder), the chunk text and sidecars `audiobook text` writes are named by type
-  # (Section 6.16), and their audio is excluded by extension above.
-  - /production/src/audiobook/generated/*/
-  - /production/src/audiobook/generated/*.txt
-  - /production/src/audiobook/generated/*.toml
-  - /production/src/audiobook/renders/*/
+  # The audiobook folder's outputs sit under a gated directory (the folder's line, in the gated
+  # block below), and take the same pair as every other output folder. Nothing under a gated
+  # directory is negated back in except an output folder's own README.md, and only from here,
+  # above every gated line (DESIGN.md Section 3.5, Section 10, D19): Copier obeys the LAST
+  # pattern that matches a path, so the shut gate, matched after these negations, still
+  # excludes the folder and both READMEs, while an open gate renders to nothing and leaves them.
+  # Listed after the gate, a negation would bring the READMEs back to a brand that makes no
+  # audiobooks (the early fixes' scratch renders, 05/10/2026). shipped-seeds.sh check 16 holds
+  # every negation here to that order, and shipped-brands.sh check 12 proves the renders.
+  - /production/src/audiobook/generated/**
+  - "!/production/src/audiobook/generated/README.md"
+  - /production/src/audiobook/renders/**
+  - "!/production/src/audiobook/renders/README.md"
   #
   # ── Shared root files: copy only, never on update (DESIGN.md D11, Section 3.6) ──
   #
@@ -199,14 +203,19 @@ _exclude:
   # BRAND_KIND test in every gate, as syntek-author's do.
   #
   # Bare paths name whole directories. That is safe only because nothing under a gated
-  # directory is negated back in (DESIGN.md Section 10): Copier obeys the LAST pattern that
-  # matches a path, so a negation listed after a gate brings its path back with the gate shut,
-  # whether the gate reads `/dir` or `/dir/**` (pathspec 1.1.1, 05/10/2026).
+  # directory is negated back in (DESIGN.md Section 3.5, Section 10), except the README.md of
+  # a README-only output folder (D42), whose negation sits ABOVE this block: Copier obeys the
+  # LAST pattern that matches a path, so a negation listed after a gate brings its path back
+  # with the gate shut, whether the gate reads `/dir` or `/dir/**` (pathspec 1.1.1,
+  # 05/10/2026). Never write a `!` line below this point (shipped-seeds.sh check 16).
   #
   # Everything not listed ships always — the voiceover skill, its workflow, its folder and its
-  # guide included (D51). toolkit/data/platforms.toml ships whole, and every nested .gitignore
-  # ships in every render, so removing a media kind never removes an ignore rule while the
-  # author's files remain.
+  # guide included (D51), and so do production/src/timing/ and production/src/scenes/ (D64,
+  # Section 3.5): every brand kind voices and times pieces, so they take no line here, as the
+  # voiceover folder takes none. The per-piece output folders are the toolkit's to make at run
+  # time and never ship (D64; the output folders' lines above).
+  # toolkit/data/platforms.toml ships whole, and every nested .gitignore ships in every render,
+  # so removing a media kind never removes an ignore rule while the author's files remain.
   #
   # ── brand/: one platform profile per platform (DESIGN.md Section 3.5) ──
   # Each profile is also a seed (Section 3.1), so it has a second line in _skip_if_exists.

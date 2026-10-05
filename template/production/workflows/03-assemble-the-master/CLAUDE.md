@@ -47,7 +47,8 @@ sources, and have the author approve it whole.
 ## Output & naming
 
 - **Produces:** `production/src/edits/<piece>.toml`, `production/src/cards/<piece>.<card>.html`
-  and, git-ignored, `production/src/renders/<piece>.master.mp4` (or `.wav`) with its card PNGs.
+  and, git-ignored, `production/src/renders/<piece>/<piece>.master.mp4` (or `.wav`) with its
+  card PNGs in `production/src/renders/<piece>/cards/`.
 - **Also writes:** for a recorded piece, `publishing/src/captions/<piece>.en-GB.srt`; the brief's
   `verified` entry for M4 and its `status`.
 - **Does not touch:** the script, the transcript, the storyboard, the footage or any take.

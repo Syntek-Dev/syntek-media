@@ -86,8 +86,9 @@ Fix every finding before rendering. _Mechanical._
 
 For each deliverable, run `uv run toolkit/card.py render <html> --deliverable KEY -o <png>`, or
 `--size WxH` for a size the author confirmed in step 2, writing
-`publishing/src/renders/<html-stem>.<platform>-<format>.png`. Exit 2 names a missing uv or
-Chromium, with its install command: report it, and stop. _Mechanical._
+`publishing/src/renders/<piece>/<html-stem>.<platform>-<format>.png`, in the piece's own folder.
+Exit 2 names a missing uv or Chromium, with its install command: report it, and stop.
+_Mechanical._
 
 ## 8. Make the posters, the other formats and the GIF
 
@@ -103,9 +104,11 @@ uv run toolkit/card.py render <html> --deliverable newsletter.preview_gif --tran
 python3 toolkit/media.py cut <master> --deliverable newsletter.preview_gif --in <In> --out <Out> --overlay <overlay png>
 ```
 
-Record each poster's `--at`, and the GIF's In and Out on the master with what its first frame
-shows, under `## Image`, so a remade file equals the approved one. Exit 1 names what failed (a
-size, `max_size`, a range over `max_seconds`): fix it at its source. _Mechanical._
+Each file lands beside the PNGs in `publishing/src/renders/<piece>/`; name the overlay's PNG
+there too with `-o`. Record each poster's `--at`, and the GIF's In and Out on the master with
+what its first frame shows, under `## Image`, so a remade file equals the approved one. Exit 1
+names what failed (a size, `max_size`, a range over `max_seconds`): fix it at its source.
+_Mechanical._
 
 ## 9. Check it at thumbnail size
 

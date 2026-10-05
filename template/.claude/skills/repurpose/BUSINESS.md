@@ -9,7 +9,7 @@ into short clips that each give one useful thing and one next step.
   `scripts/src/pieces/NNN-kebab-title/`. **Cut:** one moment of it: one tip, one answer or one
   result.
 - **Procedure:** `publishing/workflows/01-plan-the-cut-downs/`.
-- **Master:** `production/src/renders/<piece>.master.mp4`. **Plan:**
+- **Master:** `production/src/renders/<piece>/<piece>.master.mp4`. **Plan:**
   `publishing/src/cut-downs/<piece>.md`.
 - **Profiles:** `brand/src/platforms/<platform>.md`, for the deliverables each platform uses.
   Where syntek-author's social-media family is present (it is on by default in a business

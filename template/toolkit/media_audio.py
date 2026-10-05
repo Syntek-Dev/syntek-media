@@ -34,12 +34,24 @@ FILE, else the quietest stretch of the takes, looped; and 'audiobook check' fail
 head or tail is digital silence; the mastered chapter is what M4 needs approved and archived
 (DESIGN D52). 'audiobook check' measures any MP3 against [audiobook.acx].
 
+'extract-audio' writes production/src/renders/<piece>/<stem>[.<in>-<out>].wav by default, or
+the folder's top where the stem begins with no piece key, such as a footage file's (DESIGN D64,
+Section 6.16); 'loudness normalise' writes beside a source already in an output folder, and
+otherwise by the same rule, in production/src/renders/<piece>/ or at the folder's top.
+
 'take add' (DESIGN D21, D44) renames a fresh ElevenLabs file to its permanent name at once (the
 server names files by the second and can overwrite one), writes the register and appends the
-credits-log row. A pcm_* take is headerless 16-bit little-endian mono in a file the server names
-.mp3: it is renamed .pcm and read with the register's sample rate (VERIFY the raw layout on
-first use). An audiobook's output format is the chapter register's output_format, else the
-Output format of its voice_use row in brand/src/voice/voice.md.
+credits-log row. A voiceover take is named in the folder it was found in: the piece's
+generated/<piece>/takes/ (DESIGN D64), or the flat generated/ an earlier release used (D65); its
+number follows the segment's highest take in either, and the register's own take, so a re-roll
+never repeats a number; the row's file records the path the take was named at, which every
+reader opens. A re-roll resets the segment's status to generated and archived to empty, because the new
+take is unheard and unarchived (Section 6.6). A voice trial in generated/voice-trials/<name>/ is
+never a take: take add refuses it (D21). A pcm_* take is headerless 16-bit little-endian mono in
+a file the server names .mp3: it is renamed .pcm and read with the register's sample rate
+(VERIFY the raw layout on first use). An audiobook's takes stay flat in its own generated/; its
+output format is the chapter register's output_format, else the Output format of its voice_use
+row in brand/src/voice/voice.md.
 
 Standard library only; Python 3.11+.
 """
@@ -225,7 +237,9 @@ def render(cmd: list, out: Path, cwd=None, what="ffmpeg"):
 
 
 def default_out_dir(src: Path) -> Path:
-    return src.resolve().parent if C.in_output_folder(src) else C.path(C.PROD_RENDERS)
+    """Beside a source already in an output folder; otherwise production/src/renders/, in the
+    piece's own folder where the source's name begins with a piece key (DESIGN D64)."""
+    return src.resolve().parent if C.in_output_folder(src) else C.piece_folder(C.PROD_RENDERS, src.name)
 
 
 def cmd_normalise(args) -> int:
@@ -253,8 +267,8 @@ def cmd_extract(args) -> int:
         seek, label = ["-ss", C.fmt_tc(a), "-to", C.fmt_tc(b)], f".{C.tc_name(a)}-{C.tc_name(b)}"
     if not 8000 <= args.rate <= 192000:
         raise C.Fatal(f"--rate {args.rate} is not a sample rate between 8000 and 192000 Hz")
-    stem = src.name.rsplit(".", 1)[0]
-    out = C.output_path(C.path(C.PROD_RENDERS) / f"{stem}{label}.wav", args.o, inputs=[src])
+    stem = src.name.rsplit(".", 1)[0]   # its piece's folder, or the top for a stem with none (D64)
+    out = C.output_path(C.piece_folder(C.PROD_RENDERS, stem) / f"{stem}{label}.wav", args.o, inputs=[src])
     render(["-y"] + seek + C.input_args(src) + ["-map", "0:a:0", "-vn", "-ac", "1", "-ar",
                                                 str(args.rate), "-c:a", "pcm_s16le", str(out)], out,
            what="extract-audio")
@@ -1054,10 +1068,38 @@ def set_toml_fields(text: str, table: str, match: tuple, updates: dict) -> str:
     raise C.Fatal(f"no [[{table}]] with {match[0]} = \"{match[1]}\"")
 
 
-def next_take(folder: Path, prefix: str) -> int:
-    numbers = [int(m.group(1)) for f in folder.glob(f"{prefix}.t*.*")
+def next_take(folders, prefix: str, floor: int = 0) -> int:
+    """The number after the highest take named <prefix>.tN.* in any of folders, and after floor
+    (the register's own take). A voiceover segment's takes may sit in both layouts (DESIGN D65):
+    flat in generated/, where an earlier release put them, and in generated/<piece>/takes/, so a
+    re-roll after a flat take continues its numbering. Only names are read, never a take."""
+    folders = [folders] if isinstance(folders, (str, Path)) else list(folders)
+    numbers = [int(m.group(1)) for folder in folders for f in Path(folder).glob(f"{prefix}.t*.*")
                if (m := re.match(rf"^{re.escape(prefix)}\.t(\d+)\.", f.name))]
-    return max(numbers, default=0) + 1
+    return max(numbers + [floor], default=0) + 1
+
+
+def take_folder(src: Path, piece: str) -> tuple:
+    """(the folder a voiceover take is named in, every folder its segment's takes may sit in): the
+    piece's generated/<piece>/takes/ (DESIGN D64), or the flat generated/ an earlier release used
+    (D65), whichever holds src. Anything else is refused, a voice trial with its reason (D21)."""
+    flat = C.path(C.VO_GENERATED)
+    takes = flat / piece / "takes"
+    homes = (takes, flat)
+    parent = src.resolve().parent
+    for home in homes:
+        if parent == home.resolve():
+            if home == flat:
+                print(f"  note: {C.shown(src)} is flat in {C.VO_GENERATED}/, where an earlier release kept "
+                      f"takes: it is named there; this release's calls write to {C.shown(takes)}/ (D64)")
+            return home, homes
+    trials = (flat / "voice-trials").resolve()
+    if parent == trials or trials in parent.parents:
+        raise C.Fatal(f"{C.shown(src)} is a voice trial, which is never a take: it keeps the server's name, "
+                      "enters no register and takes its credits-log row from the skill, with '—' for the "
+                      "piece (DESIGN D21, D44)")
+    raise C.Fatal(f"{C.shown(src)} is not in {C.shown(takes)}/, where this piece's takes live (or flat in "
+                  f"{C.shown(flat)}/, where an earlier release kept them)")
 
 
 def voice_name(use: str) -> str:
@@ -1081,18 +1123,21 @@ def cmd_take_add(args) -> int:
         raise C.Fatal(f"{C.shown(src)} is not in a generated/ folder: every ElevenLabs call passes "
                       "an absolute output_directory inside one")
     piece = args.piece
+    if not re.fullmatch(r"\d{3}-[a-z0-9][a-z0-9-]*", piece):
+        raise C.Fatal(f"--piece {piece!r} is not a piece name (NNN-kebab-title)")
     if args.segment:
         if args.chapter or args.part:
             raise C.Fatal("take add takes --segment, or --chapter with --part, not both")
         sid = segment_id(args.segment)
+        folder, homes = take_folder(src, piece)
         reg = C.path(C.VOICEOVER) / f"{piece}.toml"
         data = C.load_toml(reg)
         head = data.get("voiceover", {})
         seg = next((s for s in data.get("segment", []) if str(s.get("id")) == sid), None)
         if seg is None:
             raise C.Fatal(f"{C.shown(reg)} has no [[segment]] with id = \"{sid}\"")
-        folder = C.path(C.VO_GENERATED)
         prefix = f"{piece}.{sid}"
+        floor = seg.get("take") if isinstance(seg.get("take"), int) else 0
         fmt = head.get("output_format", "mp3_44100_128")
         chars = int(seg.get("characters") or 0) or len(str(seg.get("request") or seg.get("text") or ""))
         voice, model, note = voice_name(head.get("voice_use", "")), head.get("model_id", ""), f"segment {sid}"
@@ -1105,6 +1150,7 @@ def cmd_take_add(args) -> int:
             raise C.Fatal(f"not found: {C.shown(reg)} (the chapter register)")
         meta = C.split_frontmatter(C.read_text(reg))[0]
         folder = C.path(C.AB_GENERATED)
+        homes, floor = (folder,), 0   # an audiobook's generated/ stays flat (D64)
         prefix = f"{piece}.{ch}.{part}"
         fmt, fmt_from = C.chapter_format(piece)
         print(f"  output format {fmt}, from {fmt_from}")
@@ -1117,11 +1163,10 @@ def cmd_take_add(args) -> int:
     if src.resolve().parent != folder.resolve():
         raise C.Fatal(f"{C.shown(src)} is not in {C.shown(folder)}, where takes for this register live")
     ext = extension_for(fmt)
-    n = next_take(folder, prefix)
-    dest = folder / f"{prefix}.t{n}{ext}"
-    while dest.exists():
+    n = next_take(homes, prefix, floor)
+    while any((home / f"{prefix}.t{n}{ext}").exists() for home in homes):
         n += 1
-        dest = folder / f"{prefix}.t{n}{ext}"
+    dest = folder / f"{prefix}.t{n}{ext}"
     src.rename(dest)
     print(f"renamed {C.shown(src)} → {C.shown(dest)}")
     if args.segment:
@@ -1130,7 +1175,8 @@ def cmd_take_add(args) -> int:
                                {"take": n, "file": toml_str(rel), "status": toml_str("generated"),
                                 "archived": toml_str("")})
         reg.write_text(text, encoding="utf-8")
-        print(f"wrote take = {n}, file = \"{rel}\" and status = \"generated\" for {sid} in {C.shown(reg)}")
+        print(f"wrote take = {n}, file = \"{rel}\", status = \"generated\" and archived = \"\" for {sid} in "
+              f"{C.shown(reg)}: a new take is unheard and unarchived (Section 6.6)")
     else:
         lines, row_index, _ = chapter_row(piece, ch)
         names = [c.lower() for c in C.split_row(lines[C.find_table(lines, ('Ch', 'Title'))[0]])]

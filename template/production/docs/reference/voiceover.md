@@ -34,7 +34,7 @@ instead, only for a kinetic-caption short, on the author's word.
 | `script_lines` | the script's `beat.line`, or a range: one sentence or one beat |
 | `text` | the words as spoken, braces removed: this is also the caption text |
 | `request` | the text as sent: pronunciations substituted, directions as audio tags where the model takes them |
-| `take`, `file` | written by `take add`; `file` is relative to `production/src/voiceover/` |
+| `take`, `file` | written by `take add`; `file` is relative to `production/src/voiceover/`: `generated/<piece>/takes/<name>`, or the flat `generated/<name>` of a row an earlier release wrote, and every reader opens the path the row names |
 | `characters` | the request's length, as billed |
 | `pause_after` | seconds of silence before the next segment |
 | `status` | `generated · approved · rejected` |
@@ -53,7 +53,9 @@ instead, only for a kinetic-caption short, on the author's word.
 - The narrator, model and settings are those recorded for the voiceover use; changing any of them
   is the author's decision, dated.
 - Takes are named `<piece>.sNN.tN.mp3` (`.pcm` for a raw format) in
-  `production/src/voiceover/generated/`; a regenerated segment is a new take, never an overwrite.
+  `production/src/voiceover/generated/<piece>/takes/`; a regenerated segment is a new take,
+  numbered after its highest take in either layout, never an overwrite. A scratch track sits in
+  the piece's folder itself, never among its takes.
 - The author listens to every take; only `approved` takes reach a master, and each is archived.
 - A piece with a generated voice says so in its brief's `synthetic_voice`, and is disclosed at
   publish.

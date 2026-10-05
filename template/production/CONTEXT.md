@@ -26,8 +26,10 @@ production/
 <: endif :>│   ├── cards/                  ← title and end cards, copied from the brand's card component
 │   ├── edits/                  ← one edit decision list per piece
 │   ├── footage/                ← manifest.toml (seed): every source file; raw/, the ignored mirror
-│   ├── renders/                ← masters and card PNGs (git-ignored)
-│   └── voiceover/              ← one segment register per piece; generated/ is ignored
+│   ├── renders/                ← a folder per piece: masters, the joined voice, card PNGs (git-ignored)
+│   ├── scenes/                 ← a scene piece's cue index, real index and scene code
+│   ├── timing/                 ← a piece's word timings, words check and mouth cues
+│   └── voiceover/              ← one segment register per piece; generated/ is ignored, a folder per piece
 └── workflows/                  ← the procedures, one folder per production job
     ├── NN-verb-first-name/     ← template procedures: CONTEXT · CLAUDE · STEPS · CHECKLIST
     └── local/                  ← your own procedures; a same-slug local workflow wins
@@ -42,8 +44,10 @@ production/
 - `production/docs/project/` — your own guides. The template ships only the folder's pair.
 - `production/src/` — the material. **`production/src/footage/manifest.toml` is the one list of
   every source file**, and **`production/src/rights-register.md` the one record of what each
-  piece may use**; `production/src/credits-log.md` shows every credit spent. Renders and
-  generated audio stay out of Git (`production/src/.gitignore`).
+  piece may use**; `production/src/credits-log.md` shows every credit spent. A piece's timing
+  and a scene piece's indexes and code sit flat in `production/src/timing/` and
+  `production/src/scenes/`. Renders and generated audio stay out of Git
+  (`production/src/.gitignore`), in a folder per piece.
 - `production/workflows/` — one procedure per production job, numbered and frozen: log source
   media, make a voiceover, assemble the master,
 <: if 'podcast' in MEDIA_KINDS :>  master a podcast episode,

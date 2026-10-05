@@ -16,18 +16,39 @@ string, so a path with spaces or quotes is safe under zsh); how a raw ElevenLabs
 each; the project's timezone, for the dates a podcast feed carries; and how the files git
 ignores are left unread.
 
+A piece's output sits in a folder named for it (DESIGN D64, Section 6.16): piece_folder puts a
+file whose name begins with a piece key (NNN-kebab-title) in <output folder>/<piece>/, or in a
+named subfolder of it (cards/, timing/, takes/), and keeps a name with no piece key (a footage
+file's extract, a show's cover) at the output folder's top. Tracked files never sit in a
+per-piece folder: timing/ and scenes/ stay flat under their <piece>. names.
+
+uv_script is the one way the toolkit starts a PEP 723 script (DESIGN D20): 'uv run --python'
+with the interpreter UV_PYTHON names, or else the one 'uv python find --system' returns for the
+script's requires-python, so an active virtual environment, its bin on PATH or a .venv in the
+working folder never mislinks the script's environment; within a timeout, after which the run
+and everything it started are stopped; and under a first-run lock at user scope, never in the
+project, so no run starts while another run of the same script is building its environment.
+The lock is fcntl's flock (msvcrt's byte lock on Windows), held on every run so a deleted uv
+environment is rebuilt safely too. Where the lock cannot be taken, the command exits 2 with
+the fix rather than start an environment build unlocked.
+
 Standard library only; Python 3.11+ (tomllib).
 """
 from __future__ import annotations
 
+import contextlib
 import copy
 import datetime
+import errno
+import hashlib
 import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 if sys.version_info < (3, 11):
@@ -79,6 +100,8 @@ AB_GENERATED = "production/src/audiobook/generated"
 AB_RENDERS = "production/src/audiobook/renders"
 PROD_RENDERS = "production/src/renders"
 PUB_RENDERS = "publishing/src/renders"
+TIMING = "production/src/timing"     # a piece's tracked word and mouth timings and its words check (D64, D66)
+SCENES = "production/src/scenes"     # a piece's tracked cue index, real-source index and scene code (D64, D69, D70)
 CAPTIONS = "publishing/src/captions"
 PODCAST = "publishing/src/podcast"   # show registers and tracked feeds, where the project self-hosts a podcast
 CREDITS_LOG = "production/src/credits-log.md"
@@ -177,13 +200,30 @@ def replace_file(out: Path, data: bytes) -> None:
             tmp.unlink()
 
 
+PIECE_KEY_RE = re.compile(r"^(\d{3}-[a-z0-9][a-z0-9-]*)")
+
+
+def piece_key(p) -> str | None:
+    """The piece key a file's name begins with (NNN-kebab-title, before any --cNN), or None."""
+    m = PIECE_KEY_RE.match(Path(p).name)
+    return m.group(1).split("--")[0] if m else None
+
+
 def piece_of(p) -> str:
     """The piece a file belongs to: the leading NNN-kebab-title of its name, else its stem."""
-    name = Path(p).name
-    m = re.match(r"^(\d{3}-[a-z0-9][a-z0-9-]*)", name)
-    if m:
-        return m.group(1).split("--")[0]
-    return name.split(".")[0]
+    return piece_key(p) or Path(p).name.split(".")[0]
+
+
+def piece_folder(top, name, sub: str = "") -> Path:
+    """The folder an output named name lands in, inside the output folder top (a root-relative
+    path such as PROD_RENDERS, or a Path): top/<piece>/, or top/<piece>/<sub>/ (cards, timing,
+    takes), for a name that begins with a piece key, and top itself for a name with none, which
+    takes no sub (DESIGN D64, Section 6.16). It only names the folder; the writer makes it."""
+    base = path(top) if isinstance(top, str) else Path(top)
+    key = piece_key(name)
+    if key is None:
+        return base
+    return base / key / sub if sub else base / key
 
 
 def file_form(key: str) -> str:
@@ -722,6 +762,208 @@ def ffmpeg(args: list, cwd=None, what: str = "ffmpeg") -> subprocess.CompletedPr
     capped = args[:-1] + ["-threads", n] + args[-1:] if args else args
     return run([need("ffmpeg"), "-hide_banner", "-nostdin", "-nostats", "-filter_threads", n,
                 "-filter_complex_threads", n] + capped, cwd=cwd, what=what)
+
+
+# ── uv scripts: D20's interpreter, a timeout and the first-run lock ─────────────────────
+
+UV_LOCKS = None   # the first-run locks' folder; None is the user's cache (the self-test names a scratch one)
+PEP723_RE = re.compile(r"(?m)^# /// (?P<type>[a-zA-Z0-9-]+)$\s(?P<content>(^#(| .*)$\s)+)^# ///$")
+UV_FIND_ENV = {"UV_PYTHON_DOWNLOADS": "never", "UV_OFFLINE": "1"}   # 'uv python find' fetches nothing
+
+
+def _script_match(script):
+    return next((m for m in PEP723_RE.finditer(read_text(script)) if m.group("type") == "script"), None)
+
+
+def script_block(script) -> str:
+    """The text of a PEP 723 script's '# /// script' block, or '' where it has none."""
+    m = _script_match(script)
+    return m.group(0) if m else ""
+
+
+def script_metadata(script) -> dict:
+    """A PEP 723 script's inline metadata as TOML (requires-python, dependencies); {} with none."""
+    m = _script_match(script)
+    if not m:
+        return {}
+    body = "".join(line[2:] if line.startswith("# ") else line[1:]
+                   for line in m.group("content").splitlines(keepends=True))
+    try:
+        return tomllib.loads(body)
+    except tomllib.TOMLDecodeError as err:
+        raise Fatal(f"the '# /// script' block of {shown(script)} is not valid TOML: {err}") from None
+
+
+def uv_find(uv: str, request: str = "", system: bool = False, cwd=None) -> str:
+    """The interpreter 'uv python find' reports for a request, or '' where none meets it. It never
+    downloads a Python or reaches the network, and builds nothing. system skips every virtual
+    environment: an active one, its bin on PATH and a .venv in the working folder alike."""
+    cmd = [uv, "python", "find"] + (["--system"] if system else []) + ([request] if request else [])
+    try:
+        proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=60,
+                              env=dict(os.environ, **UV_FIND_ENV))
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    lines = proc.stdout.strip().splitlines()
+    return lines[-1].strip() if proc.returncode == 0 and lines else ""
+
+
+def uv_python(uv: str, script) -> tuple:
+    """(interpreter, how it was chosen) for a uv script (DESIGN D20): the one UV_PYTHON names where
+    it is set, else the one 'uv python find --system' returns for the script's requires-python.
+    A virtual environment's interpreter is never taken unasked: one made with --copies reports
+    another Python as its base, and uv then records one version and links the other, so the
+    script's packages do not import. Nothing meeting the range is exit 2, naming the fix."""
+    named = os.environ.get("UV_PYTHON", "").strip()
+    if named:
+        return named, "UV_PYTHON"
+    want = str(script_metadata(script).get("requires-python", "") or "").strip()
+    found = uv_find(uv, want, system=True)
+    if not found:
+        raise Fatal(f"no Python outside a virtual environment meets {Path(script).name}'s requires-python "
+                    f"{want or '(any)'}, so uv cannot build its environment: install one in that range (for "
+                    "example 'uv python install 3.12', or your system's package), or set UV_PYTHON at user "
+                    "scope to an interpreter in that range")
+    return found, "uv python find --system"
+
+
+def lock_folder() -> Path:
+    """Where the per-script locks live: the user's cache, never the project."""
+    if UV_LOCKS:
+        return Path(UV_LOCKS)
+    home = Path.home()
+    if sys.platform == "darwin":
+        base = home / "Library" / "Caches"
+    elif os.name == "nt":
+        base = Path(os.environ.get("LOCALAPPDATA") or home / "AppData" / "Local")
+    else:
+        base = Path(os.environ.get("XDG_CACHE_HOME") or home / ".cache")
+    return base / "media-toolkit" / "uv-first-run"
+
+
+def _try_lock(fh):
+    """True when the lock on fh was taken, False while another process holds it, None where this
+    platform or file system has no lock to take."""
+    try:
+        import fcntl
+    except ImportError:
+        fcntl = None
+    if fcntl is not None:
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return True
+        except OSError as err:
+            return False if err.errno in (errno.EAGAIN, errno.EACCES, errno.EWOULDBLOCK) else None
+    try:
+        import msvcrt
+    except ImportError:
+        return None
+    try:
+        fh.seek(0)
+        msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
+        return True
+    except OSError:
+        return False
+
+
+def _unlock(fh) -> None:
+    try:
+        import fcntl
+        fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    except ImportError:
+        import msvcrt
+        fh.seek(0)
+        msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
+    except OSError:
+        pass
+
+
+@contextlib.contextmanager
+def _exclusive(lock: Path, deadline: float, label: str, timeout: float):
+    """Hold the lock file, waiting for another holder until the deadline (exit 2 after it). It
+    exits 2 where no lock can be taken, so an environment is never built unlocked.
+    A lock dies with its process, so a run that was killed never leaves one behind."""
+    why = ""
+    try:
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        fh = open(lock, "a+b")
+    except OSError as err:
+        fh, why = None, f"{shown(lock.parent)} cannot be written: {err.strerror or err}"
+    if fh is None:
+        raise Fatal(f'{label} cannot take its first-run lock: {why}; use a writable user-cache '
+                    'directory on a file system that supports locks')
+    with fh:
+        waited = False
+        while (got := _try_lock(fh)) is False:
+            if not waited:
+                print(f"  note: waiting for another run of {label} to finish building its environment",
+                      file=sys.stderr)
+                waited = True
+            if time.monotonic() >= deadline:
+                raise Fatal(f"another run of {label} was still building its environment after {timeout:g} s "
+                            f"(its lock is {shown(lock)}): let it finish, then run this again")
+            time.sleep(0.2)
+        if got is None:
+            raise Fatal(f'{label} cannot take its first-run lock on {shown(lock)}: '
+                        'use a user-cache directory on a file system that supports locks')
+        try:
+            yield bool(got)
+        finally:
+            if got:
+                _unlock(fh)
+
+
+def _stop(proc) -> None:
+    """Stop a run and every process it started (its own process group, on POSIX)."""
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGKILL)
+        else:
+            proc.kill()
+    except OSError:
+        pass
+    try:
+        proc.communicate(timeout=10)
+    except (subprocess.TimeoutExpired, ValueError, OSError):
+        pass
+
+
+def _run_until(cmd: list, cwd, capture: bool, deadline: float, label: str, timeout: float, hint: str):
+    left = deadline - time.monotonic()
+    pipe = subprocess.PIPE if capture else None
+    try:
+        proc = subprocess.Popen(cmd, cwd=cwd, stdout=pipe, stderr=pipe, text=True, encoding="utf-8",
+                                errors="replace", start_new_session=os.name == "posix")
+    except FileNotFoundError:
+        raise Fatal(f"uv is not installed: {INSTALL['uv']}") from None
+    try:
+        out, err = proc.communicate(timeout=max(left, 0.01))
+    except subprocess.TimeoutExpired:
+        _stop(proc)
+        raise Fatal(f"{label} did not finish within {timeout:g} s, so it was stopped, with every process it "
+                    f"started{': ' + hint if hint else ''}") from None
+    except BaseException:
+        _stop(proc)
+        raise
+    return subprocess.CompletedProcess(cmd, proc.returncode, out or "", err or "")
+
+
+def uv_script(script, args: list, timeout: float, cwd=None, offline: bool = False, capture: bool = True,
+              hint: str = "") -> subprocess.CompletedProcess:
+    """Run a PEP 723 script through uv as DESIGN D20 says, and hand back its exit and output for the
+    caller to read: 'uv run --quiet --python <uv_python's interpreter> [--offline] SCRIPT ARGS';
+    under the per-script lock on every run, including rebuilds after cache removal; and within
+    timeout seconds, a wait on the lock included, after which it is stopped (exit 2, with hint).
+    capture=False lets the script's output through to the terminal. Exit 2 where uv is absent."""
+    uv = need("uv")
+    script = Path(script).resolve()
+    python, _how = uv_python(uv, script)
+    cmd = [uv, "run", "--quiet", "--python", python] + (["--offline"] if offline else []) \
+        + [str(script)] + [str(a) for a in args]
+    deadline = time.monotonic() + timeout
+    name = f"{script.stem}-{hashlib.sha256(str(script).encode('utf-8')).hexdigest()[:16]}"
+    with _exclusive(lock_folder() / f'{name}.lock', deadline, script.name, timeout):
+        return _run_until(cmd, cwd, capture, deadline, script.name, timeout, hint)
 
 
 FORMAT_RE = re.compile(r"(?:mp3|pcm)_\d+(?:_\d+)?")

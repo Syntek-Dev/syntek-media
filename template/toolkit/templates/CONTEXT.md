@@ -21,11 +21,14 @@ toolkit/templates/
 
 - `thumbnail.html` — **the fallback for the brand's thumbnail.** `thumbnail-brief` copies it to
   `publishing/src/thumbnails/<piece>[--cNN].html` and changes only the copy: the words, and the
-  picture, set on the frame as `style="--picture: url('../renders/<still>.png')"`. The title sits
-  low on a 16:9 frame (smaller on a 1.91:1 share image), full width on a square or 4:5 cover, and
-  in the middle band of a 9:16 cover, inside the profile grid's crop. The same layout serves the
-  brand's own channels' images (share, featured and preview images), which `media.py image`
-  then encodes into their formats.
+  picture, set on the frame as
+  `style="--picture: url('../../../production/src/assets/<still>.png')"`: a small committed
+  still in `production/src/assets/` (a frame is extracted there with `media.py frame -o`), never
+  a git-ignored render, so the layout rebuilds from tracked files. The title sits low on a 16:9
+  frame (smaller on a 1.91:1 share image), full width on a square or 4:5 cover, and in the
+  middle band of a 9:16 cover, inside the profile grid's crop. The same layout serves the brand's
+  own channels' images (share, featured and preview images), which `media.py image` then encodes
+  into their formats.
 - **The play button** (DESIGN D57): an element carrying `data-play-button`, shown only under
   `:root[data-deliverable^="newsletter."]`, which `card.py render --deliverable` sets with
   `data-platform`. It is a solid disc in `--color-accent` with an outline in `--color-on-accent`

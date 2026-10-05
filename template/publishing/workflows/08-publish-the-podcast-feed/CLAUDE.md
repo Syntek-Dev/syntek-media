@@ -48,9 +48,9 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
 ## Output & naming
 
 - **Produces:** the episode's row in `publishing/src/podcast/<show>.toml` (and the register itself,
-  once per show); `publishing/src/renders/<piece>.chapters.json`;
+  once per show); `publishing/src/renders/<piece>/<piece>.chapters.json`;
   `publishing/src/renders/<show>.feed.xml`.
-- **Also changes:** `publishing/src/renders/<piece>.podcast-feed-audio.mp3`, tagged in place.
+- **Also changes:** `publishing/src/renders/<piece>/<piece>.podcast-feed-audio.mp3`, tagged in place.
 - **Does not touch:** the post package, the schedule or the publish log (they are
   `publishing/workflows/05-prepare-a-post/`'s and `publishing/workflows/06-record-a-publication/`'s),
   or the tracked feed.

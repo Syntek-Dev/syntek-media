@@ -168,7 +168,12 @@ a platform removed without warning takes the author's filled-in profile with it.
 files Git tracks or would track (`git ls-files --cached --others --exclude-standard`, `git grep`,
 or a list filtered through `git check-ignore`). An ignored file (a render, a take, the footage
 mirror) is opened only by the path a manifest, a register or the author names, or as output a
-skill has just made in order to check it, and only to probe or play it.
+skill has just made in order to check it, and only to probe or play it. **A piece's output
+folders** (`production/src/renders/<piece>/`, `production/src/voiceover/generated/<piece>/`,
+`publishing/src/renders/<piece>/`) are never listed: `python3 toolkit/media.py where <piece>`
+lists the piece's tracked files and names those folders, saying whether each exists, never what
+is inside them. A working copy the toolkit writes in a piece's `timing` folder is never opened:
+the command that wrote it printed what it found, so read that output instead.
 
 **Why this rule exists.** Ignored files hold credentials, local settings and private recordings. A
 search that reads them prints them into the session, and from there into a handoff or a commit.

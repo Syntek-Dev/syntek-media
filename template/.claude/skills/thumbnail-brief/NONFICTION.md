@@ -9,7 +9,7 @@ author's face where it helps, and every quoted word or reference with its source
   briefed as `<piece>--cNN`.
 - **Procedure:** `publishing/workflows/04-brief-a-thumbnail/`.
 - **Brief and layout:** `publishing/src/thumbnails/<piece>[--cNN].md` and `.html`; renders in
-  `publishing/src/renders/`.
+  `publishing/src/renders/<piece>/`.
 - **Images:** stills from the master and the book's cover, as tracked files in
   `production/src/assets/`; the cover with its `artwork` row.
 - **Guides:** `publishing/docs/reference/thumbnails.md`,

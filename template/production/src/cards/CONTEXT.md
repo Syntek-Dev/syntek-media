@@ -4,9 +4,9 @@ The title and end cards a piece's master uses (and any other card its storyboard
 file each. Every card is a copy of the brand's card component,
 `brand/src/design-system/previews/card.html` (or `toolkit/templates/card.html` where the brand
 has none), given the piece's words. `python3 toolkit/media.py assemble` renders each card to PNG
-with `uv run toolkit/card.py` whenever the PNG is missing or older than the HTML or the brand's
-tokens, so a master always rebuilds from tracked files. Thumbnails are not cards: they live in
-`publishing/src/thumbnails/`.
+with `uv run toolkit/card.py`, into the piece's own folder in `production/src/renders/`, whenever
+the PNG is missing or older than the HTML or the brand's tokens, so a master always rebuilds from
+tracked files. Thumbnails are not cards: they live in `publishing/src/thumbnails/`.
 
 ## Directory Tree
 
@@ -40,4 +40,5 @@ the rest of the worked example once you no longer need it, and it will not come 
 - `production/docs/reference/edit-decision-lists.md` — a card as a clip, held, pushed in or
   overlaid.
 - `brand/src/design-system/previews/card.html` — the brand's card component.
-- `production/src/renders/` — where each card's PNG lands, git-ignored.
+- `production/src/renders/` — where each card's PNG lands, git-ignored, in the `cards` folder of
+  its piece's folder.

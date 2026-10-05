@@ -34,7 +34,7 @@ brand section of `.claude/rules/syntek-media/01-layout-and-routing.md`, and the 
 |---|---|---|
 | `brand/` | production | The brand kit: design tokens, preview cards and the thumbnail and card layouts, design exports, the spoken voice, and one profile per platform |
 | `scripts/` | production | The pieces: one folder per piece with its brief, script or transcript, storyboard and shot list |
-| `production/` | production | Source media and its manifest, voiceover, edit decision lists, cards<: if 'audiobook' in MEDIA_KINDS :>, audiobook chapters<: endif :>, the rights register and the credits log |
+| `production/` | production | Source media and its manifest, voiceover, edit decision lists, cards, timing and scene files<: if 'audiobook' in MEDIA_KINDS :>, audiobook chapters<: endif :>, the rights register and the credits log |
 | `publishing/` | production | Cut-down plans, captions, thumbnails, post packages, the schedule and the publish log |
 | `toolkit/` | supporting | The command line every render runs through, the platform data and the fallback layouts |
 | `.claude/` | config | Claude Code's manual, rules, memory, settings and skills |
@@ -83,6 +83,11 @@ Renders are generated: never edit one by hand; change the source and render agai
 deliverables and generated audio are ignored by Git, and source footage lives in external
 storage, listed in `production/src/footage/manifest.toml`. An approved voiceover take cannot be
 made again, so archive it when you approve it.
+Each piece's output has its own ignored folder in `production/src/renders/`,
+`production/src/voiceover/generated/` (takes in its takes subfolder) and
+`publishing/src/renders/`. Tracked timing and scene files stay flat under the piece's name in
+`production/src/timing/` and `production/src/scenes/`. `python3 toolkit/media.py where <piece>`
+lists its tracked files and names its output folders without listing their contents.
 
 **Audio** comes from ElevenLabs, through an MCP server named `elevenlabs` that you add once at
 user scope; the template adds nothing to `.mcp.json`, and your API key never enters the

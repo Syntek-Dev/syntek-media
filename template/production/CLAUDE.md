@@ -54,12 +54,16 @@ made from sources that are logged, paid for once and cleared for use.
 ## Output & naming
 
 - **Written by skills and the toolkit:** segment registers in `production/src/voiceover/`, edit
-  decision lists in `production/src/edits/`, cards in `production/src/cards/`;
+  decision lists in `production/src/edits/`, cards in `production/src/cards/`, timing files in
+  `production/src/timing/` and scene files in `production/src/scenes/` (the tool-written ones
+  only through `-o`);
 <: if 'audiobook' in MEDIA_KINDS :>  chapter registers in `production/src/audiobook/`;
 <: endif :>  rows in the footage manifest, the rights register and the credits log; a recorded
   piece's `transcript.md` in its piece folder.
-- **Names:** a piece is `NNN-kebab-title`; a take `<piece>.sNN.tN.mp3`; a master
-  `<piece>.master.mp4` (`.wav` for an audio master); footage and rights IDs (`F0001`, `RR0001`)
-  are permanent. Dates are DD/MM/YYYY in prose and DD-MM-YYYY in filenames.
+- **Names:** a piece is `NNN-kebab-title`; a take `<piece>.sNN.tN.mp3`, in
+  `generated/<piece>/takes/`; a master `<piece>.master.mp4` (`.wav` for an audio master), in
+  `renders/<piece>/`; footage and rights IDs (`F0001`, `RR0001`) are permanent. Dates are
+  DD/MM/YYYY in prose and DD-MM-YYYY in filenames.
 - **Generated (never hand-edit):** everything in `production/src/renders/` and in each folder
-  named `generated`, which `production/src/.gitignore` ignores.
+  named `generated`, which `production/src/.gitignore` ignores; a piece's output sits in a folder
+  named for it there, and a tracked file never does.
