@@ -50,7 +50,8 @@ find what a piece is for and where it stands without asking.
 ## Output & naming
 
 - **Hand-written (with the author):** `NNN-kebab-title/`, its pair and `brief.md`, one sentence
-  per line in the body:
+  per line in the body. Shape and Metaphor always have an answer; `n/a` is valid, blank is not.
+  A brief that passed M1 before these headings keeps its date until it is next re-briefed:
 
   ```markdown
   ---
@@ -70,7 +71,7 @@ find what a piece is for and where it stands without asking.
   ai_visuals: none           # none | assisted | generated
   music: none                # none | licensed | own | generated
   rights: []                 # rights-register IDs, e.g. [RR0003]
-  verified: {}               # gate: DD/MM/YYYY | 'n/a — reason' | 'waived DD/MM/YYYY — reason'
+  verified: {}               # gate or M4 sub-check: DD/MM/YYYY | 'n/a — reason' | 'waived DD/MM/YYYY — reason'
   last_updated: DD/MM/YYYY
   ---
 
@@ -78,6 +79,8 @@ find what a piece is for and where it stands without asking.
 
   ## Purpose
   ## Audience
+  ## Shape
+  ## Metaphor
   ## Hook
   ## Key points
   ## Call to action

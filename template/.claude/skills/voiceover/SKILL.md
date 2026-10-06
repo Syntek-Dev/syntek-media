@@ -34,7 +34,7 @@ Route to the one that matches the task and follow its `STEPS.md` against its `CH
 are the procedure of record — do not restate them at length here.
 
 - `production/workflows/02-make-a-voiceover/` — making and approving the takes.
-- Time the joined voice in production/workflows/09-time-the-voice/: offline `transcribe` and `lipsync`,
+- Time the joined voice in `production/workflows/09-time-the-voice/`: offline `transcribe` and `lipsync`,
   writing working timing copies, then accepted copies through `-o` in `production/src/timing/`.
   Mouths are reviewed at `M4.stills` in production/workflows/10-animate-a-scene/.
 - If the layer's `workflows/local/` holds a folder with the same `NN-name` as the procedure above,
@@ -166,7 +166,7 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
 10. **Hand back.** Report the segments voiced, the takes made, the characters and calls spent, the
     voice and model used, anything the voice got wrong, and which takes are approved and archived.
     For a scene piece, run `python3 toolkit/media.py transcribe <piece>` and
-    `python3 toolkit/media.py lipsync <piece>` on the joined voice in production/workflows/09-time-the-voice/. The latter uses
+    `python3 toolkit/media.py lipsync <piece>` on the joined voice in `production/workflows/09-time-the-voice/`. The latter uses
     plain segment `text`, never request tags or respellings; its centisecond mouth timings need
     review at `M4.stills`. The working copies go into the piece's timing output folder; accepted
     words, check and mouth files go into `production/src/timing/` through explicit `-o`.

@@ -157,6 +157,356 @@ def select_lines(script: Script, spec: str | None) -> list:
     return chosen
 
 
+@dataclass
+class Board:
+    id: str
+    beat: int
+    cells: list       # the storyboard's nine cells, a missing Timing notes cell filled with a dash
+
+
+def read_storyboard(p: Path) -> tuple:
+    """Read either storyboard table shape without changing its text (DESIGN Section 6.3)."""
+    lines = C.read_text(p).splitlines()
+    first, last = C.find_table(lines, ('#', 'Beat'))
+    if first is None:
+        raise C.Fatal(f'{C.shown(p)} needs a storyboard table beginning with # and Beat')
+    headers = C.split_row(lines[first])
+    expected = ['#', 'Beat', 'Time', 'Picture', 'Spoken', 'On screen', 'Sound', 'Vertical framing']
+    if [h.lower() for h in headers] not in ([h.lower() for h in expected],
+                                         [h.lower() for h in expected + ['Timing notes']]):
+        raise C.Fatal('storyboard needs its eight columns, with an optional ninth Timing notes column')
+    boards, seen = [], set()
+    for number in range(first + 2, last + 1):
+        cells = C.split_row(lines[number])
+        if len(cells) != len(headers):
+            raise C.Fatal(f'{C.shown(p)}:{number + 1}: storyboard row has the wrong number of cells')
+        if not re.fullmatch(r'B[0-9]{2,}', cells[0]) or int(cells[0][1:]) < 1:
+            raise C.Fatal(f'{C.shown(p)}:{number + 1}: board ID must be B01 or later')
+        if cells[0] in seen:
+            raise C.Fatal(f'{C.shown(p)}:{number + 1}: duplicate board {cells[0]}')
+        if not re.fullmatch(r'[0-9]+', cells[1]) or int(cells[1]) < 1:
+            raise C.Fatal(f'{C.shown(p)}:{number + 1}: board Beat must be a positive script beat number')
+        seen.add(cells[0])
+        boards.append(Board(cells[0], int(cells[1]), cells + (['—'] if len(cells) == 8 else [])))
+    if not boards:
+        raise C.Fatal('the storyboard table holds no boards')
+    return expected + ['Timing notes'], boards
+
+
+def match_script_words(script: Script, rows: list) -> tuple:
+    """Map aligned word indices to spoken script lines; report every sequence disagreement.
+
+    Normalisation is the caption checker's: punctuation and case do not change a word,
+    hyphen parts retain their one original word index, and repeated words stay in order.
+    This computes associations only; the owning command decides how to print/store them.
+    """
+    if not isinstance(rows, list):
+        raise C.Fatal('the words file must hold an array of word rows')
+    expected, line_of, heard, index_of = [], [], [], []
+    indices = {f'{line.beat}.{line.n}': [] for line in script.lines}
+    findings = []
+    for line in script.lines:
+        tokens = words_of(line.text)
+        expected.extend(tokens)
+        line_of.extend([f'{line.beat}.{line.n}'] * len(tokens))
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict) or not isinstance(row.get('word'), str) \
+                or len(row['word'].split()) != 1:
+            raise C.Fatal('every words row needs one spoken word as text')
+        if any(char in row['word'] for char in '{}[]'):
+            raise C.Finding('a direction or audio tag cannot be a timed word')
+        tokens = words_of(row['word'])
+        if not tokens:
+            findings.append(f'word {index}: {row["word"]!r} has no spoken letters')
+        heard.extend(tokens)
+        index_of.extend([index] * len(tokens))
+    matching = difflib.SequenceMatcher(None, expected, heard, autojunk=False)
+    for operation, a0, a1, b0, b1 in matching.get_opcodes():
+        if operation == 'equal':
+            for a, b in zip(range(a0, a1), range(b0, b1)):
+                line = line_of[a]
+                if index_of[b] not in indices[line]:
+                    indices[line].append(index_of[b])
+        else:
+            if a0 != a1:
+                affected = ', '.join(dict.fromkeys(line_of[a0:a1]))
+                findings.append(f'script lines {affected}: words not matched: ' + ' '.join(expected[a0:a1]))
+            if b0 != b1:
+                findings.append('aligned words not in the script at this position: ' + ' '.join(heard[b0:b1]))
+    return indices, findings
+
+
+def cue_words(source: Path) -> tuple:
+    """Read alignment rows without inventing timings for missing or untimed words."""
+    def reject_constant(value):
+        raise ValueError(f'non-finite JSON number {value}')
+
+    try:
+        rows = json.loads(C.read_text(source), parse_constant=reject_constant)
+    except ValueError:
+        raise C.Fatal(f'{C.shown(source)} is not a words JSON file') from None
+    if not isinstance(rows, list) or not rows:
+        raise C.Finding('the words file holds no words')
+    findings, previous = [], None
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict) or not all(key in row for key in ('word', 'start', 'end', 'score', 'segment')):
+            raise C.Fatal('every words row needs word, start, end, score and segment')
+        if not isinstance(row['word'], str) or len(row['word'].split()) != 1 or not row['segment']:
+            raise C.Fatal('every words row needs one spoken word and its segment')
+        score = row['score']
+        if score is not None and (isinstance(score, bool) or not isinstance(score, (int, float))
+                                  or not math.isfinite(score) or not 0 <= score <= 1):
+            raise C.Fatal('word scores must be null or finite numbers between zero and one')
+        a, b = row['start'], row['end']
+        for value in (a, b):
+            if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float))
+                                      or not math.isfinite(value) or value < 0):
+                raise C.Fatal('word times must be null or finite nonnegative seconds')
+        if a is None or b is None:
+            findings.append(f'word {index} {row["word"]!r} is untimed')
+        elif b <= a:
+            raise C.Fatal('every timed word must end after it starts')
+        else:
+            if previous is not None and a < previous:
+                findings.append(f'word {index} overlaps or runs backwards')
+            previous = b
+    return rows, findings
+
+
+def cue_span(indices: list, words: list) -> tuple:
+    if not indices or any(words[i]['start'] is None or words[i]['end'] is None for i in indices):
+        return None, None
+    return min(words[i]['start'] for i in indices), max(words[i]['end'] for i in indices)
+
+
+def build_cues(piece: str, script: Script, boards: list, rows: list) -> tuple:
+    """The approved separate lists; each original aligned word appears exactly once."""
+    indices, findings = match_script_words(script, rows)
+    words = [dict(row, line=None) for row in rows]
+    lines, by_line = [], {}
+    for line in script.lines:
+        key = f'{line.beat}.{line.n}'
+        chosen = indices[key]
+        complete = (words_of(line.text) == [token for i in chosen for token in words_of(rows[i]['word'])])
+        start, end = cue_span(chosen, rows) if complete else (None, None)
+        item = dict(id=key, beat=line.beat, word_indices=chosen, start=start, end=end)
+        lines.append(item)
+        by_line[key] = item
+        for i in chosen:
+            if words[i]['line'] is not None:
+                findings.append(f'word {i} belongs to more than one script line')
+            else:
+                words[i]['line'] = key
+        if start is None:
+            findings.append(f'line {key} cannot be fully timed')
+    for i, word in enumerate(words):
+        if word['line'] is None:
+            findings.append(f'word {i} has no script line')
+    beats = []
+    for number, title, _kind, _target in script.beats:
+        selected = [line for line in lines if line['beat'] == number]
+        complete = bool(selected) and all(line['start'] is not None for line in selected)
+        beats.append(dict(id=number, title=title, lines=[line['id'] for line in selected],
+                          start=min(line['start'] for line in selected) if complete else None,
+                          end=max(line['end'] for line in selected) if complete else None))
+    timed_boards = []
+    for board in boards:
+        references, complete = [], True
+        try:
+            selected = select_lines(script, board.cells[4])
+            if not board.cells[4].strip():
+                raise C.Fatal('Spoken references are empty')
+            limits = re.fullmatch(r'\s*(\d+)\.(\d+)\s*(?:[-–]\s*(\d+)\.(\d+)\s*)?', board.cells[4])
+            first = f'{int(limits[1])}.{int(limits[2])}'
+            last = f'{int(limits[3])}.{int(limits[4])}' if limits[3] else first
+            references = [f'{line.beat}.{line.n}' for line in selected]
+            complete = (references[0] == first and references[-1] == last
+                        and any(line.beat == board.beat for line in selected)
+                        and all(by_line[key]['start'] is not None for key in references))
+        except C.Fatal as exc:
+            findings.append(f'board {board.id}: {exc}')
+            complete = False
+        timed_boards.append(dict(id=board.id, beat=board.beat, spoken=board.cells[4],
+                                timing_notes=board.cells[8], lines=references,
+                                start=min(by_line[key]['start'] for key in references) if complete else None,
+                                end=max(by_line[key]['end'] for key in references) if complete else None))
+        if not complete:
+            findings.append(f'board {board.id} cannot be matched to fully timed script lines')
+    return dict(piece=piece, beats=beats, boards=timed_boards, lines=lines, words=words, events=[]), findings
+
+
+def retimed_table(headers: list, boards: list, timed: list) -> str:
+    """MM:SS contains the spoken interval; JSON retains the exact seconds."""
+    def mmss(seconds):
+        return f'{seconds // 60:02d}:{seconds % 60:02d}'
+
+    def row(cells):
+        return '| ' + ' | '.join(str(cell).replace('|', '\\|') for cell in cells) + ' |'
+
+    lines = [row(headers), row(['---'] * len(headers))]
+    for board, timing in zip(boards, timed):
+        cells = list(board.cells)
+        a, b = timing['start'], timing['end']
+        cells[2] = f'{mmss(math.floor(a))}–{mmss(math.ceil(b))}' if a is not None else '—'
+        lines.append(row(cells))
+    return '\n'.join(lines)
+
+
+def script_events(script: Script, data: dict) -> tuple:
+    """Preserve instructions at their source positions, without aligning them as spoken words."""
+    _, body, _ = C.split_frontmatter(C.read_text(script.path))
+    line_map = {line['id']: line for line in data['lines']}
+    events, findings, beat, number = [], [], 0, 0
+    for source_line, raw in enumerate(body.splitlines(), start=1):
+        text = raw.strip()
+        heading = BEAT_RE.match(text)
+        if heading:
+            beat, number = int(heading[1]), 0
+            continue
+        if text.startswith('## '):
+            beat, number = 0, 0
+            continue
+        tagged = SPEAKER_RE.match(text)
+        if not tagged:
+            continue
+        tag, content = tagged[1], tagged[2]
+        if tag in ('SFX', 'MUSIC'):
+            events.append(dict(id=f'e{len(events) + 1:02d}', kind='sfx' if tag == 'SFX' else 'music',
+                               instruction=content, beat=beat, source_line=source_line,
+                               script_line=None, anchor=None, start=None, end=None, source=None, mix=None))
+        elif tag not in CUE_TAGS:
+            spoken = re.sub(r'\s+', ' ', BRACE_RE.sub(' ', content)).strip()
+            if not spoken and not PAUSE_RE.findall(content):
+                continue
+            number += 1
+            key = f'{beat}.{number}'
+            timed = line_map.get(key)
+            flattened = [i for i in (timed['word_indices'] if timed else [])
+                         for _token in words_of(data['words'][i]['word'])]
+            for direction in BRACE_RE.finditer(content):
+                before = len(words_of(BRACE_RE.sub(' ', content[:direction.start()])))
+                anchor = None
+                if flattened and timed['start'] is not None:
+                    index = flattened[min(before, len(flattened) - 1)]
+                    edge = 'start' if before < len(flattened) else 'end'
+                    anchor = dict(kind='word', word=index, edge=edge, time=data['words'][index][edge])
+                event = dict(id=f'e{len(events) + 1:02d}', kind='delivery',
+                             instruction=direction[0][1:-1].strip(), beat=beat,
+                             source_line=source_line, script_line=key, anchor=anchor)
+                events.append(event)
+                if anchor is None:
+                    findings.append(f'event {event["id"]} has no timed word anchor in line {key}')
+    return events, findings
+
+
+def bind_audio_events(piece: str, events: list, edl: dict, entries: dict) -> list:
+    """Resolve approved cue links from tracked audio rows and manifest metadata only."""
+    findings, links = [], {}
+    by_id = {event['id']: event for event in events}
+    tracks = edl.get('audio', [])
+    if not isinstance(tracks, list) or any(not isinstance(track, dict) for track in tracks):
+        raise C.Fatal('the edit needs [[audio]] rows')
+    for index, track in enumerate(tracks):
+        cue = str(track.get('cue', '')).strip()
+        if not cue:
+            continue
+        if cue not in by_id or by_id[cue]['kind'] == 'delivery':
+            findings.append(f'audio row {index + 1}: cue {cue!r} is not a sound or music event')
+        links.setdefault(cue, []).append((index, track))
+    sounds = [event for event in events if event['kind'] != 'delivery']
+    if not sounds:
+        return findings
+    voices = [track for track in tracks if track.get('source') == f'vo:{piece}']
+    if len(voices) != 1:
+        return findings + ['sound/music cues need exactly one vo:<piece> audio row to locate the joined voice']
+
+    def seconds(value, label):
+        result = C.parse_tc(value, label)
+        if not math.isfinite(result) or result < 0:
+            raise C.Fatal(f'{label} must be finite nonnegative seconds')
+        return result
+
+    offset = seconds(voices[0].get('at') or 0, 'voice at')
+    for event in sounds:
+        linked = links.get(event['id'], [])
+        if len(linked) != 1:
+            findings.append(f'event {event["id"]}: needs exactly one audio row with cue = {event["id"]!r}')
+            continue
+        index, track = linked[0]
+        role = 'effect' if event['kind'] == 'sfx' else 'music'
+        source = str(track.get('source', ''))
+        entry = entries.get(source)
+        if track.get('role') != role or entry is None or entry.get('kind') == 'image':
+            findings.append(f'event {event["id"]}: needs role = {role!r} and a logged sound footage ID')
+            continue
+        duration = entry.get('duration')
+        if isinstance(duration, bool) or not isinstance(duration, (int, float)) \
+                or not math.isfinite(duration) or duration <= 0:
+            findings.append(f'event {event["id"]}: source {source} has no finite sound duration')
+            continue
+        at = seconds(track.get('at') or 0, f'{event["id"]} at')
+        a = seconds(track.get('in') or 0, f'{event["id"]} in')
+        b = seconds(track['out'], f'{event["id"]} out') if track.get('out') else duration
+        if b <= a or b > duration:
+            findings.append(f'event {event["id"]}: its source range is outside {source}')
+            continue
+        mix = dict(role=role, gain_db=track.get('gain_db', 0), fade_in=track.get('fade_in', 0),
+                   fade_out=track.get('fade_out', 0), duck=track.get('duck', False),
+                   source_in=a, source_out=b, master_at=at)
+        for field in ('gain_db', 'fade_in', 'fade_out'):
+            value = mix[field]
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) \
+                    or (field != 'gain_db' and value < 0):
+                raise C.Fatal(f'event {event["id"]}: {field} must be a finite number, fades nonnegative')
+        if not isinstance(mix['duck'], bool) or (mix['duck'] and role != 'music'):
+            raise C.Fatal(f'event {event["id"]}: duck must be boolean and only ducks music')
+        start, end = at - offset, at - offset + b - a
+        if not math.isfinite(start) or not math.isfinite(end):
+            raise C.Fatal(f'event {event["id"]}: the derived interval must be finite')
+        event.update(source=source, anchor=dict(kind='audio', row=index, voice_offset=offset),
+                     start=start, end=end, mix=mix)
+    return findings
+
+
+def cmd_cues(args) -> int:
+    piece = str(args.piece)
+    if not piece or C.piece_key(piece) != piece:
+        raise C.Fatal('cues needs PIECE (NNN-kebab-title)')
+    folder = C.path(C.PIECES) / piece
+    script_path, board_path = folder / 'script.md', folder / 'storyboard.md'
+    words_path = C.path(C.TIMING) / f'{piece}.words.json'
+    edl_path = C.path(C.EDITS) / f'{piece}.toml'
+    manifest_path = C.path(C.MANIFEST)
+    inputs = [script_path, board_path, words_path, edl_path, manifest_path]
+    default = C.piece_folder(C.PROD_RENDERS, piece, 'timing') / f'{piece}.cues.json'
+    out = C.output_path(default, args.o, inputs=inputs, tracked_timing=(piece, 'cues.json'))
+    script = read_script(script_path)
+    headers, boards = read_storyboard(board_path)
+    words, findings = cue_words(words_path)
+    data, matching = build_cues(piece, script, boards, words)
+    findings.extend(matching)
+    data['events'], event_findings = script_events(script, data)
+    findings.extend(event_findings)
+    edl = C.load_toml(edl_path) if edl_path.is_file() else {}
+    if edl and edl.get('edit', {}).get('piece') != piece:
+        raise C.Fatal('the cue audio list belongs to another piece')
+    entries = {str(row.get('id')): row for row in C.load_toml(manifest_path).get('file', [])} \
+        if manifest_path.is_file() else {}
+    findings.extend(bind_audio_events(piece, data['events'], edl, entries))
+    print(retimed_table(headers, boards, data['boards']))
+    for board in data['boards']:
+        if board['start'] is not None:
+            print(f'{board["id"]}: exact start={board["start"]} end={board["end"]}; '
+                  f'Seconds={board["end"] - board["start"]}')
+    for event in data['events']:
+        print(f'{event["id"]} {event["kind"]}: {event["instruction"]}; '
+              f'anchor={event["anchor"]}; source={event.get("source")}')
+    out = C.output_path(default, args.o, inputs=inputs, tracked_timing=(piece, 'cues.json'))
+    C.replace_file(out, (json.dumps(data, indent=2, ensure_ascii=False, allow_nan=False) + '\n').encode('utf-8'))
+    print(f'wrote {C.shown(out)}')
+    return report(findings, 'cues')
+
+
 # ── SRT, VTT and ASS ────────────────────────────────────────────────────────────────────
 
 def parse_srt(text: str, where: str = "SRT") -> list:

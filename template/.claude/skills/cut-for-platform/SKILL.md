@@ -149,7 +149,9 @@ are the procedure of record — do not restate them at length here.
 
 8. **Report back.** Give every path, the edit decision list's version, the master's probe and
    loudness, each deliverable's probe line and verdict, every failure with its command and its
-   reason, the rights rows not yet `cleared`, and any missing tool. The procedure records the gates
+   reason, the rights rows not yet `cleared`, and any missing tool.
+   For a non-scene piece, first record all four `M4.*` as `n/a` with a footage or no-picture
+   reason, filling missing entries for older boards. Record the gates
    in the brief, on the author's word: M4 (storyboarded → produced) once the master probes clean,
    `footage verify` passes, every take it uses is approved and archived, its loudness is within
    the target and the author has been through it; M5 (produced → cut) once every deliverable of

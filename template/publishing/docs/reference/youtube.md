@@ -32,6 +32,11 @@ tone on YouTube live in its profile in `brand/src/platforms/`.
   upload; it shows `platform.youtube.hashtags_shown_by_title` of them by the title, chosen from
   the description, so the ones that matter go first.
 - The disclosure line sits near the top of the description, where it is read without expanding.
+- `youtube.long` only: **Chapters** is a fenced block of `MM:SS <title>` lines in the package,
+  starting `00:00`; later beat starts come from tracked cues plus the edit's voice offset,
+  or master captions if cues are absent, rounded down. Beat names are the default titles.
+  Check `platform.youtube.chapters_min` and `chapter_min_seconds`, including `verify`.
+  The author approves with M7; append the lines to paste-ready descriptions in chat, never a file.
 
 ## Disclosure
 

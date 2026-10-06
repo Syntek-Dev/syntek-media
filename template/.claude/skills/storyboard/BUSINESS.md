@@ -38,6 +38,10 @@ customer and member of staff who can be recognised.
 - **Step 9 — also group the shoot by place.** The shoot list groups every `to shoot` shot by
   location and names who must be on camera, so that one visit covers each place.
 
+- **Steps 4–6 — a scene uses the same domain rules.** Type every drawn board `scene`, frame
+  each rendered aspect `native`, and keep Timing notes; re-time through
+  `production/workflows/09-time-the-voice/` without changing M3 when only time moves.
+
 ## Domain rules
 
 - **Consent before a likeness** (`.claude/rules/syntek-media/03-production-ethics.md` Section 6):
@@ -55,11 +59,11 @@ customer and member of staff who can be recognised.
 Invented board rows for Harbour Lane Studio's explainer:
 
 ```markdown
-| # | Beat | Time | Picture | Spoken | On screen | Sound | Vertical framing |
-|---|---|---|---|---|---|---|---|
-| B01 | 1 | 00:00–00:04 | The owner at the studio desk, mid-shot | 1.1 | Visitors, but no bookings? | voice; room tone | crop x=656 |
-| B02 | 2 | 00:04–00:14 | Screen recording: a long booking form, demonstration data | 2.1 | Ask for the date first | voice; music low | pad |
-| B03 | 3 | 00:14–00:22 | End card: the call to action and the logo | 3.1–3.2 | Book a free review: link below | voice; music out | centre |
+| # | Beat | Time | Picture | Spoken | On screen | Sound | Vertical framing | Timing notes |
+|---|---|---|---|---|---|---|---|---|
+| B01 | 1 | 00:00–00:04 | The owner at the studio desk, mid-shot | 1.1 | Visitors, but no bookings? | voice; room tone | crop x=656 | — |
+| B02 | 2 | 00:04–00:14 | Screen recording: a long booking form, demonstration data | 2.1 | Ask for the date first | voice; music low | pad | — |
+| B03 | 3 | 00:14–00:22 | End card: the call to action and the logo | 3.1–3.2 | Book a free review: link below | voice; music out | centre | — |
 ```
 
 The shot list behind them:

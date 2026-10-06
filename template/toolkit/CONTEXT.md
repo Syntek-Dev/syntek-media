@@ -72,6 +72,9 @@ toolkit/
   first to working timing JSON, then to an accepted tracked mouth file through `-o`. Keep the
   dictionary beside the executable's real path; a version check alone cannot prove readiness.
   Review its centisecond estimates at `M4.stills`.
+- **Cue index:** `media.py cues <piece>` connects tracked words to beats, boards, lines and
+  delivery/SFX/music events. Effect/music events take their source and mix from audio rows
+  linked by `cue`; it prints enclosing MM:SS boards and exact seconds, then accepts JSON through `-o`.
 - `data/platforms.toml` — the template's platform data, refreshed by `copier update`; the
   brand's confirmed corrections are `[[override]]` tables in `brand/src/platforms/overrides.toml`,
   which every command applies and prints.

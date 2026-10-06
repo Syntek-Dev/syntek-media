@@ -23,6 +23,8 @@ production/src/edits/
 - A clip's `source` is a footage ID, an asset under `production/src/assets/` or a card under
   `production/src/cards/`; a sound's `source` may also be `vo:<piece>`, the piece's approved
   voiceover segments joined in order.
+- An audio row's optional `cue = "e02"` connects a script SFX or MUSIC event to that row's
+  footage source, placement, fades and ducking; `media.py cues` reports missing or duplicate links.
 - A generated project may hold the worked example's list, where it was kept. It names footage no
   project has, so `assemble` on it exits 2 by design; delete it with the rest of the worked
   example once you no longer need it, and it will not come back.

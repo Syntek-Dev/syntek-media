@@ -44,7 +44,7 @@ In a picture master every clip has a picture; a sound with no picture goes in `[
   approved voiceover segments, joined in order with their pauses), a footage ID or an asset;
   `in` and `out` take part of it; `gain_db`, `fade_in` and `fade_out` shape it; `role` is
   `voice · music · effect`, and `duck = true` lowers a music bed under the voice.
-  `production/docs/reference/sound-and-loudness.md` says where each sound sits, and how loud.
+  Optional `cue = "e02"` links a script SFX/MUSIC event; `media.py cues` copies this row's mix.
 
 ## Stills, cards and the trailer kit
 

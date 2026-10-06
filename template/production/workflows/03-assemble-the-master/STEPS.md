@@ -96,7 +96,14 @@ Skip this step for a scripted piece, and say so. _Mechanical._
 > **Skill:** `cut-for-platform` · **Guide:** `production/docs/reference/edit-decision-lists.md`
 
 The author watches or hears the whole master. A change goes back to step 4 as a new `version` of
-the list. On the author's yes, and not before, record M4 in the brief's `verified` with today's
+the list.
+
+Before recording M4, record `M4.takes`, `M4.words`, `M4.cues` and `M4.stills` as
+`n/a — footage` for a picture master or `n/a — no picture` for an audio master; write any
+missing entries for older boards. A scene piece uses production/workflows/10-animate-a-scene/
+instead of this assemble route.
+
+On the author's yes, and not before, record M4 in the brief's `verified` with today's
 date and set `status` to `produced`. _Substantive._
 
 ## 9. Hand back

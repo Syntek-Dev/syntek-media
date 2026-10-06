@@ -67,6 +67,9 @@ goes to the author, and the decision is recorded with its date and reason. _Subs
 Write `publishing/src/posts/<piece>.md` in its skeleton (`publishing/src/posts/CLAUDE.md`): one
 `## <platform>.<format>` section per deliverable, ` — cNN` for a cut, each with its Title,
 Description, Hashtags, Disclosure, Captions, Thumbnail, Render, Calendar and Scheduled bullets.
+For `youtube.long` only, add Chapters as fenced `MM:SS <title>` lines, first `00:00`,
+then beat starts from tracked cues plus the edit's voice offset, or tracked master captions,
+rounded down; beat names unless the author changes them. Check the chapter keys and `verify`.
 The Description's fence holds one sentence per line, as every `src/` file does. The words follow
 the mode file and the platform's guide, and promise only what the deliverable delivers.
 
@@ -144,6 +147,6 @@ and the reason. While a check fails, the rows stay `planned`. _Mechanical._
 
 Report the package, each schedule row, each disclosure decision and its rule, and every `verify`
 key relied on. When the author is ready to post a deliverable, give its title and description in
-chat as paste-ready text, the fenced lines joined into paragraphs; never write it to a file.
+chat as paste-ready text, the fenced lines joined into paragraphs and video chapters appended; never write it to a file.
 **The author posts.** Ask the author to report each post, with its URL and the label they set, so
 `publishing/workflows/06-record-a-publication/` can log it. _Substantive._

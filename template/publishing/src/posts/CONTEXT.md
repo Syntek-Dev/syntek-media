@@ -21,7 +21,7 @@ publishing/src/posts/
 - `<piece>.md` — a package, written by `prepare-post` with the author. **The shape is fixed by
   `publishing/docs/reference/posting-and-the-log.md`**: frontmatter `piece` and `approved`; one
   `## <platform>.<format>` section per deliverable (with ` — cNN` for a cut), each with the
-  bullets **Title**, **Description**, **Hashtags**, **Disclosure**, **Captions**, **Thumbnail**,
+  bullets **Title**, **Description**, **Chapters** for `youtube.long` only, **Hashtags**, **Disclosure**, **Captions**, **Thumbnail**,
   **Render**, **Calendar**, **Scheduled** and **Limits**. The skeleton is fenced in this folder's
   `CLAUDE.md`.
 - **A placement** on the brand's own sites, blogs and newsletters (the one file a page or an

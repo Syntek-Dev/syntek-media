@@ -3,7 +3,7 @@ name: storyboard
 description: >-
   Turn one approved script into a storyboard and a shot list: a picture for every spoken line, the
   framing for every vertical deliverable, the on-screen text, the sound, and a source for every
-  shot (footage, a still, a card, a colour clip, or a shot still to film), opening a needed rights
+  shot (footage, a still, a card, a scene, or a shot still to film), opening a needed rights
   row for every licensed or identifiable item (M3). Use when the author says 'storyboard the
   explainer', 'what do we show over this line?', 'make a shot list for the shoot', 'plan the
   trailer's stills and cards' or 'how will this crop for a vertical short?'. Never run for a
@@ -24,8 +24,8 @@ without a source**: 'something to be decided' is the gap that stops an edit on t
 
 The board plans only what the edit can make. In this template that is footage cut frame-accurately,
 stills and cards held for a set time, colour clips, cuts, cross-fades and a slow push-in on a still
-(`production/docs/reference/edit-decision-lists.md`); anything else is a shot to film or a
-question for the author. <%OWNER_FIRST_NAME%> approves the board, and the approval is what M3
+(`production/docs/reference/edit-decision-lists.md`), or a code-animated scene with native
+aspects. Recorded video inside a scene is deferred. <%OWNER_FIRST_NAME%> approves the board, and the approval is what M3
 records.
 
 ## Governing procedures (route here — do not restate at length)
@@ -58,7 +58,11 @@ The mode file adds this project's kinds of picture, its sources and its domain r
    it has `picture: false`, stop: M3 is `n/a — no picture`. If its `status` is `briefed` (M2 not
    dated), stop: the script comes first (`scripts/workflows/02-write-a-script/`). If
    `storyboard.md` already exists, the request is a revision: change only what the author asks,
-   and go to step 8.
+   and go to step 8. A timing-only re-time follows `production/workflows/09-time-the-voice/`:
+   run `python3 toolkit/media.py cues <piece>`, review the printed table, accept the cue index
+   with `-o production/src/scenes/<piece>.cues.json`, and update Time and shot Seconds.
+   Raise `version`, keep approval and M3, and clear `M4.cues`, `M4.stills`, M4 and later gates;
+   date cues again only after the author accepts the re-time. A word or shot change clears M3.
    *Complete when:* the piece is confirmed as scripted, with a picture, its M2 dated, and the run is
    known to be a first board or a revision.
 
@@ -78,17 +82,17 @@ The mode file adds this project's kinds of picture, its sources and its domain r
 
 4. **Board every spoken line.** Write `storyboard.md`: frontmatter `piece`, `version: 1` and an
    empty `approved:`, the H1 `# <Title> — storyboard`, then the table
-   `| # | Beat | Time | Picture | Spoken | On screen | Sound | Vertical framing |`. One row per
+   `| # | Beat | Time | Picture | Spoken | On screen | Sound | Vertical framing | Timing notes |`. One row per
    picture, numbered `B01` onwards: Beat is the script's beat number; Time is `MM:SS–MM:SS`, from
    the beat targets and the script's timing; Picture says what is seen, in a phrase; Spoken cites
    the lines the picture carries (`2.1–2.3`); On screen carries the script's `TEXT:` cues and any
    name caption; Sound carries the voice, the `SFX:` and `MUSIC:` cues and room tone. Every spoken
-   line sits in exactly one row. Apply the mode file's additions.
+   line sits in exactly one row. Timing notes are `—` until the author has timing feedback. Apply the mode file's additions.
    *Complete when:* `storyboard.md` exists, and every spoken line of the script is cited by exactly
    one row.
 
 5. **Frame every row for the vertical deliverables.** Fill each row's Vertical framing with
-   `centre`, `crop x=<px>` (the crop offset in source pixels) or `pad`, chosen so that faces, hands
+   `native` for a scene rendered at its own aspect, or `centre`, `crop x=<px>` or `pad`, chosen so that faces, hands
    and on-screen text sit inside the safe zone of every vertical deliverable of the brief; where
    the brief has none, frame for a 9:16 cut-down all the same, because the cut-down plan reads this
    column. A row that no single framing can serve gets a note and a question for the author. Text
@@ -98,10 +102,12 @@ The mode file adds this project's kinds of picture, its sources and its domain r
 6. **Give every shot a source.** Write `shot-list.md`: the H1 `# <Title> — shot list`, then the
    table `| Shot | Board | Type | Source | Framing | Seconds | Status | Rights |`, one row per
    shot, numbered `S01` onwards, every board row covered by at least one shot. Type is one of
-   `camera`, `screen`, `stock`, `still`, `card`, `colour` or `generated`. Source is a footage ID
+   `camera`, `screen`, `stock`, `still`, `card`, `colour`, `generated` or `scene`. Source is a footage ID
    from the manifest (`F0007`), an asset under `production/src/assets/`, a card under
    `production/src/cards/` named `<piece>.<card>.html` (made later from the brand's card layout), a
-   colour as `#RRGGBB`, or `to shoot`. Seconds is set for stills, cards and colour clips. Status is
+   colour as `#RRGGBB`, `production/src/scenes/<piece>.scene.py`, or `to shoot`. Every board
+   of a scene piece is Type `scene`; other sources are images or text captures, never video.
+   Its brief records `ai_visuals: assisted`. Seconds is set for stills, cards and colour clips. Status is
    `needed`, `captured`, `logged` or `cleared`. Never take an image, a clip or a track from the web
    because it is only a draft. Apply the mode file's additions.
    *Complete when:* `shot-list.md` exists, every board row has a shot, and every shot has a type
@@ -126,7 +132,8 @@ The mode file adds this project's kinds of picture, its sources and its domain r
    changes they agree, raising `version` and clearing `approved:` on each revision. Only when the
    author approves, set `approved:` in `storyboard.md` to today's date (DD/MM/YYYY), then set the
    brief's `status: storyboarded`, date `M3` in `verified`, add the new rights IDs to its `rights`
-   list, and set `last_updated`. Where M3 does not pass, leave the status at `scripted` and say
+   list, and set `last_updated`. For every non-scene piece, record all four `M4.*` sub-checks
+   as `n/a — footage` (or `n/a — no picture` when M3 does not apply). Where M3 does not pass, leave the status at `scripted` and say
    which check failed.
    *Complete when:* the author has approved the board and M3 is dated, or the run has stopped on the
    check that failed.
@@ -137,7 +144,9 @@ The mode file adds this project's kinds of picture, its sources and its domain r
    `production/workflows/01-log-source-media/` for footage still to log,
    `production/workflows/02-make-a-voiceover/` where the script has generated lines,
    `production/workflows/07-clear-the-rights/` for the open rows, and then
-   `production/workflows/03-assemble-the-master/` (`cut-for-platform`).
+   `production/workflows/03-assemble-the-master/` (`cut-for-platform`) for footage; a scene
+   goes through `production/workflows/09-time-the-voice/` and then
+   production/workflows/10-animate-a-scene/.
    *Complete when:* the author has the report, and the brief's status matches the gate that passed.
 
 ## Anti-patterns

@@ -38,6 +38,7 @@ Usage:
     python3 toolkit/media.py transcribe PIECE [--no-cross-check] [-o WORDS]
     python3 toolkit/media.py transcribe fetch
     python3 toolkit/media.py lipsync PIECE [-o FILE]
+    python3 toolkit/media.py cues PIECE [-o FILE]
     python3 toolkit/media.py feed new SHOW --feed-url URL [--site SLUG] [--rekey]
     python3 toolkit/media.py feed add SHOW --piece PIECE
     python3 toolkit/media.py feed tag SHOW --piece PIECE
@@ -370,6 +371,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('piece')
     out(p, 'the mouth JSON path (default: production/src/renders/<piece>/timing/<piece>.mouth.json)')
     p.set_defaults(func=A.cmd_lipsync)
+
+    p = sub.add_parser('cues', help='exact board, line, word and event timings; print the re-timed storyboard')
+    p.add_argument('piece')
+    out(p, 'the cues JSON path (default: production/src/renders/<piece>/timing/<piece>.cues.json)')
+    p.set_defaults(func=K.cmd_cues)
 
     p = sub.add_parser("captions", help="check, from-segments, from-words, align, retime, rewrap, vtt, transcript, burn")
     cs = p.add_subparsers(dest="sub", metavar="action")
@@ -904,6 +910,9 @@ def self_test() -> int:
                       ("uv scripts: the interpreter, the timeout, the first-run lock, card renders and the "
                        "setup row", lambda: test_uv(verdict, skip, cli, root)),
                       ("default output paths: each piece's own folder", lambda: test_piece_defaults(verdict))]
+            groups.append(('eight- and nine-column storyboard input', lambda: test_storyboards(verdict, root)))
+            groups.append(('cue index, script events and audio cue links',
+                           lambda: test_cues(verdict, cli, root, have_git)))
             groups.append(("offline voice plans and tracked timing guards",
                            lambda: test_voice_plan(verdict, skip, cli, root, have_git)))
             groups.append(('word alignment logic and captions from words',
@@ -1324,6 +1333,171 @@ def test_piece_defaults(verdict) -> None:
             got == [pub / piece / f"{piece}--c01.youtube-short.burned.mp4", pub / "talk-cam-a.youtube-short.mp4",
                     pub / piece / f"{piece}.youtube-long.en-GB.srt", pub / "talk-cam-a.youtube-long.en-GB.srt",
                     pub / piece / f"{piece}.podcast-feed-audio.mp3", pub / "fixture-show.podcast-cover.jpg"], got)
+
+
+def test_storyboards(verdict, root: Path) -> None:
+    script = root / 'board-script.md'
+    write(script, '## 1. Opening (target 00:10)\nVO: {quiet} A ferry crosses.\n'
+          'TEXT: Not spoken.\nVO: Home again.\n')
+    parsed = K.read_script(script)
+    for count, dash in ((8, '-'), (9, '–')):
+        headings = ['#','Beat','Time','Picture','Spoken','On screen','Sound','Vertical framing']
+        cells = ['B01','1',f'00:00{dash}00:10','A ferry \\| its wake',f'1.1{dash}1.2','A ferry','—','native']
+        if count == 9:
+            headings.append('Timing notes'); cells.append('Hold the last frame.')
+        board = root / f'boards-{count}.md'
+        text = ('# Storyboard\n\n| ' + ' | '.join(headings) + ' |\n| '
+                + ' | '.join(['---'] * count) + ' |\n| ' + ' | '.join(cells) + ' |\n')
+        write(board, text)
+        header, rows = K.read_storyboard(board)
+        chosen = K.select_lines(parsed, rows[0].cells[4])
+        verdict(f'boards: {count} cells, {dash} ranges, escaped picture pipe and spoken-only line references',
+                len(header) == 9 and len(rows) == 1 and rows[0].id == 'B01' and rows[0].beat == 1
+                and rows[0].cells[3] == 'A ferry | its wake'
+                and rows[0].cells[8] == ('—' if count == 8 else 'Hold the last frame.')
+                and [line.text for line in chosen] == ['A ferry crosses.', 'Home again.']
+                and board.read_text() == text)
+    rows = [{'word': word} for word in ('A','ferry','crosses.','Home','again.')]
+    indices, findings = K.match_script_words(parsed, rows)
+    verdict('word-to-line matching ignores punctuation and keeps actual word indices',
+            indices == {'1.1': [0,1,2], '1.2': [3,4]} and not findings)
+    indices, findings = K.match_script_words(parsed, rows[:2] + rows[3:])
+    verdict('a missing script word is reported and later lines retain their real word indices',
+            indices['1.2'] == [2,3] and any('1.1' in finding and 'crosses' in finding for finding in findings))
+    write(script, '## 1. Opening\nVO: Ferry boat.\nVO: Ferry boat.\nVO: A half-hearted answer.\n')
+    repeated = K.read_script(script)
+    indices, findings = K.match_script_words(repeated, [{'word': word} for word in
+                                                      ('FERRY','boat.','Ferry','boat.','A','half-hearted','answer.')])
+    verdict('repeated words keep line order and hyphen parts share the original aligned word index',
+            indices == {'1.1': [0,1], '1.2': [2,3], '1.3': [4,5,6]} and not findings)
+    original = board.read_text()
+    for label, changed in (
+            ('duplicate IDs', original + original.splitlines()[-1] + '\n'),
+            ('ragged cells', original.replace(' | native |', ' | native | extra |')),
+            ('missing header', '# Not a storyboard\n'),
+            ('invalid ID', original.replace('B01', 'B00'))):
+        board.write_text(changed)
+        try:
+            K.read_storyboard(board)
+            rejected = False
+        except C.Fatal:
+            rejected = True
+        verdict('boards refuse ' + label + ' without rewriting the source', rejected
+                and board.read_text() == changed)
+
+
+def test_cues(verdict, cli, root: Path, have_git: bool) -> None:
+    from unittest.mock import patch
+    saved_root = C.ROOT
+    with tempfile.TemporaryDirectory(prefix='media-cues-') as folder:
+        root = Path(folder)
+        C.ROOT = root
+        try:
+            piece = '919-cue-fixture'
+            script = write(root / C.PIECES / piece / 'script.md',
+                           '## 1. Opening (target 00:02)\nVO: {quiet} A ferry {emphatic} crosses.\n'
+                           'SFX: tick\n\n## 2. Home (target 00:02)\nVO: {laughing} Home again.\n'
+                           'MUSIC: playful instrumental\n')
+            board = root / C.PIECES / piece / 'storyboard.md'
+            rows = [dict(word=w, start=a, end=b, score=0.9, segment=s) for w,a,b,s in
+                    [('A',0.125,0.375,'s01'),('ferry',0.4,0.8,'s01'),('crosses.',0.85,1.25,'s01'),
+                     ('Home',1.6,1.9,'s02'),('again.',1.95,2.4,'s02')]]
+            words = write(root / C.TIMING / f'{piece}.words.json', json.dumps(rows))
+            edit = write(root / C.EDITS / f'{piece}.toml', '[edit]\npiece = "919-cue-fixture"\n'
+                         '[[audio]]\nsource = "vo:919-cue-fixture"\nat = 0.5\nrole = "voice"\n'
+                         '[[audio]]\nsource = "F0991"\ncue = "e03"\nrole = "effect"\nat = 1.75\n'
+                         '[[audio]]\nsource = "F0992"\ncue = "e05"\nrole = "music"\nat = 2.0\n'
+                         'in = 0.1\nout = 0.9\ngain_db = -20\nfade_in = 0.1\nfade_out = 0.2\nduck = true\n')
+            write(root / C.MANIFEST, '[[file]]\nid = "F0991"\nkind = "audio"\nduration = 0.2\n'
+                  'path = "raw/not-present.wav"\n[[file]]\nid = "F0992"\nkind = "music"\nduration = 5.0\n'
+                  'path = "raw/not-present-music.wav"\n')
+            working = root / C.PROD_RENDERS / piece / 'timing' / f'{piece}.cues.json'
+            headings = ['#','Beat','Time','Picture','Spoken','On screen','Sound','Vertical framing']
+            for count, dash in ((8,'-'), (9,'–')):
+                head = headings + (['Timing notes'] if count == 9 else [])
+                cells = [['B01','1','00:00–00:10','A ferry \\| its wake',f'1.1{dash}1.1','Ferry','tick','native'],
+                         ['B02','2','00:10–00:20','Home',f'2.1{dash}2.1','Home','music','native']]
+                text = '| ' + ' | '.join(head) + ' |\n|' + '|'.join(['---'] * count) + '|\n'
+                text += '\n'.join('| ' + ' | '.join(row + (['Hold.'] if count == 9 else [])) + ' |'
+                                  for row in cells) + '\n'
+                write(board, text)
+                with patch.object(C, 'probe', side_effect=AssertionError('cues must not open the footage mirror')):
+                    code, output = cli('cues', piece)
+                data = json.loads(working.read_text()) if working.is_file() else {}
+                verdict(f'cues match {count}-column boards with {dash} ranges and never rewrite the source',
+                        code == 0 and board.read_text() == text and len(data.get('boards', [])) == 2, output)
+            verdict('cues keep exact JSON times and print enclosing MM:SS with escaped cells',
+                    data['boards'][0]['start'] == 0.125 and data['boards'][0]['end'] == 1.25
+                    and '00:00–00:02' in output and '00:01–00:03' in output and 'A ferry \\| its wake' in output
+                    and 'exact start=0.125 end=1.25' in output, output)
+            verdict('cues preserve separate beat, board, line and original word lists',
+                    set(data) == {'piece','beats','boards','lines','words','events'}
+                    and data['beats'][1]['title'] == 'Home' and data['lines'][1]['word_indices'] == [3,4]
+                    and data['words'] == [dict(row,line='1.1' if i < 3 else '2.1') for i,row in enumerate(rows)]
+                    and data['boards'][0]['timing_notes'] == 'Hold.')
+            events = data['events']
+            verdict('cues retain delivery instructions at actual word anchors without inventing sound duration',
+                    [e['instruction'] for e in events if e['kind'] == 'delivery'] == ['quiet','emphatic','laughing']
+                    and events[0]['anchor']['word'] == 0 and events[1]['anchor']['time'] == 0.85
+                    and events[3]['script_line'] == '2.1' and 'end' not in events[3])
+            verdict('cues resolve sound and music IDs from tracked audio rows including offset fades and ducking',
+                    events[2]['source'] == 'F0991' and events[2]['start'] == 1.25
+                    and events[4]['source'] == 'F0992' and events[4]['start'] == 1.5
+                    and abs(events[4]['end'] - 2.3) < 0.000001 and events[4]['mix']['gain_db'] == -20
+                    and events[4]['mix']['fade_out'] == 0.2 and events[4]['mix']['duck'] is True)
+            old = board.read_text()
+            board.write_text(old.replace('2.1–2.1', '2.9–2.9'))
+            code, output = cli('cues', piece)
+            unmatched = json.loads(working.read_text())
+            verdict('cues report an unmatched board with null times and exit one', code == 1
+                    and unmatched['boards'][1]['start'] is None and 'B02' in output, output)
+            board.write_text(old)
+            held = edit.read_text()
+            for label, changed in [('missing',held.replace('cue = "e05"','cue = "e99"')),
+                                   ('duplicate',held + '\n[[audio]]\nsource="F0992"\ncue="e05"\nrole="music"\n')]:
+                edit.write_text(changed)
+                code, output = cli('cues', piece)
+                incomplete = json.loads(working.read_text())
+                verdict(f'cues report {label} audio links rather than guessing a music placement',
+                        code == 1 and incomplete['events'][4]['start'] is None and 'e05' in output, output)
+            edit.write_text(held)
+            invalid = [dict(row) for row in rows]; invalid[1]['start'] = None
+            words.write_text(json.dumps(invalid))
+            code, output = cli('cues', piece)
+            verdict('cues report untimed words and leave their board times null', code == 1
+                    and json.loads(working.read_text())['boards'][0]['end'] is None, output)
+            before = working.read_bytes()
+            invalid[1]['start'] = float('nan'); words.write_text(json.dumps(invalid))
+            code, output = cli('cues', piece)
+            verdict('cues refuse non-finite word data without replacing an output', code == 2
+                    and working.read_bytes() == before, output)
+            words.write_text(json.dumps(rows))
+            target = root / C.SCENES / f'{piece}.cues.json'
+            code, output = cli('cues', piece, '-o', target)
+            verdict('cues write accepted data only through explicit tracked output', code == 0 and target.is_file(), output)
+            if have_git:
+                C.run(['git','init','-q'],cwd=root)
+                C.run(['git','config','user.name','Fixture'],cwd=root)
+                C.run(['git','config','user.email','fixture@example.com'],cwd=root)
+                C.run(['git','add','-A'],cwd=root); C.run(['git','commit','-qm','accepted cues'],cwd=root)
+                code, output = cli('cues', piece, '-o', target)
+                verdict('cues replace a clean committed cue file atomically', code == 0
+                        and not target.with_name('.' + target.name + '.partial').exists(), output)
+                target.write_text('author edit\n')
+                with patch.object(K, 'build_cues', side_effect=AssertionError('dirty output must fail early')):
+                    code, output = cli('cues', piece, '-o', target)
+                verdict('cues refuse dirty output before matching', code == 2 and target.read_text() == 'author edit\n', output)
+                C.run(['git','restore',str(target.relative_to(root))],cwd=root)
+                original = K.script_events
+                def concurrent_edit(*args):
+                    target.write_text('edited during matching\n')
+                    return original(*args)
+                with patch.object(K, 'script_events', concurrent_edit):
+                    code, output = cli('cues', piece, '-o', target)
+                verdict('cues recheck author edits immediately before replacement', code == 2
+                        and target.read_text() == 'edited during matching\n', output)
+        finally:
+            C.ROOT = saved_root
 
 
 def test_captions(verdict, cli, root: Path) -> None:

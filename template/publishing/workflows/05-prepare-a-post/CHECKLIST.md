@@ -32,6 +32,7 @@ model: opus
 
 **Writing and checking**
 
+- [ ] Video chapters proposed only for `youtube.long`, kept as package lines from tracked master timings; chapter keys checked, first `00:00`, titles approved with M7. · _opus_
 - [ ] One section per deliverable in the package's skeleton, every bullet filled. · _opus_
 - [ ] **One section per placement** (`— <platform>:<slug>`), with its channel guide's bullets: only the words outside its written piece, its images as bullets, its date cited from the written piece. · _opus_
 - [ ] A feed episode's section cites its show register; its register part of M7 sent through the podcast-feed workflow; each episode page on another site a placement. · _opus_

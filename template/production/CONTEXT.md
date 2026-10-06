@@ -52,7 +52,8 @@ production/
   media, make a voiceover, assemble the master,
 <: if 'podcast' in MEDIA_KINDS :>  master a podcast episode,
 <: endif :><: if 'audiobook' in MEDIA_KINDS :>  narrate an audiobook, master an audiobook,
-<: endif :>  clear the rights, bring in a recording.
+<: endif :>  clear the rights, bring in a recording, time the approved voice and re-time a scene's boards
+  through `production/workflows/09-time-the-voice/`.
 
 ## Cross-references
 

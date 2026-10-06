@@ -25,7 +25,7 @@ Read the piece's brief in `scripts/src/pieces/<piece>/`. It is at `scripted` wit
 script is `approved`, `picture: true` and `origin: scripted`. A piece with no picture, or a
 recorded one, is never boarded: where its brief does not already say so, record
 `M3: 'n/a — no picture'` or `M3: 'n/a — recorded'` in `verified`, then name the procedure that
-comes next and stop. _Mechanical._
+comes next and stop. Record the four `M4.*` sub-checks `n/a` with the same reason. _Mechanical._
 
 ## 2. Confirm you will not clobber a storyboard
 
@@ -34,7 +34,9 @@ comes next and stop. _Mechanical._
 Look for `storyboard.md` and `shot-list.md` in the piece's folder. If they exist, this run
 revises them: read both in full, note the `version` and whether the storyboard is `approved`, and
 confirm with the author before changing anything. Board and shot IDs already used are kept;
-replacing a shot after M3 clears M3 and every later gate, so say so first. _Mechanical._
+replacing a shot or changing words after M3 clears approval, M3 and every later gate.
+A timing-only re-time raises `version` but keeps approval and M3; it clears `M4.cues`,
+`M4.stills`, M4 and later gates and follows `production/workflows/09-time-the-voice/`. _Mechanical._
 
 ## 3. Read the script, the brief and the guides
 
@@ -54,7 +56,7 @@ components in `brand/src/design-system/`; and what already exists in
 Write `storyboard.md`: frontmatter `piece`, `version`, an empty `approved:`, then one row per
 board, `B01` onwards, with its beat, its time, the picture in one sentence, the script lines it
 covers as `beat.line`, the words of its `TEXT:` cues and the sounds under it. Every spoken line
-sits in exactly one board's range. A still or a card that should push in, or a board that should
+sits in exactly one board's range. Add Timing notes after Vertical framing, initially `—`. A still or a card that should push in, or a board that should
 fade in, says so in its Picture cell. _Substantive._
 
 ## 5. Frame every vertical deliverable
@@ -62,7 +64,7 @@ fade in, says so in its Picture cell. _Substantive._
 > **Skill:** `storyboard` · **Guide:** `scripts/docs/reference/storyboards-and-shot-lists.md`
 
 For every vertical deliverable in the brief, fill each board's Vertical framing: `centre`,
-`crop x=<px>` or `pad`. Keep faces and on-screen words inside the deliverable's safe zone; a value
+`crop x=<px>`, `pad`, or `native` for a scene drawn at that aspect. Keep faces and on-screen words inside the deliverable's safe zone; a value
 the preset lists as `verify` is unconfirmed, so check it by eye and say so. _Substantive._
 
 ## 6. Give every shot a source
@@ -73,7 +75,9 @@ Write `shot-list.md`: one row per shot, `S01` onwards, naming its board, its typ
 footage ID, an asset under `production/src/assets/`, a card under `production/src/cards/`, a
 colour `#RRGGBB`, or `to shoot`), its framing, its seconds and its status. A shot typed
 `generated` must agree with the brief's `ai_visuals`; where it does not, stop and settle the
-brief's disclosure plan with the author first. _Substantive._
+brief's disclosure plan with the author first. Every board of a code-animated piece is Type
+`scene`, with Source `production/src/scenes/<piece>.scene.py` and `ai_visuals: assisted`;
+other sources are images or text captures, never recorded video inside its scene. _Substantive._
 
 ## 7. Open the rights rows
 
@@ -93,7 +97,8 @@ deciding what needs one is substantive._
 Walk the author through the boards in order against the script, then the shot list. Apply their
 corrections. Check M3 (scripted → storyboarded) against the ladder guide, item by item. When the
 author approves, date `approved:` in the storyboard, set the brief's `status: storyboarded`,
-record `M3` with today's date in `verified`, and update `last_updated`. _Mechanical (writing);
+record `M3` with today's date in `verified`, and update `last_updated`. For every non-scene
+piece, also record all four `M4.*` as `n/a — footage`, filling missing entries in older boards. _Mechanical (writing);
 the read-back is substantive._
 
 ## 9. Hand on
@@ -104,5 +109,7 @@ Tell the author what is boarded, what is still `to shoot`, and which rights rows
 Name the next procedures by their full folder names: `production/workflows/01-log-source-media/`
 for footage, `production/workflows/02-make-a-voiceover/` for the voice,
 `production/workflows/07-clear-the-rights/` for the rows just opened, and then
-`production/workflows/03-assemble-the-master/` for M4. Offer to start the one that brings the
+`production/workflows/03-assemble-the-master/` for a footage master. A scene goes through
+`production/workflows/09-time-the-voice/`, then production/workflows/10-animate-a-scene/.
+Offer to start the one that brings the
 master nearest. _Substantive._

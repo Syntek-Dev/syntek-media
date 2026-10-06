@@ -15,7 +15,9 @@ made from sources that are logged, paid for once and cleared for use.
 - **Routing:** start every job from the matching procedure in `production/workflows/` (the
   index is `production/workflows/CLAUDE.md`; `run-media-workflow` resolves
   `production/workflows/local/` first); each one names its skill and guide. Voiceover goes
-  through `voiceover`; edit decision lists, cards and masters through `cut-for-platform`; a
+  through `voiceover`; a scene's words and boards through
+  `production/workflows/09-time-the-voice/` with `voiceover` and `storyboard`;
+  edit decision lists, cards and masters through `cut-for-platform`; a
   recording and its transcript through `captions`;
 <: if 'audiobook' in MEDIA_KINDS :>  audiobook chapters through `narrate-audiobook`;
 <: endif :>  logging source media and clearing rights are procedures with no skill.

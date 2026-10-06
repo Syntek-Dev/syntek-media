@@ -31,6 +31,7 @@ model: opus
 **The boards**
 
 - [ ] Storyboard written with frontmatter and one row per board, `B01` onwards. · _sonnet_
+- [ ] Timing notes follows Vertical framing; scene aspects use `native` and every scene board has a `scene` shot. · _sonnet_
 - [ ] Every spoken line of the approved script sits in exactly one board's range. · _opus_
 - [ ] Every vertical deliverable has its framing on every board; unconfirmed safe zones checked by eye and said so. · _opus_
 
@@ -43,8 +44,12 @@ model: opus
 
 **Approval**
 
+- [ ] Any timing-only re-time keeps approval and M3, raises `version` and clears `M4.cues`, `M4.stills`, M4 and later gates; word or shot changes clear M3. · _opus_
+
 - [ ] Boards and shots read back to the author and corrections applied. · _opus_
 - [ ] On the author's approval, `approved:` dated and M3 (scripted → storyboarded) recorded: `status: storyboarded` and `M3` dated in `verified`. · _sonnet_
+
+- [ ] For non-scene pieces, all four `M4.*` recorded `n/a` with a footage or no-picture reason, including older boards. · _sonnet_
 
 ## Done When
 

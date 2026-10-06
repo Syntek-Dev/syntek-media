@@ -111,8 +111,15 @@ This skill runs procedures; it never replaces one, and it never paraphrases one 
    - `scripted`: `scripts/workflows/03-storyboard-a-piece/` (M3); a piece with `picture: false`
      or `origin: recorded` has M3 `n/a`, recorded with its M2, and goes straight on to its master
      (an audiobook's chapters through the audiobook procedures, where the project makes them).
-   - `storyboarded`: `production/workflows/02-make-a-voiceover/` where the script has generated
-     lines, `production/workflows/01-log-source-media/` for footage not yet logged, then
+   - `storyboarded`: for a scene piece, read `M4.takes`, `M4.words`, `M4.cues` and `M4.stills`
+     in order and route on the first undated sub-check; a dated entry or `n/a` with its reason
+     passes. Undated takes go to `production/workflows/02-make-a-voiceover/`; words or cues to
+     `production/workflows/09-time-the-voice/`; stills to
+     production/workflows/10-animate-a-scene/. When all four pass but M4 is undated, return to
+     that scene procedure to review the master. These sub-checks are progress within
+     `storyboarded`, not a status disagreement. For other pieces, use
+     `production/workflows/02-make-a-voiceover/` where the script has generated lines,
+     `production/workflows/01-log-source-media/` for footage not yet logged, then
      `production/workflows/03-assemble-the-master/` (M4); a podcast episode's master comes from
      the podcast procedure, where the project makes podcasts.
    - `produced`: `publishing/workflows/01-plan-the-cut-downs/`, then

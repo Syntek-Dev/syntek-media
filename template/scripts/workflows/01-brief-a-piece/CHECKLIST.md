@@ -32,6 +32,7 @@ model: opus
 
 - [ ] Purpose written as a viewer or listener outcome; audience written only where it differs from the audience test; hook in one sentence. · _opus_
 - [ ] `kind`, `origin` and `picture` settled, and the guide for the kind read where the project makes it. · _opus_
+- [ ] Shape gives the beats in order and what each does; Metaphor gives the one image or comparison. Each is answered (`n/a` is valid, never blank). · _opus_
 - [ ] `deliverables` are full-length keys of the project's platforms, or `audiobook.<store>` keys, with no cut-down among them. · _sonnet_
 - [ ] `target_seconds` inside every deliverable's `max_seconds`; `words_per_minute` set. · _sonnet_
 - [ ] Key points and one call to action written; unchecked claims listed under Notes for the script stage; no flag in the brief. · _opus_
@@ -41,7 +42,7 @@ model: opus
 **Writing and recording**
 
 - [ ] Folder created with its pair from the skeleton in `scripts/src/pieces/CLAUDE.md`, every slot filled. · _sonnet_
-- [ ] Brief written with every frontmatter field, `status: idea`, `verified: {}` and the nine H2s, one sentence per line. · _sonnet_
+- [ ] Brief written with every frontmatter field, `status: idea`, `verified: {}` and the eleven H2s, one sentence per line. · _sonnet_
 - [ ] Register row added: number, piece, kind, origin, parent, opened. · _sonnet_
 - [ ] Brief read back to the author and corrections applied. · _opus_
 - [ ] On the author's agreement, M1 (idea → briefed) recorded: `status: briefed` and `M1` dated in `verified`. · _sonnet_

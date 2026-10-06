@@ -45,6 +45,7 @@ model: opus
 **Approval**
 
 - [ ] The author watched or heard the whole master; every change made in the list as a new `version`. · _opus_
+- [ ] All four `M4.*` sub-checks recorded `n/a` with the footage or no picture reason before M4; missing entries filled for older pieces. · _sonnet_
 - [ ] M4 dated in `verified` and `status` set to `produced`, on the author's yes. · _sonnet_
 
 ## Done When

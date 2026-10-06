@@ -16,7 +16,7 @@ scripts/src/pieces/
 └── NNN-kebab-title/        ← one piece, numbered from the register, with its own pair
     ├── CONTEXT.md          ← what this piece is for, and where it stands
     ├── CLAUDE.md           ← this piece's traps and its definition of done
-    ├── brief.md            ← the plan: frontmatter with status and verified, nine sections
+    ├── brief.md            ← the plan: frontmatter with status and verified, eleven sections
     ├── script.md           ← a scripted piece's words (transcript.md for a recorded piece)
     ├── storyboard.md       ← a picture for every spoken line
     └── shot-list.md        ← a source for every shot
@@ -30,7 +30,7 @@ scripts/src/pieces/
   this folder's `CLAUDE.md`: frontmatter `piece`, `title`, `kind`, `origin`, `picture`,
   `status`, `deliverables`, `source_media`, `target_seconds`, `words_per_minute`, `parent`,
   `source`, `synthetic_voice`, `ai_visuals`, `music`, `rights`, `verified`, `last_updated`,
-  then the title and `## Purpose` · `## Audience` · `## Hook` · `## Key points` ·
+  then the title and `## Purpose` · `## Audience` · `## Shape` · `## Metaphor` · `## Hook` · `## Key points` ·
   `## Call to action` · `## Disclosure plan` · `## Rights needs` · `## Draws on` · `## Notes`.
   `deliverables` lists full-length deliverables only, as keys of `toolkit/data/platforms.toml`;
   cut-downs live in the piece's cut-down plan. The gates its `status` and `verified` record are

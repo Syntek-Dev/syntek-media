@@ -17,7 +17,7 @@
 #
 #                    Twenty-six checks, per render: 1–26. Numbers 27–28 are
 #                    DESIGN.md Section 7's for commands the toolkit does not have yet, and are
-#                    taken when they arrive (24 then gains `cues` and `real` beside `where`).
+#                    taken when they arrive (24 then gains `real` beside `where` and `cues`).
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
 #                         exercises the media_*.py modules, card.py and transcribe.py). A self-test reads only
 #                         the toolkit, so one result serves every render whose toolkit/ is
@@ -158,6 +158,9 @@
 #                         them, names its three ignored per-piece folders, each existing or
 #                         absent, and never names anything inside them (D50, D64); a name with
 #                         no piece folder is exit 2.
+#                         `cues` retains separate word/line/beat/board lists, exact seconds and
+#                         enclosing MM:SS, delivery anchors and SFX/music audio links; unmatched
+#                         rows and links are findings, invalid data and author edits are refused.
 #                     25. 25 flat stills of 0.16 s at 30 fps (DESIGN.md Section 6.4): the master
 #                         is 120 frames, the frame nearest the edit's 4.000 s (still by still,
 #                         125), each still starting on the frame nearest its running total, read
@@ -703,6 +706,7 @@ SHIM
 
   # ── 24. where ──
   smoke_where
+  smoke_cues
   smoke_timing
   smoke_lipsync
   if $HAVE_FFMPEG; then smoke_voice
@@ -1813,6 +1817,45 @@ PY
   fi
 }
 
+# ── 24. separate cue lists, events and author-owned audio links ──
+smoke_cues() {
+  local st=0
+  PYTHONDONTWRITEBYTECODE=1 python3 - "$T" "$OUT" "$RESULTS" \
+    >"$OUT/cues-fixture.log" 2>&1 <<'PYCODE' || st=$?
+import sys
+from pathlib import Path
+root, out, receipt = map(Path, sys.argv[1:4])
+sys.path.insert(0, str(root / 'toolkit'))
+import media as M
+import media_common as C
+C.ROOT = root
+results = {}
+labels = {
+    'cues keep exact JSON times and print enclosing MM:SS with escaped cells': 'times',
+    'cues preserve separate beat, board, line and original word lists': 'lists',
+    'cues retain delivery instructions at actual word anchors without inventing sound duration': 'delivery',
+    'cues resolve sound and music IDs from tracked audio rows including offset fades and ducking': 'audio',
+    'cues report an unmatched board with null times and exit one': 'unmatched',
+    'cues report untimed words and leave their board times null': 'untimed',
+    'cues refuse non-finite word data without replacing an output': 'finite',
+}
+def verdict(label, good, detail=''):
+    print(('ok ' if good else 'FAIL ') + label, flush=True)
+    if not good: print(detail, flush=True)
+    key = labels.get(label, 'links' if 'audio links' in label else
+                     'boards' if '-column boards' in label else 'guards')
+    results[key] = results.get(key, True) and good
+def cli(*args):
+    code, stdout, stderr = M.cli_split(*args)
+    return code, stdout + stderr
+with M.hermetic_git(out / 'cues-gitconfig'):
+    M.test_cues(verdict, cli, root, True)
+with receipt.open('a') as f:
+    for key, good in results.items(): f.write('cues.' + key + '\t' + ('yes' if good else 'no') + '\n')
+PYCODE
+  rec cues.status "$st"
+}
+
 smoke_voice() {
   local p="916-smoke-voice" gen="$T/production/src/voiceover/generated"
   mkdir -p "$gen/$p/takes"
@@ -2417,6 +2460,12 @@ run_checks() {
   fi
 
   # 24
+  if [[ -n "${RES[cues.status]:-}" ]]; then
+    [[ "${RES[cues.status]}" == 0 ]] || finding "check 24 — $L cue fixture could not run (exit ${RES[cues.status]})"
+    for feature in times lists delivery audio unmatched untimed finite links boards guards; do
+      [[ "${RES[cues.$feature]:-}" == yes ]] || finding "check 24 — $L cue index failed $feature (${RES[cues.$feature]:-missing})"
+    done
+  fi
   if [[ -n "${RES[where.status]:-}" ]]; then
     if [[ "${RES[where.status]}" != 0 ]]; then finding "check 24 — $L where $P_WHERE failed (exit ${RES[where.status]}): ${RES[where.tail]:-}"
     else
@@ -2666,6 +2715,17 @@ tr.lines.has	yes
 tr.lines.extra	no
 tr.o.status	0
 tr.o.written	yes
+cues.status	0
+cues.times	yes
+cues.lists	yes
+cues.delivery	yes
+cues.audio	yes
+cues.unmatched	yes
+cues.untimed	yes
+cues.finite	yes
+cues.links	yes
+cues.boards	yes
+cues.guards	yes
 where.status	0
 where.listed	yes
 voice.plan	yes
@@ -2859,6 +2919,10 @@ self_test() {
   mut setup.transcribe no;               probe "check 26 fires when absent WhisperX is not an optional setup note" "check 26 — [fixture] missing WhisperX"
   mut where.hidden "production/src/renders/914-smoke-where/914-smoke-where.master.mp4"; probe "check 24 fires when where lists inside an ignored folder" "check 24 — [fixture] where 914-smoke-where named what is inside an ignored per-piece folder"
   mut where.folders "production/src/renders/914-smoke-where/=exists"; probe "check 24 fires when where does not name all three folders" "check 24 — [fixture] where 914-smoke-where did not name its three ignored per-piece folders"
+  for feature in times lists delivery audio unmatched untimed finite links boards guards; do
+    mut "cues.$feature" no; probe "check 24 fires when cue $feature fails" "check 24 — [fixture] cue index failed $feature"
+  done
+  mut cues.status 2; probe "check 24 fires when cue fixtures cannot run" "check 24 — [fixture] cue fixture could not run"
   mut where.bad 0;                        probe "check 24 fires when where accepts a name with no piece folder" "check 24 — [fixture] where with a name that has no piece folder"
   mut frames.count 125;                   probe "check 25 fires when stills are rounded one by one" "check 25 — [fixture] 25 stills of 0.16 s at 30 fps assembled to 125 frames"
   mut frames.order "frame 14 shows still 3 where still 4 is due"; probe "check 25 fires when a still starts off its running total" "check 25 — [fixture] a still does not start on the frame nearest its running total"

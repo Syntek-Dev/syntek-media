@@ -32,6 +32,7 @@ model: opus
 
 - [ ] The author heard every chapter whole; faults sent back to be mastered, regenerated or re-recorded. · _opus_
 - [ ] Each approved master archived with `footage add` (`--kind generated` or `--kind audio`), the chapter noted; chunk takes archived only where the author wants them. · _sonnet_
+- [ ] All four `M4.*` sub-checks recorded `n/a` with the no picture reason before M4; missing entries filled for older pieces. · _sonnet_
 - [ ] M4 dated in `verified` and `status` set to `produced` once every master was approved and archived. · _sonnet_
 
 **Packaging**

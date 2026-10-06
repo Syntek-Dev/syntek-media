@@ -32,6 +32,10 @@ sources, and have the author approve it whole.
 
 ## Guardrails
 
+- **Record the non-scene progress.** Before M4, write all four `M4.*` as `n/a` with a footage
+  or no-picture reason, filling missing entries for older boards. A scene piece uses
+  production/workflows/10-animate-a-scene/.
+
 - **Sources first.** Every footage ID verifies, every asset is in `production/src/assets/`, and
   every voiceover segment the list uses is approved and archived, before `assemble` runs.
 - **Copy the brand's card component; never edit it here.** A layout change belongs to the brand

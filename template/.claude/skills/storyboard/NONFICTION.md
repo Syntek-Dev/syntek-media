@@ -34,6 +34,10 @@ quotation shown is permitted for video.
   credit line it asks for in a `scripture` or `quotation` row, flagged `VERIFY` until it has been
   read at source, and board the credit where the terms say it must appear.
 
+- **Steps 4–6 — a scene uses the same domain rules.** Type every drawn board `scene`, frame
+  each rendered aspect `native`, and keep Timing notes; re-time through
+  `production/workflows/09-time-the-voice/` without changing M3 when only time moves.
+
 ## Domain rules
 
 - **A quotation is shown exactly as the named translation has it**
@@ -48,10 +52,10 @@ quotation shown is permitted for video.
 Invented board rows for one of Robin Example's teaching clips:
 
 ```markdown
-| # | Beat | Time | Picture | Spoken | On screen | Sound | Vertical framing |
-|---|---|---|---|---|---|---|---|
-| B03 | 2 | 00:20–00:32 | Card: the passage in three lines, the repeated verb in the accent colour | 2.1 | [reference to be supplied] | voice; room tone | centre |
-| B04 | 2 | 00:32–00:40 | The speaker at the lectern, mid-shot | 2.2–2.3 | One reading | voice; room tone | crop x=600 |
+| # | Beat | Time | Picture | Spoken | On screen | Sound | Vertical framing | Timing notes |
+|---|---|---|---|---|---|---|---|---|
+| B03 | 2 | 00:20–00:32 | Card: the passage in three lines, the repeated verb in the accent colour | 2.1 | [reference to be supplied] | voice; room tone | centre | — |
+| B04 | 2 | 00:32–00:40 | The speaker at the lectern, mid-shot | 2.2–2.3 | One reading | voice; room tone | crop x=600 | — |
 ```
 
 An invented rights row this board opens:

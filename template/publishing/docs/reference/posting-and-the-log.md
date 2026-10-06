@@ -25,6 +25,7 @@ deliverable, `## <platform>.<format>` (with ` — cNN` for a cut), each with the
 |---|---|
 | **Title** | the title as it will be pasted |
 | **Description** | a fenced block, one sentence per line like every `src/` file, its words exactly as they will be posted, the disclosure line included; `prepare-post` joins the lines into paste-ready text in chat when the author posts |
+| **Chapters** | `youtube.long` only: fenced `MM:SS <title>` lines from tracked master timings, first `00:00`; approved with the package and appended in chat, never a video chapters file |
 | **Hashtags** | the set, inside the platform's keys; above `platform.instagram.hashtags_max` warns |
 | **Disclosure** | the label and its setting with its rule, the description line, any spoken or on-screen line |
 | **Captions** | the caption file, and whether it is burned in or uploaded |
@@ -65,8 +66,7 @@ log's `## Corrections`.
 
 ## How we apply it here
 
-- A log row is written only from the author's report, never from the package or the schedule.
-- A package is approved whole, by the author, before its first schedule row becomes `ready`.
+- Log rows come only from the author's report; the author approves a whole package before any schedule row becomes `ready`.
 - Times are 24-hour, in <%TIMEZONE%>; dates DD/MM/YYYY; one sentence per line in Notes.
 
 ## Who implements it

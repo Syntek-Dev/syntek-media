@@ -494,6 +494,7 @@ k:audiobook   d  production/workflows/05-narrate-an-audiobook
 k:audiobook   d  production/workflows/06-master-an-audiobook
 always        d  production/workflows/07-clear-the-rights
 always        d  production/workflows/08-bring-in-a-recording
+always        d  production/workflows/09-time-the-voice
 always        d  publishing/docs/reference
 always        d  publishing/docs/project
 always        d  publishing/src

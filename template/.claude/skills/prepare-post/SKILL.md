@@ -96,8 +96,11 @@ the people they may show.
    carries `<!-- VERIFY: … -->`. Run the spelling and grammar skills (syntek-author), where
    present, as one supportive report, and the fact-check skill (syntek-author), where present, on
    every claim; check each `.claude/skills/<skill>/SKILL.md` first, and name any that is missing.
-   *Complete when:* every deliverable has its three fields drafted, and every report is with the
-   author.
+   For `youtube.long` only, propose **Chapters** as fenced `MM:SS <title>` lines: first
+   `00:00`, then tracked cue beat starts plus the edit's voice offset, or each beat's first
+   master-timed caption if cues are absent, rounded down. Use beat names unless the author
+   changes them; check the chapter keys and `verify`, keep the lines here and append in chat.
+   *Complete when:* each deliverable has its words drafted and every report is with the author.
 
 5. **Package each placement on the brand's own channels.** A piece placed on a site of the
    website or blog profile, or in an issue of a list in the newsletter profile, gets one section
@@ -169,8 +172,8 @@ the people they may show.
     `scripts/docs/reference/the-piece-ladder.md` gives it. Report what is ready, when each post is
     due, and what the author sets by hand at upload, platform by platform. When the author is ready
     to post a deliverable, give its title and its description in chat as paste-ready text: the
-    fenced lines joined into paragraphs, one sentence per line being only how the file keeps them;
-    never write that joined text to a file. The author posts.
+    fenced lines joined into paragraphs, followed by its video chapters; never write that joined
+    text to a file. The author posts.
     *Complete when:* the author has the hand-over, and the brief's status moved only on the author's
     approval.
 
@@ -187,13 +190,11 @@ the people they may show.
 
 ## Anti-patterns
 
-- **Posting, or saying it was posted.** No platform is called from here; a package is not a post,
-  and the log records only what the author reports.
+- **Posting, or saying it was posted.** The log records only what the author reports; no platform is called.
 - **A toggle by habit.** A label the platform's rule does not ask for can mislead viewers about
   what is synthetic; a label it does ask for is never skipped. The rule and its date decide.
 - **A synthetic voice with no description line.** Whatever the toggle, the description says so.
-- **A limit from memory, or a count by eye.** Every limit comes from `media.py presets`; every
-  count is exact.
+- **A limit from memory, or a count by eye.** Read `media.py presets` and count exactly.
 - **An invented URL, figure or endorsement.** The URL is the one the author gives, and a claim is
   one the piece's sources support.
 - **Duplicating the social plan.** Where syntek-author's social-media family is present, its

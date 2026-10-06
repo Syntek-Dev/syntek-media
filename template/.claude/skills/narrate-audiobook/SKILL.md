@@ -196,16 +196,16 @@ The mode file adds this kind of book's source, the words it cannot say unaided, 
     asks for (Spotify's digital voice narration box, for one) for the post package, and set each
     packaged row's Status to `packaged`.
     *Complete when:* every channel is packaged, with its sample and its disclosure noted.
-
 12. **Hand back.** Report the chapters made or recorded, mastered and checked; the characters and
     calls spent; the voice and model; every check result; what is archived; each channel's route,
-    package and disclosure; and open words and flags. The procedure records the gates in the
-    brief, on the author's word: M4 (storyboarded → produced, with M3 `n/a — no picture`) once
-    every chapter's master, the credits' included, exists, probes clean, has been heard through,
+    package and disclosure; and open words and flags. First fill all four `M4.*` as
+    `n/a — no picture`, including missing entries in older pieces. The procedure records
+    the gates on the author's word: M4 (storyboarded → produced, with M3 `n/a — no picture`)
+    once every chapter's master, the credits' included, exists, probes clean, has been heard through,
     is approved and is archived; then M5 (produced → cut) once `audiobook check` passes on every
     file, with `M6: 'n/a — audiobook'` beside it and `status: cut`. The author uploads to each
-    channel; this skill never does. Name what M7 still needs: every rights row the book uses
-    `cleared`, and the announcement through `prepare-post`.
+    channel; this skill never does. M7 still needs every rights row `cleared` and the announcement
+    through `prepare-post`.
     *Complete when:* the author has the report, and nothing was generated, mastered or sent
     without the author's word.
 

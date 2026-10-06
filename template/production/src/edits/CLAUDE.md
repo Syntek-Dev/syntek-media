@@ -69,6 +69,7 @@ until = "00:00:00.000"
 
 [[audio]]
 source = "vo:<piece>"       # vo:<piece> · a footage ID · an asset path
+cue = ""                   # optional e02: the script's SFX or MUSIC event ID
 at = "00:00:00.000"         # where it starts on the timeline
 in = ""                     # optional source range
 out = ""

@@ -65,7 +65,13 @@ Archive each approved master with
 `python3 toolkit/media.py footage add FILE --kind generated --location LABEL` for an AI chapter,
 or `--kind audio` for a human one, note the chapter in the manifest row's `notes`, and record the
 footage ID in the register. Its chunk takes are archived too only where the author wants them
-kept. When every master is approved and archived, record M4 in the brief's `verified` with
+kept.
+
+Before recording M4, record `M4.takes`, `M4.words`, `M4.cues` and `M4.stills` as
+`n/a — no picture` in the brief; write any missing entries for a piece made before these
+sub-checks existed.
+
+When every master is approved and archived, record M4 in the brief's `verified` with
 today's date and set `status` to `produced`. _Mechanical._
 
 ## 6. Package per channel

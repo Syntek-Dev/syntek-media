@@ -25,7 +25,7 @@ shaped from its transcript.
 | Recap | The steps again, in a sentence each. |
 | Call to action | One thing to do next, said and shown. |
 
-Each beat is an H2 in the script with its target time, so `python3 toolkit/media.py script time`
+Record this order under the brief's `## Shape`; each beat is an H2 in the script with its target time, so `python3 toolkit/media.py script time`
 can show which beat runs long.
 
 ## Keeping the picture moving

@@ -129,3 +129,7 @@ deliverable is one line and a failed render says exactly what failed.
   by default; `--no-cross-check` records its omission. Only the author runs `transcribe fetch`.
 - **Captions from words:** `captions from-words WORDS --deliverable KEY [--offset TC] [-o SRT]`
   preserves first/last word boundaries, reports short gaps and checks the existing house limits.
+- **Cue index:** `cues PIECE [-o FILE]` matches tracked words to beats, boards and lines,
+  retains delivery/SFX/music events, and prints enclosing MM:SS board ranges plus exact seconds.
+  Link each effect/music event ID through one edit audio row's optional `cue`; its footage
+  source and mix supply the event timing. Missing matches or links are findings with null times.

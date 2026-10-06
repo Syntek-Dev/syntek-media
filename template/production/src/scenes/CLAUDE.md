@@ -34,6 +34,9 @@ can be rendered again, frame for frame, from tracked files.
 
 - **Indexes are tool-written, never hand-edited.** A wrong time or source is put right in the
   storyboard, the shot list or the voice, and the command run again.
+- **Cue events retain script instructions.** Link each SFX/MUSIC event ID to one edit audio row
+  with `cue = 'e02'`; its footage source, placement, fades and ducking supply the sound timing.
+  After changing instructions, review the printed IDs and links before accepting new cues.
 - **Replaced only through `-o`, and only while Git holds the old version.** The command that
   makes an index is the only one that replaces it, with `-o` naming it, and only while Git
   reports no uncommitted change to it (`.claude/rules/syntek-media/04-toolkit-pipeline.md`

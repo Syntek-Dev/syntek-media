@@ -21,7 +21,7 @@ synthetic_voice: none      # none | stock | designed | own-clone | other-clone
 ai_visuals: none           # none | assisted | generated
 music: none                # none | licensed | own | generated
 rights: [RR0000]           # a placeholder no project has: see Rights needs
-verified: {M1: <%DATE%>, M2: <%DATE%>, M3: <%DATE%>}
+verified: {M1: <%DATE%>, M2: <%DATE%>, M3: <%DATE%>, M4.takes: 'n/a — footage', M4.words: 'n/a — footage', M4.cues: 'n/a — footage', M4.stills: 'n/a — footage'}
 last_updated: <%DATE%>
 ---
 
@@ -42,6 +42,14 @@ The piece shows how <%BRAND_NAME%> thinks about running a business, in thirty se
 
 <%AUDIENCE_TEST%>
 Every line has to work in its captions alone, so each is short enough to read at a glance.
+
+## Shape
+
+A hook opens, the key points develop it, and the last beat asks for one action.
+
+## Metaphor
+
+n/a — the presenter speaks directly to camera.
 
 ## Hook
 
@@ -103,7 +111,7 @@ synthetic_voice: none      # none | stock | designed | own-clone | other-clone
 ai_visuals: none           # none | assisted | generated
 music: none                # none | licensed | own | generated
 rights: [RR0000]           # a placeholder no project has: see Rights needs
-verified: {M1: <%DATE%>, M2: <%DATE%>, M3: <%DATE%>}
+verified: {M1: <%DATE%>, M2: <%DATE%>, M3: <%DATE%>, M4.takes: 'n/a — footage', M4.words: 'n/a — footage', M4.cues: 'n/a — footage', M4.stills: 'n/a — footage'}
 last_updated: <%DATE%>
 ---
 
@@ -124,6 +132,14 @@ The teaser sells a feeling and a question, and holds back the title and the cove
 
 <%AUDIENCE_TEST%>
 The captions carry the whole teaser, so every line is short and the pauses do the work.
+
+## Shape
+
+A hook opens, the key points develop it, and the last beat asks for one action.
+
+## Metaphor
+
+n/a — the presenter speaks directly to camera.
 
 ## Hook
 
@@ -186,7 +202,7 @@ synthetic_voice: none      # none | stock | designed | own-clone | other-clone
 ai_visuals: none           # none | assisted | generated
 music: none                # none | licensed | own | generated
 rights: [RR0000]           # a placeholder no project has: see Rights needs
-verified: {M1: <%DATE%>, M2: <%DATE%>, M3: <%DATE%>}
+verified: {M1: <%DATE%>, M2: <%DATE%>, M3: <%DATE%>, M4.takes: 'n/a — footage', M4.words: 'n/a — footage', M4.cues: 'n/a — footage', M4.stills: 'n/a — footage'}
 last_updated: <%DATE%>
 ---
 
@@ -207,6 +223,14 @@ One claim, stated twice and given its test, so it stays with the viewer after th
 
 <%AUDIENCE_TEST%>
 The claim has to land on a first hearing, with no slide and no context before it.
+
+## Shape
+
+A hook opens, the key points develop it, and the last beat asks for one action.
+
+## Metaphor
+
+n/a — the presenter speaks directly to camera.
 
 ## Hook
 

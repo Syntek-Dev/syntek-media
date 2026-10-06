@@ -50,7 +50,9 @@ log ◄─ the author posts ◄─ post package and schedule (M7) ◄─ thumbna
 | 2b. Bring in a recording | `captions` | `production/workflows/08-bring-in-a-recording/` | `scripted` (M3 `n/a — recorded`) |
 | 3. Storyboard it | `storyboard` | `scripts/workflows/03-storyboard-a-piece/` | `storyboarded` |
 | 4. Voice it; log the footage | `voiceover` | `production/workflows/02-make-a-voiceover/`, `production/workflows/01-log-source-media/` | — |
+| 4b. Time a scene piece's joined voice | `voiceover`, `storyboard` | `production/workflows/09-time-the-voice/` | `storyboarded`, with `M4.words` and `M4.cues` dated |
 | 5. Assemble the master | `cut-for-platform` | `production/workflows/03-assemble-the-master/` | `produced` |
+| 5b. Animate a scene piece | `cut-for-platform` | production/workflows/10-animate-a-scene/ | `produced`, after `M4.stills` and every aspect's master |
 | 6. Plan and cut the deliverables | `repurpose`, `cut-for-platform` | `publishing/workflows/01-plan-the-cut-downs/`, `publishing/workflows/02-cut-for-a-platform/` | `cut` |
 | 7. Caption them | `captions` | `publishing/workflows/03-caption-a-piece/` | `captioned` |
 | 8. Brief the thumbnails | `thumbnail-brief` | `publishing/workflows/04-brief-a-thumbnail/` | — |
@@ -74,15 +76,23 @@ each gate checks.
 
 | Gate | Moves | In one line |
 |---|---|---|
-| M1 | idea → briefed | the brief is complete: real deliverable keys, purpose, call to action, disclosure plan, rights needs |
+| M1 | idea → briefed | the brief is complete: real deliverable keys, purpose, shape and metaphor (each answered, `n/a` valid), call to action, disclosure plan, rights needs |
 | M2 | briefed → scripted | the script, or a recorded piece's transcript, is approved, timed and fact-checked, with no flag in it; an audiobook, which has no script, has its chapter register approved |
 | M3 | scripted → storyboarded | every spoken line boarded and every shot sourced, with a rights row for anything licensed or identifiable |
-| M4 | storyboarded → produced | the master probes clean, its footage verifies, its takes are approved and archived (an audiobook's mastered chapters), the author has watched or heard it |
+| M4 | storyboarded → produced | every master probes clean, its footage verifies, its takes are approved and archived (an audiobook's mastered chapters), the author has watched or heard it; a scene piece dates the four `M4.*` first, other pieces record them `n/a` |
 | M5 | produced → cut | every deliverable rendered, verified, and seen or heard by the author; a feed episode's audio encoded untagged |
 | M6 | cut → captioned | every deliverable with speech and picture has captions that pass `captions check --script`; on a site of the website or blog profile, a `.vtt` sidecar and a published transcript of exactly what each page plays; a feed episode's transcript and master-timed `.vtt` |
 | M7 | captioned → scheduled | rights cleared, disclosure set, package approved and inside every limit, no flags, a schedule row per deliverable and per placement; a placement on a site or list the brand does not own has its dated agreement; a feed episode's register row `ready`, its file tagged and its feed checked |
 
 `published` is not a gate: it follows when every schedule row is `posted` or `dropped`.
+
+A scene piece (a shot typed `scene`) dates `M4.takes`, `M4.words`, `M4.cues` and `M4.stills` in
+that order under `storyboarded`; the router chooses the first undated one. Each change clears
+that sub-check, every later one, M4 and later gates. Every other piece records all four `n/a`
+with its reason at M3, or before M4 where M3 is `n/a`; the master procedure fills any missing.
+A re-time raises board `version` and keeps `approved:` and M3, but clears `M4.cues`, `M4.stills`
+and M4 and later gates. A note changing words or replacing a shot also clears M3. A new take
+clears all four and requires joining, alignment and lip sync again; a re-time alone needs no new mouths.
 
 **Why this rule exists.** A ladder a project guide could quietly relax is not a ladder. The gates
 catch a fabricated claim, an uncleared track or an unheard take before it is public.

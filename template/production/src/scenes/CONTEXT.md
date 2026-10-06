@@ -19,6 +19,9 @@ production/src/scenes/
 
 ## What's here
 
+- Cue JSON has separate `beats`, `boards`, `lines`, `words` and `events` lists. Events retain
+  script delivery/SFX/MUSIC instructions; effect/music IDs link through edit audio rows' `cue`
+  field to their logged source and mix. All timings are exact seconds relative to the joined voice.
 - `<piece>.cues.json` — written by `python3 toolkit/media.py cues <piece>` from the script's beats
   and lines, the storyboard's boards and the tracked words in `production/src/timing/`. The
   storyboard is re-timed from what the command prints; nothing rewrites the storyboard itself.

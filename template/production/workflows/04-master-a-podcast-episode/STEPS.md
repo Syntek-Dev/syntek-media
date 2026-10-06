@@ -76,6 +76,9 @@ on the master, and quote the integrated loudness and true peak against
 > **Skill:** `cut-for-platform` · **Guide:** `scripts/docs/reference/podcast-episodes.md`
 
 The author hears the whole episode. A change goes back to step 4 as a new `version` of the list.
+Before recording M4, record `M4.takes`, `M4.words`, `M4.cues` and `M4.stills` as
+`n/a — no picture` in the brief; write any missing entries for a piece made before these
+sub-checks existed.
 On the author's yes, and not before, record M4 in `verified` with today's date and set `status`
 to `produced`. _Substantive._
 

@@ -46,7 +46,7 @@
 # Documentary (read by people, guides and checklists, never by the toolkit): pix_fmt (the toolkit
 # always writes and checks yuv420p for video) · min_height · max_width · audio_codec_alt ·
 # audio_bitrate_max · loudness_tolerance_db (the toolkit's tolerance is 1 LU) · the own channels'
-# platform-wide keys (embed_*, autoplay_muted_allowed, captions_required, featured_min_width and
+# platform-wide keys (YouTube chapters_min and chapter_min_seconds; embed_*, autoplay_muted_allowed, captions_required, featured_min_width and
 # the other structured-data minimums, display_width, html_clip_kb, html_target_kb, image_formats,
 # video_tag_supported) · and the rest of [platform.podcast] (display_max_chars,
 # episodes_shown_max, max_seconds, chapters_auto_min_seconds, transcript_formats,
@@ -75,6 +75,9 @@ title_max_chars = 100
 description_max_chars = 5000
 hashtags_ignored_over = 60          # "more than 60 hashtags" -> every hashtag on that content ignored
 hashtags_shown_by_title = 3         # up to three, chosen by YouTube from the description
+chapters_min = "VERIFY"             # confirm the video-chapter minimum before packaging
+chapter_min_seconds = "VERIFY"      # confirm the minimum chapter duration before packaging
+verify = ["chapters_min", "chapter_min_seconds"]
 checked = "03/10/2026"
 source = "https://support.google.com/youtube/answer/57404?hl=en"
 extra_sources = ["https://support.google.com/youtube/answer/6390658?hl=en"]   # scrub: allow — a help-centre article ID, not personal data

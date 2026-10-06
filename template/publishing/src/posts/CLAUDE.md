@@ -55,6 +55,7 @@ approved: ""                       # DD/MM/YYYY once the author approves the who
 
 - **Title:** <as it will be pasted>
 - **Description:** <a fenced block, one sentence per line, holding the description's words exactly, the disclosure line included; a blank line between paragraphs>
+- **Chapters:** <youtube.long only: fenced MM:SS title lines, first 00:00; tracked cue beat starts plus the edit voice offset, or master captions, rounded down; beat names unless the author changes them>
 - **Hashtags:** <the set>
 - **Disclosure:** <label and setting, and the rule it rests on> · <description line> · <spoken or on-screen line, or none>
 - **Captions:** <caption file> · <burned or sidecar>
@@ -92,4 +93,5 @@ approved: ""                       # DD/MM/YYYY once the author approves the who
   **Feed** (the `feed check` result, the upload copy, the order and time of upload) and **On
   YouTube** (the `youtube.long` that carries it, by publish-log URL, or none). A `youtube.long`
   that carries a feed episode adds **Playlist**. An episode page on another site is a placement.
+- **Video chapters** stay in the package; check the platform chapter keys and append the lines to paste-ready descriptions in chat. No video chapters file.
 - **Generated:** nothing here; renders are in `publishing/src/renders/`.

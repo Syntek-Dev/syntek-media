@@ -76,7 +76,10 @@ an episode lists both `youtube.long` and `podcast.feed_audio`; posters, share, f
 preview images and a GIF preview are the thumbnail brief's, and an embed of the YouTube upload is
 a placement, never a deliverable. Set `target_seconds` inside every deliverable's `max_seconds`, and `words_per_minute` from
 the voice file's spoken style, or 150. For a recorded piece, `source_media` lists the recording's
-footage IDs once it is logged, and stays `[]` until then. _Substantive._
+footage IDs once it is logged, and stays `[]` until then. Write `## Shape`: the beats in order
+and what each does, using the kind's guide where it gives a shape. Write `## Metaphor`: the
+one image or comparison the piece is built on. Each needs an answer; `n/a` is valid, blank is
+not. _Substantive._
 
 ## 6. Settle the key points and the call to action
 
@@ -110,7 +113,7 @@ _Substantive._
 Create `scripts/src/pieces/<piece>/` with its `CONTEXT.md` and `CLAUDE.md` from the pair
 skeleton in `scripts/src/pieces/CLAUDE.md`, every slot filled from what was settled. Write
 `brief.md` from the brief skeleton fenced in the same file: every frontmatter field,
-`status: idea`, `verified: {}`, `last_updated` today, then the title and the nine H2s, one
+`status: idea`, `verified: {}`, `last_updated` today, then the title and the eleven H2s, one
 sentence per line. Add the register row: number, piece, kind, origin, parent and the date
 opened. For a re-brief, change the brief in place and leave the pair and the register row as they
 are unless the author says otherwise. _Mechanical._

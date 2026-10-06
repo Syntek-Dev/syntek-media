@@ -37,6 +37,10 @@ given away.
   licence that covers video (`font`), and the cover or any illustration shown needs the artist's
   or the publisher's permission for video (`artwork`).
 
+- **Steps 4–6 — a scene uses the same domain rules.** Type every drawn board `scene`, frame
+  each rendered aspect `native`, and keep Timing notes; re-time through
+  `production/workflows/09-time-the-voice/` without changing M3 when only time moves.
+
 ## Domain rules
 
 - **No spoilers in pictures either**: the board keeps the reveal line the script keeps.
@@ -51,11 +55,11 @@ given away.
 Invented board rows for Morgan Example's teaser:
 
 ```markdown
-| # | Beat | Time | Picture | Spoken | On screen | Sound | Vertical framing |
-|---|---|---|---|---|---|---|---|
-| B01 | 1 | 00:00–00:05 | Still: the mill town at dusk, a clock in every window; slow push-in | 1.1 | One night a year, time turns back | narrator; low drone | centre |
-| B02 | 2 | 00:05–00:12 | Still: a figure at the riverbank, seen from behind, face unseen | 2.1 | Who comes back? | whisper; water rising, then silence | crop x=420 |
-| B03 | 3 | 00:12–00:17 | Card: the cover, then the call to action | 3.1 | Read chapter one | narrator; music out | centre |
+| # | Beat | Time | Picture | Spoken | On screen | Sound | Vertical framing | Timing notes |
+|---|---|---|---|---|---|---|---|---|
+| B01 | 1 | 00:00–00:05 | Still: the mill town at dusk, a clock in every window; slow push-in | 1.1 | One night a year, time turns back | narrator; low drone | centre | — |
+| B02 | 2 | 00:05–00:12 | Still: a figure at the riverbank, seen from behind, face unseen | 2.1 | Who comes back? | whisper; water rising, then silence | crop x=420 | — |
+| B03 | 3 | 00:12–00:17 | Card: the cover, then the call to action | 3.1 | Read chapter one | narrator; music out | centre | — |
 ```
 
 The shot list behind them:

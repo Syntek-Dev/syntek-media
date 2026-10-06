@@ -20,6 +20,7 @@ production/workflows/
 ├── 06-master-an-audiobook/         ← chapters mastered, checked to the ACX targets and packaged
 <: endif :>├── 07-clear-the-rights/            ← every licence, release and consent a piece uses, cleared
 ├── 08-bring-in-a-recording/        ← a recording logged, transcribed, anchored and approved
+├── 09-time-the-voice/             ← approved words and mouth timing, boards re-timed before animation
 └── local/                          ← your own procedures; a same-slug folder here wins
 ```
 
@@ -37,7 +38,7 @@ NN-verb-first-name/
 
 - `production/workflows/01-log-source-media/`, `production/workflows/02-make-a-voiceover/`,
   `production/workflows/03-assemble-the-master/`, `production/workflows/07-clear-the-rights/`,
-  `production/workflows/08-bring-in-a-recording/` — for every project.
+  `production/workflows/08-bring-in-a-recording/`, `production/workflows/09-time-the-voice/` — for every project.
 <: if 'podcast' in MEDIA_KINDS :>- `production/workflows/04-master-a-podcast-episode/` — podcast episodes.
 <: endif :><: if 'audiobook' in MEDIA_KINDS :>- `production/workflows/05-narrate-an-audiobook/`, `production/workflows/06-master-an-audiobook/` —
   audiobooks.
