@@ -1,17 +1,23 @@
 # Changelog
 
-**Last Updated**: 05/10/2026 **Version**: 0.2.2 **Maintained By**: Syntek Studio
+**Last Updated**: 06/10/2026 **Version**: 0.3.0 **Maintained By**: Syntek Studio
 **Language**: British English (en_GB)
 
 All notable changes to syntek-media are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D63) or section.
+Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D73) or section.
 
 ---
 
 ## [Unreleased]
+
+## [0.3.0] - 06/10/2026
+
+The per-video pipeline (D64–D72): per-piece output folders, offline voice preparation, joined voice, word and mouth timing, script and storyboard cues, deterministic scenes with native masters, indexed real sources and optional memory caps. Shared agent support (D73) adds Claude Code, Codex and Antigravity entrypoints using one canonical skill and rule tree. A 0.2.x project needs no migration (D65); legacy takes remain usable. New copy-only agent files require the documented manual setup in existing projects. Before copying into a project with a real `.agents` directory, preserve it and pass `--exclude /.agents`.
+
+**syntek-author baseline.** Released against syntek-author `9a65902d38e8f82d07c30fb803fa72273ef3a70a` (its v0.3.0 release), read on 06/10/2026: `run-all.sh` passed in full (34 PASS, 0 FINDINGS, 0 ERROR, 0 SKIP), `coexist-test.sh` included, and `.github/scripts/syntek-author-names.txt` is unchanged.
 
 ### Added
 
