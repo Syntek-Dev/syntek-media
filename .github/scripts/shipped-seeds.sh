@@ -9,7 +9,7 @@
 #                    manifest lands in every project and no update can retract it — so emptiness
 #                    is AUDITED, not trusted (DESIGN.md Section 3.1). Seed-once examples are the
 #                    opposite contract: copied on `copy`, excluded on `update`, so an example the
-#                    author deleted stays deleted (Section 3.2). The ten shared files are a third:
+#                    author deleted stays deleted (Section 3.2). The seventeen shared paths are a third:
 #                    copy only, never on update, never recreated (D11, Section 3.6), and they need
 #                    BOTH their copier.yml lines — without the update gate a file the author
 #                    deleted comes back from media's copy inside syntek-author's project
@@ -34,7 +34,7 @@
 #                         table header with no rows is empty: the website and blog profiles'
 #                         `## Sites` and the newsletter profile's `## Lists` ship that way
 #                         (DESIGN.md D61, Section 6.15).
-#                      8. Each of the ten shared files has its update-gated _exclude line
+#                      8. Each of the seventeen shared paths has its update-gated _exclude line
 #                         ("_copier_operation == 'update'"), and nothing else carries that gate.
 #                      9. A Markdown register or brand seed lacks the seeded-stub banner. Index
 #                         pairs carry none: a pair is navigation.
@@ -231,7 +231,7 @@ static_checks() {
     [[ -n "${update_gated[$s]:-}" ]] || finding "check 8 — the shared file $s has no update-gated _exclude line ($SM_SHARED_GATE) — an update would recreate it after the author deleted it (DESIGN.md Section 10)"
   done
   for s in "${!update_gated[@]}"; do
-    is_shared "$s" || finding "check 8 — /$s carries the shared files' update gate ($SM_SHARED_GATE) but is not one of the ten (DESIGN.md D11): it would never reach a project by update"
+    is_shared "$s" || finding "check 8 — /$s carries the shared files' update gate ($SM_SHARED_GATE) but is not one of the seventeen (DESIGN.md D11): it would never reach a project by update"
   done
 
   # ── 16. Negations: an output folder's own README.md, above every gated line ──
@@ -431,7 +431,11 @@ write_fixture() { # $1 = repo root
     for s in $SM_SHARED $SM_SEEDS; do printf '  - /%s\n' "$s"; done
     printf 'BRAND_NAME:\n  type: str\n'
   } > "$r/copier.yml"
-  for s in $SM_SHARED $SM_SEEDS; do mkdir -p "$(dirname "$t/$s")"; printf '# %s\n' "${s##*/}" > "$t/$s"; done
+  for s in $SM_SHARED $SM_SEEDS; do
+    [[ "$s" == .agents ]] && continue
+    mkdir -p "$(dirname "$t/$s")"; printf '# %s\n' "${s##*/}" > "$t/$s"
+  done
+  ln -s .claude "$t/.agents"
   for s in $SM_REGISTER_SEEDS; do
     printf '# %s\n\n%s\n\n## Register\n\n| ID | Notes |\n|---|---|\n' "${s##*/}" "$banner" > "$t/$s"
   done

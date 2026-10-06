@@ -17,7 +17,7 @@
 #                - copier.yml readers: list items, registered keys, question choices, gated
 #                  paths, gate negation (list membership included: DESIGN.md D15);
 #                - the DESIGN.md catalogue: skills, mode files, gated paths, seeds, examples,
-#                  the ten copy-only shared files, the spine set, the identity tokens, the
+#                  the seventeen copy-only shared paths, the spine set, the identity tokens, the
 #                  companion skills, pair-only folders and pair exemptions, the D13 allow, ask
 #                  and deny lists, and the _message_after_copy lines;
 #                - a reader for a rendered tree's answers (multiselect lists included), a gate
@@ -389,6 +389,14 @@ always        f  .claude/MEMORY.md
 always        f  .claude/settings.json
 always        f  .claude/skills/CONTEXT.md
 always        f  .claude/skills/CLAUDE.md
+always        f  AGENTS.md
+always        f  GEMINI.md
+always        d  .agents
+always        f  .codex/config.toml
+always        f  .codex/CONTEXT.md
+always        f  .codex/CLAUDE.md
+always        f  .claude/mcp_config.json
+always        f  .claude/syntek-media-agents.md
 always        f  .claude/rules/syntek-media/01-layout-and-routing.md
 always        f  .claude/rules/syntek-media/02-skills.md
 always        f  .claude/rules/syntek-media/03-production-ethics.md
@@ -576,8 +584,8 @@ SM_AUTHOR_PATH_HEADS="standards manuscript library planning research proposal ty
 SM_AUTHOR_PATH_PREFIXES=".claude/rules/syntek-author"
 SM_AUTHOR_FILE_NAMES="Makefile 00-project.md"
 
-# The ten copy-only shared files (DESIGN.md D11, Section 3.6).
-SM_SHARED="README.md CONTEXT.md .gitignore .mcp.json .claude/CLAUDE.md .claude/CONTEXT.md .claude/MEMORY.md .claude/settings.json .claude/skills/CONTEXT.md .claude/skills/CLAUDE.md"
+# The seventeen copy-only shared paths (DESIGN.md D11, D73, Section 3.6).
+SM_SHARED="README.md CONTEXT.md .gitignore .mcp.json .claude/CLAUDE.md .claude/CONTEXT.md .claude/MEMORY.md .claude/settings.json .claude/skills/CONTEXT.md .claude/skills/CLAUDE.md AGENTS.md GEMINI.md .agents .codex/config.toml .codex/CONTEXT.md .codex/CLAUDE.md .claude/mcp_config.json"
 SM_SHARED_GATE="_copier_operation == 'update'"
 
 # Seeds (DESIGN.md Section 3.1): twenty-six, then the sixteen author-filled index-pair files.
@@ -597,7 +605,7 @@ SM_EXAMPLES="scripts/src/pieces/000-example-piece production/src/edits/000-examp
 SM_EXAMPLE_GATE="_copier_operation == 'update' or not SEED_EXAMPLES"
 SM_EXAMPLE_NAME="000-example-piece"
 
-# The root spine (DESIGN.md Section 2, Token discipline). The ten shared files, the seeds and
+# The root spine (DESIGN.md Section 2, Token discipline). The seventeen shared paths, the seeds and
 # the examples are spine through their own sets; index files are computed.
 SM_ROOT_SPINE="$SM_ANSWERS_FILE"
 SM_ROOT_SPINE_GLOBS=".claude/rules/syntek-media/*.md"
@@ -625,7 +633,7 @@ SM_SETTINGS_ASK=(
 )
 SM_SETTINGS_BANNED_KEYS="hooks effortLevel ultracode enabledPlugins"   # and every disable* key
 
-# What _message_after_copy must say, in DESIGN.md D13's order: (1) the ten shared files and the
+# What _message_after_copy must say, in DESIGN.md D13's order: (1) the seventeen shared paths and the
 # skip rule, that Copier's 'conflict' then 'skip' pair is expected, and Section 8's hand edits 2
 # and 3 (the optional line in .claude/CLAUDE.md; nothing to add to .gitignore or .mcp.json);
 # (2) the four Bash allows, the nine asks and the two Edit denies to add by hand (DESIGN.md
@@ -875,7 +883,7 @@ load_owned() { # $1 = tree
     SM_FOREIGN_DIRS["."]=1
     d="$f"
     while [[ "$d" == */* ]]; do d="${d%/*}"; SM_FOREIGN_DIRS["$d"]=1; done
-  done < <(cd "$t" && find . -name .git -prune -o -type f -print0)
+  done < <(cd "$t" && find . -name .git -prune -o \( -type f -o -type l \) -print0)
   return 0
 }
 
@@ -1003,7 +1011,7 @@ list_files0() { # $1 = dir
 # Every file of a tree, relative, one per line, sorted bytewise — whatever Git ignores
 # included. The over-author scope is the difference of two of these.
 tree_files() { # $1 = dir
-  (cd "$1" && find . -name .git -prune -o -type f -print | sed 's#^\./##' | LC_ALL=C sort)
+  (cd "$1" && find . -name .git -prune -o \( -type f -o -type l \) -print | sed 's#^\./##' | LC_ALL=C sort)
 }
 
 # ── _message_after_copy ──────────────────────────────────────────────────────
@@ -1130,7 +1138,7 @@ sm_render_over_author() { # $1 = syntek-author snapshot, $2 = media snapshot, $3
 # ── The fixture templates ────────────────────────────────────────────────────
 #
 # sm_fixture_template: a minimal syntek-media with the real repository's shape — the house
-# delimiters, the named answers file, the ten copy-only shared files, a register seed and a
+# delimiters, the named answers file, the seventeen copy-only shared paths, a register seed and a
 # brand seed, a gated profile and platform guide per platform, the podcast platform's gate on
 # the pair-only folder of the show registers (DESIGN.md D59), the audiobook gate on a folder
 # and a skill, one seed-once example, a moded skill with its generated mode block, the D14
@@ -1148,6 +1156,7 @@ sm_fixture_template() { # $1 = dest (created, git-initialised and committed)
     cat <<'EOF'
 _min_copier_version: "9.6.0"
 _subdirectory: template
+_preserve_symlinks: true
 _answers_file: .copier-answers.syntek-media.yml
 _external_data:
   prev: .copier-answers.syntek-media.yml
@@ -1169,6 +1178,7 @@ _message_after_copy: |
 EOF
     printf '  Shared files, written only where absent (a skip left yours exactly as it was):\n'
     for p in $SM_SHARED; do printf '    %s\n' "$p"; done
+    printf '    Existing agent directories, aliases and settings need manual setup.\n'
     printf '  Copier lists an existing one as %sconflict%s then %sskip%s; that pair is expected.\n' "$q" "$q" "$q" "$q"
     printf '  Optional: name .claude/rules/syntek-media/ in .claude/CLAUDE.md.\n'
     printf '  Nothing needs adding to .gitignore or .mcp.json.\n'
@@ -1265,6 +1275,14 @@ EOF
   printf '# CONTEXT.md — <%%BRAND_NAME%%>\n' > CONTEXT.md
   printf '__pycache__/\n' > .gitignore
   printf '{"mcpServers": {}}\n' > .mcp.json
+  mkdir -p .codex
+  printf '# AGENTS.md — fixture instructions\n' > AGENTS.md
+  printf '# GEMINI.md — fixture instructions\n' > GEMINI.md
+  ln -s .claude .agents
+  printf "project_doc_fallback_filenames = ['CLAUDE.md']\n" > .codex/config.toml
+  printf '# CONTEXT.md — .codex/\n' > .codex/CONTEXT.md
+  printf '# CLAUDE.md — .codex/\n' > .codex/CLAUDE.md
+  printf '{"mcpServers": {}}\n' > .claude/mcp_config.json
   printf '# CLAUDE.md — <%%BRAND_NAME%%>\n\n## 3. Project-specific rules\n' > .claude/CLAUDE.md
   printf '# CONTEXT.md — .claude/\n' > .claude/CONTEXT.md
   printf '# MEMORY.md — <%%BRAND_SLUG%%>\n\n## Facts\n\n## Decisions\n\n## Feedback\n\n## Status\n\n## Open questions\n\n## Sensitivities\n' > .claude/MEMORY.md
@@ -1421,7 +1439,7 @@ owned_and_all() { # $1 = rendered dir, $2 = copier.yml, $3 = answers file
       [[ "$f" == $s ]] && { seed=true; break; }
     done
     $seed || printf 'O %s\n' "$f"
-  done < <(cd "$1" && find . -name .git -prune -o -type f -print0)
+  done < <(cd "$1" && find . -name .git -prune -o \( -type f -o -type l \) -print0)
 }
 
 # The paths a step changed in a committed project — modified, added, deleted and untracked
@@ -1433,9 +1451,32 @@ changed_paths() { # $1 = project
 
 # path<TAB>sha1 for every file of a tree (.git left out), sorted by path: what "no byte
 # changed" is measured against.
+# Link targets are fingerprinted without following the alias into a second tree (D73).
+path_fingerprint() { # $1 = file or symbolic link
+  if [[ -L "$1" ]]; then { printf 'symlink:'; readlink -n -- "$1"; } | sha1sum | cut -d' ' -f1
+  elif [[ -f "$1" ]]; then sha1sum < "$1" | cut -d' ' -f1
+  else printf 'absent'; fi
+}
+
 hash_tree() { # $1 = dir
-  (cd "$1" && find . -name .git -prune -o -type f -print0 | LC_ALL=C sort -z | xargs -0 -r sha1sum) \
-    | sed -E 's#^([0-9a-f]+)  \./(.*)$#\2\t\1#' | LC_ALL=C sort
+  python3 - "$1" <<'PYHASH'
+from pathlib import Path
+import hashlib, os, sys
+root = Path(sys.argv[1])
+rows = []
+for folder, dirs, files in os.walk(root, followlinks=False):
+    dirs[:] = [d for d in dirs if d != '.git']
+    names = files + [d for d in dirs if (Path(folder) / d).is_symlink()]
+    for name in names:
+        path = Path(folder) / name
+        digest = hashlib.sha1()
+        if path.is_symlink(): digest.update(b'symlink:' + os.fsencode(os.readlink(path)))
+        else:
+            with path.open('rb') as stream:
+                for block in iter(lambda: stream.read(64 * 1024), b''): digest.update(block)
+        rows.append((path.relative_to(root).as_posix(), digest.hexdigest()))
+for name, digest in sorted(rows): print(name + '\t' + digest)
+PYHASH
 }
 
 # Every *.rej file and every file holding a conflict marker, relative, one per line.

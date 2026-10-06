@@ -19,7 +19,7 @@
 #                      template:<name> form; claudeMdExcludes keeps the generated project's
 #                      manuals out.
 #
-#                    Four checks:
+#                    Six checks:
 #                      1. The root .claude/settings.json exists and is valid JSON.
 #                      2. Every skill folder under template/.claude/skills/ is denied as
 #                         Skill(<name>).
@@ -28,9 +28,17 @@
 #                      4. claudeMdExcludes carries "**/template/**/CLAUDE.md" and
 #                         "**/template/.claude/**".
 #
+#                      5. The development Codex config is valid TOML, disables every product
+#                         skill from a path relative to .codex, and enables no product manual
+#                         fallback (D73).
+#                      6. Development AGENTS.md and GEMINI.md route to the development manual;
+#                         .agents links to the development .claude tree (D73).
+#
 #                    Numbers are stable identifiers. Append, never renumber.
 #
-#                    What it CANNOT check: that Claude Code honours the settings. A deny rule
+#                    What it CANNOT check: that a client honours these settings. Native
+#                    Antigravity and authenticated Codex sessions are not run in CI.
+#                    Claude Code behaviour requires a live session: A deny rule
 #                    refuses the Skill call; it does not hide the skill. Claude Code's skills
 #                    documentation says so, and a 2.1.289 session (04/10/2026) showed it: once
 #                    a file under template/ was read, all ten were listed "from
@@ -141,6 +149,44 @@ run_checks() {
   for x in "${EXCLUDES[@]}"; do
     [[ -n "${excluded[$x]:-}" ]] || finding "check 4 — claudeMdExcludes does not carry \"$x\""
   done
+
+  local problem
+  problem="$(python3 - "$SM_ROOT" "$SM_SKILLS" <<'PYCLIENT'
+from pathlib import Path
+import sys, tomllib
+root = Path(sys.argv[1])
+expected = {str((root / 'template/.claude/skills' / row.split()[0]).resolve())
+            for row in sys.argv[2].splitlines() if row.strip()}
+try:
+    data = tomllib.loads((root / '.codex/config.toml').read_text())
+    rows = data.get('skills', {}).get('config', [])
+    paths = [str((root / '.codex' / row['path']).resolve()) for row in rows]
+    if (set(paths) != expected or len(paths) != len(expected)
+            or any(row.get('enabled') is not False for row in rows)
+            or data.get('project_doc_fallback_filenames')):
+        print('product skills must all be disabled; no product instruction fallback is allowed')
+except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
+    print('invalid development Codex configuration: ' + str(error).splitlines()[0])
+PYCLIENT
+)"
+  [[ -z "$problem" ]] || finding "check 5 — $problem"
+  problem="$(python3 - "$SM_ROOT" <<'PYCLIENT'
+from pathlib import Path
+import os, sys
+root = Path(sys.argv[1])
+try:
+    agents = (root / 'AGENTS.md').read_text()
+    gemini = (root / 'GEMINI.md').read_text()
+    if ('.claude/CLAUDE.md' not in agents or 'DESIGN.md' not in agents
+            or 'AGENTS.md' not in gemini or not (root / '.agents').is_symlink()
+            or os.readlink(root / '.agents') != '.claude'):
+        print('development entrypoints must route to the manual and .agents must link to .claude')
+except OSError as error:
+    print('missing development entrypoint or alias: ' + error.strerror)
+PYCLIENT
+)"
+  [[ -z "$problem" ]] || finding "check 6 — $problem"
+
 }
 
 self_test() {
@@ -165,12 +211,43 @@ self_test() {
   }
   local ok='["**/template/**/CLAUDE.md", "**/template/.claude/**"]'
   write_settings "" "$ok"
+  mkdir -p "$tmp/.codex"
+  write_clients() {
+    python3 - "$tmp" "$SM_SKILLS" <<'PYCLIENT'
+from pathlib import Path
+import sys
+root = Path(sys.argv[1])
+(root / 'AGENTS.md').write_text('Read .claude/CLAUDE.md and DESIGN.md for development.\n')
+(root / 'GEMINI.md').write_text('Read root AGENTS.md for development.\n')
+link = root / '.agents'
+if link.is_symlink(): link.unlink()
+link.symlink_to('.claude')
+(root / '.codex/config.toml').write_text(''.join(
+    "[[skills.config]]\npath = '../template/.claude/skills/" + row.split()[0]
+    + "'\nenabled = false\n" for row in sys.argv[2].splitlines() if row.strip()))
+PYCLIENT
+  }
+  write_clients
   st_baseline "a root settings file that denies every skill"
 
   printf '{ "permissions": ' > "$SETTINGS";                         probe "check 1 fires on settings that are not JSON" "check 1"
   write_settings "captions" "$ok";                                    probe "check 2 fires when a skill on disk is not denied" "check 2 — template skill captions"
   write_settings "narrate-audiobook" "$ok";                           probe "check 3 fires when a catalogued skill is not denied" "check 3 — DESIGN.md names the skill narrate-audiobook"
   write_settings "" '["**/template/**/CLAUDE.md"]';                   probe "check 4 fires when an exclusion is lost" "check 4"
+
+  write_settings "" "$ok"
+  printf 'bad = [' > "$tmp/.codex/config.toml"; probe "check 5 fires on invalid Codex TOML" "check 5"
+  write_clients
+  sed -i '0,/enabled = false/s//enabled = true/' "$tmp/.codex/config.toml"
+  probe "check 5 fires when a product skill is enabled" "check 5"
+  write_clients
+  printf "project_doc_fallback_filenames = ['CLAUDE.md']\n" | cat - "$tmp/.codex/config.toml" > "$tmp/fallback.toml"
+  mv "$tmp/fallback.toml" "$tmp/.codex/config.toml"
+  probe "check 5 fires on a development product-manual fallback" "check 5"
+  write_clients; rm "$tmp/GEMINI.md"
+  probe "check 6 fires on a missing development entrypoint" "check 6"
+  write_clients; rm "$tmp/.agents"; ln -s template/.claude "$tmp/.agents"
+  probe "check 6 fires when the development alias exposes product skills" "check 6"
 
   SM_ROOT="$real_root"; SETTINGS="$SM_ROOT/.claude/settings.json"; SKILLS="$SM_ROOT/template/.claude/skills"
   st_finish "an isolated template from a leaking one"
@@ -185,7 +262,7 @@ fi
 bold "▸ $SCRIPT_NAME"
 run_checks
 if [[ ${#FINDINGS[@]} -eq 0 ]]; then
-  bold "✓ $ON_DISK template skill(s) on disk and every catalogued skill denied; both CLAUDE.md exclusions present."
+  bold "✓ $ON_DISK template skill(s) on disk and every catalogued skill denied; both CLAUDE.md exclusions and client isolation present."
   exit 0
 fi
 bold "✗ ${#FINDINGS[@]} finding(s):"

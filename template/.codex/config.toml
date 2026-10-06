@@ -1,0 +1,6 @@
+# Project instructions: use the canonical folder manual where AGENTS.md is absent.
+# Codex loads project configuration after the user trusts the project.
+project_doc_fallback_filenames = ['CLAUDE.md']
+
+# Configure local MCP servers using Codex's TOML format and authenticate locally.
+# This file sets no model, trust level, permission bypass or credentials.

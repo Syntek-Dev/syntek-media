@@ -24,6 +24,10 @@ If Opus usage is exhausted, substantive work falls back to **sonnet** until it r
 lower. **When in doubt, the work is substantive.** A caption break that changes what a line seems
 to say, or a cut that drops a qualification, is a judgement, not a chore.
 
+On Codex and Antigravity, these aliases identify work tiers. The owner chooses suitable models
+in that client; no automatic provider switch or pinned version is required. Apply the same
+substantive review boundary and read `.claude/syntek-media-agents.md` for client setup.
+
 ---
 
 ## 2. How the tiers are named in files

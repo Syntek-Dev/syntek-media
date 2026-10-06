@@ -1,0 +1,42 @@
+# Development isolation: product skills are source text, never tools here.
+# Relative paths are resolved from this .codex folder.
+
+[[skills.config]]
+path = '../template/.claude/skills/captions'
+enabled = false
+
+[[skills.config]]
+path = '../template/.claude/skills/cut-for-platform'
+enabled = false
+
+[[skills.config]]
+path = '../template/.claude/skills/narrate-audiobook'
+enabled = false
+
+[[skills.config]]
+path = '../template/.claude/skills/prepare-post'
+enabled = false
+
+[[skills.config]]
+path = '../template/.claude/skills/repurpose'
+enabled = false
+
+[[skills.config]]
+path = '../template/.claude/skills/run-media-workflow'
+enabled = false
+
+[[skills.config]]
+path = '../template/.claude/skills/storyboard'
+enabled = false
+
+[[skills.config]]
+path = '../template/.claude/skills/thumbnail-brief'
+enabled = false
+
+[[skills.config]]
+path = '../template/.claude/skills/voiceover'
+enabled = false
+
+[[skills.config]]
+path = '../template/.claude/skills/write-script'
+enabled = false

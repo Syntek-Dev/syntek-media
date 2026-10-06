@@ -12,7 +12,13 @@ in `.claude/rules/syntek-media/01-layout-and-routing.md` Section 1, and the rule
 
 ```text
 <%BRAND_SLUG%>/
+├── AGENTS.md               ← Codex: reads the shared instruction bridge
+├── GEMINI.md               ← Antigravity: reads the shared instruction bridge
+├── .agents                 ← relative link to .claude; one canonical skill tree
+├── .codex/                 ← Codex folder-manual fallback and local MCP settings
 ├── .claude/                ← Claude Code: the manual, the template's rules, memory, settings, skills
+│   ├── syntek-media-agents.md ← shared read order and client setup (template-owned)
+│   ├── mcp_config.json     ← Antigravity workspace MCP servers (empty)
 │   ├── CLAUDE.md           ← the project brief and where the rules live (read first)
 │   ├── MEMORY.md           ← project memory (read second)
 │   ├── rules/syntek-media/ ← loaded at launch: the brand brief (01, Section 1) and the template's rules (never edit)

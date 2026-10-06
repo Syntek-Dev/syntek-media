@@ -38,7 +38,8 @@
 #                        added) and its answers file.
 #                    11. A second syntek-author update changes nothing — no media file perturbed
 #                        its three-way merge.
-#                    12. The shared files are still syntek-author's, byte for byte.
+#                    12. Existing author shared paths and newly filled media shared paths
+#                        retain their bytes and link targets through both updates (D73).
 #                    13. No media skill or top-level path shares a name with anything in
 #                        syntek-author's template/ — every variant, read from the live tree —
 #                        the shared files and the .claude/ container excepted.
@@ -246,7 +247,7 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   sm_update_author "$PROJ" >>"$log" 2>&1 || A_AGAIN_STATUS=$?
   changed_paths "$PROJ" > "$w/a-again.txt"; sm_commit_all "$PROJ" 'update syntek-author again'
   for p in $SM_SHARED; do
-    [[ -f "$PROJ/$p" ]] && printf '%s\t%s\n' "$p" "$(sha1sum < "$PROJ/$p" | cut -d' ' -f1)"
+    [[ -f "$PROJ/$p" || -L "$PROJ/$p" ]] && printf '%s\t%s\n' "$p" "$(path_fingerprint "$PROJ/$p")"
   done | LC_ALL=C sort > "$w/shared-after.sha"
   sm_update "$PROJ" >>"$log" 2>&1 || B_AGAIN_STATUS=$?
   changed_paths "$PROJ" > "$w/b-again.txt"; sm_commit_all "$PROJ" 'update syntek-media again'
@@ -293,7 +294,7 @@ run_checks() {
   if $GLOBAL; then
     # ── 13. No media name is syntek-author's ──────────────────────────────────
     for n in "${B_TOP_NAMES[@]}"; do
-      case "$n" in .claude|"$SM_ANSWERS_FILE") continue ;; esac
+      case "$n" in .claude|.codex|"$SM_ANSWERS_FILE") continue ;; esac
       is_shared "$n" && continue
       for p in "${A_TOP_NAMES[@]}"; do
         [[ "$p" == "$n" ]] && finding "check 13 — media's top-level path $n is also in syntek-author's template/ — an update would overwrite one template's file with the other's"
@@ -367,11 +368,11 @@ run_checks() {
     finding "check 11 — $label a second syntek-author update was not a no-op (exit $A_AGAIN_STATUS; changed: $(head -3 "$W/a-again.txt" | paste -sd' ' -))"
   fi
 
-  # ── 12. The shared files are still syntek-author's ──────────────────────────
+  # ── 12. Existing and newly filled shared paths remain unchanged ─────────────
   while IFS=$'\t' read -r p h; do [[ -n "$p" ]] && shared["$p"]="$h"; done < "$W/shared-after.sha"
   for p in $SM_SHARED; do
-    want="${pre[$p]:-absent}"
-    [[ "${shared[$p]:-absent}" == "$want" ]] || finding "check 12 — $label the shared file $p is no longer syntek-author's (it differs from syntek-author's render after both updates)"
+    want="${pre[$p]:-${post[$p]:-absent}}"
+    [[ "${shared[$p]:-absent}" == "$want" ]] || finding "check 12 — $label the shared path $p changed after both updates (existing author paths and newly filled media paths must be preserved)"
   done
 
   # ── 14. Both rules folders ──────────────────────────────────────────────────
@@ -511,7 +512,11 @@ STUB
   probe "check 10 fires when media's update touches a shared file" "check 10 — [author-fiction] media's update touched .claude/MEMORY.md"; sed -i '$d' "$W/b-changed.txt"
   printf 'README.md\n' > "$W/a-again.txt"; probe "check 11 fires when a second syntek-author update changes a file" "check 11"; : > "$W/a-again.txt"
   cp "$W/shared-after.sha" "$h"; sed -i -E 's/^(\.mcp\.json\t).*/\1changed/' "$W/shared-after.sha"
-  probe "check 12 fires when a shared file is no longer syntek-author's" "check 12 — [author-fiction] the shared file .mcp.json"; cp "$h" "$W/shared-after.sha"
+  probe "check 12 fires when a shared file is no longer syntek-author's" "check 12 — [author-fiction] the shared path .mcp.json"; cp "$h" "$W/shared-after.sha"
+  sed -i -E 's/^(AGENTS\.md\t).*/\1changed/' "$W/shared-after.sha"
+  probe "check 12 fires when a newly filled agent entrypoint changes" "check 12 — [author-fiction] the shared path AGENTS.md"; cp "$h" "$W/shared-after.sha"
+  sed -i -E 's/^(\.agents\t).*/\1changed/' "$W/shared-after.sha"
+  probe "check 12 fires when the shared alias target changes" "check 12 — [author-fiction] the shared path .agents"; cp "$h" "$W/shared-after.sha"
   A_TOP_NAMES+=("toolkit"); probe "check 13 fires on a top-level name syntek-author also takes" "check 13 — media's top-level path toolkit"; unset 'A_TOP_NAMES[-1]'
   A_SKILL_NAMES+=("write-script"); probe "check 13 fires on a skill name syntek-author also takes" "check 13 — media's skill write-script"; unset 'A_SKILL_NAMES[-1]'
   mv "$PROJ/.claude/rules/syntek-author" "$tmp/held-rules"; probe "check 14 fires when a rules folder is missing" "check 14 — [author-fiction] .claude/rules/syntek-author/"; mv "$tmp/held-rules" "$PROJ/.claude/rules/syntek-author"
@@ -580,6 +585,6 @@ for kind in $KINDS; do
 done
 log ""
 [[ "$STATUS" -eq 0 ]] && { bold "✓ syntek-media and syntek-author share every project cleanly, in either order."; exit 0; }
-log "  DESIGN.md Section 9: own answers file, own rules folder, own skills, the ten shared files"
+log "  DESIGN.md Section 9: own answers file, own rules folder, own skills, seventeen shared paths"
 log "  seeded in both and update-gated in media; Section 10 lists what goes wrong when one slips."
 exit 1

@@ -3,11 +3,11 @@
 > <%BRAND_DESCRIPTION%>
 
 <: if BRAND_KIND == 'business' :>The video and audio of <%BRAND_NAME%>, a business: social video, recorded talks and explainers,
-made by <%OWNER_NAME%> from plain files under Git, with Claude Code as a production partner.
+made by <%OWNER_NAME%> from plain files under Git, with a coding agent as a production partner.
 <: endif :><: if BRAND_KIND == 'author-fiction' :>The video and audio of <%BRAND_NAME%>, a novelist's brand: book trailers, audiobooks and author
-socials, made by <%OWNER_NAME%> from plain files under Git, with Claude Code as a production partner.
+socials, made by <%OWNER_NAME%> from plain files under Git, with a coding agent as a production partner.
 <: endif :><: if BRAND_KIND == 'author-nonfiction' :>The video and audio of <%BRAND_NAME%>, a non-fiction author's brand: talks, a podcast, audiobooks
-and author socials, made by <%OWNER_NAME%> from plain files under Git, with Claude Code as a
+and author socials, made by <%OWNER_NAME%> from plain files under Git, with a coding agent as a
 production partner.
 <: endif :>Generated from the syntek-media template on <%DATE%>.
 
@@ -223,3 +223,16 @@ The kit computes every frame in Python; Playwright draws only local brand art an
 captures. `--memory-max SIZE` or user-scope `MEDIA_MEMORY_MAX` optionally caps assemble and
 scene renders under systemd with swap disabled; other runs report that they are uncapped.
 No scene command calls a generation API.
+
+## Codex and Antigravity
+
+Read `.claude/syntek-media-agents.md` for the shared read order and client setup. Root
+`AGENTS.md` and `GEMINI.md` route there, and `.agents` aliases `.claude`, exposing one skill
+tree. Codex uses the folder manuals through its fallback setting; Antigravity has an empty
+workspace MCP configuration through the alias. Configure and authenticate capabilities locally.
+The same production rules, work tiers and spending approval apply in every client.
+
+These entrypoints, the alias and client configuration are copy-only shared paths. Updates
+preserve edits and deletions and never add new copy-only files. For an existing project, follow
+the bridge's temporary-generation setup and copy only missing files. Preserve existing settings,
+entrypoints, real directories and differently targeted links; agree integration with the owner.

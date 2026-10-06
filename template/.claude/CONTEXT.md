@@ -9,6 +9,8 @@ which.
 
 ```text
 .claude/
+├── syntek-media-agents.md  ← shared instructions for Codex and Antigravity (template-owned)
+├── mcp_config.json         ← Antigravity workspace MCP servers through .agents (empty; yours)
 ├── CLAUDE.md               ← the project brief, where the rules live, project rules (read first; yours)
 ├── CONTEXT.md              ← this file (yours)
 ├── MEMORY.md               ← project memory: facts, decisions, feedback, status (read second; yours)

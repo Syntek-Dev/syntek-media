@@ -35,7 +35,11 @@ Claude Code loads a nested `.claude/skills/` the first time a session reads a fi
 - **Layer 2 — `claudeMdExcludes`** keeps `template/**/CLAUDE.md` and everything under `template/.claude/` out of this session's memory.
 - **Never invoke a template skill.** If one appears invocable (listed as `template:<name>`, or offered for files under `template/`), the deny list has a gap: stop and report it rather than using it.
 - **Adding a skill to the template means adding its deny line.** That is a change to this repository's permission settings, so it is the maintainer's to make or approve; propose the exact line.
-- `.github/scripts/dev-isolation.sh` proves both layers on every push.
+- **Codex and Antigravity:** root `AGENTS.md` and `GEMINI.md` route to this development manual;
+  `.agents` links to this development `.claude` tree, never the product's. The development
+  `.codex/config.toml` disables every product skill by a path relative to that folder and sets
+  no `CLAUDE.md` fallback. Product manuals remain source text in every client (D73).
+- `.github/scripts/dev-isolation.sh` proves the Claude layers and the native client isolation on every push.
 
 ## 4. Token discipline
 
@@ -49,7 +53,7 @@ Every file under `template/` is rendered (`_templates_suffix: ""`) with the hous
 
 - **Registered tokens** are the question keys in `copier.yml` (every top-level `UPPER_SNAKE` key) plus `_copier_operation`, `_copier_answers` and `_copier_conf`. Nothing else may appear inside a delimiter. `check-template-tokens.sh` derives the set from `copier.yml`, so only questions may be top-level `UPPER_SNAKE` keys there.
 - **Identity and locale tokens may appear anywhere:** `BRAND_NAME`, `BRAND_SLUG`, `OWNER_NAME`, `OWNER_FIRST_NAME`, `DATE`, `TIMEZONE`.
-- **Variant tokens and `<: if :>` blocks appear only in the spine set** (DESIGN.md Section 2): the root spine (`.claude/rules/syntek-media/*.md` and `.copier-answers.syntek-media.yml`); the ten copy-only shared files; every seed and seed-once example; and **index files**. Variant tokens are `BRAND_KIND`, `PLATFORMS`, `MEDIA_KINDS`, `BRAND_DESCRIPTION`, `AUDIENCE_TEST`, `SEED_EXAMPLES`, `MODEL_MECHANICAL` and every later answer.
+- **Variant tokens and `<: if :>` blocks appear only in the spine set** (DESIGN.md Section 2): the root spine (`.claude/rules/syntek-media/*.md` and `.copier-answers.syntek-media.yml`); the seventeen copy-only shared paths; every seed and seed-once example; and **index files**. Variant tokens are `BRAND_KIND`, `PLATFORMS`, `MEDIA_KINDS`, `BRAND_DESCRIPTION`, `AUDIENCE_TEST`, `SEED_EXAMPLES`, `MODEL_MECHANICAL` and every later answer.
 - **An index file** is a `CONTEXT.md` or `CLAUDE.md` whose folder is an ancestor of a gated path. It wraps each row, tree line or cross-reference that names a gated path in `<: if GATE :>…<: endif :>`, where `GATE` is the exact string of DESIGN.md Section 3.5 — the same string `copier.yml` negates for that path — or names the path only in prose. It never gates a row on `SEED_EXAMPLES` and never names an example path (D43).
 - **Every other shipped file is shared and byte-identical** in every render that ships it. Put a brand-kind difference in a mode file and a platform or media-kind difference in a gated file, never in a conditional. A shared or mode file never backticks a path or skill gated by `PLATFORMS` or `MEDIA_KINDS`: it names it in prose ("the audiobook folder, where the project makes audiobooks"), or the line carries `<!-- doc-references: variant-only -->`. `byte-identity.sh` enforces this.
 - **A multiselect is a list.** Gate with `'tiktok' in PLATFORMS`, never `PLATFORMS == 'tiktok'`; render it with `<% PLATFORMS | join(', ') %>`, never a loop variable inside `<% %>` (the token audit rejects lower-case names), or one gated line per item.
@@ -87,7 +91,7 @@ Each recipe ends the same way: run the audits (Section 8) and add a `CHANGELOG.m
 2. Write `template/.claude/skills/<name>/SKILL.md` to the conformance rules of DESIGN.md Section 5. A moded skill gets one mode file per brand kind (7.2).
 3. A gated skill gets one `_exclude` line in its block of `copier.yml`: `"<: if not (GATE) :>/.claude/skills/<name><: endif :>"`.
 4. Add its row to `template/.claude/rules/syntek-media/02-skills.md` Section 3, wrapped in its gate, and to the skill catalogue in `.github/scripts/_common.sh`.
-5. Propose its `Skill(<name>)` deny line for the root `.claude/settings.json` (Section 3).
+5. Propose its `Skill(<name>)` deny line for the root `.claude/settings.json` and disabled Codex skill entry in `.codex/config.toml` (Section 3).
 
 **7.2 Add or remove a mode file.** Write `BUSINESS.md`, `FICTION.md` or `NONFICTION.md` beside the `SKILL.md` with the four H2s, then regenerate the block of `copier.yml` between the `BEGIN`/`END generated mode excludes` markers:
 

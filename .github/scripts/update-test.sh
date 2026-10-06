@@ -29,7 +29,7 @@
 #                       author's project would, in the folder that platform gates;
 #                    8. assert.
 #
-#                  Fifteen checks per brand kind:
+#                  Sixteen checks per brand kind:
 #                    1. The project renders.
 #                    2. `copier update` succeeds.
 #                    3. The author's MEMORY.md entry survives.
@@ -59,8 +59,15 @@
 #                       author's registers and feeds stay).
 #                   14. A copy-only shared file the author deleted stays deleted, and one they
 #                       edited stays as edited (D11: copy only, never on update).
+#                       D73 extends this to all seven agent paths, preserving an edited
+#                       alias target and native configuration as well as deleted entrypoints.
 #                   15. A second update with no template change leaves `git status
 #                       --porcelain` empty.
+#
+#                   16. Copies over existing agent entrypoints, configuration, a real .agents
+#                       directory and a differently targeted alias preserve every prior byte
+#                       and link target and explain manual setup (D73).
+#                       A real directory uses D73's pre-copy --exclude /.agents procedure.
 #
 #                  Copier prints a MissingFileWarning on a fresh copy and on every update (the
 #                  previous answers are read through _external_data, D14). It is expected and
@@ -140,7 +147,7 @@ UPDATE_LOG=""; SWITCH_STATUS=0; SWITCH_LOG=""; SWITCH_DIRTY=""; SWITCH_RECORDED=
 AGAIN_STATUS=0; AGAIN_DIRTY=""; REMOVE_STATUS=0; REMOVE_PLATFORM=""; REMOVED=""; REMOVE_CONFLICTS=""
 REMOVE_WANT=""
 DELETED=()
-declare -A FIXTURE_SUMS=()
+declare -A FIXTURE_SUMS=() AGENT_EXPECTED=() AGENT_COPY_ROOT=() AGENT_COPY_STATUS=() AGENT_COPY_SUMS=()
 
 # The author's own files in the folder the podcast platform gates (DESIGN.md D59, Section 6.17):
 # a show register and the feed as last published. Invented (Harbour Lane Studio, example.com),
@@ -208,7 +215,7 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   KIND="$2"; W="$3"; PROJ="$3/proj"; COPY_STATUS=0; UPDATE_STATUS=0; DELETED=()
   UPDATE_LOG="$3/update.log"; SWITCH_STATUS=0; SWITCH_LOG="$3/switch.log"; SWITCH_DIRTY=""; SWITCH_RECORDED=""
   AGAIN_STATUS=0; AGAIN_DIRTY=""; REMOVE_STATUS=0; REMOVE_PLATFORM=""; REMOVED=""; REMOVE_CONFLICTS=""
-  REMOVE_WANT=""; FIXTURE_SUMS=()
+  REMOVE_WANT=""; FIXTURE_SUMS=(); AGENT_EXPECTED=(); AGENT_COPY_ROOT=(); AGENT_COPY_STATUS=(); AGENT_COPY_SUMS=()
   : > "$UPDATE_LOG"; : > "$SWITCH_LOG"
   sm_snapshot "$src" "$tpl" >>"$log" 2>&1 || die "could not snapshot $src"
 
@@ -216,6 +223,35 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   [[ "$COPY_STATUS" -eq 0 ]] || return 0
   [[ -d "$PROJ/.git" ]] || sm_git "$PROJ" init -q
   sm_commit_all "$PROJ" 'generated'
+
+  # D73: fresh copies must preserve both an existing real alias directory and another link.
+  local shape target path digest
+  local -a copy_args
+  for shape in directory link; do
+    target="$W/agent-copy-$shape"; AGENT_COPY_ROOT["$shape"]="$target"
+    mkdir -p "$target/.claude" "$target/.codex"
+    for path in AGENTS.md GEMINI.md .codex/config.toml .codex/CONTEXT.md .codex/CLAUDE.md .claude/mcp_config.json; do
+      printf '# Existing author configuration: preserve it.\n' > "$target/$path"
+    done
+    if [[ "$shape" == directory ]]; then
+      mkdir "$target/.agents"; printf 'Owner skill tree.\n' > "$target/.agents/keep.md"
+    else
+      mkdir "$target/.owner-agents"; printf 'Owner skill tree.\n' > "$target/.owner-agents/keep.md"
+      ln -s .owner-agents "$target/.agents"
+    fi
+    while IFS=$'\t' read -r path digest; do
+      AGENT_COPY_SUMS["$shape:$path"]="$digest"
+    done < <(hash_tree "$target")
+    AGENT_COPY_STATUS["$shape"]=0
+    # D73's documented pre-copy check: Copier cannot skip a link landing on a real directory.
+    copy_args=()
+    if [[ -d "$target/.agents" && ! -L "$target/.agents" ]]; then
+      copy_args+=(--exclude /.agents)
+    fi
+    sm_render "$tpl" "$target" "$KIND" "${copy_args[@]}" >"$W/agent-copy-$shape.log" 2>&1 || AGENT_COPY_STATUS["$shape"]=$?
+    [[ -d "$target/.git" ]] || sm_git "$target" init -q
+    sm_commit_all "$target" 'existing agent configuration'
+  done
 
   # The author at work.
   printf -- '- **01/01/2027** — **%s.** An author decision that must survive every update.\n' "$MEMORY_MARK" >> "$PROJ/.claude/MEMORY.md"
@@ -229,6 +265,15 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   OWN_SUM="$(sha1sum < "$PROJ/$OWN_PIECE")"
   rm -f "$PROJ/$DELETED_SHARED"
   printf '\n%s\n' "$SHARED_MARK" >> "$PROJ/$EDITED_SHARED"
+  # D73: every new shared path keeps an edit or stays deleted, including a dangling alias.
+  for e in AGENTS.md GEMINI.md .agents .codex/config.toml .codex/CONTEXT.md .codex/CLAUDE.md .claude/mcp_config.json; do
+    case "$e" in
+      GEMINI.md|.codex/CONTEXT.md|.claude/mcp_config.json) rm -f "$PROJ/$e" ;;
+      .agents) rm -f "$PROJ/$e"; ln -s ../author-agent-tree "$PROJ/$e" ;;
+      *) printf '\n# Author setting: preserve this file.\n' >> "$PROJ/$e" ;;
+    esac
+    AGENT_EXPECTED["$e"]="$(path_fingerprint "$PROJ/$e")"
+  done
   sm_commit_all "$PROJ" 'the author at work'
 
   # The template moves on: a template-owned skill every kind ships, or the layout rule.
@@ -237,6 +282,10 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   [[ -f "$tpl/template/$TARGET_REL" ]] || die "the template has neither run-media-workflow/SKILL.md nor the layout rule — nothing template-owned to update"
   printf '\n%s\n' "$TEMPLATE_MARK" >> "$tpl/template/$TARGET_REL"
   sm_commit_all "$tpl" 'a template change'
+  for shape in "${!AGENT_COPY_ROOT[@]}"; do
+    [[ "${AGENT_COPY_STATUS[$shape]}" -eq 0 ]] || continue
+    sm_update "${AGENT_COPY_ROOT[$shape]}" >>"$W/agent-copy-$shape.log" 2>&1 || AGENT_COPY_STATUS["$shape"]=$?
+  done
 
   sm_update "$PROJ" >"$UPDATE_LOG" 2>&1 || UPDATE_STATUS=$?
   cat "$UPDATE_LOG" >>"$log"
@@ -344,6 +393,25 @@ run_checks() {
     && finding "check 14 — $L the shared $DELETED_SHARED, deleted by the author, came back on update (D11: copy only)"
   grep -qF "$SHARED_MARK" "$PROJ/$EDITED_SHARED" 2>/dev/null \
     || finding "check 14 — $L the author's edit to the shared $EDITED_SHARED did not survive the update"
+  for f in "${!AGENT_EXPECTED[@]}"; do
+    [[ "$(path_fingerprint "$PROJ/$f")" == "${AGENT_EXPECTED[$f]}" ]] \
+      || finding "check 14 — $L the author's shared agent path $f changed or was recreated on update"
+  done
+  local shape key path
+  for shape in "${!AGENT_COPY_ROOT[@]}"; do
+    if [[ "${AGENT_COPY_STATUS[$shape]}" -ne 0 ]]; then
+      finding "check 16 — $L a copy over an existing agent $shape failed (exit ${AGENT_COPY_STATUS[$shape]})"
+      continue
+    fi
+    for key in "${!AGENT_COPY_SUMS[@]}"; do
+      [[ "$key" == "$shape:"* ]] || continue
+      path="${key#*:}"
+      [[ "$(path_fingerprint "${AGENT_COPY_ROOT[$shape]}/$path")" == "${AGENT_COPY_SUMS[$key]}" ]] \
+        || finding "check 16 — $L copy changed the author's agent $shape path $path"
+    done
+    grep -qF 'manual' "$W/agent-copy-$shape.log" \
+      || finding "check 16 — $L copy did not explain manual agent setup for the existing $shape"
+  done
   if [[ "$AGAIN_STATUS" -ne 0 || -n "$AGAIN_DIRTY" ]]; then
     finding "check 15 — $L a second update with no template change was not a no-op (exit $AGAIN_STATUS; $(printf '%s\n' "$AGAIN_DIRTY" | grep -c . || true) path(s) changed)"
   fi
@@ -396,6 +464,23 @@ self_test() {
   printf 'x\n' > "$PROJ/$DELETED_SHARED"; probe "check 14 fires when a deleted shared file comes back" "check 14 — [author-nonfiction] the shared $DELETED_SHARED"; rm -f "$PROJ/$DELETED_SHARED"
   cp "$PROJ/$EDITED_SHARED" "$h"; grep -vF "$SHARED_MARK" "$h" > "$PROJ/$EDITED_SHARED"
   probe "check 14 fires when the edit to a shared file is lost" "check 14 — [author-nonfiction] the author's edit"; cp "$h" "$PROJ/$EDITED_SHARED"
+  rm "$PROJ/.agents"; ln -s .claude "$PROJ/.agents"
+  probe "check 14 fires when an author alias target is replaced" "check 14 — [author-nonfiction] the author's shared agent path .agents"
+  rm "$PROJ/.agents"; ln -s ../author-agent-tree "$PROJ/.agents"
+  printf '# Recreated entrypoint\n' > "$PROJ/GEMINI.md"
+  probe "check 14 fires when a deleted agent entrypoint is recreated" "check 14 — [author-nonfiction] the author's shared agent path GEMINI.md"
+  rm "$PROJ/GEMINI.md"
+  cp "$PROJ/.codex/config.toml" "$h"; printf '# Replaced settings\n' > "$PROJ/.codex/config.toml"
+  probe "check 14 fires when authored Codex settings are replaced" "check 14 — [author-nonfiction] the author's shared agent path .codex/config.toml"
+  cp "$h" "$PROJ/.codex/config.toml"
+  local agent_root="${AGENT_COPY_ROOT[directory]}"
+  cp "$agent_root/AGENTS.md" "$h"; printf '# Overwritten instructions\n' > "$agent_root/AGENTS.md"
+  probe "check 16 fires when copy overwrites an existing agent entrypoint" "check 16 — [author-nonfiction] copy changed the author's agent directory path AGENTS.md"
+  cp "$h" "$agent_root/AGENTS.md"
+  agent_root="${AGENT_COPY_ROOT[link]}"
+  rm "$agent_root/.agents"; ln -s .claude "$agent_root/.agents"
+  probe "check 16 fires when copy replaces an existing alias" "check 16 — [author-nonfiction] copy changed the author's agent link path .agents"
+  rm "$agent_root/.agents"; ln -s .owner-agents "$agent_root/.agents"
   AGAIN_DIRTY=" M README.md"; probe "check 15 fires when a second update changes a file" "check 15"; AGAIN_DIRTY=""
   probe_clean "the fixture's updates keep every promise again once every mutation is undone"
   st_finish "an update that keeps its promises from one that breaks them"

@@ -68,8 +68,8 @@ _external_data:
 # binary at all (DESIGN.md Section 10): no audio, video, image or font.
 _templates_suffix: ""
 
-# Nothing in v0.1 ships as a symbolic link. Kept from the house idiom so that a later alias
-# renders as a link to its target rather than as a second copy that drifts from the first.
+# D73: .agents aliases .claude using a relative symbolic link; preserve it rather than
+# rendering a second copy of the skills, rules and memory.
 _preserve_symlinks: true
 
 # Tokens are written <%TOKEN%> rather than {{TOKEN}} so they cannot collide with anything a
@@ -152,7 +152,8 @@ _exclude:
   #
   # ── Shared root files: copy only, never on update (DESIGN.md D11, Section 3.6) ──
   #
-  # The ten files syntek-author also ships. Each has TWO lines in this file and needs both:
+  # The seventeen shared paths (D73), including the ten syntek-author also ships.
+  # Each has TWO lines in this file and needs both:
   # this update gate, so an update never renders it and a copy the author deleted is never
   # recreated; and its anchored line in _skip_if_exists below, so a copy over a project that
   # already has it skips it (exit 0) instead of stopping with 'Interactive session required'.
@@ -160,8 +161,8 @@ _exclude:
   # an existing file, never touched by an update and never recreated after deletion (probes
   # b1–b4, h1 and gate.sh, 03/10/2026). That is stricter than syntek-author's seed-if-missing
   # shared files (overrides syntek-author D17), because coexistence rule 3 says they render on
-  # copy only, never on update. In a combined project they are syntek-author's, and nothing
-  # media needs lives only in them (D5).
+  # copy only, never on update. Existing shared paths remain the author's; media fills only
+  # missing paths. Nothing media needs lives only in them (D5, D73).
   #
   # NEVER DELETE ONE OF THESE LINES. Without it the file becomes seed-if-missing, and a shared
   # file the author deleted is recreated from media's copy on the next update — inside
@@ -178,6 +179,13 @@ _exclude:
   - "<: if _copier_operation == 'update' :>/.claude/settings.json<: endif :>"
   - "<: if _copier_operation == 'update' :>/.claude/skills/CONTEXT.md<: endif :>"
   - "<: if _copier_operation == 'update' :>/.claude/skills/CLAUDE.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/AGENTS.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/GEMINI.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.agents<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.codex/config.toml<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.codex/CONTEXT.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.codex/CLAUDE.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/mcp_config.json<: endif :>"
   #
   # ── Gated paths ──────────────────────────────────────────────────────────────
   #
@@ -351,7 +359,7 @@ _exclude:
 # preview cards) and why that emptiness is audited by `.github/scripts/shipped-seeds.sh`, not
 # trusted.
 #
-# The ten shared root files are here for a second reason (D11): a copy over a project that
+# The seventeen shared root paths are here for a second reason (D11): a copy over a project that
 # already has one must skip it rather than abort. Their update-gated lines in _exclude above
 # make them copy-only as well, so unlike every other line here they are never recreated.
 #
@@ -386,6 +394,13 @@ _skip_if_exists:
   - /.claude/settings.json
   - /.claude/skills/CONTEXT.md
   - /.claude/skills/CLAUDE.md
+  - /AGENTS.md
+  - /GEMINI.md
+  - /.agents
+  - /.codex/config.toml
+  - /.codex/CONTEXT.md
+  - /.codex/CLAUDE.md
+  - /.claude/mcp_config.json
   # ── brand/: the design register, the design system and the spoken voice ──
   # tokens.css and the two layout components (previews/thumbnail.html and previews/card.html)
   # are the brand's source of truth, synced with its Claude Design project by the author (D18).
@@ -765,7 +780,7 @@ DATE:
 # they exist, so a release that changes what a seed must contain ships that change as a
 # migration too. And a release that stops shipping a seed ships a migration that preserves it
 # first: a seed dropped from template/ is deleted from the project by the next update, filled
-# in or not (probe h2; Section 10). The ten shared files are not seeds of media's to migrate:
+# in or not (probe h2; Section 10). The seventeen shared paths are not seeds of media's to migrate:
 # media never mutates a shared file (D11), so a change to what one should hold reaches a
 # project only as a hand edit that the release's notes and README.md name.
 #
@@ -840,7 +855,7 @@ _message_before_update: |
 # ── After a copy ─────────────────────────────────────────────────────────────
 #
 # DESIGN.md D13 and Section 8: what coexistence leaves to the author, in D13's order — (1) the
-# ten shared files and the skip rule (Copier prints an existing one as `conflict` then `skip`,
+# seventeen shared paths and the skip rule (Copier prints an existing one as `conflict` then `skip`,
 # or `identical`), with Section 8's hand edits 2 and 3: the optional index lines, and nothing
 # to add to .gitignore or .mcp.json; (2) the allow, ask and Edit deny entries for an existing
 # settings.json, exactly as the standalone seed holds them; (3) the ElevenLabs line, with the
@@ -861,13 +876,18 @@ _message_after_copy: |
 
   1. Shared files. README.md, CONTEXT.md, .gitignore, .mcp.json, .claude/CLAUDE.md,
      .claude/CONTEXT.md, .claude/MEMORY.md, .claude/settings.json, .claude/skills/CONTEXT.md
-     and .claude/skills/CLAUDE.md are written only where they did not exist. Any that Copier
+     .claude/skills/CLAUDE.md, AGENTS.md, GEMINI.md, .agents, .codex/config.toml,
+     .codex/CONTEXT.md, .codex/CLAUDE.md and .claude/mcp_config.json are written only where
+     they did not exist. Any that Copier
      reported as 'conflict' then 'skip', or as 'identical', was left exactly as it was, and no
      syntek-media update will touch it: that pair is expected and is not a collision.
      The media rules in .claude/rules/syntek-media/ load at launch whatever those files say,
      so naming the media layers in README.md and CONTEXT.md, and .claude/rules/syntek-media/
      in .claude/CLAUDE.md, is optional. Nothing needs adding to .gitignore or .mcp.json:
      media's ignore rules are nested, and the ElevenLabs server is user-scoped.
+     Codex and Antigravity read .claude/syntek-media-agents.md. Preserve any existing
+     entrypoint, agent settings, real .agents directory or differently targeted link;
+     follow the bridge's explicit setup instructions for missing files or manual integration.
 
   2. Permissions. If .claude/settings.json was skipped, add these entries to it by hand.
      Under "permissions", in "allow" (syntek-author's settings already allow the last two):

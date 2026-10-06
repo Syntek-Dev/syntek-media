@@ -20,7 +20,7 @@
 #                     Sections 3–5 transcribed), evaluated against the answers the render
 #                     recorded in .copier-answers.syntek-media.yml.
 #
-#                     Twelve checks:
+#                     Fourteen checks:
 #                       1. The answers file records BRAND_KIND, PLATFORMS and MEDIA_KINDS.
 #                       2. Every skill the gates open is present, with its SKILL.md.
 #                       3. No shut-gate media skill, and no skill DESIGN.md Section 5.1 does not
@@ -59,6 +59,12 @@
 #                          the render's proof. Each entry directly inside an output folder is
 #                          reported once, a folder with the count of files it holds.
 #
+#                      13. Media-supplied .agents is a relative link to .claude, and client
+#                          configurations are valid, empty of servers and owner-specific
+#                          settings (D73). Existing shared paths are outside media's scope.
+#                      14. Media-supplied AGENTS.md and GEMINI.md route to the canonical
+#                          template-owned instruction bridge (D73).
+#
 #                     Numbers are stable identifiers. Append, never renumber.
 #
 #                     Over-author scope (DESIGN.md Section 7): on a <kind>--over-author tree,
@@ -76,7 +82,7 @@
 #            names file, proves it clean, then applies one mutation per check and asserts
 #            exactly one finding each; then proves the over-author scope on a composite tree.
 #
-# Requirements: bash 4+, grep, awk, find. No network. Does NOT render — pass trees that
+# Requirements: bash 4+, grep, awk, find, python3 (client configuration). No network. Does NOT render — pass trees that
 #               generate-all.sh (or `copier copy`) produced.
 #
 # Usage: shipped-brands.sh [--root DIR] [--quiet] [--self-test] [--help] <rendered-tree>...
@@ -127,11 +133,11 @@ TREE=""
 EXPECT=""
 AUTHOR_SKILLS_SKIPPED=0
 
-# Shared by design: the ten copy-only files, the folders that hold them, and the per-template
+# Shared by design: the seventeen copy-only paths, the folders that hold them, and the per-template
 # rules folder's parent (DESIGN.md Section 9, rules 2 and 3).
 shared_entry() { # $1 = a top-level entry or a .claude/ path
   case "$1" in
-    .claude|.claude/rules|.claude/skills) return 0 ;;
+    .claude|.claude/rules|.claude/skills|.codex) return 0 ;;
   esac
   is_shared "$1"
 }
@@ -315,6 +321,37 @@ run_checks() {
       fi
     done < <(cd "$TREE/$o" && find . -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
   done
+  # ── 13–14. Native agent entrypoints, alias and configuration (D73) ───────────
+  if is_owned_file .agents && [[ -e "$TREE/.agents" || -L "$TREE/.agents" ]]; then
+    [[ -L "$TREE/.agents" && "$(readlink "$TREE/.agents")" == .claude ]] \
+      || finding "check 13 — .agents must be a relative symbolic link to .claude"
+  fi
+  local problem
+  for p in .codex/config.toml .claude/mcp_config.json; do
+    is_owned_file "$p" || continue
+    [[ -f "$TREE/$p" ]] || continue # A missing catalogued path belongs to check 6.
+    problem="$(python3 - "$TREE/$p" "$p" <<'PYCLIENT'
+from pathlib import Path
+import json, sys, tomllib
+try:
+    text = Path(sys.argv[1]).read_text()
+    data = tomllib.loads(text) if sys.argv[2].endswith('.toml') else json.loads(text)
+    expected = ({'project_doc_fallback_filenames': ['CLAUDE.md']}
+                if sys.argv[2].endswith('.toml') else {'mcpServers': {}})
+    if data != expected: print('must contain only the documented empty client configuration')
+except (OSError, ValueError, TypeError) as error:
+    print('invalid client configuration: ' + str(error).splitlines()[0])
+PYCLIENT
+)"
+    [[ -z "$problem" ]] || finding "check 13 — $p $problem"
+  done
+  for p in AGENTS.md GEMINI.md; do
+    is_owned_file "$p" || continue
+    [[ -f "$TREE/$p" ]] || continue
+    grep -qF '.claude/syntek-media-agents.md' "$TREE/$p" \
+      || finding "check 14 — $p must route to the canonical media instruction bridge"
+  done
+
 }
 
 # ── Self-test ────────────────────────────────────────────────────────────────
@@ -338,6 +375,12 @@ build_tree() { # $1 = dir — every path the catalogue says the current answers 
     printf 'MEDIA_KINDS:\n'; printf -- '- %s\n' $A_KINDS
     printf 'SEED_EXAMPLES: %s\nMODEL_MECHANICAL: opus\n' "$A_SEED"
   } > "$t/$SM_ANSWERS_FILE"
+  rmdir "$t/.agents"; ln -s .claude "$t/.agents"
+  printf "project_doc_fallback_filenames = ['CLAUDE.md']\n" > "$t/.codex/config.toml"
+  printf '{"mcpServers": {}}\n' > "$t/.claude/mcp_config.json"
+  for path in AGENTS.md GEMINI.md; do
+    printf 'Read .claude/syntek-media-agents.md before production work.\n' > "$t/$path"
+  done
 }
 
 self_test() {
@@ -366,6 +409,19 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   TREE="$tmp/gen"; EXPECT=""; load_owned "$TREE"
   build_tree "$TREE"
   st_baseline "a business tree built from the catalogue"
+
+  rm "$TREE/.agents"; ln -s . "$TREE/.agents"
+  probe "check 13 fires on a different agent alias target" "check 13 — .agents"
+  rm "$TREE/.agents"; ln -s .claude "$TREE/.agents"
+  cp "$TREE/.codex/config.toml" "$tmp/client-held"; printf 'bad = [' > "$TREE/.codex/config.toml"
+  probe "check 13 fires on invalid Codex configuration" "check 13 — .codex/config.toml"
+  cp "$tmp/client-held" "$TREE/.codex/config.toml"
+  printf '{"mcpServers": {"example": {}}}\n' > "$TREE/.claude/mcp_config.json"
+  probe "check 13 fires when an installed server ships in the Antigravity seed" "check 13 — .claude/mcp_config.json"
+  printf '{"mcpServers": {}}\n' > "$TREE/.claude/mcp_config.json"
+  cp "$TREE/AGENTS.md" "$tmp/client-held"; printf '# An unrelated entrypoint\n' > "$TREE/AGENTS.md"
+  probe "check 14 fires when an agent entrypoint loses its bridge" "check 14 — AGENTS.md"
+  cp "$tmp/client-held" "$TREE/AGENTS.md"
 
   mv "$TREE/$SM_ANSWERS_FILE" "$tmp/held"
   probe "check 1 fires when the answers file is missing" "check 1"
@@ -473,6 +529,7 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   st_finish "a correctly gated render from a leaking or incomplete one"
 }
 
+command -v python3 >/dev/null 2>&1 || die "python3 is not installed"
 if $SELF_TEST; then
   self_test
   exit $?

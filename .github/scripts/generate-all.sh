@@ -55,7 +55,7 @@
 #                        names its own kind (BRAND_KIND equals the file's name).
 #                     4. The copy output (stderr, without --quiet) of each <kind>--defaults
 #                        render carries every _message_after_copy line of _common.sh's lists
-#                        (DESIGN.md D13): the ten shared files and the skip rule, the four allows,
+#                        (DESIGN.md D13, D73): the seventeen shared paths and the skip rule, the four allows,
 #                        nine asks and two Edit denies, the ELEVENLABS_MCP_BASE_PATH line,
 #                        filter.lfs.required, the setup check, and the update command with -a;
 #                        and, from Section 8, that 'conflict' then 'skip' is expected, the
