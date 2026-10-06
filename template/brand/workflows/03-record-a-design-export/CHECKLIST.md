@@ -32,6 +32,8 @@ model: opus
 - [ ] A show's cover encoded with `media.py image` to `podcast.cover` and `podcast.id3_cover`, and a partner-branded image to its site's key; never by hand. · _sonnet_
 - [ ] Handed back: path, storage, row, anything superseded, rights still needed. · _opus_
 
+- [ ] Sprite pose/mouth/blink names, native mouth origin and scale recorded where applicable. · _opus_
+
 ## Done When
 
 - [ ] **The file is where its size requires, stored as Git can bear, and registered with its link.** · _opus_

@@ -32,6 +32,9 @@ explainers, cut into clips that each carry one idea with its reasons and its sou
 
 ## Domain rules
 
+- A scene piece uses its native master for each aspect, Frame `native`, with the master list
+  default first; missing aspects return to `production/workflows/10-animate-a-scene/`.
+
 - **Context travels with the claim.** A cut never makes the author say more, or less, than the
   whole piece says; a qualifier, a caveat or a 'some scholars hold' stays with its claim.
 - **Sources stay on screen.** A quotation or a scripture reading shows its source, and for

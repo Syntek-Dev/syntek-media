@@ -37,6 +37,9 @@ talks, cut into teasers that sell the story without spending it.
 
 ## Domain rules
 
+- A scene piece uses its native master for each aspect, Frame `native`, with the master list
+  default first; missing aspects return to `production/workflows/10-animate-a-scene/`.
+
 - **Never past the spoiler line.** A twist, a death or an ending stays out of every cut, whatever
   its hook.
 - **Every line keeps its speaker.** A character's line read by the author is attributed in the

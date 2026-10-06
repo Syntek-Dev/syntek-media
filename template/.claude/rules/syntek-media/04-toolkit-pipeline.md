@@ -50,7 +50,7 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 | `probe` | `FILE [--json]` | duration, size and every stream (a `.pcm` take read with its `--output-format`) | 0 · 2 |
 | `presets` | `[KEY] [--stale-after DAYS --today DD/MM/YYYY]` | deliverable tables with their `verify` keys and brand overrides applied; lists stale `checked` dates | 0 · 1 · 2 |
 | `script time` | `PATH [--wpm N] [--write]` | spoken words and pauses per beat (each against its own `(target MM:SS)`) and in total, at the brief's `words_per_minute` unless `--wpm` overrides, against `target_seconds` (±10%) and each `max_seconds` | 0 · 1 · 2 |
-| `assemble` | `EDL [-o OUT]` | the master from an edit decision list: frame-accurate clips, stills, cards, colour, fades, push-in, the voice track, `[[audio]]` ranges, ducking, loudness; ffprobe-verified | 0 · 1 · 2 |
+| `assemble` | `EDL [--memory-max SIZE] [-o OUT]` | the master from an edit decision list: frame-accurate clips, stills, cards, colour, fades, push-in, the voice track, `[[audio]]` ranges, ducking, loudness; ffprobe-verified | 0 · 1 · 2 |
 | `cut` | `SRC --deliverable KEY --in TC --out TC [--cut cNN] [--frame crop\|pad] [--x PX] [--captions SRT] [--overlay PNG] [-o OUT]` | trims, reframes and encodes one deliverable in one pass, burning captions when given and laying a transparent overlay of the deliverable's size when given; verifies size, codecs, duration and moov first; an audio deliverable (no width or height, such as an audiobook's retail sample) is trimmed and encoded as audio only; a table with `audio_tracks = 0` gets no sound track; a GIF table (`newsletter.preview_gif`) is cut to a GIF within its `max_seconds`, `fps_max`, `colours_max` and `max_size` | 0 · 1 · 2 |
 | `encode` | `SRC --deliverable KEY [--frame crop\|pad] [-o OUT]` | a whole file to a video or audio deliverable, loudness to its target; an audio deliverable from a picture master takes its sound only; `podcast.feed_audio` untagged, its tags `feed tag`'s | 0 · 1 · 2 |
 | `frame` | `SRC --at TC [-o OUT]` | one PNG still, for a thumbnail background | 0 · 2 |
@@ -100,6 +100,22 @@ and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
 
 ---
 
+### Scenes (`uv run toolkit/scene.py …`)
+
+- `stills PIECE [--size WxH --size WxH]`: first/middle board frames and a measured boxes report;
+  overlaps, safe-zone violations, text overflow and fractional positions are findings, exit 1.
+- `render PIECE [--size WxH] [--memory-max SIZE]`: a native master, no clip/overlay rows, sharing
+  assemble's audio mix and accepted joined voice; frame count, sound length and loudness checked.
+- The scene defines `build_scene(root, piece)` returning the standard-library kit's `Scene`;
+  native layout and frame state live in Python, the fresh local page only draws them.
+- Missing timing names its producing command; missing art is exit 2 naming the frame.
+- `--memory-max SIZE` overrides user-scope `MEDIA_MEMORY_MAX` for assemble or scene rendering.
+  Where systemd and a user service manager exist, the child scope has `MemorySwapMax=0`; otherwise
+  the render reports it runs uncapped. A failed scope setup or stopped render is exit 2.
+- See `production/docs/reference/scenes-as-code.md` and `production/workflows/10-animate-a-scene/`.
+
+---
+
 ## 3. Rules
 
 - **Renders are generated.** Never hand-edit a master, deliverable, PNG or take; change the source
@@ -146,7 +162,7 @@ and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
   (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
 - **Keep the toolkit minimal**: standard-library Python 3.11+ and author-edited TOML; tool-written
   timing is finite JSON. Heavy dependencies stay in pinned PEP 723 scripts: `toolkit/card.py`
-  (Playwright 1.62.0) and `toolkit/transcribe.py` (WhisperX 3.8.6; Python >=3.10,<3.14).
+  and `toolkit/scene.py` (Playwright 1.62.0), and `toolkit/transcribe.py` (WhisperX 3.8.6; Python >=3.10,<3.14).
 - **Transcription stays offline** after the author runs `python3 toolkit/media.py transcribe fetch`
   once. Never run fetch from a skill. `MEDIA_TRANSCRIBE_PYTHON` names an existing interpreter at
   user scope; otherwise the uv helper runs with `--offline`. Missing cache files are exit 2.
@@ -159,13 +175,14 @@ and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
 |---|---|
 | `ffmpeg` and `ffprobe`, built with libass, x264 and mp3lame | every render, probe, loudness pass and caption burn |
 | `python3` (3.11 or later) and `git` | every `media.py` command; the repository root and what Git ignores |
-| `uv`, with Playwright's Chromium | `toolkit/card.py`, and the card PNGs `assemble` renders |
+| `uv`, with Playwright's Chromium | `toolkit/card.py`, `toolkit/scene.py`, and the card PNGs `assemble` renders |
 | WhisperX 3.8.6 and its fetched English weights, punkt_tab and cross-check model (optional) | `transcribe`; the author runs `transcribe fetch` once, no skill downloads models |
 | Rhubarb Lip Sync 1.14.0 (optional), unzipped at user scope and linked onto PATH | `lipsync`; keep res/sphinx/cmudict-en-us.dict beside the real executable, never copy the binary alone |
 | `git-lfs` | large design exports in `brand/src/exports/large/` |
 | ffmpeg's libwebp, an AV1 encoder (libaom-av1 or libsvtav1) and the `avif` muxer (optional) | `media.py image` to WebP and AVIF; JPEG and PNG need none |
 | `pandoc` (optional) | cleaner chapter text in `audiobook text`, which works without it |
 | `espeak-ng` (optional) | a scratch voice track for timing, labelled approximate |
+| `systemd-run` (optional) | author-set memory caps for assemble and scene renders; unavailable means a noted uncapped run |
 | fontconfig's `fc-match` (optional) | the brand-font probe of `uv run toolkit/card.py --self-test`, which without it is skipped by name and the self-test ends incomplete (exit 2) |
 
 `python3 toolkit/media.py check --setup` reports every one of them, the allow, ask and deny

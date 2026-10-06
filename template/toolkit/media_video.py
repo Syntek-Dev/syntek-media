@@ -988,7 +988,119 @@ def still_list(run: list, rate: Fraction, fps_text: str, out: Path) -> Path:
     return out
 
 
+def mix_audio(audio_rows: list, piece: str, ar: int, total_samples: int, add, graph: list,
+              acc_a: str, joined: bool = False) -> str:
+    """The one audio mix for both master routes, appended as [aout].
+
+    assemble joins approved segment sources; a scene reads that same join's WAV so its
+    sound is the file used for accepted word and mouth timing. Ranges, fades, gain,
+    voice ducking and sample-exact duration use this graph in either route.
+    """
+    # [[audio]] tracks
+    tracks, voices, ducked = [], [], []
+    for n, t in enumerate(audio_rows):
+        src = str(t.get("source", "")).strip()
+        given = str(t.get("role", "") or "").strip()
+        role = given or ("music" if t.get("duck") else "voice")
+        if role not in ROLES:
+            raise C.Fatal(f"audio {n + 1}: role {role!r} is not voice, music or effect")
+        if t.get("duck") and role != "music":
+            raise C.Fatal(f"audio {n + 1}: duck = true ducks a music bed under the voice, and this track's "
+                          f"role is {role!r}: set role = \"music\", or drop duck")
+        if t.get("duck") and not given:
+            print(f"  note: audio {n + 1} sets duck = true and no role: it is mixed as music, ducked "
+                  "under the voice")
+        at = C.parse_tc(t.get("at") or 0, f"audio {n + 1} at")
+        label = f"t{n}"
+        if src.startswith("vo:"):
+            voiced_piece = src[3:].strip() or piece
+            if joined:
+                voice = C.piece_folder(C.PROD_RENDERS, voiced_piece) / f'{voiced_piece}.voice.wav'
+                if not voice.is_file():
+                    raise C.Fatal(f'{C.shown(voice)} is missing: run media.py voice join {voiced_piece}')
+                length = C.duration(C.probe(voice))
+                k = add(C.input_args(voice))
+                graph.append(f'[{k}:a]asetpts=PTS-STARTPTS,aresample={ar},'
+                             f'aformat=sample_fmts=fltp:channel_layouts=stereo[raw{n}]')
+            else:
+                segs = voice_segments(voiced_piece)
+                length = A.voice_join_graph(segs, A.voice_sample_rate(voiced_piece), add, graph, f"joined{n}")
+                graph.append(f"[joined{n}]aresample={ar},aformat=sample_fmts=fltp:channel_layouts=stereo[raw{n}]")
+        else:
+            r = resolve_source(src, manifest_entries())
+            if r["kind"] == "missing" or not r["path"].is_file():
+                raise C.Fatal(f"audio {n + 1}: {r.get('label', src)} is not in this project")
+            a = C.parse_tc(t.get("in") or 0, f"audio {n + 1} in")
+            seek = ["-ss", f"{a:.6f}"]
+            if t.get("out"):
+                b = C.parse_tc(t["out"], f"audio {n + 1} out")
+                if b <= a:
+                    raise C.Fatal(f"audio {n + 1}: out must come after in")
+                seek += ["-t", f"{b - a:.6f}"]
+                length = b - a
+            else:
+                length = (r.get("duration") or C.duration(C.probe(r["path"]))) - a
+            k = add(seek + C.input_args(r["path"]))
+            graph.append(f"[{k}:a]asetpts=PTS-STARTPTS,aresample={ar},aformat=sample_fmts=fltp:"
+                         f"channel_layouts=stereo[raw{n}]")
+        chain = f"[raw{n}]volume={float(t.get('gain_db', 0) or 0):.2f}dB"
+        fi, fo = float(t.get("fade_in", 0) or 0), float(t.get("fade_out", 0) or 0)
+        if fi > 0:
+            chain += f",afade=t=in:st=0:d={fi:.6f}"
+        if fo > 0:
+            chain += f",afade=t=out:st={max(0.0, length - fo):.6f}:d={fo:.6f}"
+        chain += f",adelay={int(round(at * 1000))}:all=1[{label}]"
+        graph.append(chain)
+        if role == "voice":
+            voices.append(label)
+        elif t.get("duck") and role == "music":
+            ducked.append(label)
+        else:
+            tracks.append(label)
+    mix = [acc_a]
+    if voices:
+        if len(voices) > 1:
+            graph.append("".join(f"[{v}]" for v in voices) + f"amix=inputs={len(voices)}:duration=longest:"
+                         "normalize=0[vox]")
+            key = "vox"
+        else:
+            key = voices[0]
+    else:
+        key = None
+    if ducked:
+        if key is None:
+            graph.append(f"[{acc_a}]asplit=2[base][keysrc]")
+            mix = ["base"]
+            key = "keysrc"
+        graph.append(f"[{key}]asplit={len(ducked) + 1}[voxmix]" + "".join(f"[sc{d}]" for d in range(len(ducked))))
+        if voices:
+            mix.append("voxmix")
+        else:
+            graph.append("[voxmix]anullsink")
+        for d, label in enumerate(ducked):
+            graph.append(f"[sc{d}]apad[scp{d}]")
+            graph.append(f"[{label}][scp{d}]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[dk{d}]")
+            mix.append(f"dk{d}")
+    elif key:
+        mix.append(key)
+    mix += tracks
+    if len(mix) > 1:
+        graph.append("".join(f"[{m}]" for m in mix) + f"amix=inputs={len(mix)}:duration=first:normalize=0,"
+                     f"atrim=end_sample={total_samples}[aout]")
+    else:
+        graph.append(f"[{mix[0]}]atrim=end_sample={total_samples}[aout]")
+    return 'aout'
+
+
 def cmd_assemble(args) -> int:
+    command = [sys.executable, str(C.TOOLKIT / 'media.py'), 'assemble', str(args.edl)]
+    if args.o:
+        command += ['-o', str(args.o)]
+    if getattr(args, 'memory_max', None) is not None:
+        command += ['--memory-max', args.memory_max]
+    capped = C.memory_scope(getattr(args, 'memory_max', None), command, cwd=C.ROOT)
+    if capped is not None:
+        return capped
     with tempfile.TemporaryDirectory(prefix="media-assemble-") as tmp:
         return assemble(args, Path(tmp))
 
@@ -1183,90 +1295,7 @@ def assemble(args, tmp: Path) -> int:
                          f"eof_action=repeat[vo{j}]")
             acc_v = f"vo{j}"
         graph.append(f"[{acc_v}]format=yuv420p[vout]")
-    # [[audio]] tracks
-    tracks, voices, ducked = [], [], []
-    for n, t in enumerate(edl["audio"]):
-        src = str(t.get("source", "")).strip()
-        given = str(t.get("role", "") or "").strip()
-        role = given or ("music" if t.get("duck") else "voice")
-        if role not in ROLES:
-            raise C.Fatal(f"audio {n + 1}: role {role!r} is not voice, music or effect")
-        if t.get("duck") and role != "music":
-            raise C.Fatal(f"audio {n + 1}: duck = true ducks a music bed under the voice, and this track's "
-                          f"role is {role!r}: set role = \"music\", or drop duck")
-        if t.get("duck") and not given:
-            print(f"  note: audio {n + 1} sets duck = true and no role: it is mixed as music, ducked "
-                  "under the voice")
-        at = C.parse_tc(t.get("at") or 0, f"audio {n + 1} at")
-        label = f"t{n}"
-        if src.startswith("vo:"):
-            voiced_piece = src[3:].strip() or piece
-            segs = voice_segments(voiced_piece)
-            length = A.voice_join_graph(segs, A.voice_sample_rate(voiced_piece), add, graph, f"joined{n}")
-            graph.append(f"[joined{n}]aresample={ar},aformat=sample_fmts=fltp:channel_layouts=stereo[raw{n}]")
-        else:
-            r = resolve_source(src, manifest_entries())
-            if r["kind"] == "missing" or not r["path"].is_file():
-                raise C.Fatal(f"audio {n + 1}: {r.get('label', src)} is not in this project")
-            a = C.parse_tc(t.get("in") or 0, f"audio {n + 1} in")
-            seek = ["-ss", f"{a:.6f}"]
-            if t.get("out"):
-                b = C.parse_tc(t["out"], f"audio {n + 1} out")
-                if b <= a:
-                    raise C.Fatal(f"audio {n + 1}: out must come after in")
-                seek += ["-t", f"{b - a:.6f}"]
-                length = b - a
-            else:
-                length = (r.get("duration") or C.duration(C.probe(r["path"]))) - a
-            k = add(seek + C.input_args(r["path"]))
-            graph.append(f"[{k}:a]asetpts=PTS-STARTPTS,aresample={ar},aformat=sample_fmts=fltp:"
-                         f"channel_layouts=stereo[raw{n}]")
-        chain = f"[raw{n}]volume={float(t.get('gain_db', 0) or 0):.2f}dB"
-        fi, fo = float(t.get("fade_in", 0) or 0), float(t.get("fade_out", 0) or 0)
-        if fi > 0:
-            chain += f",afade=t=in:st=0:d={fi:.6f}"
-        if fo > 0:
-            chain += f",afade=t=out:st={max(0.0, length - fo):.6f}:d={fo:.6f}"
-        chain += f",adelay={int(round(at * 1000))}:all=1[{label}]"
-        graph.append(chain)
-        if role == "voice":
-            voices.append(label)
-        elif t.get("duck") and role == "music":
-            ducked.append(label)
-        else:
-            tracks.append(label)
-    mix = [acc_a]
-    if voices:
-        if len(voices) > 1:
-            graph.append("".join(f"[{v}]" for v in voices) + f"amix=inputs={len(voices)}:duration=longest:"
-                         "normalize=0[vox]")
-            key = "vox"
-        else:
-            key = voices[0]
-    else:
-        key = None
-    if ducked:
-        if key is None:
-            graph.append(f"[{acc_a}]asplit=2[base][keysrc]")
-            mix = ["base"]
-            key = "keysrc"
-        graph.append(f"[{key}]asplit={len(ducked) + 1}[voxmix]" + "".join(f"[sc{d}]" for d in range(len(ducked))))
-        if voices:
-            mix.append("voxmix")
-        else:
-            graph.append("[voxmix]anullsink")
-        for d, label in enumerate(ducked):
-            graph.append(f"[sc{d}]apad[scp{d}]")
-            graph.append(f"[{label}][scp{d}]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[dk{d}]")
-            mix.append(f"dk{d}")
-    elif key:
-        mix.append(key)
-    mix += tracks
-    if len(mix) > 1:
-        graph.append("".join(f"[{m}]" for m in mix) + f"amix=inputs={len(mix)}:duration=first:normalize=0,"
-                     f"atrim=end_sample={total_samples}[aout]")
-    else:
-        graph.append(f"[{mix[0]}]atrim=end_sample={total_samples}[aout]")
+    mix_audio(edl["audio"], piece, ar, total_samples, add, graph, acc_a)
     name = f"{piece}.master{'.mp4' if size else '.wav'}"
     out = C.output_path(C.piece_folder(C.PROD_RENDERS, name) / name, args.o)
     print(f"assemble {C.shown(edl['path'])}: {len(clips)} clip(s), {len(edl['overlay'])} overlay(s), "

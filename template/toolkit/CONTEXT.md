@@ -24,8 +24,10 @@ toolkit/
 ├── media_captions.py   ← captions (check, from-segments, align, retime, rewrap, vtt, transcript, burn) and script time
 ├── media_repo.py       ← footage, tokens, flags, check, where
 ├── media_image.py      ← image, and the GIF pass of cut (a newsletter's preview GIF)
+├── media_scene.py     ← deterministic frame timing, native mouth sampling and safe zones
 ├── media_feed.py       ← feed: a self-hosted podcast's register, RSS feed, chapters and file tags
 ├── card.py             ← HTML and CSS to PNG in headless Chromium (uv run; Playwright 1.62.0, pinned)
+├── scene.py            ← deterministic scenes to stills and native masters (pinned Playwright)
 ├── transcribe.py       ← offline known-word alignment; WhisperX 3.8.6, Python >=3.10,<3.14
 ├── data/               ← platforms.toml: every deliverable's delivery specs, dated and sourced
 └── templates/          ← thumbnail.html and card.html: fallbacks for the brand's two layouts
@@ -75,6 +77,11 @@ toolkit/
 - **Cue index:** `media.py cues <piece>` connects tracked words to beats, boards, lines and
   delivery/SFX/music events. Effect/music events take their source and mix from audio rows
   linked by `cue`; it prints enclosing MM:SS boards and exact seconds, then accepts JSON through `-o`.
+- `scene.py` runs the tracked scene with `runpy.run_path`, writes its page afresh and uses one
+  browser for stills or a native master. `media_scene.py` computes frame state in Python, including
+  sprite mouths, movement and anchor responses. Still paths and box findings are printed for review.
+  Rendering uses the accepted joined voice and assemble's shared audio mix; `--memory-max` or
+  `MEDIA_MEMORY_MAX` caps heavy renders where the user service manager is available.
 - `data/platforms.toml` — the template's platform data, refreshed by `copier update`; the
   brand's confirmed corrections are `[[override]]` tables in `brand/src/platforms/overrides.toml`,
   which every command applies and prints.

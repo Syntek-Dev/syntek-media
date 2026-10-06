@@ -40,6 +40,8 @@ production/src/scenes/
   here is written only through `-o`, once the author has accepted the run.
 - This folder ships with every project, holding only its pair until a scene piece is made.
 
+- **Scene entry:** `build_scene(root, piece)` returns the kit's `Scene`; its layout is called for
+  each native frame size. Python computes every frame; the freshly generated page only paints it.
 ## Cross-references
 
 - `production/src/timing/` — the words and mouth cues every scene is timed from.

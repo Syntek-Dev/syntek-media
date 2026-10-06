@@ -468,6 +468,7 @@ always        f  production/docs/reference/rights-and-consent.md
 always        f  production/docs/reference/elevenlabs.md
 always        f  production/docs/reference/voiceover.md
 always        f  production/docs/reference/recorded-pieces.md
+always        f  production/docs/reference/scenes-as-code.md
 k:audiobook   f  production/docs/reference/audiobook-narration.md
 always        f  production/src/.gitignore
 always        f  production/src/rights-register.md
@@ -495,6 +496,7 @@ k:audiobook   d  production/workflows/06-master-an-audiobook
 always        d  production/workflows/07-clear-the-rights
 always        d  production/workflows/08-bring-in-a-recording
 always        d  production/workflows/09-time-the-voice
+always        d  production/workflows/10-animate-a-scene
 always        d  publishing/docs/reference
 always        d  publishing/docs/project
 always        d  publishing/src

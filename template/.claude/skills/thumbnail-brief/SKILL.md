@@ -101,7 +101,8 @@ it never puts on one.
    with its frontmatter, `approved` left empty.
    *Complete when:* each brief is written as the author agreed it, one sentence per line.
 
-5. **Choose and place the image.** Take a still from the master where the brief asks for one
+5. **Choose and place the image.** A scene thumbnail may use a frame of its native master.
+   Take a still from the master where the brief asks for one
    (`python3 toolkit/media.py frame <master> --at <HH:MM:SS.mmm>`), or use an asset the author
    names. With the author's agreement, copy each still a layout uses into
    `production/src/assets/`: a still left in a renders folder is git-ignored, and a layout must

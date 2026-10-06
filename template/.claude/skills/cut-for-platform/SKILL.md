@@ -1,16 +1,13 @@
 ---
 name: cut-for-platform
 description: >-
-  Render every master, cut and deliverable through the toolkit and nothing else: write the piece's
-  edit decision list with the author from its storyboard and shot list, or a recorded piece's
-  transcript; copy the brand's card layout for each card; assemble the master with 'python3
-  toolkit/media.py assemble'; then cut, reframe and encode each deliverable of the brief and the
-  cut-down plan, web video, silent loops and a podcast feed's audio among them, burning captions in
-  the same pass where they exist, and probe every output against its preset. Renders are
-  git-ignored, never hand-edited. Use when the author says 'assemble the master', 'cut the shorts',
-  'encode it for YouTube', 'master the episode', 'the website version' or 'why did the cut fail?'.
-  Not choosing which moments to cut (`repurpose`). Not making or checking the captions (`captions`).
-  Not a thumbnail, poster or GIF preview (`thumbnail-brief`).
+  Render masters and deliverables through the toolkit: assemble footage edits, or animate a scene
+  from accepted timings and brand art with 'scene.py', review stills and a preview, and render
+  each aspect natively. Write the edit's sound mix with the author; cut and encode the brief's
+  and plan's deliverables, burn approved captions where needed and probe every output against
+  its preset. Renders stay ignored and regenerable. Use for 'assemble the master', 'animate the
+  scene', 'cut the shorts', 'encode it for YouTube' or 'why did the cut fail?'. Not choosing
+  moments (`repurpose`), making captions (`captions`) or thumbnails and GIFs (`thumbnail-brief`).
 ---
 
 # Skill: Cut for Platform (<%BRAND_NAME%>)
@@ -18,7 +15,7 @@ description: >-
 Locale: en_GB · <%TIMEZONE%> · dates DD/MM/YYYY.
 
 Turns a piece's plan into files, and checks them. **Every render goes through
-`python3 toolkit/media.py`**, because its commands carry the frame-accurate seek, the platform
+`python3 toolkit/media.py` or `uv run toolkit/scene.py`**, because its commands carry the frame-accurate seek, the platform
 presets with the brand's overrides, the loudness targets and the verification a hand-written
 ffmpeg line skips. A render that exited cleanly is not a finished deliverable: this skill probes
 each output, reports it against its preset, and counts it done only once the author has seen it.
@@ -33,6 +30,8 @@ record.
 Route to the one that matches the task and follow its `STEPS.md` against its `CHECKLIST.md`. These
 are the procedure of record — do not restate them at length here.
 
+- `production/workflows/10-animate-a-scene/` — the scene route: sources, native layouts, stills
+  and preview review, then masters per aspect; guide `production/docs/reference/scenes-as-code.md`.
 - `production/workflows/03-assemble-the-master/` — the edit decision list, the cards and the
   master.
 - `publishing/workflows/02-cut-for-a-platform/` — every deliverable of the brief and the cut-down
@@ -69,7 +68,13 @@ are the procedure of record — do not restate them at length here.
    *Complete when:* the procedure, the piece, the job, every deliverable key and its preset are
    known, and the gate the job needs has passed.
 
-2. **Write the edit decision list with the author.** Write `production/src/edits/<piece>.toml` in
+2. **Write the edit decision list with the author.** If the shot list has Type `scene`, follow
+   `production/workflows/10-animate-a-scene/` instead of the clip/card/assemble steps below: index
+   sources with `real` through `-o`, write the tracked scene, review every printed still and the
+   preview with the author, then render native masters. Keep ordered M4 sub-checks; Timing notes
+   return through `production/workflows/09-time-the-voice/`. The scene edit has audio rows only,
+   its joined voice driving both mouths and sound. Link SFX/MUSIC event IDs through `cue`.
+   Set `ai_visuals: assisted` when code animates the author's own art. For a footage piece, Write `production/src/edits/<piece>.toml` in
    the format of `production/docs/reference/edit-decision-lists.md`. `[edit]` sets the master's
    `size` (`""` for an audio master, which takes sound only from its clips), `audio_rate` and
    `loudness`. One `[[clip]]` per shot, in timeline order: from each storyboard row and the source
@@ -122,7 +127,8 @@ are the procedure of record — do not restate them at length here.
    run `python3 toolkit/media.py encode MASTER --deliverable KEY`, with `--frame crop` or
    `--frame pad` where the frame changes. For each approved cut of the plan, run
    `python3 toolkit/media.py cut MASTER --deliverable KEY --in TC --out TC --cut cNN` with the
-   plan's Frame: `centre` is `--frame crop`, `crop x=<px>` is `--frame crop --x <px>`, `pad` is
+   plan's Frame: a scene's `native` takes the matching native master with no crop/pad flag;
+   missing aspects return to the scene workflow, never reframe another master. `centre` is `--frame crop`, `crop x=<px>` is `--frame crop --x <px>`, `pad` is
    `--frame pad`. Add `--captions SRT` when the cut's caption file exists and the platform takes no
    sidecar or the brief asks for burned captions, so they burn in the same pass: the deliverable's
    rewrapped `.<platform>-<format>` file where one exists (the key's dot and underscores as

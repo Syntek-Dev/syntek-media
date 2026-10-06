@@ -51,6 +51,7 @@ import signal
 import subprocess
 import sys
 import time
+import tempfile
 from pathlib import Path
 
 if sys.version_info < (3, 11):
@@ -787,6 +788,90 @@ def run(cmd: list, cwd=None, what: str = "", input_text=None) -> subprocess.Comp
         tail = "\n".join(line for line in proc.stderr.strip().splitlines()[-8:])
         raise Fatal(f"{what or Path(cmd[0]).name} failed (exit {proc.returncode}):\n{tail}")
     return proc
+
+
+def stream_run(cmd: list, chunks, cwd=None, what: str = '') -> int:
+    """Feed binary chunks with pipe backpressure; keep diagnostics on disk, never in RAM.
+
+    A failed producer stops the child and its process group. This is the scene renderer's
+    frame pipe: it holds one screenshot at a time, never a movie's screenshots or stderr.
+    """
+    cmd = [str(value) for value in cmd]
+    with tempfile.TemporaryFile() as log:
+        try:
+            proc = subprocess.Popen(cmd, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                                    stderr=log, start_new_session=os.name == 'posix')
+        except OSError as err:
+            raise Fatal(f'{what or cmd[0]} could not start: {err}') from None
+        broken = False
+        try:
+            try:
+                for chunk in chunks:
+                    proc.stdin.write(chunk)
+                proc.stdin.close()
+            except BrokenPipeError:
+                broken = True
+            code = proc.wait()
+            if code != 0 or broken:
+                log.seek(0, os.SEEK_END)
+                log.seek(max(0, log.tell() - 8192))
+                tail = '\n'.join(log.read().decode('utf-8', errors='replace').splitlines()[-8:])
+                raise Fatal(f'{what or cmd[0]} failed (exit {code}'
+                            f'{", input pipe closed early" if broken else ""}):\n{tail}')
+            return code
+        except BaseException:
+            _stop(proc)
+            raise
+        finally:
+            try:
+                proc.stdin.close()
+            except OSError:
+                pass
+
+
+def memory_scope(limit, command: list, cwd=None):
+    """D72: return the capped child's exit code, or None to run here with an explicit note."""
+    limit = str(limit if limit is not None else os.environ.get('MEDIA_MEMORY_MAX', '')).strip()
+    if not limit:
+        print('  memory: uncapped (no --memory-max or MEDIA_MEMORY_MAX set)', flush=True)
+        return None
+    if os.environ.get('_MEDIA_MEMORY_CAPPED') == limit:
+        receipt = os.environ.get('_MEDIA_MEMORY_RECEIPT')
+        if receipt:
+            marker = Path(receipt)
+            if marker.name != 'started' or not marker.parent.name.startswith('media-memory-') \
+                    or marker.parent.parent.resolve() != Path(tempfile.gettempdir()).resolve():
+                raise Fatal('the memory scope has an invalid start receipt')
+            marker.write_text('started\n', encoding='utf-8')
+        print(f'  memory: capped at {limit}, swap disabled', flush=True)
+        return None
+    runner, manager = shutil.which('systemd-run'), shutil.which('systemctl')
+    available = False
+    if runner and manager:
+        try:
+            status = subprocess.run([manager, '--user', 'show', '--property=Version', '--value'],
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+            available = status.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    if not available:
+        print('  memory: uncapped (systemd-run or the user service manager is unavailable)', flush=True)
+        return None
+    cmd = [runner, '--user', '--scope', '-p', f'MemoryMax={limit}', '-p', 'MemorySwapMax=0',
+           '--quiet'] + [str(value) for value in command]
+    print(f'  memory: starting under a {limit} cap, swap disabled', flush=True)
+    with tempfile.TemporaryDirectory(prefix='media-memory-') as folder:
+        receipt = Path(folder) / 'started'
+        env = dict(os.environ, _MEDIA_MEMORY_CAPPED=limit, _MEDIA_MEMORY_RECEIPT=str(receipt))
+        try:
+            code = subprocess.run(cmd, cwd=cwd, env=env).returncode
+        except OSError as err:
+            raise Fatal(f'the {limit} memory scope could not start: {err}') from None
+        started = receipt.is_file()
+    if code not in (0, 1) or not started:
+        raise Fatal(f'the render under memory limit {limit} stopped (exit {code}); '
+                    'read the scope/render error above')
+    return code
 
 
 def threads() -> int:

@@ -51,6 +51,7 @@ approved: ""                       # DD/MM/YYYY once the author approves every r
 ## Promise
 ## Words on the image
 ## Image
+<!-- A scene may use a frame from its native master, taken with media.py frame -o into production/src/assets/. -->
 ## Variants
 ## Checks
 ```

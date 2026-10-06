@@ -59,7 +59,12 @@ can be rendered again, frame for frame, from tracked files.
 - **Written by the toolkit, through `-o`, once the author accepts the run:**
   `<piece>.cues.json` by `media.py cues` and `<piece>.real.json` by `media.py real`, JSON with
   finite numbers, each named for the piece's folder.
-- **Written by skills (with the author):** `<piece>.scene.py`, by `cut-for-platform`.
+- **Written by skills (with the author):** `<piece>.scene.py`, by `cut-for-platform`: define
+  `build_scene(root, piece)` returning `Scene(root, piece, frames, layout, fps=30)`. Its
+  `layout(width, height, safe)` returns kit `Element` objects for that native size; see
+  `production/docs/reference/scenes-as-code.md` for keyframes, sprites and named anchors.
+- **Real index:** `{piece, sources: [{source, kind, path, sha256}]}`, kinds `image` or `text`,
+  Source the shot-list reference, path repository-relative. The scene never scans a mirror.
 - **Working copies and output (never committed):** the indexes' working copies in
   `production/src/renders/<piece>/timing/`; the scene's page, stills and masters elsewhere in
   `production/src/renders/<piece>/`. A tracked file never sits in a per-piece folder, and a file

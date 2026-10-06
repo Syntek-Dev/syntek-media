@@ -64,7 +64,7 @@ cuts this kind never makes.
    can still name lines, hooks and framing, but every In and Out stays empty and no cut can be
    agreed; say so.
    *Complete when:* the piece, its origin, its master (or its absence) and any existing plan are
-   named.
+   named. For a scene, read and probe the native master list, default first.
 
 2. **Read the words and their timing.** For a scripted piece, read `script.md` and the
    storyboard's Vertical framing column; for a recorded piece, read the approved `transcript.md`.
@@ -118,7 +118,9 @@ cuts this kind never makes.
    it has one; otherwise from a still of the master
    (`python3 toolkit/media.py frame <master> --at <HH:MM:SS.mmm>`), keeping the speaker or subject
    and any on-screen title inside the safe zone. Note the caption width the cut's aspect needs, and
-   whether one deliverable needs its own caption file. An audio master's cut goes onto a video
+   whether one deliverable needs its own caption file. A scene uses Frame `native` and the
+   matching aspect's master; list every master, default first, and request any missing native
+   aspect through `production/workflows/10-animate-a-scene/`, never crop or pad another scene master. An audio master's cut goes onto a video
    platform under a still: name the still.
    *Complete when:* every cut has its In, Out, frame and caption width, and its length fits every
    deliverable it serves.

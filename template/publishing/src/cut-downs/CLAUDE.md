@@ -41,7 +41,7 @@ before a render is made.
 ```markdown
 ---
 piece: NNN-kebab-title                  # equals the piece's folder name
-master: NNN-kebab-title.master.mp4      # the master render the cuts are taken from
+master: NNN-kebab-title.master.mp4      # or a list of native masters, the edit-size master first
 approved: ""                            # DD/MM/YYYY once the author agrees the plan
 ---
 
@@ -49,13 +49,15 @@ approved: ""                            # DD/MM/YYYY once the author agrees the 
 
 | Cut | Deliverables | Lines | In | Out | Frame | Hook | Status |
 |---|---|---|---|---|---|---|---|
-| c01 | <platform>.<format>, … | <beat.line–beat.line> | HH:MM:SS.mmm | HH:MM:SS.mmm | centre · crop x=<px> · pad | <opening words> | planned |
+| c01 | <platform>.<format>, … | <beat.line–beat.line> | HH:MM:SS.mmm | HH:MM:SS.mmm | centre · crop x=<px> · pad · native | <opening words> | planned |
 
 ## c01 — <hook>
 
 <Opening words, on-screen title, caption width, its own thumbnail or not, and why this moment stands alone; one sentence per line.>
 ```
 
+- **Scene masters:** list the render names with the edit-size master first; further masters are
+  `<piece>.master.<W>x<H>.mp4`. Use Frame `native` and the matching aspect's master for a cut.
 - **A silent loop** (`website.hero_loop`) is a row like any cut, its Lines `—` and its note naming
   any cut it shares frames with; the rules that a cut stands alone in whole sentences and differs
   from every other cut do not bind it.

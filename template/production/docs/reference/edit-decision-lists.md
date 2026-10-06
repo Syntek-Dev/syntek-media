@@ -11,8 +11,7 @@ model: opus
 
 **What it is.** A master is never edited by hand. It is described, clip by clip, in
 `production/src/edits/<piece>.toml`, and `python3 toolkit/media.py assemble` builds it from that
-list, the logged footage, the cards and the approved voiceover. Change the list and assemble
-again: the master is generated, and the list is the record. It is written with the author from
+list, the logged footage, cards and approved voiceover. Rebuild from that record, written with the author from
 the storyboard and shot list or, for a recorded piece, from its transcript.
 
 ## The edit and its clips
@@ -53,19 +52,20 @@ with `seconds`, `motion = "push-in"` where one should drift, `transition = "fade
 and a music bed in `[[audio]]`. Cards are HTML files in `production/src/cards/`, copied from the
 brand's card component; `assemble` renders any card PNG that is missing or older than its HTML
 or the brand's tokens before it composites, so a master always rebuilds from tracked files.
-Every clip starts and ends on the master's frame nearest its running total, never rounded clip by
-clip: 187 stills of 0.16 s end on the frame nearest 29.92 s, one holding a frame more or less.
-Each still, card and colour is framed alone to the master's size, so stills of any size, format
-or orientation with no push-in or fade between them are one input, read an image at a time, and
+Clip boundaries use the frame nearest each running total, never durations rounded clip by clip.
+Each still, card and colour is framed alone; different sizes, formats and orientations with no
+push-in or fade are one input, read an image at a time, and
 a long run needs no more memory than a short one; each video, push-in or fade opens another.
-Transitions beyond a cross-fade, motion beyond a push-in and layered picture are not in this version.
+Further assemble transitions and motion are deferred; a scene uses `scenes-as-code.md` instead.
+A scene edit has only `[edit]` and `[[audio]]`: its joined voice drives timing and the same mix,
+with the edit's size/rate/loudness; no clip/overlay rows. Each further aspect is rendered natively.
+`--memory-max SIZE` or `MEDIA_MEMORY_MAX` optionally caps assemble and scene renders with no swap.
 
 ## How we apply it here
 
 - One list per piece, named for the piece; raise `version` when the author approves a new cut.
 - Every source is logged and verifies first (`production/docs/reference/source-media.md`).
-- Cuts are frame-accurate: the toolkit re-encodes a cut and never stream-copies one.
-- Probe every master before reporting it, and quote what was measured.
+- Re-encode frame-accurate cuts; never stream-copy. Probe each master and quote what was measured.
 - An audio master is the same list with `size = ""`: an episode is cut from a recorded talk this
   way, by its own procedure, where the project makes podcasts.
 

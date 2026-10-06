@@ -176,7 +176,9 @@ folders** (`production/src/renders/<piece>/`, `production/src/voiceover/generate
 `publishing/src/renders/<piece>/`) are never listed: `python3 toolkit/media.py where <piece>`
 lists the piece's tracked files and names those folders, saying whether each exists, never what
 is inside them. A working copy the toolkit writes in a piece's `timing` folder is never opened:
-the command that wrote it printed what it found, so read that output instead.
+the command that wrote it printed what it found, so read that output instead. A still
+`scene.py stills` has just written may be opened by its printed path to review its picture and mouths;
+never list the folder to find it.
 
 **Why this rule exists.** Ignored files hold credentials, local settings and private recordings. A
 search that reads them prints them into the session, and from there into a handoff or a commit.

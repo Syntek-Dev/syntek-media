@@ -15,6 +15,7 @@ production/docs/reference/
 ├── elevenlabs.md               ← the user-scope server, the base path, cost before spend, one call at a time
 ├── recorded-pieces.md          ← a recording in, a transcript as its script, captions to every cut
 ├── rights-and-consent.md       ← what needs a row; clearing it; consent before a likeness or a voice
+├── scenes-as-code.md           ← deterministic sprite movement, real sources, stills and native masters
 ├── sound-and-loudness.md       ← the loudness targets; where a music bed goes; ducking and fades
 ├── source-media.md             ← the footage manifest, external storage and the checked local mirror
 └── voiceover.md                ← one segment per spoken sentence or beat; the segment register
@@ -26,6 +27,8 @@ production/docs/reference/
   manifest field by field, the mirror, and music beds, stock and archived takes.
 - `edit-decision-lists.md` — the edit decision list field by field: clips, stills, cards,
   colour clips, fades, push-ins, overlays and sound.
+- `scenes-as-code.md` — the scene kit, frame clock, sprite slot, movement and anchor interactions;
+  first/middle stills and the preview review, then a master rendered natively per aspect.
 - `sound-and-loudness.md` — the loudness targets and where each comes from; where a music bed
   goes, how it ducks under the voice and how it fades.
 - `rights-and-consent.md` — every kind of item that needs a rights row, the register's statuses,

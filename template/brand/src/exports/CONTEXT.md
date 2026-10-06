@@ -26,6 +26,8 @@ brand/src/exports/
 - Each file's row in `brand/src/design-register.md` gives its Claude Design link, its storage
   (`git` here) and the date it was exported.
 
+- Sprite exports keep pose/mouth and optional blink names for the scene kit; whole frames or
+  pose plus native mouth layer, all registered with their origin and scale notes.
 ## Cross-references
 
 - `brand/docs/reference/design-exports.md` — small and large, LFS, and the register.

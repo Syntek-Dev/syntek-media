@@ -9,3 +9,8 @@ A master or card render an earlier release left at this folder's top stays where
 Everything here except this file is ignored by `production/src/.gitignore`, a piece's folder and everything in it included: a render is regenerable from the tracked edit decision list, cards, footage manifest, voiceover register and timing files, so never force one into Git, and never put a tracked file in a folder here.
 A folder inside this one carries no README and no pair.
 Never hand-edit a render; change what it is made from and render again.
+
+Scene pieces also keep their freshly generated `<piece>/scene/index.html`, first/middle board PNGs and
+`<piece>.stills.json` in `<piece>/stills/`, and native masters `<piece>.master.mp4` (the edit size) and
+`<piece>.master.<W>x<H>.mp4` (further aspects). Open stills only by paths the runner prints;
+never hand-edit or commit a generated page, report or master.

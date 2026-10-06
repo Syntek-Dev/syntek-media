@@ -51,6 +51,8 @@ cut-down however good it is.
 
 ## How we apply it here
 
+A scene explainer animates the author's art as `ai_visuals: assisted`, with native masters per aspect.
+
 - The promise is kept in the same piece; a long video that ends on 'more next time' has not.
 - Every figure and quotation is checked before approval, or cut.
 - Chapters, descriptions and timestamps belong to the post package, not the script.

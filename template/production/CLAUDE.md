@@ -16,7 +16,8 @@ made from sources that are logged, paid for once and cleared for use.
   index is `production/workflows/CLAUDE.md`; `run-media-workflow` resolves
   `production/workflows/local/` first); each one names its skill and guide. Voiceover goes
   through `voiceover`; a scene's words and boards through
-  `production/workflows/09-time-the-voice/` with `voiceover` and `storyboard`;
+  `production/workflows/09-time-the-voice/` with `voiceover` and `storyboard`; animation and native
+  masters through `production/workflows/10-animate-a-scene/` with `cut-for-platform`;
   edit decision lists, cards and masters through `cut-for-platform`; a
   recording and its transcript through `captions`;
 <: if 'audiobook' in MEDIA_KINDS :>  audiobook chapters through `narrate-audiobook`;

@@ -53,7 +53,8 @@ production/
 <: if 'podcast' in MEDIA_KINDS :>  master a podcast episode,
 <: endif :><: if 'audiobook' in MEDIA_KINDS :>  narrate an audiobook, master an audiobook,
 <: endif :>  clear the rights, bring in a recording, time the approved voice and re-time a scene's boards
-  through `production/workflows/09-time-the-voice/`.
+  through `production/workflows/09-time-the-voice/`, then review stills and the preview and render
+  native masters through `production/workflows/10-animate-a-scene/`.
 
 ## Cross-references
 

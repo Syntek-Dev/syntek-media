@@ -37,6 +37,9 @@ into short clips that each give one useful thing and one next step.
 
 ## Domain rules
 
+- A scene piece uses its native master for each aspect, Frame `native`, with the master list
+  default first; missing aspects return to `production/workflows/10-animate-a-scene/`.
+
 - **A promotional clip is advertising.** Every objective claim in a cut has its evidence before
   the cut is agreed, checked with the fact-check skill (syntek-author), where present; a claim
   trimmed of its condition ('for most clients', 'in our experience') is a new claim, and is not

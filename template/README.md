@@ -215,3 +215,11 @@ created yourself are never deleted. A list answer replaces the whole list:
 because Copier never rewrites them: this README, `CONTEXT.md`, Section 1 of `.claude/CLAUDE.md`,
 and any rows for a removed platform in `brand/src/platforms/overrides.toml`. The brand section of
 the rules updates itself.
+
+Scene pieces use `production/docs/reference/scenes-as-code.md` and
+`production/workflows/10-animate-a-scene/`: review first/middle board stills with
+`uv run toolkit/scene.py stills`, then render each aspect natively with `scene.py render`.
+The kit computes every frame in Python; Playwright draws only local brand art and indexed
+captures. `--memory-max SIZE` or user-scope `MEDIA_MEMORY_MAX` optionally caps assemble and
+scene renders under systemd with swap disabled; other runs report that they are uncapped.
+No scene command calls a generation API.

@@ -5,7 +5,7 @@ Usage:
     python3 toolkit/media.py probe FILE [--json] [--output-format pcm_RATE]
     python3 toolkit/media.py presets [KEY] [--stale-after DAYS --today DD/MM/YYYY]
     python3 toolkit/media.py script time PATH [--wpm N] [--write]
-    python3 toolkit/media.py assemble EDL [-o OUT]
+    python3 toolkit/media.py assemble EDL [--memory-max SIZE] [-o OUT]
     python3 toolkit/media.py cut SRC --deliverable KEY --in TC --out TC [--cut cNN] [--frame crop|pad]
                                  [--x PX] [--captions SRT] [--overlay PNG] [-o OUT]
     python3 toolkit/media.py encode SRC --deliverable KEY [--frame crop|pad] [-o OUT]
@@ -285,6 +285,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("assemble", help="build a master from an edit decision list")
     p.add_argument("edl")
+    p.add_argument('--memory-max', metavar='SIZE', help='systemd memory cap (else MEDIA_MEMORY_MAX)')
     out(p, "the output path (default: production/src/renders/<piece>/<piece>.master.mp4, or .master.wav for an "
            "audio master)")
     p.set_defaults(func=V.cmd_assemble)
@@ -898,7 +899,8 @@ def self_test() -> int:
     C.TIMEZONE = "Europe/London"   # the fixtures' feed dates are written for this zone
     have_ff = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
     have_git = bool(shutil.which("git"))
-    with tempfile.TemporaryDirectory(prefix="media-self-test-") as tmp, hermetic_git(Path(tmp) / "gitconfig"):
+    with tempfile.TemporaryDirectory(prefix="media-self-test-") as tmp, hermetic_git(Path(tmp) / "gitconfig"), \
+            held_env(drop=('MEDIA_MEMORY_MAX', '_MEDIA_MEMORY_CAPPED', '_MEDIA_MEMORY_RECEIPT')):
         root = Path(tmp) / "project"
         C.ROOT = root
         try:
@@ -910,6 +912,9 @@ def self_test() -> int:
                       ("uv scripts: the interpreter, the timeout, the first-run lock, card renders and the "
                        "setup row", lambda: test_uv(verdict, skip, cli, root)),
                       ("default output paths: each piece's own folder", lambda: test_piece_defaults(verdict))]
+            groups.append(('deterministic scene timing and safe zones', lambda: test_scene_timing(verdict)))
+            groups.append(('scene layouts, movement, interaction and local sources', lambda: test_scene_model(verdict)))
+            groups.append(('streamed frame input and opt-in memory scopes', lambda: test_render_helpers(verdict, root)))
             groups.append(('eight- and nine-column storyboard input', lambda: test_storyboards(verdict, root)))
             groups.append(('cue index, script events and audio cue links',
                            lambda: test_cues(verdict, cli, root, have_git)))
@@ -918,6 +923,7 @@ def self_test() -> int:
             groups.append(('word alignment logic and captions from words',
                            lambda: test_words(verdict, cli, root)))
             if have_ff:
+                groups.append(("the shared sound of both master routes", lambda: test_shared_mix(verdict)))
                 groups.append(("cut, burn-in, loudness, assemble, align and the audiobook master",
                                lambda: test_media(verdict, skip, cli, root)))
                 groups.append(("image, the GIF preview, the silent loop and web video",
@@ -1333,6 +1339,269 @@ def test_piece_defaults(verdict) -> None:
             got == [pub / piece / f"{piece}--c01.youtube-short.burned.mp4", pub / "talk-cam-a.youtube-short.mp4",
                     pub / piece / f"{piece}.youtube-long.en-GB.srt", pub / "talk-cam-a.youtube-long.en-GB.srt",
                     pub / piece / f"{piece}.podcast-feed-audio.mp3", pub / "fixture-show.podcast-cover.jpg"], got)
+
+
+def test_scene_model(verdict) -> None:
+    import scene as worker
+    import media_scene as S
+    saved = C.ROOT
+    with tempfile.TemporaryDirectory(prefix='media-scene-model-') as tmp:
+        root = Path(tmp) / 'project'; root.mkdir(); C.ROOT = root
+        try:
+            worker.write_fixture(root)
+            data = root / 'toolkit/data'; data.mkdir(parents=True)
+            shutil.copyfile(C.TOOLKIT / 'data/platforms.toml', data / 'platforms.toml')
+            scene = worker.load_scene('922-scene-fixture')
+            page, elements = scene.write_page(160, 90)
+            original = page.read_bytes(); page.write_text('stale author edit')
+            scene.write_page(160, 90)
+            verdict('a scene run writes the local page afresh from the tracked Python', page.read_bytes() == original)
+            verdict('scene clocks resolve beat, line, board and original word boundaries',
+                    [scene.frame(ref) for ref in ('beat:2','line:2.1','board:b02','word:1','word:1:end')]
+                    == [30,30,30,30,45])
+            def character(n): return next(row for row in scene.state(n,elements,page) if row['name']=='character')
+            verdict('movement is stepped on whole pixels with a walk cycle before arrival',
+                    [character(n)['pose'] for n in range(6)] == ['walk1'] * 3 + ['walk2'] * 3
+                    and character(2)['x'] != character(5)['x']
+                    and all(float(character(n)['x']).is_integer() for n in range(30)))
+            elements[1].hold = 3
+            verdict('a stepped position holds for the author-set number of frames',
+                    character(0)['x'] == character(2)['x'] and character(3)['x'] != character(2)['x'])
+            elements[1].hold = 1
+            verdict('an anchor arrival changes pose, facing and the target highlight together',
+                    character(30)['pose']=='point' and character(30)['facing']=='left'
+                    and next(row for row in scene.state(30,elements,page) if row['name']=='label')['style']
+                    == {'background-color':'var(--color-surface)'})
+            verdict('one aspect is laid out independently of another, without crop or pad',
+                    scene.elements(90,160)[0].width==80 and scene.elements(160,90)[0].width==150)
+            brief=root/C.PIECES/scene.piece/'brief.md'
+            brief.write_text('---\ndeliverables:\n  - youtube.long\n---\n')
+            plan=root/'publishing/src/cut-downs'/(scene.piece+'.md');plan.parent.mkdir(parents=True)
+            plan.write_text('| Cut | Deliverables | Lines |\n| c01 | tiktok.video | 1.1 |\n')
+            verdict('safe margins gather both the brief and cut plan deliverable columns',
+                    {table['key'] for table in scene.deliverables()} == {'youtube.long','tiktok.video'})
+
+            sprite=S.Sprite(css_frames=elements[1].sprite.css_frames,scale=2,breathe_hold=15,blink_every=15)
+            idle=S.Element('idle',kind='sprite',x=10,y=10,width=24,height=32,sprite=sprite)
+            a=scene.state(0,[idle],page)[0]; b=scene.state(15,[idle],page)[0]; c=scene.state(4,[idle],page)[0]
+            verdict('idle life blinks deterministically and breathes by one scaled sprite pixel',
+                    a['blink'] and b['blink'] and not c['blink'] and b['y']-a['y']==2)
+            art=root/'brand/src/exports';art.mkdir(parents=True)
+            sprite=S.Sprite(folder='brand/src/exports',name='figure',extension='.svg',layered=True,mouth=(2,3),scale=2)
+            for stem in ('figure-idle','figure-mouth-a','figure-idle-blink'):
+                (art/(stem+'.svg')).write_text('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="16"></svg>')
+            idle.sprite=sprite
+            state=scene.state(0,[idle],page)[0]
+            verdict('layered sprites place a native mouth and optional blink above the pose',
+                    len(state['images'])==3 and state['images'][1]['x']==4 and state['images'][1]['y']==6)
+            (art/'figure-mouth-a.svg').unlink()
+            try: scene.state(0,[idle],page); missing=False
+            except C.Fatal as err: missing='figure-mouth-a.svg' in str(err)
+            verdict('a missing required sprite frame is a named could-not-run error',missing)
+            try:
+                scene.state(0,[S.Element('a',keyframes=[S.Keyframe(0,anchor='b')]),
+                               S.Element('b',keyframes=[S.Keyframe(0,anchor='a')])],page)
+                cycle=False
+            except C.Fatal as err: cycle='cyclic' in str(err)
+            verdict('cyclic anchor references fail before drawing',cycle)
+            try: scene.frame('word:99'); absent=False
+            except C.Fatal as err: absent='accepted time' in str(err)
+            verdict('an absent timing anchor names the commands that repair it',absent)
+        finally: C.ROOT = saved
+
+
+def test_scene_timing(verdict) -> None:
+    import media_scene as S
+    mouth = S.MouthTimeline([{'start': 0, 'end': 0.03, 'value': 'A'},
+                             {'start': 0.03, 'end': 0.08, 'value': 'B'},
+                             {'start': 0.10, 'end': 0.11, 'value': 'C'}])
+    verdict('mouth shapes sample frame middles, with rest in gaps and after speech',
+            [mouth.shape(n) for n in range(5)] == ['A', 'B', 'X', 'X', 'X'])
+    verdict('mouth sampling subtracts the edit voice offset',
+            mouth.shape(0, 30, 1) == 'X' and mouth.shape(30, 30, 1) == 'A')
+    edge = S.MouthTimeline([{'start': 0.05, 'end': 0.15, 'value': 'H'},
+                            {'start': 0.15, 'end': 0.25, 'value': 'G'}])
+    verdict('mouth intervals include starts, exclude ends and never borrow a later cue',
+            [edge.shape(n, 10) for n in range(3)] == ['H', 'G', 'X'])
+    bad = ([{'start': 0, 'end': 0.1, 'value': 'Z'}],
+           [{'start': float('nan'), 'end': 0.1, 'value': 'X'}],
+           [{'start': 0, 'end': 0.1, 'value': 'A'}, {'start': 0.05, 'end': 0.2, 'value': 'B'}])
+    rejected = 0
+    for cues in bad:
+        try: S.MouthTimeline(cues)
+        except C.Fatal: rejected += 1
+    verdict('invalid, non-finite and overlapping mouth cues cannot produce frame state', rejected == len(bad))
+    tables = [{'width': 1080, 'height': 1920, 'safe_zone': {'top': 288, 'right': 192}},
+              {'width': 540, 'height': 960, 'safe_zone': {'bottom': 200, 'left': 30}},
+              {'width': 1920, 'height': 1080, 'safe_zone': {'top': 900}}, {'kind': 'audio'}]
+    verdict('scene safe zones combine the largest edge of each same-aspect deliverable',
+            S.safe_zone(540, 960, tables) == {'top': 144, 'bottom': 200, 'left': 30, 'right': 96})
+    verdict('scene frame variables use whole pixels at the requested native size',
+            S.frame_vars(540, 960, tables)['--safe-right'] == '96px'
+            and S.frame_vars(540, 960, tables)['--frame-width'] == '540px')
+    verdict('typed text holds for author-selected whole frames and stops at its full length',
+            [S.typed_text('abc', n, 2, 2) for n in range(9)]
+            == ['', '', 'a', 'a', 'ab', 'ab', 'abc', 'abc', 'abc'])
+    verdict('scene tokens are the brand properties, read by the shared token parser',
+            S.brand_tokens() == C.read_tokens() and '--color-bg' in S.brand_tokens())
+
+
+def test_shared_mix(verdict) -> None:
+    import array
+    import wave
+    saved_root = C.ROOT
+    try:
+        with tempfile.TemporaryDirectory(prefix='media-shared-mix-') as folder:
+            root = Path(folder)
+            C.ROOT = root
+            write_fixture(root)
+            piece = '920-mix-fixture'
+            gen = root / C.VO_GENERATED / piece / 'takes'
+            gen.mkdir(parents=True)
+            src = gen / 'voice.wav'
+            C.ffmpeg(['-y', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=8000:duration=0.3',
+                      '-ac', '1', '-c:a', 'pcm_s16le', src])
+            write(root / C.VOICEOVER / (piece + '.toml'),
+                  '[voiceover]\npiece="' + piece + '"\noutput_format="pcm_8000"\n[[segment]]\n'
+                  'id="s01"\nfile="generated/' + piece + '/takes/voice.wav"\ntext="A ferry."\n'
+                  'status="approved"\npause_after=0.1\n')
+            assert A.cmd_voice_join(argparse.Namespace(piece=piece, o=None)) == 0
+            asset = root / C.ASSETS / 'bed.wav'
+            asset.parent.mkdir(parents=True, exist_ok=True)
+            C.ffmpeg(['-y', '-f', 'lavfi', '-i', 'sine=frequency=660:sample_rate=48000:duration=1',
+                      '-ac', '2', '-c:a', 'pcm_s16le', asset])
+            rows = [dict(source='vo:' + piece, at=0.1, role='voice', gain_db=-3, fade_in=.03, fade_out=.02),
+                    dict(source=C.ASSETS + '/bed.wav', at=0, role='music', duck=True, gain_db=-15,
+                         fade_in=.05, fade_out=.1, **{'in': .1, 'out': .9}),
+                    dict(source=C.ASSETS + '/bed.wav', at=.4, role='effect', gain_db=-25,
+                         **{'in': .05, 'out': .15})]
+            results = []
+            for joined in (False, True):
+                inputs, graph = [], ['anullsrc=r=48000:cl=stereo,atrim=end_sample=48000[base]']
+                def add(args):
+                    index = len(inputs)
+                    inputs.append(args)
+                    return index
+                label = V.mix_audio(rows, piece, 48000, 48000, add, graph, 'base', joined=joined)
+                output = root / ('joined.wav' if joined else 'segments.wav')
+                C.ffmpeg(['-y'] + [v for args in inputs for v in args]
+                         + ['-filter_complex', ';'.join(graph), '-map', '[' + label + ']',
+                            '-c:a', 'pcm_s16le', output])
+                with wave.open(str(output)) as audio:
+                    assert audio.getnframes() == 48000 and audio.getnchannels() == 2
+                    results.append(array.array('h', audio.readframes(audio.getnframes())))
+            difference = max(abs(a - b) for a, b in zip(*results))
+            verdict('both master routes share offsets ranges fades gain and ducking with sample-exact sound',
+                    difference <= 2, f'maximum PCM difference: {difference}')
+            A.joined_voice(piece).unlink()
+            try:
+                V.mix_audio(rows, piece, 48000, 48000, lambda args: 0, [], 'base', joined=True)
+                refused = False
+            except C.Fatal as err:
+                refused = 'voice join' in str(err)
+            verdict('a scene needs the accepted voice join and never silently rebuilds it from takes', refused)
+    finally:
+        C.ROOT = saved_root
+
+
+def test_render_helpers(verdict, root: Path) -> None:
+    from unittest.mock import patch
+    import time
+    with held_env(drop=('MEDIA_MEMORY_MAX', '_MEDIA_MEMORY_CAPPED', '_MEDIA_MEMORY_RECEIPT')):
+        code = C.memory_scope(None, ['unused'])
+        verdict('no memory setting stays here and announces an uncapped render', code is None)
+        with patch.object(C.shutil, 'which', return_value=None):
+            with held_env(MEDIA_MEMORY_MAX='512M'):
+                code = C.memory_scope(None, ['unused'])
+            verdict('a requested cap without systemd remains explicitly uncapped', code is None)
+        calls = []
+        command = [sys.executable, 'a path with spaces.py', 'assemble', "an author's edit.toml"]
+        child_code = 0
+        start = True
+        def scope(argv, **kwargs):
+            if '--property=Version' in argv:
+                return subprocess.CompletedProcess(argv, 0)
+            calls.append((argv, kwargs))
+            if start:
+                with held_env(**kwargs['env']):
+                    C.memory_scope(kwargs['env']['_MEDIA_MEMORY_CAPPED'], command)
+            return subprocess.CompletedProcess(argv, child_code)
+        with patch.object(C.shutil, 'which', side_effect=lambda name: '/bin/' + name), \
+                patch.object(C.subprocess, 'run', scope), held_env(MEDIA_MEMORY_MAX='256M'):
+            for child_code in (0, 1):
+                code = C.memory_scope('512M', command)
+                verdict(f'memory scope forwards render exit {child_code} without recursive scopes',
+                        code == child_code and len(calls) == child_code + 1)
+            argv, kw = calls[0]
+            verdict('explicit memory cap overrides user setting, disables swap and keeps argument boundaries',
+                    'MemoryMax=512M' in argv and 'MemorySwapMax=0' in argv and argv[-len(command):] == command
+                    and kw['env']['_MEDIA_MEMORY_CAPPED'] == '512M')
+            for child_code, start in ((137, True), (1, False)):
+                try:
+                    C.memory_scope('512M', command)
+                    refused = False
+                except C.Fatal as err:
+                    refused = '512M' in str(err)
+                verdict('memory scope reports a killed render or failed scope setup as exit two: '
+                        + str(child_code) + '/' + str(start), refused)
+    with patch.object(R.shutil, 'which', return_value=None):
+        rows, findings = R.setup_report(root)
+    verdict('absent systemd-run is an optional setup note for memory caps, never a requirement',
+            any('systemd-run' in row and row.startswith('--') for row in rows)
+            and not any('systemd-run' in finding for finding in findings))
+    output = root / 'streamed-bytes.bin'
+    # Fill stderr before consuming stdin: a PIPE not drained would deadlock before it reads.
+    receiver = ('import sys,pathlib; sys.stderr.write("x" * 262144); sys.stderr.flush(); '
+                'pathlib.Path(sys.argv[1]).write_bytes(sys.stdin.buffer.read())')
+    chunks = [b'first' * 65536, b'last' * 65536]
+    code = C.stream_run([sys.executable, '-c', receiver, output], iter(chunks), what='frame fixture')
+    verdict('streaming drains large diagnostics without deadlock and preserves every binary chunk',
+            code == 0 and output.read_bytes() == b''.join(chunks))
+    try:
+        C.stream_run([sys.executable, '-c', 'import sys; sys.stderr.write("encoder refused input"); sys.exit(7)'],
+                     iter(chunks), what='frame fixture')
+        refused = False
+    except C.Fatal as err:
+        refused = 'encoder refused input' in str(err) and 'exit 7' in str(err)
+    verdict('streaming reports a broken encoder pipe with the actual diagnostic', refused)
+    pidfile = root / 'stream-child.pid'
+    processes = []
+    original = C.subprocess.Popen
+    def launched(*args, **kwargs):
+        child = original(*args, **kwargs)
+        processes.append(child)
+        return child
+    def broken_producer():
+        yield b'frame' * 65536
+        until = time.monotonic() + 5
+        while not pidfile.is_file() and time.monotonic() < until:
+            time.sleep(0.01)
+        raise C.Fatal('the scene frame failed')
+    receiver = ('import sys,pathlib,subprocess,time; sys.stdin.buffer.read(327680); '
+                'child=subprocess.Popen([sys.executable,"-c","import time; time.sleep(30)"]); '
+                'pathlib.Path(sys.argv[1]).write_text(str(child.pid)); time.sleep(30)')
+    with patch.object(C.subprocess, 'Popen', launched):
+        try:
+            C.stream_run([sys.executable, '-c', receiver, pidfile], broken_producer(), what='frame fixture')
+            refused = False
+        except C.Fatal as err:
+            refused = str(err) == 'the scene frame failed'
+    stopped = bool(processes) and all(child.poll() is not None for child in processes)
+    if os.name == 'posix' and pidfile.is_file():
+        pid = int(pidfile.read_text())
+        status = Path('/proc') / str(pid) / 'stat'
+        if sys.platform.startswith('linux'):
+            until = time.monotonic() + 2
+            while status.is_file() and status.read_text().split()[2] != 'Z' and time.monotonic() < until:
+                time.sleep(0.01)
+            stopped = stopped and (not status.is_file() or status.read_text().split()[2] == 'Z')
+        else:
+            try:
+                os.kill(pid, 0)
+                stopped = False
+            except ProcessLookupError:
+                pass
+    verdict('a failed frame producer stops the encoder and its child processes', refused and stopped)
 
 
 def test_storyboards(verdict, root: Path) -> None:

@@ -29,6 +29,7 @@ procedure with the same slug replaces the one here (`run-media-workflow` does th
 <: endif :>| Clear the music, footage, voices and quotations a piece uses | `production/workflows/07-clear-the-rights/` |
 | Bring in a recorded talk, interview or conversation as a piece | `production/workflows/08-bring-in-a-recording/` |
 | Agree a scene piece's words and re-time its boards on the approved joined voice | `production/workflows/09-time-the-voice/` |
+| Animate a scene, review its mouths and preview, render each aspect natively | `production/workflows/10-animate-a-scene/` |
 
 Read the procedure's `CONTEXT.md` → `CLAUDE.md` → `STEPS.md`, then work `STEPS.md` in order
 with `CHECKLIST.md` open.

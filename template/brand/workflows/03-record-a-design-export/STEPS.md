@@ -58,7 +58,11 @@ _Mechanical._
 
 Name it in kebab-case for its design, with a variant suffix where one design has several
 (`<design>-<variant>.<ext>`). If a file of that name exists, never overwrite it: a revision takes
-a new name, agreed with the author. Place it in the folder step 3 chose. _Mechanical._
+a new name, agreed with the author. Place it in the folder step 3 chose.
+
+For sprite art, retain `<sprite>-<pose>-mouth-<shape>` whole frames or the pose and mouth-layer
+names, and optional `<sprite>-<pose>-blink`. Record native mouth origin and whole-number scale
+with each export; see `production/docs/reference/scenes-as-code.md`. _Mechanical._
 
 ## 6. Write the register row
 

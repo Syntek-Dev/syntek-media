@@ -59,8 +59,8 @@ every clone.
 
 - Never overwrite an export: a revision is a new file under a new name, with a new row, and the
   old row is marked superseded.
-- Names are kebab-case, for the design they came from, with a variant suffix where one design
-  has several.
+- Sprite frames use `<sprite>-<pose>-mouth-<shape>` (a–h/x), or pose plus `<sprite>-mouth-<shape>`;
+  `<sprite>-<pose>-blink` is optional. Keep the native mouth origin and whole-number scale recorded.
 - An export that carries a licensed font, image or piece of music has its rows in
   `production/src/rights-register.md` before a piece using it is scheduled.
 - A still or logo an edit uses directly may be copied into `production/src/assets/`; the export

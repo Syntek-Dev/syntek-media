@@ -46,6 +46,6 @@ holding a single fact about this project's pieces.
 
 | Guide | Ships with |
 |---|---|
-| `source-media.md`, `edit-decision-lists.md`, `sound-and-loudness.md`, `rights-and-consent.md`, `elevenlabs.md`, `voiceover.md`, `recorded-pieces.md` | every project |
+| `source-media.md`, `edit-decision-lists.md`, `sound-and-loudness.md`, `rights-and-consent.md`, `elevenlabs.md`, `voiceover.md`, `recorded-pieces.md`, `scenes-as-code.md` | every project |
 <: if 'audiobook' in MEDIA_KINDS :>| `audiobook-narration.md` | the audiobook media kind |
 <: endif :>

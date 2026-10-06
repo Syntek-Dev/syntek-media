@@ -659,6 +659,8 @@ def setup_report(root: Path) -> tuple:
              C.INSTALL["git-lfs"])
     else:
         item(None, "git-lfs: not needed until brand/src/exports/large/ holds a file")
+    item(None, "systemd-run (optional memory cap, MEDIA_MEMORY_MAX or --memory-max): "
+               + ("present" if shutil.which("systemd-run") else "absent; renders report uncapped"))
     item(None, "espeak-ng (optional scratch track): " + ("present" if shutil.which("espeak-ng") else "absent"))
     item(None, "pandoc (optional, for audiobook text): " + ("present" if shutil.which("pandoc") else "absent"))
     item(None, "fc-match (optional, fontconfig: card.py --self-test's brand-font probe, which without it is "

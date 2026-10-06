@@ -67,7 +67,13 @@ Grouped by what each script reads:
   and the published transcript (checks 15–19), plus offline voice preparation and the Git-clean
   timing overwrite guard (checks 20 and 23), known-word alignment and captions from words (22),
   native Rhubarb mouth cues (21), and optional/broken WhisperX and Rhubarb setup checks (26). No audit fetches models or builds WhisperX; live alignment needs
-  a prepared user interpreter or SKIPs by name. It records each step in a results file and
+  a prepared user interpreter or SKIPs by name. Check 27 observes ffmpeg in the requested
+  systemd memory scope, requires zero swap and checks the uncapped note; scope-dependent cases
+  SKIP by name without a user service manager. Browser scripts run from one fixed, locked cache
+  workspace across renders, using the toolkit's uv helper rather than building an environment
+  per temporary copy. Check 28 draws two-board CSS-sprite fixtures at two native aspects, reads
+  mouth pixels independently, tests box findings/missing art, and verifies frame count, sound
+  length and loudness on both masters. It records each step in a results file and
   judges that; its self-test writes a clean results file at run time and mutates one fact per
   probe, so it needs no ffmpeg or Chromium. A missing tool is a named SKIP; a step a render does
   not need (no audiobook folder) is n/a.

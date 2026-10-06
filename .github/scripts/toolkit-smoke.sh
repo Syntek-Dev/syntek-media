@@ -15,9 +15,7 @@
 #                    ElevenLabs call: a "take" is a tone or a few fake bytes, and the toolkit's
 #                    handling of the files around a call is what is proved (credits).
 #
-#                    Twenty-six checks, per render: 1–26. Numbers 27–28 are
-#                    DESIGN.md Section 7's for commands the toolkit does not have yet, and are
-#                    taken when they arrive (24 then gains `real` beside `where` and `cues`).
+#                    Twenty-eight checks, per render: 1–28 (24 gains `real` when it arrives).
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
 #                         exercises the media_*.py modules, card.py and transcribe.py). A self-test reads only
 #                         the toolkit, so one result serves every render whose toolkit/ is
@@ -288,11 +286,28 @@ tko() { # $1 = name, then media.py arguments — standard output to OUT/name.out
   return "$st"
 }
 
-tkc() { # $1 = log name, then card.py arguments
+tkp() { # $1 = log name, $2 = card.py or scene.py, then its arguments
   local name="$1" st=0; shift
-  (cd "$T" && PYTHONDONTWRITEBYTECODE=1 uv run --quiet toolkit/card.py "$@") >"$OUT/$name.log" 2>&1 || st=$?
+  (cd "$T" && PYTHONDONTWRITEBYTECODE=1 python3 - "$@" <<'PYWORKER'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'toolkit'))
+import media_common as C
+try:
+    if sys.argv[1] not in ('card.py', 'scene.py'):
+        raise C.Fatal('audit PEP worker must be card.py or scene.py; never builds WhisperX')
+    result = C.uv_script(C.TOOLKIT / sys.argv[1], sys.argv[2:], timeout=1200,
+                         cwd=C.ROOT, capture=False)
+except C.Fatal as err:
+    print('error: ' + str(err), file=sys.stderr)
+    raise SystemExit(2)
+raise SystemExit(result.returncode)
+PYWORKER
+  ) >"$OUT/$name.log" 2>&1 || st=$?
   return "$st"
 }
+
+tkc() { local name="$1"; shift; tkp "$name" card.py "$@"; }
 
 said() { # $1 = log name, $2 = an extended regex → yes | no
   if grep -qiE -- "$2" "$OUT/$1.log" 2>/dev/null; then echo yes; else echo no; fi
@@ -452,8 +467,11 @@ card_skips() { # $1 = exit status, $2 = log → card.py's reasons on one line, o
 smoke() { # $1 = tree — fills $RESULTS
   local src="$1" k kind w h vc ac rate min max asp st f out hash first_v="" first_land="" short_k="" short_max=999999
   local -a answered=() videos=() images=()
-  W="$(sm_mktemp)"; T="$W/tree"; OUT="$W/out"; GHOME="$W/home"; RESULTS="$W/results.tsv"
+  W="$(sm_mktemp)"; T="$SM_AUDIT_PROJECT"; OUT="$W/out"; GHOME="$W/home"; RESULTS="$W/results.tsv"
   mkdir -p "$OUT" "$GHOME" "$W/shim" "$W/fakebin"; : > "$RESULTS"
+  [[ ! -L "$T" && "${T##*/}" == audit-project \
+      && -f "${T%/*}/audit-workspace.owned" ]] || die "refusing an unowned audit workspace: $T"
+  rm -rf "$T"
   cp -a "$src" "$T"
   [[ -d "$T/.git" ]] || tgit init -q
   tgit add -A >/dev/null 2>&1 || true
@@ -478,10 +496,10 @@ smoke() { # $1 = tree — fills $RESULTS
     for f in "$T"/toolkit/*.py; do
       grep -q -- '--self-test' "$f" && grep -q '__main__' "$f" || continue
       k="${f##*/}"; st=0; why=""
-      if [[ "$k" == card.py ]]; then
+      if [[ "$k" == card.py || "$k" == scene.py ]]; then
         if ! $HAVE_UV; then why="uv is not installed"
         else
-          tkc "selftest.$k" --self-test || st=$?
+          tkp "selftest.$k" "$k" --self-test || st=$?
           why="$(card_skips "$st" "$OUT/selftest.$k.log")"
         fi
       else
@@ -682,6 +700,10 @@ SHIM
   # ── 25. A run of stills on the frame grid; an overlay on a clip boundary; the held sound ──
   if $HAVE_FFMPEG; then smoke_frames "${answered[@]}"; fi
 
+  # ── 27. The opt-in memory scope, observed on ffmpeg itself (D72) ──
+  if $HAVE_FFMPEG; then smoke_memory
+  else skip_step 27 'assemble memory scope' 'ffmpeg or ffprobe is not installed'; fi
+
   # ── 11. script time, footage, takes ──
   smoke_repo "$first_v"
 
@@ -714,6 +736,7 @@ SHIM
     rec skip.20 'the voice tools on tone takes (no ffmpeg or ffprobe)'
     rec skip.23 'the timing guard with voice fixtures (no ffmpeg or ffprobe)'
   fi
+  smoke_scene
 }
 
 manifest_id() { # $1 = kind → the first footage ID of that kind
@@ -1969,6 +1992,164 @@ PY
   while IFS=$'\t' read -r key value; do rec "$key" "$value"; done < "$OUT/voice.results"
 }
 
+smoke_scene() {
+  local st=0 k v f piece=922-scene-fixture
+  if ! $HAVE_UV || $SKIP_THUMBS; then
+    skip_step 28 'scene stills and masters' 'uv is missing or --skip-thumbnails was given'; return 0
+  fi
+  (cd "$T" && PYTHONDONTWRITEBYTECODE=1 python3 - <<'PYFIX'
+from pathlib import Path
+import sys
+sys.path.insert(0,'toolkit')
+import scene
+scene.write_fixture(Path.cwd())
+PYFIX
+  ) >"$OUT/scene.fixture.log" 2>&1 || st=$?
+  rec scene.fixture "$st"
+  st=0; tkp scene.stills scene.py stills "$piece" --size 160x90 --size 90x160 || st=$?
+  if [[ "$st" == 2 ]] && grep -Eq 'Chromium.*not installed|Playwright is not available' "$OUT/scene.stills.log"; then
+    skip_step 28 'scene stills and masters' 'Playwright or its Chromium is not installed'; return 0
+  fi
+  rec scene.stills "$st"; rec scene.tail "$(tail_of scene.stills)"
+  local check_st=0
+  (cd "$T" && PYTHONDONTWRITEBYTECODE=1 python3 - "$piece" <<'PYSTILLS'
+import json,sys,subprocess,shutil
+from pathlib import Path
+piece=sys.argv[1]
+folder=Path('production/src/renders')/piece/'stills'
+report=json.loads((folder/(piece+'.stills.json')).read_text())
+rows=report['stills']
+names={row['path'] for row in rows}
+expected={str(folder/(piece+'.'+board+mid+'.'+size+'.png'))
+          for board in ('b01','b02') for mid in ('','.mid') for size in ('160x90','90x160')}
+print('names\t'+('yes' if names==expected and all(Path(p).is_file() for p in expected) else 'no'))
+print('boxes\t'+('yes' if report['piece']==piece and report['fps']==30 and len(rows)==8
+      and all(len(row['boxes'])==2 and row['frame'] in (0,15,30,45) and not row['findings'] for row in rows) else 'no'))
+# Read mouth pixels independently of the scene state: A is one dark pixel, H eight, X nine.
+if not shutil.which('ffmpeg'):
+    print('mouthskip\tffmpeg is absent: independent mouth pixel decoding'); raise SystemExit(0)
+okay=True
+for row in rows:
+    width,height=map(int,row['size'].split('x'))
+    pixels=subprocess.check_output(['ffmpeg','-v','error','-threads','1','-i',row['path'],
+                                   '-f','rawvideo','-pix_fmt','rgb24','-threads','1','pipe:1'])
+    box=next(b for b in row['boxes'] if b['kind']=='sprite')
+    x,y=round(box['x']),round(box['y'])+8
+    dark=sum(max(pixels[(y*width+x+n)*3:(y*width+x+n)*3+3])<40 for n in range(12))
+    okay &= dark=={0:1,15:9,30:8,45:9}[row['frame']]
+print('mouths\t'+('yes' if okay else 'no'))
+PYSTILLS
+  ) >"$OUT/scene.stills.tsv" 2>"$OUT/scene.inspect.log" || check_st=$?
+  rec scene.inspect "$check_st"
+  while IFS=$'\t' read -r k v; do
+    if [[ "$k" == mouthskip ]]; then skip_step 28m 'scene mouth pixels' "$v"
+    else rec "scene.$k" "$v"; fi
+  done < "$OUT/scene.stills.tsv"
+  # Real CLI mutations: the report and exit 1 must identify each box error.
+  cp "$T/production/src/scenes/$piece.scene.py" "$W/scene.original.py"
+  for k in overlap safe overflow grid missing; do
+    PYTHONDONTWRITEBYTECODE=1 python3 - "$W/scene.original.py" "$T/production/src/scenes/$piece.scene.py" "$k" <<'PYMUT'
+from pathlib import Path
+import sys
+original,destination=map(Path,sys.argv[1:3]);kind=sys.argv[3]
+text=original.read_text()
+if kind=='missing':
+    text=text.replace("        return [label, character]", "        parts.pop('walk1-mouth-A')\n        return [label, character]")
+else:
+    expressions={'overlap':"[Element('a',width=30,height=20,text='One'),Element('b',width=30,height=20,text='Two')]",
+                 'safe':"[Element('a',x=-1,width=30,height=20,text='One')]",
+                 'overflow':"[Element('a',width=1,height=1,text='Long text')]",
+                 'grid':"[Element('a',x=0.5,width=30,height=20,text='One')]"}
+    text=text.replace('        return [label, character]','        return '+expressions[kind])
+destination.write_text(text)
+PYMUT
+    st=0; tkp "scene.$k" scene.py stills "$piece" || st=$?
+    rec "scene.$k.status" "$st"
+    case "$k" in overlap) v='text boxes overlap';; safe) v='outside the safe zone';; overflow) v='text overflows';; grid) v='design-pixel grid';; missing) v='missing sprite frame';; esac
+    rec "scene.$k.said" "$(said "scene.$k" "$v")"
+  done
+  cp "$W/scene.original.py" "$T/production/src/scenes/$piece.scene.py"
+  if ! $HAVE_FFMPEG; then
+    skip_step 28r 'scene masters' 'ffmpeg or ffprobe is not installed'; return 0
+  fi
+  for k in default 90x160; do
+    st=0
+    if [[ "$k" == default ]]; then tkp "scene.render.$k" scene.py render "$piece" || st=$?
+    else tkp "scene.render.$k" scene.py render "$piece" --size "$k" || st=$?; fi
+    rec "scene.render.$k.status" "$st"
+    f="$T/production/src/renders/$piece/$piece.master$([[ "$k" == default ]] || printf '.%s' "$k").mp4"
+    if [[ -f "$f" ]]; then
+      rec "scene.render.$k.facts" "$(probe_facts "$f")"
+      rec "scene.render.$k.frames" "$(ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames -of csv=p=0 "$f")"
+      rec "scene.render.$k.ends" "$(stream_ends "$f")"
+      rec "scene.render.$k.lufs" "$(lufs "$f")"
+    fi
+  done
+  printf '\n[[clip]]\ncolour="#222222"\nseconds=1\n' >> "$T/production/src/edits/$piece.toml"
+  st=0; tkp scene.clip scene.py render "$piece" || st=$?
+  rec scene.clip "$st"; rec scene.clip.said "$(said scene.clip 'no clip or overlay')"
+}
+
+smoke_memory() {
+  local st=0 k v
+  (cd "$T" && PYTHONDONTWRITEBYTECODE=1 python3 - "$W" <<'PYMEM'
+import os, shutil, subprocess, sys
+from pathlib import Path
+root, work = Path.cwd(), Path(sys.argv[1])
+piece = '921-smoke-memory'
+edit = root / 'production/src/edits' / (piece + '.toml')
+edit.parent.mkdir(parents=True, exist_ok=True)
+edit.write_text('[edit]\npiece="' + piece + '"\nsize="64x64"\nloudness="none"\n'
+                '[[clip]]\ncolour="#222222"\nseconds=0.2\n')
+env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
+for key in ('MEDIA_MEMORY_MAX', '_MEDIA_MEMORY_CAPPED', '_MEDIA_MEMORY_RECEIPT'):
+    env.pop(key, None)
+command = [sys.executable, str(root / 'toolkit/media.py'), 'assemble', str(edit)]
+def run(name, args, variables):
+    result = subprocess.run(args, cwd=root, env=variables, capture_output=True, text=True)
+    (work / 'out' / ('memory.' + name + '.log')).write_text(result.stdout + result.stderr)
+    return result
+result = run('uncapped', command, env)
+print('uncapped\t' + ('yes' if result.returncode == 0 and 'uncapped' in result.stdout else 'no'))
+ready = bool(shutil.which('systemd-run') and shutil.which('systemctl'))
+if ready:
+    try:
+        ready = subprocess.run(['systemctl', '--user', 'show', '--property=Version', '--value'],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        ready = False
+if not ready:
+    print('skip\tsystemd-run or a user service manager is not available')
+    raise SystemExit(0)
+shim = work / 'memory-bin'
+shim.mkdir()
+receipt = work / 'memory-scope.txt'
+ffmpeg = shutil.which('ffmpeg')
+wrapper = shim / 'ffmpeg'
+wrapper.write_text('#!' + sys.executable + '\n' +
+    'import os, subprocess, sys\nfrom pathlib import Path\n' +
+    "unit = Path(Path('/proc/self/cgroup').read_text().strip().split(':')[-1]).name\n" +
+    "values = subprocess.check_output(['systemctl', '--user', 'show', unit, '--property=MemoryMax', '--property=MemorySwapMax'], text=True)\n" +
+    'with Path(' + repr(str(receipt)) + ").open('a') as f: f.write(values)\n" +
+    'os.execv(' + repr(ffmpeg) + ", ['ffmpeg', *sys.argv[1:]])\n")
+wrapper.chmod(0o755)
+capped = dict(env, PATH=str(shim) + os.pathsep + env['PATH'], MEDIA_MEMORY_MAX='256M')
+result = run('capped', command + ['--memory-max', '512M'], capped)
+values = receipt.read_text() if receipt.is_file() else ''
+good = (result.returncode == 0 and 'capped at 512M' in result.stdout
+        and 'MemoryMax=' + str(512 * 1024 * 1024) in values and 'MemorySwapMax=0' in values)
+print('capped\t' + ('yes' if good else 'no'))
+result = run('invalid', command + ['--memory-max', 'invalid-limit'], capped)
+print('invalid\t' + ('yes' if result.returncode == 2 and 'invalid-limit' in result.stderr else 'no'))
+PYMEM
+  ) >"$OUT/memory.tsv" 2>"$OUT/memory.log" || st=$?
+  rec memory.status "$st"; rec memory.tail "$(tail_of memory)"
+  while IFS=$'\t' read -r k v; do
+    if [[ "$k" == skip ]]; then skip_step 27 'capped assemble' "$v"
+    else rec "memory.$k" "$v"; fi
+  done < "$OUT/memory.tsv"
+}
+
 smoke_frames() { # $@ = the answered rows
   local st a="$T/production/src/assets/smoke-frames" k e="" m="$T/production/src/renders/$P_FRAMES/$P_FRAMES.master.mp4" kind min max atr
   mkdir -p "$a" "$T/production/src/edits"
@@ -2497,6 +2678,50 @@ run_checks() {
       fi
     fi
   fi
+  # 28: the scene runner's real stills and native master commands.
+  if [[ -z "${RES[skip.28]:-}" ]]; then
+    for k in fixture stills inspect; do
+      [[ "${RES[scene.$k]:-missing}" == 0 ]] || finding "check 28 — $L scene $k could not run cleanly: ${RES[scene.tail]:-}"
+    done
+    for k in names boxes mouths; do
+      [[ "$k" == mouths && -n "${RES[skip.28m]:-}" ]] && continue
+      [[ "${RES[scene.$k]:-no}" == yes ]] || finding "check 28 — $L scene stills failed $k"
+    done
+    for k in overlap safe overflow grid missing; do
+      st=1; [[ "$k" == missing ]] && st=2
+      [[ "${RES[scene.$k.status]:-missing}" == "$st" && "${RES[scene.$k.said]:-no}" == yes ]] \
+        || finding "check 28 — $L scene mutation $k was not a named exit $st"
+    done
+    if [[ -z "${RES[skip.28r]:-}" ]]; then
+      for k in default 90x160; do
+        [[ "${RES[scene.render.$k.status]:-missing}" == 0 ]] || finding "check 28 — $L native master $k could not render"
+        [[ "${RES[scene.render.$k.frames]:-0}" == 60 ]] || finding "check 28 — $L native master $k did not have 60 frames"
+        read -r fw fh fv fpix fa frate _ fdur <<< "${RES[scene.render.$k.facts]:-- - - - - - - 0}"
+        want=160; h=90; [[ "$k" != default ]] && { want=90; h=160; }
+        [[ "$fw" == "$want" && "$fh" == "$h" && "$frate" == 48000 ]] \
+          || finding "check 28 — $L native master $k did not match its frame and audio rate"
+        read -r ve ae <<< "${RES[scene.render.$k.ends]:-0 999}"
+        num_eq "$ve" "$ae" 0.001 || finding "check 28 — $L native master $k sound differs from its picture length"
+        num_eq "${RES[scene.render.$k.lufs]:-nan}" "${RES[loud.social.target]:--14}" 1 \
+          || finding "check 28 — $L native master $k loudness differs from the selected target"
+      done
+      [[ "${RES[scene.clip]:-0}" == 2 && "${RES[scene.clip.said]:-no}" == yes ]] \
+        || finding "check 28 — $L scene render did not refuse an assemble clip"
+    fi
+  fi
+  # 27: an uncapped render always runs; only the systemd-dependent cases may skip.
+  if [[ -z "${RES[skip.27]:-}" || -n "${RES[memory.status]:-}" ]]; then
+    [[ "${RES[memory.status]:-missing}" == 0 ]] \
+      || finding "check 27 — $L memory fixture could not run: ${RES[memory.tail]:-}"
+    [[ "${RES[memory.uncapped]:-no}" == yes ]] \
+      || finding "check 27 — $L assemble without a limit did not report an uncapped render"
+    if [[ -z "${RES[skip.27]:-}" ]]; then
+      [[ "${RES[memory.capped]:-no}" == yes ]] \
+        || finding "check 27 — $L ffmpeg did not run under the explicit memory limit with zero swap"
+      [[ "${RES[memory.invalid]:-no}" == yes ]] \
+        || finding "check 27 — $L invalid memory scope setup was not exit 2"
+    fi
+  fi
   return 0
 }
 
@@ -2507,6 +2732,38 @@ run_checks() {
 write_clean_results() { # $1 = file
   cat > "$1" <<'EOF'
 answers	ok
+memory.status	0
+memory.uncapped	yes
+memory.capped	yes
+memory.invalid	yes
+scene.fixture	0
+scene.stills	0
+scene.inspect	0
+scene.names	yes
+scene.boxes	yes
+scene.mouths	yes
+scene.overlap.status	1
+scene.overlap.said	yes
+scene.safe.status	1
+scene.safe.said	yes
+scene.overflow.status	1
+scene.overflow.said	yes
+scene.grid.status	1
+scene.grid.said	yes
+scene.missing.status	2
+scene.missing.said	yes
+scene.render.default.status	0
+scene.render.default.facts	160 90 h264 yuv420p aac 48000 2 2.000
+scene.render.default.frames	60
+scene.render.default.ends	2.000 2.000
+scene.render.default.lufs	-14
+scene.render.90x160.status	0
+scene.render.90x160.facts	90 160 h264 yuv420p aac 48000 2 2.000
+scene.render.90x160.frames	60
+scene.render.90x160.ends	2.000 2.000
+scene.render.90x160.lufs	-14
+scene.clip	2
+scene.clip.said	yes
 selftest.media.py	0
 selftest.card.py	0
 selftest.transcribe.py	0
@@ -2965,6 +3222,82 @@ self_test() {
   write_clean_results "$f"; printf 'skip.9\tthe card clip and overlay (no uv or no Chromium)\n' >> "$f"
   sed -i '/^edl\.cards/d' "$f"; load_results "$f"
   probe_clean "a render with no Chromium is clean, the card renders' folder unread"
+  mut memory.status 2; probe 'check 27 fires when its fixture cannot run' 'check 27 — [fixture] memory fixture could not run'
+  mut memory.uncapped no; probe 'check 27 requires the uncapped note' 'check 27 — [fixture] assemble without a limit'
+  mut memory.capped no; probe 'check 27 observes the encoder memory scope' 'check 27 — [fixture] ffmpeg did not run'
+  mut memory.invalid no; probe 'check 27 requires exit 2 on invalid scope setup' 'check 27 — [fixture] invalid memory scope setup'
+  write_clean_results "$f"; printf 'skip.27\tno user service manager\n' >> "$f"
+  sed -i '/^memory\.capped/d; /^memory\.invalid/d' "$f"; load_results "$f"
+  probe_clean 'without a user service manager the uncapped render is still judged'
+  mut memory.uncapped no; probe 'check 27 still checks uncapped output when systemd is absent' 'check 27 — [fixture] assemble without a limit'
+  mut scene.fixture 2; probe "check 28 judges scene fixture" "check 28 — [fixture] scene fixture could not run"
+  mut scene.stills 2; probe "check 28 judges scene stills" "check 28 — [fixture] scene stills could not run"
+  mut scene.inspect 2; probe "check 28 judges scene inspect" "check 28 — [fixture] scene inspect could not run"
+  mut scene.names no; probe "check 28 judges stills names" "check 28 — [fixture] scene stills failed names"
+  mut scene.boxes no; probe "check 28 judges stills boxes" "check 28 — [fixture] scene stills failed boxes"
+  mut scene.mouths no; probe "check 28 judges stills mouths" "check 28 — [fixture] scene stills failed mouths"
+  mut scene.overlap.status 0; probe "check 28 requires the overlap mutation" "check 28 — [fixture] scene mutation overlap"
+  mut scene.safe.status 0; probe "check 28 requires the safe mutation" "check 28 — [fixture] scene mutation safe"
+  mut scene.overflow.status 0; probe "check 28 requires the overflow mutation" "check 28 — [fixture] scene mutation overflow"
+  mut scene.grid.status 0; probe "check 28 requires the grid mutation" "check 28 — [fixture] scene mutation grid"
+  mut scene.missing.status 0; probe "check 28 requires the missing mutation" "check 28 — [fixture] scene mutation missing"
+  mut scene.render.default.status "2"; probe "check 28 judges master status" "check 28 — [fixture] native master default could not render"
+  mut scene.render.default.frames "61"; probe "check 28 judges master frames" "check 28 — [fixture] native master default did not have 60 frames"
+  mut scene.render.default.facts "160 90 h264 yuv420p aac 44100 2 2.000"; probe "check 28 judges master facts" "check 28 — [fixture] native master default did not match"
+  mut scene.render.default.ends "2.000 2.100"; probe "check 28 judges master ends" "check 28 — [fixture] native master default sound differs"
+  mut scene.render.default.lufs "-20"; probe "check 28 judges master lufs" "check 28 — [fixture] native master default loudness differs"
+  mut scene.clip 0; probe "check 28 refuses clip rows" "check 28 — [fixture] scene render did not refuse"
+  write_clean_results "$f"; printf "skip.28\tno Chromium\n" >> "$f"; sed -i "/^scene\./d" "$f"; load_results "$f"
+  probe_clean "missing Chromium skips the scene by name"
+  local workspace_status=0 key value
+  PYTHONDONTWRITEBYTECODE=1 python3 - "$SM_ROOT" "$tmp" >"$tmp/workspace.tsv" 2>"$tmp/workspace.log" <<'PYTEST' || workspace_status=$?
+import os, subprocess, sys
+from pathlib import Path
+repo, root = map(Path, sys.argv[1:3])
+sys.path.insert(0, str(repo / 'template/toolkit'))
+import media_common as C
+os.environ['XDG_CACHE_HOME'] = str(root / 'cache')
+os.environ['LOCALAPPDATA'] = str(root / 'cache')
+env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
+env.pop('SM_AUDIT_PROJECT', None)
+env.pop('SM_AUDIT_FLAGS', None)
+args = ['bash', str(repo / '.github/scripts/toolkit-smoke.sh'), '--quiet']
+a, b = root / 'first-tree', root / 'second-tree'
+a.mkdir(); b.mkdir()
+(a / 'proof.txt').write_text('first fixture')
+(b / 'proof.txt').write_text('second fixture')
+result = subprocess.run(args + [str(a), str(b)], cwd=repo, env=env, capture_output=True, text=True)
+cache = C.lock_folder().parent / 'audit-project'
+stable = (result.returncode == 1 and 'answers' in result.stdout
+          and (cache / 'proof.txt').is_file() and (cache / 'proof.txt').read_text() == 'second fixture'
+          and not (a / '.git').exists() and not (b / '.git').exists())
+print('stable\t' + ('yes' if stable else 'no'))
+if not stable: print(result.stdout + result.stderr, file=sys.stderr)
+unsafe = root / 'unowned' / 'audit-project'
+unsafe.mkdir(parents=True)
+sentinel = unsafe / 'proof.txt'
+sentinel.write_text('author sentinel')
+(unsafe.parent / 'audit-workspace.owned').write_text('toolkit-smoke.sh scratch workspace\n')
+result = subprocess.run(args + [str(a)], cwd=repo, env=dict(env, SM_AUDIT_PROJECT=str(unsafe)),
+                        capture_output=True, text=True)
+refused = result.returncode == 2 and sentinel.read_text() == 'author sentinel'
+print('refuse\t' + ('yes' if refused else 'no'))
+if not refused: print(result.stdout + result.stderr, file=sys.stderr)
+PYTEST
+  ST_PROBES=$((ST_PROBES + 1))
+  if [[ "$workspace_status" == 0 ]] && grep -q $'^stable\tyes$' "$tmp/workspace.tsv"; then
+    log "  ✓ browser scripts use one locked workspace across fixture copies, inputs unchanged"
+  else
+    ST_FAILS=$((ST_FAILS + 1)); log "  ✗ browser-script workspace was not stable (read $tmp/workspace.log)"
+    cat "$tmp/workspace.log"
+  fi
+  ST_PROBES=$((ST_PROBES + 1))
+  if [[ "$workspace_status" == 0 ]] && grep -q $'^refuse\tyes$' "$tmp/workspace.tsv"; then
+    log "  ✓ an unrelated audit workspace is refused before any files are changed"
+  else
+    ST_FAILS=$((ST_FAILS + 1)); log "  ✗ unrelated workspace was not protected (read $tmp/workspace.log)"
+    cat "$tmp/workspace.log"
+  fi
   st_finish "a toolkit made to its presets from one that is not"
 }
 
@@ -2977,6 +3310,54 @@ command -v git >/dev/null 2>&1 || die "git is not installed"
 python3 -c 'import tomllib' 2>/dev/null || die "python3 is older than 3.11 (no tomllib), which the toolkit needs"
 $REQUIRE_FFMPEG && ! $HAVE_FFMPEG && die "ffmpeg or ffprobe is not installed and --require-ffmpeg was given"
 [[ ${#TARGETS[@]} -gt 0 ]] || die "no rendered tree given (see generate-all.sh)"
+SM_AUDIT_FLAGS=""
+$REQUIRE_FFMPEG && SM_AUDIT_FLAGS+=" --require-ffmpeg"
+$SKIP_THUMBS && SM_AUDIT_FLAGS+=" --skip-thumbnails"
+$QUIET && SM_AUDIT_FLAGS+=" --quiet"
+export SM_AUDIT_FLAGS
+# The workspace lock spans every fixture, so another audit cannot replace its toolkit
+# while a browser is running. PEP 723 paths stay identical across renders and audit runs.
+if [[ -z "${SM_AUDIT_PROJECT:-}" ]]; then
+  PYTHONDONTWRITEBYTECODE=1 python3 - "$SM_ROOT" "${BASH_SOURCE[0]}" "${TARGETS[@]}" <<'PYLOCK'
+import os, subprocess, sys, time
+from pathlib import Path
+root, script = map(Path, sys.argv[1:3])
+sys.path.insert(0, str(root / 'template/toolkit'))
+import media_common as C
+workspace = C.lock_folder().parent / 'audit-project'
+try:
+    with C._exclusive(workspace.parent / 'audit-workspace.lock', time.monotonic() + 3000,
+                      'toolkit audit workspace', 3000):
+        marker = workspace.parent / 'audit-workspace.owned'
+        if workspace.is_symlink() or (workspace.exists() and not marker.is_file()):
+            raise C.Fatal('refusing to replace an existing unowned audit workspace: ' + str(workspace))
+        marker.write_text('toolkit-smoke.sh scratch workspace\n', encoding='utf-8')
+        env = dict(os.environ, SM_AUDIT_PROJECT=str(workspace))
+        # Preserve parsed flags when re-entering; the shell caller supplies them separately.
+        flags = os.environ.get('SM_AUDIT_FLAGS', '').split()
+        result = subprocess.run(['bash', str(script), *flags, *sys.argv[3:]], env=env)
+except C.Fatal as err:
+    print('error: ' + str(err), file=sys.stderr)
+    raise SystemExit(2)
+raise SystemExit(result.returncode)
+PYLOCK
+  exit $?
+fi
+
+PYTHONDONTWRITEBYTECODE=1 python3 - "$SM_ROOT" "$SM_AUDIT_PROJECT" <<'PYOWNED'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(sys.argv[1]) / 'template/toolkit'))
+import media_common as C
+expected = C.lock_folder().parent / 'audit-project'
+given = Path(sys.argv[2])
+marker = expected.parent / 'audit-workspace.owned'
+if given.absolute() != expected.absolute() or given.is_symlink() or not marker.is_file() \
+        or marker.read_text(encoding='utf-8') != 'toolkit-smoke.sh scratch workspace\n':
+    print('error: refusing an unowned audit workspace', file=sys.stderr)
+    raise SystemExit(2)
+PYOWNED
+
 TRIPWIRE="$(lfs_tripwire_command)"
 
 bold "▸ $SCRIPT_NAME (ffmpeg: $HAVE_FFMPEG · uv: $HAVE_UV$($SKIP_THUMBS && echo ' · thumbnails skipped'))"

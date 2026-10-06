@@ -42,6 +42,9 @@ a later design can supersede them without losing the record.
 
 - **Hand-written (by the author, or filed with Claude):** `<design>.<ext>`, kebab-case, with a
   variant suffix where one design has several (`<design>-<variant>.<ext>`).
+- **Sprites:** `<sprite>-<pose>-mouth-<shape>` whole frames, or `<sprite>-<pose>` and a
+  `<sprite>-mouth-<shape>` layer at the recorded native mouth origin; shapes a–h/x. Optional
+  `<sprite>-<pose>-blink` overlays the pose. Register every art file and its scale/origin notes.
 - **Not here:** renders (`production/src/renders/`, `publishing/src/renders/`), footage
   (`production/src/footage/`).
 - **Generated (never hand-edit):** nothing here.

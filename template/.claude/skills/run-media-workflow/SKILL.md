@@ -115,7 +115,7 @@ This skill runs procedures; it never replaces one, and it never paraphrases one 
      in order and route on the first undated sub-check; a dated entry or `n/a` with its reason
      passes. Undated takes go to `production/workflows/02-make-a-voiceover/`; words or cues to
      `production/workflows/09-time-the-voice/`; stills to
-     production/workflows/10-animate-a-scene/. When all four pass but M4 is undated, return to
+     `production/workflows/10-animate-a-scene/`. When all four pass but M4 is undated, return to
      that scene procedure to review the master. These sub-checks are progress within
      `storyboarded`, not a status disagreement. For other pieces, use
      `production/workflows/02-make-a-voiceover/` where the script has generated lines,

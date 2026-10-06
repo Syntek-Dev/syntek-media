@@ -35,6 +35,10 @@ anyone touching a render.
 - **Never overwrite a list** the author approved without confirming; a rejected change is undone
   in the list, never patched in the master.
 
+- **Scene pieces:** the same `[edit]` and `[[audio]]` format, without `[[clip]]` or `[[overlay]]`.
+  Use exactly one `vo:<piece>` row with its `at` offset and no trimmed range: the joined voice
+  drives accepted timing and sound. `scene.py render` selects the edit's size/rate/loudness,
+  and each further aspect is a native render, as `production/docs/reference/scenes-as-code.md` describes.
 ## Output & naming
 
 - **Written by skills (with the author):** `<piece>.toml`, by `cut-for-platform`, named for the

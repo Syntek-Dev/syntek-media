@@ -29,6 +29,8 @@ production/src/edits/
   project has, so `assemble` on it exits 2 by design; delete it with the rest of the worked
   example once you no longer need it, and it will not come back.
 
+- A scene piece has only edit/audio tables; the scene runner shares assemble's sound mix and
+  reads the joined voice that its tracked mouth and word files describe.
 ## Cross-references
 
 - `production/workflows/03-assemble-the-master/` — the procedure that writes and assembles a list.

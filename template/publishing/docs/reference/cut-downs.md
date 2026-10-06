@@ -23,7 +23,7 @@ piece: it carries the master's lines under the master's brief, and lives only in
 | Deliverables | the `toolkit/data/platforms.toml` keys the cut is rendered for |
 | Lines | the script or transcript lines it carries, as `beat.line` ranges (`3.2–3.9`) |
 | In, Out | `HH:MM:SS.mmm` on the master, never on a recording or on another cut |
-| Frame | `centre`, `crop x=<px>` or `pad` |
+| Frame | `centre`, `crop x=<px>`, `pad`, or `native` from the scene master of that aspect |
 | Hook | the words the cut opens on |
 | Status | `planned · approved · rendered · checked` |
 
@@ -45,9 +45,9 @@ title, its caption width, whether it needs its own thumbnail, and why this momen
 
 ## Framing and safe zones
 
-- A landscape master reframed to vertical is cropped (`crop x=<px>`, the speaker kept in frame)
-  or padded (`pad`, the whole picture kept); the storyboard's Vertical framing column is the first
-  answer, and the author's eye is the last.
+- A footage master uses crop/pad, agreed from the storyboard and the author's eye. A scene
+  renders each aspect natively; list its masters, default first, and set Frame `native` from the
+  matching master. Never crop or pad the landscape scene to make its vertical picture.
 - Faces, on-screen text and captions stay inside the deliverable's `safe_zone`; a `safe_zone`
   named in its table's `verify` is unconfirmed, so leave margin and flag it.
 - A cut's length stays inside its deliverable's `max_seconds`; `media.py cut` fails its

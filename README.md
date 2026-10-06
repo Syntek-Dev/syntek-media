@@ -87,6 +87,8 @@ Media's files name each one as a companion, 'the spelling skill (syntek-author),
 
 ## Requirements
 
+Scene rendering uses the same pinned Playwright/Chromium as cards; systemd memory caps are optional.
+
 | Tool                                                   | Needed for                                                                                                                                                                                                                                                             |
 | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [uv](https://docs.astral.sh/uv/) (`uvx`)               | Running Copier without installing it (Copier 9.6.0 or newer), and `uv run toolkit/card.py`.                                                                                                                                                                            |
@@ -439,3 +441,11 @@ The renders over syntek-author and `coexist-test.sh` need a syntek-author checko
 ## Working on the template
 
 Read [`DESIGN.md`](DESIGN.md) first: it is the build contract, and where any other file disagrees with it, `DESIGN.md` wins. [`CONTEXT.md`](CONTEXT.md) maps this repository, and `.claude/CLAUDE.md` is the development manual — token discipline, how to add a skill, a mode file, a gated path, a platform or a media kind, and what to run before committing. Changes are recorded in [`CHANGELOG.md`](CHANGELOG.md).
+
+Scene pieces use `production/docs/reference/scenes-as-code.md` and
+`production/workflows/10-animate-a-scene/`: review first/middle board stills with
+`uv run toolkit/scene.py stills`, then render each aspect natively with `scene.py render`.
+The kit computes every frame in Python; Playwright draws only local brand art and indexed
+captures. `--memory-max SIZE` or user-scope `MEDIA_MEMORY_MAX` optionally caps assemble and
+scene renders under systemd with swap disabled; other runs report that they are uncapped.
+No scene command calls a generation API.

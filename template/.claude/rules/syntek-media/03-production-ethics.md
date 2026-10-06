@@ -125,8 +125,10 @@ different performance, so a lost approved take is paid for twice and never quite
 
 ## 5. AI disclosure
 
+A scene written as code animating the author's own art is `ai_visuals: assisted` in the brief.
+
 **Requirement.** A piece that uses a synthetic voice (the owner's own clone included), or
-AI-generated visuals or music, records it in its brief. At publish: (1) set each platform's AI
+AI-assisted or generated visuals or music, records it in its brief. At publish: (1) set each platform's AI
 label or toggle **exactly when that platform's current rule requires it**, recording the decision
 and the rule in the post package; (2) **always** add a disclosure line to the description, on
 every platform; (3) for a podcast, disclose in the audio and in the episode and show metadata,

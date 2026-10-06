@@ -11,7 +11,7 @@ model: opus
 
 **What it is.** A piece that uses a synthetic voice (the brand owner's own cloned voice
 included), AI-generated visuals or AI-generated music records it in its brief, in
-`synthetic_voice`, `ai_visuals` and `music`, and every post of it discloses it. The platform's own
+`synthetic_voice`, `ai_visuals` and `music`; animating the author's art is `assisted`. Every post discloses it. The platform's own
 AI label is set exactly when that platform's current rule requires it, because a label a platform
 does not ask for can mislead viewers about what is synthetic. A plain disclosure line goes in the
 description on every platform, always, because the house is more open than any one platform asks.

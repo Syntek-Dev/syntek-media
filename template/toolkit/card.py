@@ -52,6 +52,7 @@ line with why, and the last line says the self-test is incomplete. A skip is nev
 from __future__ import annotations
 
 import argparse
+from html import escape
 import re
 import struct
 import sys
@@ -174,9 +175,11 @@ class Browser:
         self.browser.close()
         self.pw.stop()
 
-    def page(self, html: Path, w: int, h: int):
+    def page(self, html: Path, w: int, h: int, variables: dict | None = None):
         """(page, blocked, failed): every http(s) request aborted and listed in blocked; every
-        local file that did not load (a missing still, font or stylesheet) listed in failed."""
+        local file that did not load (a missing still, font or stylesheet) listed in failed.
+        Optional frame variables precede page scripts without changing its source or links.
+        """
         page = self.browser.new_page(viewport={"width": w, "height": h}, device_scale_factor=1)
         blocked, failed = [], []
 
@@ -192,7 +195,24 @@ class Browser:
                 failed.append(request.url)
         page.on("requestfailed", fail)
         page.route("**/*", route)
-        page.goto(html.resolve().as_uri(), wait_until="load")
+        if variables is None:
+            page.goto(html.resolve().as_uri(), wait_until="load")
+        else:
+            # A scene's first draw needs its frame and safe zone before any page script.
+            # Keep the source intact; a base URL preserves every original relative link.
+            text = C.read_text(html)
+            head = re.search(r'<head\b[^>]*>', text, re.IGNORECASE)
+            if head is None:
+                raise C.Fatal('a page with pre-load frame variables needs a head element')
+            if any(not re.fullmatch(r'--[a-zA-Z0-9-]+', key) for key in variables):
+                raise C.Fatal('pre-load frame variables must be CSS custom properties')
+            css = ''.join(f'{key}:{escape(str(value))} !important;' for key, value in variables.items())
+            setup = f'<base href="{escape(html.resolve().as_uri())}"><style>:root{{{css}}}</style>'
+            text = text[:head.end()] + setup + text[head.end():]
+            with tempfile.TemporaryDirectory(prefix='media-page-') as folder:
+                staged = Path(folder) / 'index.html'
+                staged.write_text(text, encoding='utf-8')
+                page.goto(staged.as_uri(), wait_until='load')
         return page, blocked, failed
 
 
@@ -473,6 +493,23 @@ def self_test(nested: bool = False) -> int:
                          "fc-match is not installed to find a font file" if shutil.which("fc-match") is None
                          else "fc-match found no .ttf or .otf file to stand in for a brand font")
                 out = root / "renders" / "card.png"
+                preload = cards / '001-fixture.preload.html'
+                source = FIXTURE_CARD.replace('EXTRA', '').replace('<head>', '''<head><script>
+window.firstFrameVars = ['--frame-width','--safe-left'].map(key =>
+    getComputedStyle(document.documentElement).getPropertyValue(key).trim());
+</script>''')
+                preload.write_text(source, encoding='utf-8')
+                variables = safe_vars(None, 320, 180)
+                variables['--safe-left'] = '17px'
+                with Browser() as browser:
+                    page, blocked, failed = browser.page(preload, 320, 180, variables)
+                    got = page.evaluate('window.firstFrameVars')
+                    page.evaluate('document.fonts.ready.then(() => true)')
+                    bad = image_findings(page, failed)
+                    page.close()
+                verdict('scene frame variables precede the first page script and preserve relative brand links',
+                        got == ['320px', '17px'] and not blocked and not bad
+                        and preload.read_text(encoding='utf-8') == source, str(got) + str(bad))
                 code, text = cli("render", card, "--size", "320x180", "-o", out)
                 info = png_info(out) if out.is_file() else {}
                 verdict("render writes a PNG of exactly the size asked", code == 0 and info.get("width") == 320

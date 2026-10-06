@@ -12,7 +12,7 @@ deliverable is one line and a failed render says exactly what failed.
 
 ## How to work here
 
-- **Routing:** `cut-for-platform` runs `assemble`, `cut`, `encode`, `still-video` and `loudness`,
+- **Routing:** `cut-for-platform` runs scene stills/render, or `assemble`, `cut`, `encode`, `still-video` and `loudness`,
   web video and silent loops among them, and `feed tag` (it changes a render); `captions` runs
   `extract-audio` and every `captions` action, `captions transcript` included;
   `voiceover` runs `take add` and `footage add --kind generated`; `thumbnail-brief` runs
@@ -32,7 +32,7 @@ deliverable is one line and a failed render says exactly what failed.
   (`.claude/rules/syntek-media/05-model-allocation.md`).
 - **Concrete steps (running a command):**
   1. Run it from the repository root as `python3 toolkit/media.py …` (or `uv run toolkit/card.py
-     …`); never type the ffmpeg command it wraps, because the command carries the preset, the
+     …` or `uv run toolkit/scene.py …`); never type the ffmpeg command it wraps, because the command carries the preset, the
      overrides, the naming and the verification.
   2. Read what it printed: the probe line, every `FAIL` and every note on an unconfirmed
      (`verify`) value.
@@ -43,8 +43,9 @@ deliverable is one line and a failed render says exactly what failed.
   `data/platforms.toml` in a project.
 - **Concrete steps (changing the machinery):** describe the change and why to the author first;
   keep helper modules standard-library only; dependencies live in pinned PEP 723 scripts,
-  `card.py` and `transcribe.py`. Run `python3 toolkit/media.py --self-test`,
-  `uv run toolkit/card.py --self-test` and `python3 toolkit/transcribe.py --self-test` before and after.
+  `card.py`, `scene.py` and `transcribe.py`. Run `python3 toolkit/media.py --self-test`,
+  `uv run toolkit/card.py --self-test`, `uv run toolkit/scene.py --self-test` and
+  `python3 toolkit/transcribe.py --self-test` before and after.
 - **Concrete steps (a self-hosted podcast's feed):** `feed write` takes `--as-of` always (the
   episode's `pub_date`, the time it is uploaded): at M7 its upload copy goes to the top of
   `publishing/src/renders/`, which no piece owns; once the author reports the feed live,
@@ -89,6 +90,10 @@ deliverable is one line and a failed render says exactly what failed.
 - **Never take the whole machine.** Every ffmpeg call runs under a thread cap: `MEDIA_THREADS`
   when it is set, else every CPU but two; run one render at a time.
 
+- **Scene review:** `uv run toolkit/scene.py stills <piece> [--size WxH]` prints every first/middle
+  still path and box finding. Open each named still and agree the mouths and preview with the author.
+  `render <piece> [--size WxH] [--memory-max SIZE]` makes a native master using the shared audio mix;
+  it refuses clip/overlay rows and verifies frames, sound length and the edit's loudness target.
 ## Output & naming
 
 - **Template-owned:** every file here; `copier update` replaces them. The modules carry a usage
