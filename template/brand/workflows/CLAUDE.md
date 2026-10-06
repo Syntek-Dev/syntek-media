@@ -22,7 +22,7 @@ procedure with the same slug replaces the one here (`run-media-workflow` does th
 |---|---|
 | Set the brand's colours, type, spacing, caption style and layouts | `brand/workflows/01-set-up-the-brand-kit/` |
 | Bring a component across between the kit and Claude Design | `brand/workflows/02-sync-with-claude-design/` |
-| File a logo, cover, plate or other exported design asset | `brand/workflows/03-record-a-design-export/` |
+| File a logo, cover, plate or other exported design asset, or a revision of one; switch everything to a revision the author has approved | `brand/workflows/03-record-a-design-export/` |
 | Set up the brand's account and choices on one platform | `brand/workflows/04-set-up-a-platform/` |
 | Decide how the brand sounds aloud, who narrates, how words are said | `brand/workflows/05-write-the-spoken-voice/` |
 | Check the tools, permissions and ElevenLabs server before spending | `brand/workflows/06-check-the-setup/` |
@@ -61,6 +61,7 @@ with `CHECKLIST.md` open.
 - **Hand-written:** nothing here by the author; template procedures are template-owned and
   replaced by `copier update`. The author's procedures go in `brand/workflows/local/`.
 - **Folders:** `<NN>-<verb-first-name>/`, four files each, always.
-- **Procedures produce nothing here.** Their output lands in `brand/src/`, and a proof, through
+- **Procedures produce nothing here.** Their output lands in `brand/src/` (and, for an approved
+  export revision, in the files of other layers whose references move), and a proof, through
   `-o`, in the git-ignored `production/src/renders/proofs/<what>-DD-MM-YYYY/`, which no piece
   owns.

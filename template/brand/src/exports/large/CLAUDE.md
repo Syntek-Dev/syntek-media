@@ -33,11 +33,12 @@ Keep the brand's large exports in Git LFS, never as whole files in plain Git his
   seeds; this folder's own `.gitattributes` already does the job.
 - **Never edit `.gitattributes` here.** It is template-owned, and its three exemptions keep it
   and this pair readable as text.
-- **Never overwrite a large export.** A revision is a new file and a new row; LFS keeps every
-  version, and the quota counts them all.
+- **Never overwrite a large export.** A revision is `<design>-vN.<ext>` beside the original, which
+  stays with its row marked superseded; LFS keeps every version, and the quota counts them all.
 
 ## Output & naming
 
-- **Hand-written (by the author, or filed with Claude):** `<design>.<ext>`, kebab-case.
+- **Hand-written (by the author, or filed with Claude):** `<design>.<ext>`, kebab-case; a revision
+  is `<design>-vN.<ext>`, `N` from 2 (`brand/workflows/03-record-a-design-export/`).
 - **Template-owned:** `.gitattributes`, this pair.
 - **Generated (never hand-edit):** nothing here.

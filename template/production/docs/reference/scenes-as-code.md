@@ -40,7 +40,7 @@ pixels or `reveal` it. The character faces and points at it in the pose the auth
 ## Sprites and their mouths
 
 A sprite element takes a `Sprite(folder, name, extension, scale)`; scale is a whole number.
-Whole frames are `<sprite>-<pose>-mouth-<shape>`; shapes A–H and X use lower-case filenames.
+Whole frames are `<sprite>-<pose>-mouth-<shape>`, shapes A–H and X in lower case; a revised pose is `<pose>-vN`, filed whole, and a revised mouth layer makes a new sprite, `<sprite>-vN`.
 With `layered=True`, use `<sprite>-<pose>` plus `<sprite>-mouth-<shape>` at the native `mouth`
 origin. Optional `<sprite>-<pose>-blink` overlays blink by frame; missing blink art does not blink.
 `breathe_hold` bobs an idle sprite by one sprite pixel; `walk` names its cycle's poses.

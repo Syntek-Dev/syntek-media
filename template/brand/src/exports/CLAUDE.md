@@ -26,8 +26,9 @@ a later design can supersede them without losing the record.
 
 ## Guardrails
 
-- **Never overwrite an export.** A revised design is a new file under a new name; the old row is
-  marked superseded with the date.
+- **Never overwrite an export.** A revised design is a new file, `<design>-vN`, beside the
+  original, which stays for reference with its row marked superseded; once the author approves
+  the revision, every live reference moves to it (`brand/workflows/03-record-a-design-export/`).
 - **Over 10 MB goes in `large/`.** A large file committed here sits in plain Git for ever, in
   every clone.
 - **Every export is registered.** A file with no row in `brand/src/design-register.md` has no
@@ -41,10 +42,13 @@ a later design can supersede them without losing the record.
 ## Output & naming
 
 - **Hand-written (by the author, or filed with Claude):** `<design>.<ext>`, kebab-case, with a
-  variant suffix where one design has several (`<design>-<variant>.<ext>`).
+  variant suffix where one design has several (`<design>-<variant>.<ext>`); a revision is
+  `<design>-vN.<ext>`, `N` from 2.
 - **Sprites:** `<sprite>-<pose>-mouth-<shape>` whole frames, or `<sprite>-<pose>` and a
   `<sprite>-mouth-<shape>` layer at the recorded native mouth origin; shapes a–h/x. Optional
-  `<sprite>-<pose>-blink` overlays the pose. Register every art file and its scale/origin notes.
+  `<sprite>-<pose>-blink` overlays the pose. A revision renames the pose (`<pose>-vN`), filed
+  whole, or for a mouth layer the sprite (`<sprite>-vN`). Register every art file and its
+  scale/origin notes.
 - **Not here:** renders (`production/src/renders/`, `publishing/src/renders/`), footage
   (`production/src/footage/`).
 - **Generated (never hand-edit):** nothing here.

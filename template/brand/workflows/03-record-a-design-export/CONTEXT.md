@@ -3,8 +3,9 @@
 The short procedure for filing a design asset exported from Claude Design, or made from one: a
 logo, a cover, a background plate, a lower-third, a print file. It decides the file's folder by
 its size, makes sure Git LFS is ready before a large file goes in, names the file so nothing is
-overwritten, and writes its row in the design register with the design's link. It never edits
-the design, and it never touches footage or renders.
+overwritten, and writes its row in the design register with the design's link. When the author
+approves a revision, it moves every live reference to it and keeps the original for reference. It
+never edits the design, and it never touches footage or renders.
 
 ## Directory Tree
 
@@ -19,7 +20,8 @@ brand/workflows/03-record-a-design-export/
 ## When to use this
 
 - The author has exported a design and wants it in the repository.
-- A revised version of an earlier export replaces it.
+- A revised version of an earlier export replaces it, or the author approves a revision already
+  filed, and the files that name the original must move to it.
 - A podcast show's cover is ready, or a partner site wants an image in its own branding: both are
   exports, encoded here for their deliverables.
 - `python3 toolkit/media.py check` reports a large file outside the LFS folder, or a file in it
@@ -35,15 +37,19 @@ kit itself (`brand/workflows/01-set-up-the-brand-kit/`).
   10 MB, stored by Git LFS), under a kebab-case name no other export uses.
 - **Its row** in `brand/src/design-register.md`: design, Claude Design link, export path,
   storage, date exported, and the rights IDs of anything licensed in it.
-- **A superseded mark** on the row of any export it replaces.
+- **A superseded mark** on the row of any export it replaces; the original file stays beside its
+  revision for reference.
+- **The moved references**, once the author approves a revision: every live file that named the
+  original names the revision, and the hand-back lists what was moved and what was left.
 
 ## The failure this procedure exists to prevent
 
-A large file committed whole into plain Git, where it stays in every clone for ever, or a
-revision saved over the export a published piece still uses. The size test and the LFS check
-come before the file is added, because neither mistake can be undone by a later commit; the
-register row comes with it, because an export with no link and no date cannot be traced back to
-its design or replaced with confidence.
+A large file committed whole into plain Git, where it stays in every clone for ever; a revision
+saved over the export a published piece still uses; or an approved revision that half the brand's
+files never switch to. The size test and the LFS check come before the file is added, because
+neither of the first two mistakes can be undone by a later commit; the register row comes with it,
+because an export with no link and no date cannot be traced or replaced with confidence; and the
+references move in one listed pass, agreed with the author, so none is missed.
 
 ## Cross-references
 

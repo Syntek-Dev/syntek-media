@@ -2,7 +2,7 @@
 
 **A Copier template that adds audio and video production to a repository — brand, scripts, production and publishing layers, a small ffmpeg toolkit and a Claude Code skill suite — for a business or an author.**
 
-![Version](https://img.shields.io/badge/version-0.4.0-blue)
+![Version](https://img.shields.io/badge/version-0.4.1-blue)
 ![Template: Copier](https://img.shields.io/badge/template-copier-blue)
 
 ```bash
@@ -310,7 +310,7 @@ After a change, edit by hand the files that describe your options, because an up
 The `MissingFileWarning` about `.copier-answers.syntek-media.yml` appears on every update and is harmless.
 A project rendered from a local clone at `HEAD` (see [Generating a standalone project](#generating-a-standalone-project)) updates with `--vcs-ref=HEAD` added to the command above, until a newer release tag exists.
 
-**Migrations.** None exist at 0.4.0. When a later release moves a folder that can hold your work, or stops shipping a seed, the update will run a migration script from the template after it has written the new tree; it will move or keep your files only where exactly one outcome is right, and never overwrite or delete one.
+**Migrations.** None exist at 0.4.1. When a later release moves a folder that can hold your work, or stops shipping a seed, the update will run a migration script from the template after it has written the new tree; it will move or keep your files only where exactly one outcome is right, and never overwrite or delete one.
 
 Commit `.copier-answers.syntek-media.yml` and never edit it by hand; it is the record every future update merges against.
 

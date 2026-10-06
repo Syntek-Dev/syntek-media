@@ -14,8 +14,9 @@ card is copied from.
 ## How to work here
 
 - **Routing:** workflow `brand/workflows/01-set-up-the-brand-kit/` to change a card;
-  `brand/workflows/02-sync-with-claude-design/` to bring one across; guide
-  `brand/docs/reference/the-brand-kit.md`.
+  `brand/workflows/02-sync-with-claude-design/` to bring one across;
+  `brand/workflows/03-record-a-design-export/` to move a reference to an approved export
+  revision; guide `brand/docs/reference/the-brand-kit.md`.
 - **Model:** **Opus** for a layout change and for judging its proof; the mechanical tier for
   `card.py check` (`.claude/rules/syntek-media/05-model-allocation.md`).
 - **Concrete steps:** change one card with the author → `uv run toolkit/card.py check` on it →

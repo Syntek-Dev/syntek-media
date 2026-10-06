@@ -18,6 +18,8 @@ production/workflows/10-animate-a-scene/
 - The shot list has Type `scene` and the preceding M4 sub-checks hold.
 - The author has supplied the art and agreed the storyboard's current timing.
 - A stills or preview note has returned from the timing procedure.
+- An approved art revision moved a reference in the scene
+  (`brand/workflows/03-record-a-design-export/`), clearing `M4.stills`.
 
 ## What it produces, and where
 

@@ -23,9 +23,8 @@ not a render, which is regenerable and git-ignored, and not footage, which is li
 | 10 MB or less | `brand/src/exports/` | `git` |
 | over 10 MB | `brand/src/exports/large/` | `lfs` |
 
-`python3 toolkit/media.py check` reports any file over 10 MB that sits outside an ignored folder
-or the LFS folder, so a large export committed in the wrong place is caught before it spreads to
-every clone.
+`python3 toolkit/media.py check` reports any file over 10 MB outside an ignored folder or the LFS
+folder, so a large export in the wrong place is caught before it spreads to every clone.
 
 ## Git LFS, and the tripwire
 
@@ -42,7 +41,7 @@ every clone.
 - `media.py check` is the second guard: it reports a file marked for LFS that is stored as a
   plain blob, and one present while no LFS filter is configured.
 - The Git host's LFS storage and bandwidth are limited by plan (`VERIFY` the host's current
-  terms); keep only what pieces use, and never re-export a large file under the same name.
+  terms); file only what pieces will use, never remove a superseded original, and never reuse a name.
 
 ## The register
 
@@ -53,30 +52,31 @@ every clone.
 | Export path | the file's path from the repository root |
 | Storage | `git` or `lfs` |
 | Exported | the date it was exported, DD/MM/YYYY |
-| Notes | the rights-register ID of any font, image or music in it; 'superseded' with the date |
+| Notes | the rights-register ID of any font, image or music in it; 'superseded DD/MM/YYYY by `<new file>`' |
 
 ## How we apply it here
 
-- Never overwrite an export: a revision is a new file under a new name, with a new row, and the
-  old row is marked superseded.
+- Never overwrite an export: a revision is `<design>-vN.<ext>` beside the original, with its own
+  row; the original and its row stay, marked superseded, for reference.
+- Once the author approves a revision, and the list of files that name the original, the agreed
+  references move to it; a piece at `produced` or later and every dated record keep the original.
 - Sprite frames use `<sprite>-<pose>-mouth-<shape>` (a–h/x), or pose plus `<sprite>-mouth-<shape>`;
-  `<sprite>-<pose>-blink` is optional. Keep the native mouth origin and whole-number scale recorded.
+  `<sprite>-<pose>-blink` is optional. A revision renames the pose (`<pose>-vN`), or for a mouth
+  layer the sprite (`<sprite>-vN`), each filed whole; record its native mouth origin and scale.
 - An export that carries a licensed font, image or piece of music has its rows in
   `production/src/rights-register.md` before a piece using it is scheduled.
 - A still or logo an edit uses directly may be copied into `production/src/assets/`; the export
-  and its row stay the record.
+  and its row stay the record, and a revision's copy goes beside the old one, never over it.
 - A podcast show's cover, and an image a partner site wants in its own branding, are exports,
   encoded with `media.py image` (`podcast.cover` and `podcast.id3_cover`; the site's own key).
 
 ## Who implements it
 
-- **Workflow:** `brand/workflows/03-record-a-design-export/`.
-- **Skills:** none; the author files the export, and Claude checks it and writes its row.
+- **Workflow:** `brand/workflows/03-record-a-design-export/`; **skills:** none (the author files
+  the export; Claude checks it, writes its row and, on approval, moves the references).
 
 ## Governing standard
 
-`.claude/rules/syntek-media/04-toolkit-pipeline.md` Section 2 owns the `check` command and
-Section 4 what the toolkit needs, git-lfs for large exports among it;
-`.claude/rules/syntek-media/06-global-rules.md` Section 4 owns never overwriting an exported
-design asset. The rules own the requirements; this guide owns where an export goes and how it
-is recorded.
+`.claude/rules/syntek-media/04-toolkit-pipeline.md` Sections 2 and 4 own `check` and git-lfs; rules
+06 Section 4 owns never overwriting an export. The rules own the requirements; this guide owns where
+an export goes, how it is recorded, and how an approved revision takes the original's place.

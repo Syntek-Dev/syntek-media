@@ -14,7 +14,8 @@ brand/src/exports/
 ├── CONTEXT.md          ← this file
 ├── CLAUDE.md           ← operating rules
 ├── large/              ← exports over 10 MB, stored by Git LFS
-└── <design>.<ext>      ← one exported file, named for its design in kebab-case
+├── <design>.<ext>      ← one exported file, named for its design in kebab-case
+└── <design>-vN.<ext>   ← a revision, beside the original it supersedes
 ```
 
 ## What's here
@@ -25,6 +26,8 @@ brand/src/exports/
   `.gitattributes` marks them for Git LFS.
 - Each file's row in `brand/src/design-register.md` gives its Claude Design link, its storage
   (`git` here) and the date it was exported.
+- A revision sits beside the original it supersedes, which stays for reference and for pieces made
+  with it; the register says which file is current.
 
 - Sprite exports keep pose/mouth and optional blink names for the scene kit; whole frames or
   pose plus native mouth layer, all registered with their origin and scale notes.

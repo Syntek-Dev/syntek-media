@@ -1,17 +1,27 @@
 # Changelog
 
-**Last Updated**: 06/10/2026 **Version**: 0.4.0 **Maintained By**: Syntek Studio
+**Last Updated**: 06/10/2026 **Version**: 0.4.1 **Maintained By**: Syntek Studio
 **Language**: British English (en_GB)
 
 All notable changes to syntek-media are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D74) or section.
+Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D75) or section.
 
 ---
 
 ## [Unreleased]
+
+## [0.4.1] - 06/10/2026
+
+An approved revision of a design export now becomes the file every live reference uses, and the original stays for reference (D75). Existing projects receive the revised procedure, guides and naming rule on update; no migration, seed change, toolkit change or new Copier answer is required.
+
+**syntek-author baseline.** Not re-checked for this release: `coexist-test.sh` was not run, at the maintainer's instruction of 06/10/2026, because the release adds no path, name or shared file. The last checked baseline is syntek-author `9a65902d38e8f82d07c30fb803fa72273ef3a70a`, read on 06/10/2026 for 0.4.0. `.github/scripts/syntek-author-names.txt` is unchanged. Local checks on the release tree: `run-all.sh` passed its source audits and every render audit across twelve generated profiles, then stopped at a 25-minute time limit before its toolkit and integration steps; `toolkit-smoke.sh` then passed on the nine standalone profiles, with check 22 (WhisperX live alignment) skipped by name in each because no audit builds WhisperX, and `update-test.sh` passed for all three brand kinds. Skipped checks are not counted as passes.
+
+### Changed
+
+- **Export revisions take over every live reference once approved** (DESIGN.md D75; approved 06/10/2026). A revision is `<design>-vN.<ext>` beside the original, which keeps its file and its row for reference; the revision's row says 'awaiting approval' until the author approves it, and only then is the original's row marked superseded. `brand/workflows/03-record-a-design-export/` asks whether the author approves now or later, gives a later approval its own route, and gains a step that lists every file naming the original, shows the author which move and which stay, and moves only what they agree: layouts and cards, project guides, the rights row (extended only where its permission covers the revision, otherwise a new `needed` row), current notes in `.claude/MEMORY.md` (superseded by new dated bullets), and the files and asset copies of pieces before `produced` (real indexes made again through `-o`, never hand-edited). Moving a scene piece's art clears `M4.stills`; pieces at `produced` or later and dated records keep the original; moved layouts and cards pass `card.py check`; the hand-back lists what moved, what stayed and every gate cleared. A sprite revision is filed whole: a revised pose becomes `<pose>-vN`, and a revised mouth layer renames the sprite (`<sprite>-vN`). The design-exports guide, the exports and large-exports operating files, the brand workflow index, the design-system routing, naming rule 08, `scenes-as-code.md` and `production/workflows/10-animate-a-scene/` say so.
 
 ## [0.4.0] - 06/10/2026
 

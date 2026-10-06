@@ -43,7 +43,7 @@ in files the toolkit and the skills can read without asking again.
 - **One sentence per line** in every Markdown file here, applied when a paragraph is edited,
   never by mass reflow (`.claude/rules/syntek-media/06-global-rules.md` Section 5).
 - **Registers are append-only.** A replaced export keeps its row, marked superseded with the
-  date.
+  date, and its file stays beside the revision for reference.
 - **A platform's facts are not the brand's choices.** Sizes, limits and labels live in
   `toolkit/data/platforms.toml`; a confirmed correction is an override, never an edit to that
   template-owned file.

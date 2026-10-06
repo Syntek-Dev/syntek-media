@@ -14,8 +14,9 @@ Design can sync, so a brand change is made once and every later piece follows.
 ## How to work here
 
 - **Routing:** workflow `brand/workflows/01-set-up-the-brand-kit/` for any change to the kit;
-  `brand/workflows/02-sync-with-claude-design/` to bring a component across; guide
-  `brand/docs/reference/the-brand-kit.md`.
+  `brand/workflows/02-sync-with-claude-design/` to bring a component across;
+  `brand/workflows/03-record-a-design-export/` to move a reference to an approved export
+  revision; guide `brand/docs/reference/the-brand-kit.md`.
 - **Model:** **Opus** for every token and layout decision and for judging a proof; the
   mechanical tier for running `media.py tokens` and `card.py check`
   (`.claude/rules/syntek-media/05-model-allocation.md`).

@@ -15,7 +15,7 @@ brand/workflows/
 ├── CLAUDE.md                       ← operating rules and the 'You want to…' index
 ├── 01-set-up-the-brand-kit/        ← tokens, fonts and the two layout components, settled and checked
 ├── 02-sync-with-claude-design/     ← one component at a time, between the kit and its design project
-├── 03-record-a-design-export/      ← an exported asset filed by size, stored right and registered
+├── 03-record-a-design-export/      ← an exported asset filed by size, stored right and registered; an approved revision takes over its references
 ├── 04-set-up-a-platform/           ← a platform profile: the account, the deliverables, the choices
 ├── 05-write-the-spoken-voice/      ← the spoken style, a narrator for each use, pronunciations
 ├── 06-check-the-setup/             ← tools, permissions, Git LFS and ElevenLabs, before the first spend
