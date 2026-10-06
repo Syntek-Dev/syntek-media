@@ -66,6 +66,7 @@ Grouped by what each script reads:
   extension, the silent loop and web video, the podcast feed end to end offline on a fixture show,
   and the published transcript (checks 15–19), plus offline voice preparation and the Git-clean
   timing overwrite guard (checks 20 and 23), known-word alignment and captions from words (22),
+  real-source asset hashes and offline footage-image metadata, with video/sound refusals (24),
   native Rhubarb mouth cues (21), and optional/broken WhisperX and Rhubarb setup checks (26). No audit fetches models or builds WhisperX; live alignment needs
   a prepared user interpreter or SKIPs by name. Check 27 observes ffmpeg in the requested
   systemd memory scope, requires zero swap and checks the uncapped note; scope-dependent cases

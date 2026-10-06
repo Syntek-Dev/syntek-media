@@ -21,7 +21,7 @@ production/
 │   ├── .gitignore              ← keeps renders, the footage mirror and generated audio out of Git
 │   ├── credits-log.md          ← seed: one row per credit-spending call
 │   ├── rights-register.md      ← seed: every licence, release and consent a piece relies on
-│   ├── assets/                 ← small committed stills, logos and graphics
+│   ├── assets/                 ← small committed images and text captures
 <: if 'audiobook' in MEDIA_KINDS :>│   ├── audiobook/              ← a chapter register per audiobook; generated/ and renders/ ignored
 <: endif :>│   ├── cards/                  ← title and end cards, copied from the brand's card component
 │   ├── edits/                  ← one edit decision list per piece

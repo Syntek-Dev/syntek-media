@@ -94,6 +94,13 @@ deliverable is one line and a failed render says exactly what failed.
   still path and box finding. Open each named still and agree the mouths and preview with the author.
   `render <piece> [--size WxH] [--memory-max SIZE]` makes a native master using the shared audio mix;
   it refuses clip/overlay rows and verifies frames, sound length and the edit's loudness target.
+- **Scene sources:** `real <piece>` reads the shot-list Source column, excluding the scene file.
+  It hashes named assets, uses footage-image metadata without opening the mirror, and prints
+  findings for missing sources, video or sound. Accept a clean index with
+  `-o production/src/scenes/<piece>.real.json`; existing tracked copies must be Git-clean.
+- **Capture recovery:** cards and scenes retry Chromium's specific capture failure twice on
+  the same page, without advancing a scene frame; exhaustion or another browser error exits 2.
+
 ## Output & naming
 
 - **Template-owned:** every file here; `copier update` replaces them. The modules carry a usage

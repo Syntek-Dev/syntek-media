@@ -22,7 +22,7 @@ toolkit/
 ├── media_video.py      ← assemble, cut, encode, frame, still-video
 ├── media_audio.py      ← extract-audio, loudness, audiobook, take add, voice plans, join, timing
 ├── media_captions.py   ← captions (check, from-segments, align, retime, rewrap, vtt, transcript, burn) and script time
-├── media_repo.py       ← footage, tokens, flags, check, where
+├── media_repo.py       ← footage, real sources, tokens, flags, check, where
 ├── media_image.py      ← image, and the GIF pass of cut (a newsletter's preview GIF)
 ├── media_scene.py     ← deterministic frame timing, native mouth sampling and safe zones
 ├── media_feed.py       ← feed: a self-hosted podcast's register, RSS feed, chapters and file tags
@@ -38,7 +38,7 @@ toolkit/
 - `media.py` — **the only entry point.** Every render, check and register write goes through
   `python3 toolkit/media.py <command>`: probe, presets, script time, assemble, cut, encode, frame,
   image, still-video, extract-audio, captions, loudness, audiobook, take add, speak plan, voice join,
-  levels, transcribe, lipsync, feed, footage,
+  levels, transcribe, lipsync, cues, real, feed, footage,
   tokens, flags, where and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
   shapes Playwright and VHS write (WebM, MP4, animated GIF, none with sound), SRT, TOML, a show
   register and a git repository at run time and exercises every module; a probe that needs
@@ -77,6 +77,10 @@ toolkit/
 - **Cue index:** `media.py cues <piece>` connects tracked words to beats, boards, lines and
   delivery/SFX/music events. Effect/music events take their source and mix from audio rows
   linked by `cue`; it prints enclosing MM:SS boards and exact seconds, then accepts JSON through `-o`.
+- **Real-source index:** `media.py real <piece>` hashes shot-list assets and text captures and
+  uses a footage image's manifest hash without opening the mirror. It prints names, hashes and
+  findings, writes working JSON in the piece's timing folder, and accepts the tracked index
+  through `-o`; video and sound are findings. Sources are never copied or searched for.
 - `scene.py` runs the tracked scene with `runpy.run_path`, writes its page afresh and uses one
   browser for stills or a native master. `media_scene.py` computes frame state in Python, including
   sprite mouths, movement and anchor responses. Still paths and box findings are printed for review.

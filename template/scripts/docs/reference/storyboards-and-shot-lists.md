@@ -35,7 +35,7 @@ hole in the master. A piece with no picture, or a recorded one, has neither, and
 `shot-list.md`, beside it: `| Shot | Board | Type | Source | Framing | Seconds | Status | Rights |`.
 Shots are `S01`, `S02` …, each naming its board. Type is
 `camera · screen · stock · still · card · colour · generated · scene`. Source is a footage ID (`F0007`),
-an asset under `production/src/assets/`, a card under `production/src/cards/`, a colour
+an image or text capture under `production/src/assets/` (`.txt`, `.ansi`, `.html`), a card under `production/src/cards/`, a colour
 `#RRGGBB`, `production/src/scenes/<piece>.scene.py` for a scene, or `to shoot`. Status moves `needed · captured · logged · cleared`; Rights is a
 rights-register ID, or `—` where nothing needs clearing.
 
@@ -61,7 +61,7 @@ voice or likeness needs recorded consent. Production clears rights; boarding rec
 - A generated picture is typed `generated` and must agree with the brief's `ai_visuals`; if it
   does not, the brief's disclosure plan changes first, with the author.
 - Every board of a scene piece is Type `scene`; its other sources are images or text captures,
-  never recorded video inside a scene. The brief records `ai_visuals: assisted`.
+  never recorded video inside a scene; index them with `media.py real <piece>` and accept through `-o`. The brief records `ai_visuals: assisted`.
 - After voice timing, `media.py cues <piece>` prints the table; accept the cue index with `-o`
   in `production/src/scenes/`, through `production/workflows/09-time-the-voice/`.
 - Re-time Time and shot Seconds or timing-only notes: raise `version`, keep approval and M3,

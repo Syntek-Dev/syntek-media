@@ -39,6 +39,7 @@ Usage:
     python3 toolkit/media.py transcribe fetch
     python3 toolkit/media.py lipsync PIECE [-o FILE]
     python3 toolkit/media.py cues PIECE [-o FILE]
+    python3 toolkit/media.py real PIECE [-o FILE]
     python3 toolkit/media.py feed new SHOW --feed-url URL [--site SLUG] [--rekey]
     python3 toolkit/media.py feed add SHOW --piece PIECE
     python3 toolkit/media.py feed tag SHOW --piece PIECE
@@ -377,6 +378,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('piece')
     out(p, 'the cues JSON path (default: production/src/renders/<piece>/timing/<piece>.cues.json)')
     p.set_defaults(func=K.cmd_cues)
+
+    p = sub.add_parser('real', help='index shot-list images and text captures; never open the footage mirror')
+    p.add_argument('piece')
+    out(p, 'the real JSON path (default: production/src/renders/<piece>/timing/<piece>.real.json)')
+    p.set_defaults(func=R.cmd_real)
 
     p = sub.add_parser("captions", help="check, from-segments, from-words, align, retime, rewrap, vtt, transcript, burn")
     cs = p.add_subparsers(dest="sub", metavar="action")
@@ -918,6 +924,8 @@ def self_test() -> int:
             groups.append(('eight- and nine-column storyboard input', lambda: test_storyboards(verdict, root)))
             groups.append(('cue index, script events and audio cue links',
                            lambda: test_cues(verdict, cli, root, have_git)))
+            groups.append(('real source hashes, metadata and tracked-output guards',
+                           lambda: test_real(verdict, cli, have_git)))
             groups.append(("offline voice plans and tracked timing guards",
                            lambda: test_voice_plan(verdict, skip, cli, root, have_git)))
             groups.append(('word alignment logic and captions from words',
@@ -954,6 +962,123 @@ def self_test() -> int:
         return 1
     print("self-test passed")
     return 0
+
+
+def test_real(verdict, cli, have_git: bool) -> None:
+    """D69: named assets and offline footage metadata, with the approved source schema."""
+    saved_root = C.ROOT
+    with tempfile.TemporaryDirectory(prefix='media-real-test-') as temp:
+        root = Path(temp) / 'project'
+        C.ROOT = root
+        piece = '923-real-fixture'
+        shot = root / C.PIECES / piece / 'shot-list.md'
+        default = root / C.PROD_RENDERS / piece / 'timing' / f'{piece}.real.json'
+        tracked = root / C.SCENES / f'{piece}.real.json'
+        asset = write(root / C.ASSETS / 'real-image.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2"/></svg>')
+        captures = [write(root / C.ASSETS / ('real-capture' + ext), 'ready\n')
+                    for ext in ('.txt', '.ansi', '.html')]
+        manifest = write(root / C.MANIFEST, ''.join(
+            f'[[file]]\nid="{fid}"\npath="raw/{name}"\nkind="{kind}"\nduration={seconds}\nsha256="' + 'b' * 64 + '"\n'
+            for fid, name, kind, seconds in (('F0401', 'offline.png', 'image', 0.0),
+                ('F0402', 'video.mp4', 'video', 1.0), ('F0403', 'sound.wav', 'audio', 0.0),
+                ('F0404', 'moving.gif', 'image', 1.0))))
+        def shots(sources):
+            write(shot, '| Shot | Board | Type | Source | Framing | Seconds | Status | Rights |\n'
+                  '|------|-------|------|--------|---------|---------|--------|--------|\n' +
+                  ''.join(f'| S{i:02d} | b01 | still | {source} | native | 1 | cleared | — |\n'
+                          for i, source in enumerate(sources, 1)))
+        def indexed(): return json.loads(default.read_text(encoding='utf-8'))
+        wanted = [f'{C.SCENES}/{piece}.scene.py', str(asset.relative_to(root)),
+                  *(str(p.relative_to(root)) for p in captures), 'F0401', str(asset.relative_to(root))]
+        try:
+            shots(wanted)
+            before = {p: p.read_bytes() for p in (shot, asset, manifest, *captures)}
+            code, text = cli('real', piece)
+            data = indexed()
+            verdict('real hashes assets and all three text capture formats in the approved schema',
+                    code == 0 and data['piece'] == piece and len(data['sources']) == 5 and
+                    data['sources'][0] == {'source': str(asset.relative_to(root)), 'kind': 'image',
+                       'path': str(asset.relative_to(root)), 'sha256': R.sha256(asset)} and
+                    all(r['kind'] == 'text' and r['sha256'] == R.sha256(p)
+                        for r, p in zip(data['sources'][1:4], captures)), text)
+            verdict('real uses the footage manifest hash without opening an absent mirror',
+                    data['sources'][4] == {'source': 'F0401', 'kind': 'image',
+                      'path': C.RAW + '/offline.png', 'sha256': 'b' * 64} and not (root / C.RAW).exists(), text)
+            verdict('real skips the scene file, deduplicates sources and changes no input',
+                    all(p.read_bytes() == held for p, held in before.items()) and
+                    'ready\n' not in text and 'SHA-256' in text and not tracked.exists(), text)
+            absent = root / C.ASSETS / 'real-output-source.txt'
+            shots([str(absent.relative_to(root))])
+            alias, text = cli('real', piece, '-o', absent)
+            shots(['F0401'])
+            mirror_alias, _ = cli('real', piece, '-o', root / C.RAW / 'offline.png')
+            verdict('real refuses an output that is also a missing asset or footage source',
+                    (alias, mirror_alias) == (2, 2) and not absent.exists()
+                    and not (root / C.RAW).exists(), text)
+            shots(['production/src/assets/absent.txt', 'F9999'])
+            code, text = cli('real', piece)
+            verdict('real reports missing assets and footage IDs as findings',
+                    code == 1 and 'missing' in text and indexed()['sources'] == [], text)
+            shots(['F0402', 'F0403', 'F0404'])
+            code, text = cli('real', piece)
+            verdict('real refuses footage video, sound and moving images as findings',
+                    code == 1 and text.count('not video or sound') == 3 and indexed()['sources'] == [], text)
+            bad = [write(root / C.ASSETS / ('real-bad' + ext), 'not a capture')
+                   for ext in ('.log', '.out', '.mp4')]
+            big = root / C.ASSETS / 'real-large.txt'
+            with big.open('wb') as stream: stream.seek(R.LARGE); stream.write(b'x')
+            shots([*(str(p.relative_to(root)) for p in bad), str(big.relative_to(root)),
+                   'production/src/assets/../footage/raw/offline.png', str(asset)])
+            code, text = cli('real', piece)
+            verdict('real refuses unsupported captures, large assets and paths outside assets',
+                    code == 1 and '10 MB' in text and indexed()['sources'] == [], text)
+            gif = write(root / C.ASSETS / 'real-moving.gif', 'runtime stand-in')
+            webp = root / C.ASSETS / 'real-moving.webp'
+            webp.write_bytes(b'RIFF' + b'\0' * 4 + b'WEBPVP8X' + b'\0' * 4 + b'\x02')
+            frames = C.image_frames
+            try:
+                C.image_frames = lambda p, info=None: 2 if Path(p) == gif else frames(p, info)
+                shots([str(gif.relative_to(root)), str(webp.relative_to(root))])
+                code, text = cli('real', piece)
+                verdict('real rejects animated assets using the existing moving-image classification',
+                        code == 1 and text.count('moving media') == 2 and indexed()['sources'] == [], text)
+            finally: C.image_frames = frames
+            shots(wanted)
+            if have_git:
+                def git(*args):
+                    return C.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.com',
+                                  *args], cwd=root, what='real fixture git')
+                git('init', '-q')
+                write(root / '.gitignore', '/production/src/renders/\n')
+                first, _ = cli('real', piece, '-o', tracked)
+                git('add', '.'); git('commit', '-q', '-m', 'real fixture')
+                old = tracked.read_bytes()
+                asset.write_text('<svg xmlns="http://www.w3.org/2000/svg"/>', encoding='utf-8')
+                code, text = cli('real', piece, '-o', tracked)
+                verdict('real replaces only its committed unchanged tracked index through -o',
+                        first == 0 and code == 0 and tracked.read_bytes() != old and
+                        json.loads(tracked.read_text())['sources'][0]['sha256'] == R.sha256(asset), text)
+                dirty = tracked.read_bytes()
+                refused, text = cli('real', piece, '-o', tracked)
+                git('add', str(tracked.relative_to(root)))
+                staged, _ = cli('real', piece, '-o', tracked)
+                other = write(root / C.SCENES / 'other.json', '{}')
+                other_code, _ = cli('real', piece, '-o', other)
+                fresh_piece = '924-real-untracked'
+                write(root / C.PIECES / fresh_piece / 'shot-list.md', shot.read_text())
+                untracked = write(root / C.SCENES / f'{fresh_piece}.real.json', '{}')
+                untracked_code, _ = cli('real', fresh_piece, '-o', untracked)
+                C.ROOT = Path(temp) / 'outside'
+                outside = write(C.ROOT / C.SCENES / f'{piece}.real.json', '{}')
+                write(C.ROOT / C.PIECES / piece / 'shot-list.md', shot.read_text())
+                outside_code, _ = cli('real', piece, '-o', outside)
+                C.ROOT = root
+                verdict('real protects dirty, staged, untracked, outside-Git and other existing outputs',
+                        (refused, staged, other_code, untracked_code, outside_code) == (2, 2, 2, 2, 2)
+                        and tracked.read_bytes() == dirty and other.read_text() == '{}'
+                        and untracked.read_text() == '{}' and outside.read_text() == '{}', text)
+        finally:
+            C.ROOT = saved_root
 
 
 def cli_split(*argv):

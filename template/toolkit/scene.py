@@ -135,7 +135,7 @@ def cmd_stills(args) -> int:
                         found = box_findings(boxes, width, height, S.safe_zone(width, height, scene.tables))
                         found += page_findings(page, blocked, failed)
                         out = folder / f'{scene.piece}.{name}{suffix}.{width}x{height}.png'
-                        page.screenshot(path=str(out), full_page=False)
+                        browser.capture(page, path=str(out), full_page=False)
                         report['stills'].append({'board': name, 'size': f'{width}x{height}', 'frame': frame,
                                                 'path': out.relative_to(C.ROOT).as_posix(), 'boxes': boxes, 'findings': found})
                         print(f'wrote {C.shown(out)}; frame {frame}')
@@ -191,7 +191,7 @@ def cmd_render(args) -> int:
                         if current:
                             for finding in current:
                                 if finding not in findings: findings.append(finding)
-                        yield page.screenshot(type='png', full_page=False)
+                        yield browser.capture(page, type='png', full_page=False)
                 C.stream_run(command, frames(), cwd=C.ROOT, what='scene frame encoder')
             finally: page.close()
         filters = []

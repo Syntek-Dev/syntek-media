@@ -70,7 +70,8 @@ are the procedure of record — do not restate them at length here.
 
 2. **Write the edit decision list with the author.** If the shot list has Type `scene`, follow
    `production/workflows/10-animate-a-scene/` instead of the clip/card/assemble steps below: index
-   sources with `real` through `-o`, write the tracked scene, review every printed still and the
+   sources with `python3 toolkit/media.py real <piece>`; fix its printed findings and accept with
+   `-o production/src/scenes/<piece>.real.json`. Write the tracked scene, review every printed still and the
    preview with the author, then render native masters. Keep ordered M4 sub-checks; Timing notes
    return through `production/workflows/09-time-the-voice/`. The scene edit has audio rows only,
    its joined voice driving both mouths and sound. Link SFX/MUSIC event IDs through `cue`.

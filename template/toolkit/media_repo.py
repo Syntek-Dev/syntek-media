@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""media_repo.py: source media, tokens, flags, where and the repository guard for media.py.
+"""media_repo.py: source media, real sources, tokens, flags, where and the repository guard for media.py.
 
-Not run directly: python3 toolkit/media.py footage …, tokens, flags, where and check call it,
+Not run directly: python3 toolkit/media.py footage …, real, tokens, flags, where and check call it,
 and media.py's self-test exercises it.
 
 Source media (DESIGN D19, D46, D52): every recorded or licensed source file, music beds and
@@ -390,6 +390,96 @@ def cmd_where(args) -> int:
         folder = C.piece_folder(top, piece)
         print(f"  {f'{top}/{piece}/':<{width}}  {'exists' if folder.is_dir() else 'absent'}")
     return 0
+
+
+# ── real sources ────────────────────────────────────────────────────────────────────────
+
+def cmd_real(args) -> int:
+    """D69, D66: index named scene sources, using footage metadata without opening raw/."""
+    piece = piece_name(args.piece, 'PIECE')
+    shot = C.path(C.PIECES) / piece / 'shot-list.md'
+    default = C.piece_folder(C.PROD_RENDERS, piece, 'timing') / f'{piece}.real.json'
+    out = Path(args.o) if args.o else default
+    lines = C.read_text(shot).splitlines()
+    first, last = C.find_table(lines, ('Shot', 'Board', 'Type', 'Source'))
+    if first is None:
+        raise C.Fatal(f'{C.shown(shot)} needs the shot-list table with its Source column')
+    headers = C.split_row(lines[first])
+    sources, findings, seen = [], [], set()
+    manifest = None
+    images = C.IMAGE_EXT | {'.svg'}
+    text_formats = {'.txt', '.ansi', '.html'}
+    scene_file = f'{C.SCENES}/{piece}.scene.py'
+    for number in range(first + 2, last + 1):
+        cells = C.split_row(lines[number])
+        if len(cells) != len(headers):
+            raise C.Fatal(f'{C.shown(shot)}:{number + 1}: shot row has the wrong number of cells')
+        source = cells[3].strip('`').strip()
+        if source == scene_file or source in seen:
+            continue
+        seen.add(source)
+        label = f'{cells[0]}: {source or "empty Source"}'
+        if re.fullmatch(r'F\d{4,}', source):
+            if manifest is None:
+                manifest = manifest_rows(C.path(C.MANIFEST)) if C.path(C.MANIFEST).is_file() else []
+            matches = [r for r in manifest if r.get('id') == source]
+            if len(matches) != 1:
+                findings.append(label + ': footage ID is missing or repeated in the manifest')
+                continue
+            row = matches[0]
+            relative = Path(str(row.get('path', '')))
+            duration = row.get('duration')
+            digest = str(row.get('sha256', '')).lower()
+            if relative.suffix.lower() not in images or isinstance(duration, bool) or duration != 0.0:
+                findings.append(label + ': a scene needs an image, not video or sound')
+                continue
+            if relative.is_absolute() or '..' in relative.parts or relative.parts[:1] != ('raw',) \
+                    or not re.fullmatch(r'[a-f0-9]{64}', digest):
+                findings.append(label + ': image manifest needs its relative raw path and SHA-256')
+                continue
+            # Do not resolve, stat, probe or hash this path: the mirror may be offline.
+            path = (Path(C.FOOTAGE) / relative).as_posix()
+            if os.path.abspath(out) == os.path.abspath(C.path(path)):
+                raise C.Fatal('the real index output is also a source; nothing written')
+            sources.append({'source': source, 'kind': 'image', 'path': path, 'sha256': digest})
+        else:
+            relative = Path(source)
+            if relative.is_absolute() or '..' in relative.parts \
+                    or relative.parts[:len(Path(C.ASSETS).parts)] != Path(C.ASSETS).parts:
+                findings.append(label + ': name an image or text capture under production/src/assets/')
+                continue
+            asset = C.path(relative.as_posix())
+            if not asset.resolve().is_relative_to(C.path(C.ASSETS).resolve()):
+                findings.append(label + ': the asset points outside production/src/assets/')
+                continue
+            if asset.resolve() == out.resolve():
+                raise C.Fatal('the real index output is also a source; nothing written')
+            if not asset.is_file():
+                findings.append(label + ': named source is missing')
+                continue
+            extension = relative.suffix.lower()
+            if extension not in images | text_formats:
+                findings.append(label + ': a scene needs an image or .txt, .ansi or .html capture')
+                continue
+            if asset.stat().st_size > LARGE:
+                findings.append(label + ': asset exceeds the 10 MB limit; use footage add')
+                continue
+            if (extension == '.webp' and C.webp_animated(asset)) \
+                    or (extension in C.IMAGE_EXT and not C.is_still(asset)):
+                findings.append(label + ': moving media is not a scene image')
+                continue
+            sources.append({'source': source, 'kind': 'text' if extension in text_formats else 'image',
+                            'path': relative.as_posix(), 'sha256': sha256(asset)})
+    data = {'piece': piece, 'sources': sources}
+    out = C.output_path(default, args.o, inputs=(shot, C.path(C.MANIFEST)),
+                        tracked_timing=(piece, 'real.json'))
+    C.replace_file(out, (json.dumps(data, ensure_ascii=False, indent=2, allow_nan=False) + '\n').encode())
+    for row in sources:
+        print(f'  {row["source"]}: {row["kind"]} {row["path"]}; SHA-256 {row["sha256"]}')
+    for finding in findings:
+        print('  FAIL ' + finding)
+    print(f'wrote {C.shown(out)}; {len(sources)} real source(s), {len(findings)} finding(s)')
+    return int(bool(findings))
 
 
 # ── check ───────────────────────────────────────────────────────────────────────────────

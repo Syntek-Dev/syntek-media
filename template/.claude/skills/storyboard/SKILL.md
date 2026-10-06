@@ -103,10 +103,11 @@ The mode file adds this project's kinds of picture, its sources and its domain r
    table `| Shot | Board | Type | Source | Framing | Seconds | Status | Rights |`, one row per
    shot, numbered `S01` onwards, every board row covered by at least one shot. Type is one of
    `camera`, `screen`, `stock`, `still`, `card`, `colour`, `generated` or `scene`. Source is a footage ID
-   from the manifest (`F0007`), an asset under `production/src/assets/`, a card under
+   from the manifest (`F0007`), an image or text capture under `production/src/assets/`, a card under
    `production/src/cards/` named `<piece>.<card>.html` (made later from the brand's card layout), a
    colour as `#RRGGBB`, `production/src/scenes/<piece>.scene.py`, or `to shoot`. Every board
-   of a scene piece is Type `scene`; other sources are images or text captures, never video.
+   of a scene piece is Type `scene`; other sources are images or `.txt`, `.ansi`, `.html` captures,
+   never video or sound. `cut-for-platform` accepts their hashes with `real` through `-o`.
    Its brief records `ai_visuals: assisted`. Seconds is set for stills, cards and colour clips. Status is
    `needed`, `captured`, `logged` or `cleared`. Never take an image, a clip or a track from the web
    because it is only a draft. Apply the mode file's additions.

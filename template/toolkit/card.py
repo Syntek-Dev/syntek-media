@@ -175,6 +175,18 @@ class Browser:
         self.browser.close()
         self.pw.stop()
 
+    def capture(self, page, **options):
+        """Capture the same page; retry only Chromium's transient capture failure twice."""
+        for attempt in range(3):
+            try:
+                return page.screenshot(**options)
+            except self.Error as err:
+                message = str(err)
+                transient = 'Page.captureScreenshot' in message and 'Unable to capture screenshot' in message
+                if not transient or attempt == 2:
+                    raise C.Fatal('Chromium could not capture the page: ' + message.splitlines()[0]) from None
+                print(f'note: retrying Chromium capture on the same page ({attempt + 1}/2)', file=sys.stderr)
+
     def page(self, html: Path, w: int, h: int, variables: dict | None = None):
         """(page, blocked, failed): every http(s) request aborted and listed in blocked; every
         local file that did not load (a missing still, font or stylesheet) listed in failed.
@@ -279,7 +291,7 @@ def render(html: Path, w: int, h: int, table, transparent: bool, out: Path) -> t
         fonts = page.evaluate(LOAD_FONTS)
         found += image_findings(page, failed)
         got["play-button"] = page.evaluate(PLAY_BUTTON)
-        page.screenshot(path=str(out), omit_background=transparent, full_page=False)
+        b.capture(page, path=str(out), omit_background=transparent, full_page=False)
         page.close()
     for url in blocked:
         found.append(f"requested {url} over the network (aborted): a layout loads only local files")
@@ -420,6 +432,37 @@ html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
 """
 
 
+def test_capture(verdict) -> None:
+    """Recovery neither redraws a scene nor hides permanent or unrelated browser failures."""
+    class CaptureError(Exception):
+        pass
+    class Page:
+        def __init__(self, errors):
+            self.errors, self.calls, self.frame = list(errors), [], 17
+        def screenshot(self, **options):
+            self.calls.append((self.frame, options))
+            if self.errors: raise CaptureError(self.errors.pop(0))
+            return b'captured'
+    browser = Browser()
+    browser.Error = CaptureError
+    transient = 'Page.screenshot: Protocol error (Page.captureScreenshot): Unable to capture screenshot'
+    page = Page([transient, transient])
+    captured = browser.capture(page, type='png', full_page=False)
+    verdict('a transient Chromium capture retries twice on the same frame with unchanged options',
+            captured == b'captured' and page.calls == [(17, {'type': 'png', 'full_page': False})] * 3)
+    page = Page([])
+    browser.capture(page, type='png')
+    verdict('a successful capture is attempted only once', len(page.calls) == 1)
+    for label, errors, count in (
+            ('an exhausted capture becomes could-not-run after three attempts', [transient] * 3, 3),
+            ('an unrelated browser error becomes could-not-run without a retry', ['Target closed'], 1)):
+        page = Page(errors)
+        could_not_run = False
+        try: browser.capture(page, type='png')
+        except C.Fatal: could_not_run = True
+        verdict(label, could_not_run and len(page.calls) == count and page.frame == 17)
+
+
 def self_test(nested: bool = False) -> int:
     """Prove the PNG reader, the safe zone, rendering and the layout check on runtime fixtures,
     and that a part which cannot run is named SKIP and exits 2, never passed. nested: a run the
@@ -448,6 +491,7 @@ def self_test(nested: bool = False) -> int:
         return code, out.getvalue()
 
     print("card.py --self-test")
+    test_capture(verdict)
     saved_root = C.ROOT
     with tempfile.TemporaryDirectory(prefix="card-self-test-") as tmp:
         root = Path(tmp)

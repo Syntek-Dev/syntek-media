@@ -17,7 +17,7 @@ production/src/
 ├── .gitignore              ← keeps renders, the footage mirror and generated audio out of Git
 ├── credits-log.md          ← seed: one row per credit-spending call, written as the call is made
 ├── rights-register.md      ← seed: every licence, release and consent, RR0001 onwards
-├── assets/                 ← small committed stills, logos and graphics, under 10 MB each
+├── assets/                 ← small committed images and text captures, under 10 MB each
 <: if 'audiobook' in MEDIA_KINDS :>├── audiobook/              ← <piece>.md chapter registers; generated/ and renders/ (README only)
 <: endif :>├── cards/                  ← <piece>.<card>.html title and end cards from the brand's component
 ├── edits/                  ← <piece>.toml edit decision lists, from which masters are assembled
@@ -42,7 +42,7 @@ production/src/
 - `production/src/timing/` and `production/src/scenes/` — a piece's tracked timing (its words,
   the words check and its mouth cues) and a scene piece's cue index, real index and scene file:
   flat under the piece's name, each tool-written file reaching here only through `-o`.
-- `production/src/assets/` — small stills, logos and graphics, committed.
+- `production/src/assets/` — small images and text captures, committed; captures have home paths and host names removed.
 - `production/src/renders/` — git-ignored and regenerable, a folder per piece: its masters, its
   joined voice, its extracts, its card PNGs and the working copies of its timing and scene files;
   at the top only what no piece owns (an extract of a footage file, and brand-kit proofs, each

@@ -15,7 +15,7 @@
 #                    ElevenLabs call: a "take" is a tone or a few fake bytes, and the toolkit's
 #                    handling of the files around a call is what is proved (credits).
 #
-#                    Twenty-eight checks, per render: 1–28 (24 gains `real` when it arrives).
+#                    Twenty-eight checks, per render: 1–28.
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
 #                         exercises the media_*.py modules, card.py and transcribe.py). A self-test reads only
 #                         the toolkit, so one result serves every render whose toolkit/ is
@@ -156,6 +156,8 @@
 #                         them, names its three ignored per-piece folders, each existing or
 #                         absent, and never names anything inside them (D50, D64); a name with
 #                         no piece folder is exit 2.
+#                         `real` hashes named assets and reads offline footage-image metadata;
+#                         unsupported sources and unsafe outputs are refused.
 #                         `cues` retains separate word/line/beat/board lists, exact seconds and
 #                         enclosing MM:SS, delivery anchors and SFX/music audio links; unmatched
 #                         rows and links are findings, invalid data and author edits are refused.
@@ -729,6 +731,7 @@ SHIM
   # ── 24. where ──
   smoke_where
   smoke_cues
+  smoke_real
   smoke_timing
   smoke_lipsync
   if $HAVE_FFMPEG; then smoke_voice
@@ -1879,6 +1882,45 @@ PYCODE
   rec cues.status "$st"
 }
 
+# ── 24. real-source assets and offline footage metadata ──
+smoke_real() {
+  local st=0
+  PYTHONDONTWRITEBYTECODE=1 python3 - "$T" "$OUT" "$RESULTS" \
+    >"$OUT/real-fixture.log" 2>&1 <<'PYREAL' || st=$?
+import sys
+from pathlib import Path
+root, out, receipt = map(Path, sys.argv[1:4])
+sys.path.insert(0, str(root / 'toolkit'))
+import media as M
+labels = dict(zip((
+ 'real hashes assets and all three text capture formats in the approved schema',
+ 'real uses the footage manifest hash without opening an absent mirror',
+ 'real skips the scene file, deduplicates sources and changes no input',
+ 'real refuses an output that is also a missing asset or footage source',
+ 'real reports missing assets and footage IDs as findings',
+ 'real refuses footage video, sound and moving images as findings',
+ 'real refuses unsupported captures, large assets and paths outside assets',
+ 'real rejects animated assets using the existing moving-image classification',
+ 'real replaces only its committed unchanged tracked index through -o',
+ 'real protects dirty, staged, untracked, outside-Git and other existing outputs'),
+ ('assets','footage','inputs','output','missing','refusal','limits','moving','replace','guards')))
+results = {}
+def verdict(label, good, detail=''):
+    print(('ok ' if good else 'FAIL ') + label, flush=True)
+    if not good: print(detail, flush=True)
+    results[labels[label]] = good
+def cli(*args):
+    code, stdout, stderr = M.cli_split(*args)
+    return code, stdout + stderr
+with M.hermetic_git(out / 'real-gitconfig'):
+    M.test_real(verdict, cli, True)
+with receipt.open('a') as f:
+    for key, good in results.items():
+        f.write('real.' + key + '\t' + ('yes' if good else 'no') + '\n')
+PYREAL
+  rec real.status "$st"
+}
+
 smoke_voice() {
   local p="916-smoke-voice" gen="$T/production/src/voiceover/generated"
   mkdir -p "$gen/$p/takes"
@@ -2641,6 +2683,12 @@ run_checks() {
   fi
 
   # 24
+  if [[ -n "${RES[real.status]:-}" ]]; then
+    [[ "${RES[real.status]}" == 0 ]] || finding "check 24 — $L real fixture could not run (exit ${RES[real.status]})"
+    for feature in assets footage inputs output missing refusal limits moving replace guards; do
+      [[ "${RES[real.$feature]:-}" == yes ]] || finding "check 24 — $L real index failed $feature (${RES[real.$feature]:-missing})"
+    done
+  fi
   if [[ -n "${RES[cues.status]:-}" ]]; then
     [[ "${RES[cues.status]}" == 0 ]] || finding "check 24 — $L cue fixture could not run (exit ${RES[cues.status]})"
     for feature in times lists delivery audio unmatched untimed finite links boards guards; do
@@ -2972,6 +3020,17 @@ tr.lines.has	yes
 tr.lines.extra	no
 tr.o.status	0
 tr.o.written	yes
+real.status	0
+real.assets	yes
+real.footage	yes
+real.inputs	yes
+real.output	yes
+real.missing	yes
+real.refusal	yes
+real.limits	yes
+real.moving	yes
+real.replace	yes
+real.guards	yes
 cues.status	0
 cues.times	yes
 cues.lists	yes
@@ -3179,6 +3238,10 @@ self_test() {
   for feature in times lists delivery audio unmatched untimed finite links boards guards; do
     mut "cues.$feature" no; probe "check 24 fires when cue $feature fails" "check 24 — [fixture] cue index failed $feature"
   done
+  for feature in assets footage inputs output missing refusal limits moving replace guards; do
+    mut "real.$feature" no; probe "check 24 fires when real $feature fails" "check 24 — [fixture] real index failed $feature"
+  done
+  mut real.status 2; probe "check 24 fires when real fixtures cannot run" "check 24 — [fixture] real fixture could not run"
   mut cues.status 2; probe "check 24 fires when cue fixtures cannot run" "check 24 — [fixture] cue fixture could not run"
   mut where.bad 0;                        probe "check 24 fires when where accepts a name with no piece folder" "check 24 — [fixture] where with a name that has no piece folder"
   mut frames.count 125;                   probe "check 25 fires when stills are rounded one by one" "check 25 — [fixture] 25 stills of 0.16 s at 30 fps assembled to 125 frames"
