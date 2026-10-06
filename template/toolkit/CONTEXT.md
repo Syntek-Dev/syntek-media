@@ -24,12 +24,13 @@ toolkit/
 ├── media_captions.py   ← captions (check, from-segments, align, retime, rewrap, vtt, transcript, burn) and script time
 ├── media_repo.py       ← footage, real sources, tokens, flags, check, where
 ├── media_image.py      ← image, and the GIF pass of cut (a newsletter's preview GIF)
+├── media_score.py      ← offline title/thumbnail requests and approved Jev scoring
 ├── media_scene.py     ← deterministic frame timing, native mouth sampling and safe zones
 ├── media_feed.py       ← feed: a self-hosted podcast's register, RSS feed, chapters and file tags
 ├── card.py             ← HTML and CSS to PNG in headless Chromium (uv run; Playwright 1.62.0, pinned)
 ├── scene.py            ← deterministic scenes to stills and native masters (pinned Playwright)
 ├── transcribe.py       ← offline known-word alignment; WhisperX 3.8.6, Python >=3.10,<3.14
-├── data/               ← platforms.toml: every deliverable's delivery specs, dated and sourced
+├── data/               ← dated delivery specs and the versioned Jev editorial rubric
 └── templates/          ← thumbnail.html and card.html: fallbacks for the brand's two layouts
 ```
 
@@ -39,7 +40,7 @@ toolkit/
   `python3 toolkit/media.py <command>`: probe, presets, script time, assemble, cut, encode, frame,
   image, still-video, extract-audio, captions, loudness, audiobook, take add, speak plan, voice join,
   levels, transcribe, lipsync, cues, real, feed, footage,
-  tokens, flags, where and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
+  tokens, flags, where, score and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
   shapes Playwright and VHS write (WebM, MP4, animated GIF, none with sound), SRT, TOML, a show
   register and a git repository at run time and exercises every module; a probe that needs
   ffmpeg, or an encoder this ffmpeg lacks, is skipped by name, never passed.
@@ -126,6 +127,11 @@ toolkit/
   work tree every file is read.
 - **Nothing here spends.** No command calls ElevenLabs; only the author's model fetch uses the network. `take add`
   names and logs a file a skill has already generated with the author's yes.
+
+`media.py score plan/run` evaluates title–thumbnail text options with the versioned
+`data/packaging-score.toml` rubric. Plan is offline; run is one author-approved paid request.
+Project rubric copies and dated platform/surface guidance keep later evaluations current;
+results retain uncertainty and never approve an image or package.
 
 ## Cross-references
 

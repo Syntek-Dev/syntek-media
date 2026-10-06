@@ -30,6 +30,10 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
   approved brief, checked at size, inside the safe zone and the grid crop, with its rights
   cleared; every unconfirmed size is flagged `VERIFY`.
 
+Title–thumbnail options use `publishing/docs/reference/scoring-options.md` and
+`media.py score plan/run`: one approved paid call, retained provenance and author selection.
+Jev scores text concepts; actual images still need visual review.
+
 ## Guardrails
 
 - **Words before pixels.** No layout is filled before the brief's promise is agreed.

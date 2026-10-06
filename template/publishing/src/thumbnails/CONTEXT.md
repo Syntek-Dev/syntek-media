@@ -37,6 +37,11 @@ publishing/src/thumbnails/
   them, with the other example files, once you no longer need them, and none of them will come
   back.
 
+Option/context JSON and score results are author-owned flat files here, named
+`<piece>[--cNN].<platform>-<surface>.options.json` and `.scores.json`; a new evaluation uses a new
+suffix. Follow `publishing/docs/reference/scoring-options.md`. Variants records candidate IDs
+and author selection; Checks cites results, versions and visual review. Jev never approves pixels.
+
 ## Cross-references
 
 - `publishing/docs/reference/thumbnails.md` — the brief, the layout, which deliverables take one,

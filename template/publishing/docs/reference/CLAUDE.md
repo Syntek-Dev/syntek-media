@@ -32,7 +32,8 @@ same way until its author decides otherwise in `publishing/docs/project/`.
 <: endif :><: if 'website' in PLATFORMS :>  - anything placed on one of the brand's sites → `website.md`;
 <: endif :><: if 'blog' in PLATFORMS :>  - anything placed in a blog post → `blog.md`;
 <: endif :><: if 'newsletter' in PLATFORMS :>  - anything shown in a newsletter issue → `newsletter.md`;
-<: endif :>  - reading or correcting a platform limit → `platform-specs.md`.
+<: endif :>  - scoring title–thumbnail options → `scoring-options.md`;
+  - reading or correcting a platform limit → `platform-specs.md`.
 - **Model:** **Opus** for reading a guide into a judgement; nothing here is written
   (`.claude/rules/syntek-media/05-model-allocation.md`).
 - **Concrete steps:** read the guide → read the rules section it names at its foot → read the

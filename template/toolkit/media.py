@@ -52,6 +52,8 @@ Usage:
     python3 toolkit/media.py flags [PATH...] [--piece PIECE] [--strict]
     python3 toolkit/media.py where PIECE
     python3 toolkit/media.py check [--strict] [--setup]
+    python3 toolkit/media.py score plan INPUT [--rubric TOML] [--model NAME] [-o JSON]
+    python3 toolkit/media.py score run INPUT --approve-call [--rubric TOML] [--model NAME] [-o JSON]
     python3 toolkit/media.py --self-test
 
 KEY is a deliverable of toolkit/data/platforms.toml, written <platform>.<format> (youtube.short,
@@ -82,12 +84,13 @@ The modules beside this file do the work and have no command of their own: media
 cut, encode, frame, still-video), media_audio.py (extract-audio, loudness, audiobook, take),
 media_captions.py (captions, script time), media_repo.py (footage, tokens, flags, where, check),
 media_image.py (image, and the GIF pass of cut) and media_feed.py (a self-hosted podcast's
-register, feed, chapters and file tags). card.py renders HTML and CSS to PNG and runs through
+register, feed, chapters and file tags), and media_score.py (Jev option scoring). card.py renders HTML and CSS to PNG and runs through
 uv: uv run toolkit/card.py --help.
 
 Standard library only; Python 3.11+; ffmpeg and ffprobe for every command that touches media,
 run from argument lists, never a shell string. No command calls ElevenLabs. Network access is
-limited to the author-run transcribe fetch and uv package setup. Exit codes: 0 = done and verified, or clean; 1 = a finding (a check failed, or an
+limited to the author-run transcribe fetch, uv package setup and explicitly approved Jev scoring.
+Score plan is offline; score run writes JSON to stdout or a new explicit -o, never over an existing file. Exit codes: 0 = done and verified, or clean; 1 = a finding (a check failed, or an
 output failed its verification); 2 = could not run (bad arguments, a missing input, a missing
 tool, named with its install hint, or the tool itself failed).
 """
@@ -115,6 +118,7 @@ import media_feed as F  # noqa: E402
 import media_image as I  # noqa: E402
 import media_repo as R  # noqa: E402
 import media_video as V  # noqa: E402
+import media_score as J  # noqa: E402
 
 
 # ── probe and presets ───────────────────────────────────────────────────────────────────
@@ -657,6 +661,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("piece", metavar="PIECE")
     p.set_defaults(func=R.cmd_where)
 
+    p = sub.add_parser("score", help="Jev title/thumbnail option scoring (plan is offline)")
+    score = p.add_subparsers(dest="action", required=True)
+    for action in ("plan", "run"):
+        p = score.add_parser(action, help="offline request preview" if action == "plan" else
+                            "one explicitly approved paid TypeSafe request")
+        p.add_argument("input", metavar="INPUT", help="candidate/context JSON; see scoring-options.md")
+        p.add_argument("--rubric", metavar="TOML", help="author-owned rubric copy, with its own version")
+        p.add_argument("--model", default="jev-latest", help="Jev model/alias; resolved version is recorded")
+        p.add_argument("--today", metavar="DD/MM/YYYY", help="guidance freshness date; defaults to today")
+        p.add_argument("-o", "--output", metavar="JSON", help="new JSON file; otherwise stdout; never overwrite")
+        if action == "run":
+            p.add_argument("--approve-call", action="store_true", help="author has approved this paid call")
+        p.set_defaults(func=J.cmd_score, approve_call=False)
+
     p = sub.add_parser("check", help="the repository guard; --setup adds the readiness report")
     p.add_argument("--strict", action="store_true", help="warnings count as findings")
     p.add_argument("--setup", action="store_true")
@@ -919,6 +937,7 @@ def self_test() -> int:
                        "setup row", lambda: test_uv(verdict, skip, cli, root)),
                       ("default output paths: each piece's own folder", lambda: test_piece_defaults(verdict))]
             groups.append(('deterministic scene timing and safe zones', lambda: test_scene_timing(verdict)))
+            groups.append(('offline Jev scoring and paid-call boundaries', lambda: J.self_test(verdict)))
             groups.append(('scene layouts, movement, interaction and local sources', lambda: test_scene_model(verdict)))
             groups.append(('streamed frame input and opt-in memory scopes', lambda: test_render_helpers(verdict, root)))
             groups.append(('eight- and nine-column storyboard input', lambda: test_storyboards(verdict, root)))

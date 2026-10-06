@@ -1,8 +1,8 @@
 # CONTEXT.md — toolkit/data/
 
 Reference data the toolkit reads, kept apart from the code so that it can be read, dated and
-re-checked as data. It holds one file: the delivery specs of every platform deliverable the
-toolkit cuts, encodes, captions or renders a thumbnail for, and the house's loudness decision.
+re-checked as data. It holds delivery specs, the house's loudness decision and the versioned
+editorial rubric for title–thumbnail scoring.
 Nothing here describes this brand: its own choices live in its platform profiles beside
 `brand/src/platforms/overrides.toml`, and its confirmed corrections in that file.
 
@@ -12,6 +12,7 @@ Nothing here describes this brand: its own choices live in its platform profiles
 toolkit/data/
 ├── CONTEXT.md          ← this file
 ├── CLAUDE.md           ← operating rules
+├── packaging-score.toml ← house Jev questions, weights and review thresholds
 └── platforms.toml      ← one table per deliverable and per audiobook store, each with checked and source
 ```
 
@@ -51,6 +52,11 @@ toolkit/data/
   which `media.py` and `card.py` apply and print; `media.py presets` shows each table with them
   applied, and `media.py presets --stale-after DAYS --today DD/MM/YYYY` lists tables checked longer
   ago than that.
+
+`packaging-score.toml` supplies the seven Jev score questions. Its thresholds and weights are
+house choices, not platform facts. Copy it to publishing's project guides and use `--rubric`
+for revisions; optional platform/surface selectors add questions only where they apply.
+Dated current guidance travels in each input and remains preserved in its result.
 
 ## Cross-references
 

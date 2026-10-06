@@ -43,6 +43,10 @@ a promise the video does not keep, or a face nobody cleared. Briefing it in word
 checking the render at size, against the crop, the safe zone and the rights register, before the
 author approves it, prevents every one.
 
+Title–thumbnail options use `publishing/docs/reference/scoring-options.md` and
+`media.py score plan/run`: one approved paid call, retained provenance and author selection.
+Jev scores text concepts; actual images still need visual review.
+
 ## Cross-references
 
 - `publishing/docs/reference/thumbnails.md` — the brief, the layout, which deliverables take one,

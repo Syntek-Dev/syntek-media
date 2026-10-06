@@ -46,7 +46,15 @@ poster needs no layout: it is a frame of its own video's render. _Substantive._
 With the author, write the promise in one sentence, the words on the image (as few as carry it,
 never the title repeated), the image, and any variant with its reason, in the brief's skeleton
 (`publishing/src/thumbnails/CLAUDE.md`). The mode file says what a promise is for this brand.
-**No layout is touched until the promise is agreed.** _Substantive._
+**No layout is touched until the promise is agreed.**
+
+Before choosing the words, propose several title–thumbnail pairs and follow
+`publishing/docs/reference/scoring-options.md`: write the option/context JSON, preview with
+`media.py score plan`, show the current cost basis and wait before `score run --approve-call`.
+Retain the rubric, dated platform/surface guidance, resolved model and findings beside the brief;
+Jev scores text concepts only. The author selects; unavailable Jev is reported and explicit
+manual review remains possible. A changed approved image returns to
+`publishing/workflows/04-brief-a-thumbnail/` for visual checks and approval. _Substantive._
 
 ## 4. Copy the brand's layout
 

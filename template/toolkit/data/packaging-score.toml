@@ -1,0 +1,62 @@
+# packaging-score.toml — house editorial rubric for title–thumbnail options (DESIGN D74).
+# Read by media.py score plan/run. Template-owned: copier update may refresh it.
+# Copy to publishing/docs/project/ and select with --rubric for project changes.
+# Fields: version; review thresholds/freshness (house choices, not platform facts);
+# question id, instructions, ordered criteria, weight, scope; optional platforms/surfaces.
+# Current platform guidance is supplied in input JSON with source, checked, version and basis.
+# Jev receives text concepts only: pixels still need visual review. Never predict click rates.
+version = "1"
+
+[review]
+min_confidence = 0.65
+accuracy_min = 0.9
+stale_after_days = 183
+
+[[question]]
+id = "title_clarity"
+instructions = "How clearly does the title identify the subject?"
+criteria = ["The subject cannot be identified.", "The subject is identifiable but vague.", "The subject is clear and specific."]
+weight = 1.0
+scope = "title"
+
+[[question]]
+id = "audience_relevance"
+instructions = "How directly does the title address the stated audience?"
+criteria = ["No connection to the stated audience.", "Some connection, but the benefit is vague.", "A clear connection to this audience and its stated interests."]
+weight = 1.0
+scope = "title"
+
+[[question]]
+id = "curiosity"
+instructions = "How specific is the reason the title gives this audience to watch?"
+criteria = ["No reason beyond a generic announcement.", "A reason is suggested but vague.", "A specific question or benefit gives a reason to watch."]
+weight = 1.0
+scope = "title"
+
+[[question]]
+id = "accuracy"
+instructions = "How well does the supplied content support the title and image promise?"
+criteria = ["The promise contradicts the content or lacks supporting evidence.", "The content supports part of the promise but leaves a material gap.", "The supplied content supports the complete promise without exaggeration."]
+weight = 1.0
+scope = "title"
+
+[[question]]
+id = "thumbnail_concept"
+instructions = "How clearly does the described thumbnail communicate one idea?"
+criteria = ["No clear subject or several competing ideas.", "One subject is present but competing details obscure it.", "One recognisable subject clearly expresses the intended idea."]
+weight = 1.0
+scope = "image"
+
+[[question]]
+id = "pairing"
+instructions = "How much meaning does the thumbnail add to the title?"
+criteria = ["The image conflicts with or merely repeats the title.", "The image supports the title but adds little meaning.", "The image adds useful complementary information to the title."]
+weight = 1.0
+scope = "image"
+
+[[question]]
+id = "platform_fit"
+instructions = "How well does this candidate follow the supplied guidance for the named platform and surface?"
+criteria = ["The candidate conflicts with the supplied relevant guidance.", "The candidate meets some guidance but leaves relevant points unresolved.", "The candidate meets all applicable supplied guidance; hypotheses remain labelled as unproven."]
+weight = 1.0
+scope = "title"

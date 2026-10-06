@@ -23,6 +23,8 @@ model: opus
 
 ## Execution Checklist
 
+- [ ] Candidate pairs reviewed with the Jev scorecard: request and cost basis shown before any approved paid call; scores/provenance retained, or unavailable service reported and author review recorded; image pixels checked separately. · _opus_
+
 **The brief**
 
 - [ ] Every deliverable that takes a thumbnail or cover identified from its tables, and every image a placement needs (poster, share, featured, preview image, GIF); unconfirmed sizes flagged `VERIFY`. · _opus_

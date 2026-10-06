@@ -46,6 +46,10 @@ AI label set where the rule did not ask (misleading viewers about what is synthe
 where it did (risking the post), a licensed track not yet cleared, or a `VERIFY` flag left in the
 words. Every one is cheap to catch in a package and expensive to put right once posted.
 
+Title–thumbnail options use `publishing/docs/reference/scoring-options.md` and
+`media.py score plan/run`: one approved paid call, retained provenance and author selection.
+Jev scores text concepts; actual images still need visual review.
+
 ## Cross-references
 
 - `publishing/docs/reference/posting-and-the-log.md` — the package, the schedule and the log.

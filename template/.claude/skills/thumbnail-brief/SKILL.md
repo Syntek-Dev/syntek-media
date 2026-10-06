@@ -96,9 +96,10 @@ it never puts on one.
    (the fewest words that carry the promise, adding to the title rather than repeating it),
    `## Image` (what is shown and where it comes from, with every moment taken from a render: each
    poster's `--at` on its video's render, the GIF's In and Out on the master and what its first
-   frame shows), `## Variants` (only those the author asks for) and `## Checks` (filled at
+   frame shows), `## Variants` (candidate IDs, scores and the author's choice) and `## Checks` (filled at
    step 8). Wait for the author's answer, then write `publishing/src/thumbnails/<piece>[--cNN].md`
    with its frontmatter, `approved` left empty.
+   Score several title–thumbnail pairs through `publishing/docs/reference/scoring-options.md`; retain author selection and separate visual review.
    *Complete when:* each brief is written as the author agreed it, one sentence per line.
 
 5. **Choose and place the image.** A scene thumbnail may use a frame of its native master.

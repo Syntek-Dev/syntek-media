@@ -84,7 +84,14 @@ word. _Substantive._
 Re-read the source of each row of the disclosure guide for a platform this project posts to. A
 rule that has changed is reported to the author; on the author's word it is recorded in a
 same-named guide in `publishing/docs/project/`, which overrides the reference guide. The
-reference guide itself is never edited. _Substantive._
+reference guide itself is never edited.
+
+Re-read the platform/surface advice used by the Jev scorecard too, following
+`publishing/docs/reference/scoring-options.md`. Separate official published advice from labelled
+hypotheses; report announced changes and stale or unresolved sources. On the author's word,
+update project guides and the project rubric, increment their versions, and use the revised
+context in new option JSON. Never change a checked date without reading its source, invent
+algorithm weights, edit the toolkit rubric in a generated project or rewrite past score results. _Substantive._
 
 ## 9. Hand back
 

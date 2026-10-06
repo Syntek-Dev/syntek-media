@@ -79,7 +79,15 @@ channel's guide gives in place of Title, Description and Hashtags; its other ima
 it, its date the written piece's own, cited. **A feed episode** has `## podcast.feed_audio`, whose
 title, description and chapters are cited from its show register, never repeated; its register
 part of M7 runs through the podcast-feed workflow, where the project serves its own feed, and each
-episode page on a site other than the feed's is a placement here. _Substantive._
+episode page on a site other than the feed's is a placement here.
+
+Before choosing the words, propose several title–thumbnail pairs and follow
+`publishing/docs/reference/scoring-options.md`: write the option/context JSON, preview with
+`media.py score plan`, show the current cost basis and wait before `score run --approve-call`.
+Retain the rubric, dated platform/surface guidance, resolved model and findings beside the brief;
+Jev scores text concepts only. The author selects; unavailable Jev is reported and explicit
+manual review remains possible. A changed approved image returns to
+`publishing/workflows/04-brief-a-thumbnail/` for visual checks and approval. _Substantive._
 
 ## 6. Count every limit against its key
 

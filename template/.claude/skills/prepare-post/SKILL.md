@@ -100,6 +100,7 @@ the people they may show.
    `00:00`, then tracked cue beat starts plus the edit's voice offset, or each beat's first
    master-timed caption if cues are absent, rounded down. Use beat names unless the author
    changes them; check the chapter keys and `verify`, keep the lines here and append in chat.
+   Score several title–thumbnail pairs through `publishing/docs/reference/scoring-options.md`; retain author selection and separate visual review.
    *Complete when:* each deliverable has its words drafted and every report is with the author.
 
 5. **Package each placement on the brand's own channels.** A piece placed on a site of the

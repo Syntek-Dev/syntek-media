@@ -25,8 +25,8 @@ layout) and `approved` (DD/MM/YYYY, or empty). Its body:
 | `## Promise` | the one thing a viewer gets by pressing play, in a sentence |
 | `## Words on the image` | the words, as few as carry the promise, and never the title repeated |
 | `## Image` | the picture: a frame of the master, a still, or the brand alone |
-| `## Variants` | any second version, and why it exists |
-| `## Checks` | each check below, with its result |
+| `## Variants` | candidate IDs, the Jev score result and the author's choice; each variant's reason |
+| `## Checks` | score provenance and findings, plus each visual check below and its result |
 
 ## The layout
 
@@ -63,7 +63,7 @@ a small committed still, never pointed at a render, because renders are ignored 
 
 ## How we apply it here
 
-- Brief before layout; layout before render; the author approves the PNG, not the HTML.
+- Score concepts through `publishing/docs/reference/scoring-options.md` before selection; then layout, render and visual review. The author approves the PNG.
 - A thumbnail promises nothing the deliverable does not deliver.
 - A newsletter image needs the layout's play-button hook (`data-play-button`): a copy whose brand
   layout lacks it gets it from `toolkit/templates/thumbnail.html`, and the author is told.

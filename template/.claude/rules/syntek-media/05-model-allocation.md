@@ -15,6 +15,10 @@ syntek-author is applied, its own table governs writing work; both name the tier
 
 No Haiku on this project.
 
+Jev is a narrow external scoring service, used only through the approved option scorecard
+(`publishing/docs/reference/scoring-options.md`). It does not replace the substantive tier
+for creating options or author approval; its scores never pass a gate.
+
 | Work | Model |
 |---|---|
 | Mechanical only: renders and encodes, probes, file moves and renames, `take add` and `footage add`, register and log rows already agreed, checklist ticks | **<%MODEL_MECHANICAL%>** |

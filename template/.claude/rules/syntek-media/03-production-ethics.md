@@ -101,6 +101,11 @@ catch a fabricated claim, an uncleared track or an unheard take before it is pub
 
 ## 4. Credits: never spend unasked
 
+**Jev option scoring:** preview `media.py score plan` and state the current TypeSafe cost basis
+before the author approves a call or an agreed batch. Only `score run --approve-call` spends;
+keep the key at user scope and retain returned usage in the score result. No automatic retry.
+Scoring never approves a title or thumbnail, and text-only Jev never verifies image pixels.
+
 **Requirement.** A call that spends ElevenLabs credits (text-to-speech, speech-to-text, and the
 rest of the ask list in the standalone `.claude/settings.json`) is made only when the author
 asked for that audio or transcript. If nothing was asked, stop: never generate unasked, including

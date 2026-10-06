@@ -42,5 +42,7 @@ a hashtag limit is read from data and never remembered.
 
 ## Output & naming
 
-- **Template-owned:** `platforms.toml`.
+- **Template-owned:** `platforms.toml` and `packaging-score.toml`.
+- **Scoring changes:** copy the rubric to publishing's project guides, increment its version,
+  and select it with `--rubric`; use `scoring-options.md` for dated platform/surface evidence.
 - **Generated:** nothing here; `media.py presets` only reports.

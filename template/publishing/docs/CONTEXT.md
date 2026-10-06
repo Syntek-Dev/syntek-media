@@ -19,7 +19,7 @@ publishing/docs/
 
 ## What's here
 
-- `reference/` — the template's guides: six for the work every piece meets on its way out, and
+- `reference/` — the template's guides: seven for the work every piece meets on its way out, and
   one for each platform the project posts to. **Template-owned:** never edit them in place, because
   `copier update` merges template changes into them. `reference/CONTEXT.md` lists the guides this
   project has.

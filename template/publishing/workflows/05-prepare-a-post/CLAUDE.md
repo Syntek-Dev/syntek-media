@@ -32,6 +32,10 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
   inside its key, the disclosure set by each platform's rule with the description line always,
   every rights row cleared, zero flags, a schedule row per deliverable, and M7 recorded.
 
+Title–thumbnail options use `publishing/docs/reference/scoring-options.md` and
+`media.py score plan/run`: one approved paid call, retained provenance and author selection.
+Jev scores text concepts; actual images still need visual review.
+
 ## Guardrails
 
 - **Never post.** No upload, no API call, no scheduling inside a platform's own tools; the author

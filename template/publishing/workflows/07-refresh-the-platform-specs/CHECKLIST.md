@@ -42,6 +42,8 @@ model: opus
 - [ ] Each disclosure rule the project relies on re-read; a changed one reported, and recorded in a same-named project guide on the author's word. · _opus_
 - [ ] Handed back: tables re-read, overrides added or retired, values still unconfirmed, deliverables affected, the next refresh date. · _opus_
 
+- [ ] Jev platform/surface advice re-read, published advice separated from hypotheses; confirmed project guidance/rubric changes versioned and earlier results preserved. · _opus_
+
 ## Done When
 
 - [ ] **No table the project relies on is stale, or each one still stale is named with the reason.** · _opus_

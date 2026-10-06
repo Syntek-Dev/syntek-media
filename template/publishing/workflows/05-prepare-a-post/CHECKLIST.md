@@ -24,6 +24,8 @@ model: opus
 
 ## Execution Checklist
 
+- [ ] Candidate pairs reviewed with the Jev scorecard: request and cost basis shown before any approved paid call; scores/provenance retained, or unavailable service reported and author review recorded; image pixels checked separately. · _opus_
+
 **Before writing**
 
 - [ ] **Every rights row the piece uses is `cleared`;** any other sent to the rights procedure, its deliverable held. · _opus_

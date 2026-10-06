@@ -22,6 +22,11 @@ remade from the brand's tokens and an agreed brief.
 - **Definition of done:** the brief is approved, the layout passes `uv run toolkit/card.py check`,
   and every deliverable it names is rendered, checked and seen by the author.
 
+Option/context JSON and score results are author-owned flat files here, named
+`<piece>[--cNN].<platform>-<surface>.options.json` and `.scores.json`; a new evaluation uses a new
+suffix. Follow `publishing/docs/reference/scoring-options.md`. Variants records candidate IDs
+and author selection; Checks cites results, versions and visual review. Jev never approves pixels.
+
 ## Guardrails
 
 - **Copy the brand's component; never edit it here.** A change to the layout for every piece

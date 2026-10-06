@@ -1,6 +1,6 @@
 # CONTEXT.md — publishing/docs/reference/
 
-The template's publishing guides, one per question. Six cover the work every piece meets on its
+The template's publishing guides, one per question. Seven cover the work every piece meets on its
 way out: cut-downs, captions, thumbnails, AI disclosure, posting and the log, and how the platform
 data is read. One more covers each platform the project posts to, citing its limits by key, and a
 podcast the brand serves itself has a second, on its feed. Each names the skill and workflow that
@@ -16,6 +16,7 @@ publishing/docs/reference/
 ├── CLAUDE.md                 ← operating rules
 ├── cut-downs.md              ← one long piece, several short ones that stand alone
 ├── captions.md               ← three timing routes, the house limits, burned or sidecar
+├── scoring-options.md         ← Jev questions, dated platform guidance and author selection
 ├── thumbnails.md             ← the brief, the brand's layout, and checks at thumbnail size
 ├── ai-disclosure.md          ← each platform's rule for its label; the description line always
 ├── posting-and-the-log.md    ← the package, the schedule, the author posts, the log
@@ -38,6 +39,7 @@ publishing/docs/reference/
   moments that stand alone, framing and safe zones, and why a near-identical batch is refused.
 - `captions.md` — the house caption limits, file names, the three timing routes, captions made
   before the cut, and when captions are burned in rather than uploaded.
+- `scoring-options.md` — title–thumbnail candidates, versioned rubrics, paid-call approval and visual review.
 - `thumbnails.md` — the thumbnail brief, the brand's layout component, which deliverables take a
   thumbnail, and the checks at the size it is seen.
 - `ai-disclosure.md` — **read before any post that uses a synthetic voice, generated visuals or

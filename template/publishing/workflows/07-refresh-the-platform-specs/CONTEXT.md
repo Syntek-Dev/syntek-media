@@ -44,6 +44,9 @@ a hashtag cap imposed, a caption upload withdrawn. The toolkit verifies every re
 the data says, so stale data passes a render that the platform then rejects or crops. Dated
 tables, a fixed refresh and corrections kept where the toolkit applies and prints them prevent it.
 
+Refresh the Jev scorecard's platform/surface sources and project rubric through
+`publishing/docs/reference/scoring-options.md`, preserving earlier evaluation records.
+
 ## Cross-references
 
 - `publishing/docs/reference/platform-specs.md` — `verify`, `chosen`, absent keys, overrides and

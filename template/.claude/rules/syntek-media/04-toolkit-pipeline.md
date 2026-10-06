@@ -48,6 +48,7 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 | Command (`python3 toolkit/media.py …`) | Arguments | What it does | Exit |
 |---|---|---|---|
 | `probe` | `FILE [--json]` | duration, size and every stream (a `.pcm` take read with its `--output-format`) | 0 · 2 |
+| `score plan` / `score run` | `INPUT [--rubric TOML] [--model NAME] [-o JSON]`; run requires `--approve-call` | offline request / one approved Jev request; versioned scores and review findings; concepts only, author selection remains required | 0 · 1 · 2 |
 | `presets` | `[KEY] [--stale-after DAYS --today DD/MM/YYYY]` | deliverable tables with their `verify` keys and brand overrides applied; lists stale `checked` dates | 0 · 1 · 2 |
 | `script time` | `PATH [--wpm N] [--write]` | spoken words and pauses per beat (each against its own `(target MM:SS)`) and in total, at the brief's `words_per_minute` unless `--wpm` overrides, against `target_seconds` (±10%) and each `max_seconds` | 0 · 1 · 2 |
 | `assemble` | `EDL [--memory-max SIZE] [-o OUT]` | the master from an edit decision list: frame-accurate clips, stills, cards, colour, fades, push-in, the voice track, `[[audio]]` ranges, ducking, loudness; ffprobe-verified | 0 · 1 · 2 |

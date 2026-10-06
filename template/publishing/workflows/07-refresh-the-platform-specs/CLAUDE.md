@@ -30,6 +30,9 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
   every confirmed difference is an override the toolkit prints; every unconfirmed value is still
   in `verify` and named in the hand-back.
 
+Refresh the Jev scorecard's platform/surface sources and project rubric through
+`publishing/docs/reference/scoring-options.md`, preserving earlier evaluation records.
+
 ## Guardrails
 
 - **Never edit `toolkit/data/platforms.toml`.** It is template-owned: `copier update` replaces

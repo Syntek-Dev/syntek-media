@@ -512,6 +512,7 @@ always        d  publishing/workflows/local
 always        f  publishing/docs/reference/cut-downs.md
 always        f  publishing/docs/reference/captions.md
 always        f  publishing/docs/reference/thumbnails.md
+always        f  publishing/docs/reference/scoring-options.md
 always        f  publishing/docs/reference/ai-disclosure.md
 always        f  publishing/docs/reference/posting-and-the-log.md
 always        f  publishing/docs/reference/platform-specs.md
@@ -551,9 +552,11 @@ always        f  toolkit/media_captions.py
 always        f  toolkit/media_repo.py
 always        f  toolkit/media_image.py
 always        f  toolkit/media_feed.py
+always        f  toolkit/media_score.py
 always        f  toolkit/card.py
 always        f  toolkit/transcribe.py
 always        f  toolkit/data/platforms.toml
+always        f  toolkit/data/packaging-score.toml
 always        f  toolkit/templates/thumbnail.html
 always        f  toolkit/templates/card.html
 seed          d  scripts/src/pieces/000-example-piece
