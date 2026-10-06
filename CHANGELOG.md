@@ -1,17 +1,27 @@
 # Changelog
 
-**Last Updated**: 06/10/2026 **Version**: 0.3.0 **Maintained By**: Syntek Studio
+**Last Updated**: 06/10/2026 **Version**: 0.4.0 **Maintained By**: Syntek Studio
 **Language**: British English (en_GB)
 
 All notable changes to syntek-media are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D73) or section.
+Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D74) or section.
 
 ---
 
 ## [Unreleased]
+
+## [0.4.0] - 06/10/2026
+
+Jev scores title and thumbnail options against editable questions and dated platform/surface guidance (D74). Existing projects receive the new shared toolkit module, rubric and guide on update; no migration or new Copier answer is required. Export `TYPESAFE_API_KEY` for authorised calls. Scores support the author's choice; thumbnail images still need separate visual review.
+
+**syntek-author baseline.** Checked against syntek-author `9a65902d38e8f82d07c30fb803fa72273ef3a70a` (its v0.3.0 release), read on 06/10/2026. The feature commit passed all three Template Integrity CI jobs; local checks passed for twelve generated profiles, update preservation and coexistence. Optional local media checks were skipped and are not counted as passes. `.github/scripts/syntek-author-names.txt` is unchanged.
+
+### Added
+
+- **Jev title–thumbnail option scoring** (DESIGN.md D74; approved 06/10/2026). Seven focused, descriptive questions use versioned rubrics and dated platform/surface guidance. `media.py score plan` previews offline; `score run --approve-call` makes one authorised TypeSafe request, validates the response and retains model, usage, scores, confidence and provenance. Thumbnail/post workflows keep author selection and separate visual review; the platform refresh maintains project guidance and rubric copies. Runtime fixtures prove the paid-call boundary without contacting the service.
 
 ## [0.3.0] - 06/10/2026
 
@@ -20,8 +30,6 @@ The per-video pipeline (D64–D72): per-piece output folders, offline voice prep
 **syntek-author baseline.** Released against syntek-author `9a65902d38e8f82d07c30fb803fa72273ef3a70a` (its v0.3.0 release), read on 06/10/2026: `run-all.sh` passed in full (34 PASS, 0 FINDINGS, 0 ERROR, 0 SKIP), `coexist-test.sh` included, and `.github/scripts/syntek-author-names.txt` is unchanged.
 
 ### Added
-
-- **Jev title–thumbnail option scoring** (DESIGN.md D74; approved 06/10/2026). Seven focused, descriptive questions use versioned rubrics and dated platform/surface guidance. `media.py score plan` previews offline; `score run --approve-call` makes one authorised TypeSafe request, validates the response and retains model, usage, scores, confidence and provenance. Thumbnail/post workflows keep author selection and separate visual review; the platform refresh maintains project guidance and rubric copies. Runtime fixtures prove the paid-call boundary without contacting the service.
 
 - **Shared agent setup** (D11, D38, D73, Section 3.7; approved 06/10/2026). Fresh projects receive Codex and Antigravity entrypoints, a relative `.agents -> .claude` alias, a Codex folder-manual fallback and an empty Antigravity MCP configuration. One template-owned instruction bridge explicitly reads canonical rules recursively, project memory, folder pairs, skills and modes; client model labels identify work tiers without a provider switch. All seven new shared paths are copy-only, preserving edits, deletions, existing configurations, real directories and different link targets. Existing projects use explicit temporary-generation setup for missing files. Development entrypoints and Codex skill exclusions keep production instructions out of template work; audits prove native configuration, alias preservation, entrypoint routing and copy/update protection.
 

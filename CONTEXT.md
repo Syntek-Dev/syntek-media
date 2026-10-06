@@ -13,7 +13,7 @@ syntek-media/
 ├── README.md                 ← the user guide: applying over syntek-author, standalone, the questions, updating, coexistence, audio, audits
 ├── DESIGN.md                 ← the build contract; where any file disagrees with it, DESIGN.md wins
 ├── copier.yml                ← questions, gated _exclude, _skip_if_exists, messages, _tasks, _migrations
-├── VERSION                   ← the template's release number (0.1.0)
+├── VERSION                   ← the template's release number (0.4.0)
 ├── CHANGELOG.md              ← the template's history, Keep a Changelog
 ├── AGENTS.md                 ← Codex development entrypoint; reads the development manual
 ├── GEMINI.md                 ← Antigravity development entrypoint
