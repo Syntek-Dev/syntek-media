@@ -27,7 +27,7 @@ toolkit/
 ├── media_score.py      ← offline title/thumbnail requests and approved Jev scoring
 ├── media_scene.py     ← deterministic frame timing, native mouth sampling and safe zones
 ├── media_feed.py       ← feed: a self-hosted podcast's register, RSS feed, chapters and file tags
-├── card.py             ← HTML and CSS to PNG in headless Chromium (uv run; Playwright 1.62.0, pinned)
+├── card.py             ← HTML and CSS to PNG in headless Chromium (uv run; Playwright 1.63.0, pinned)
 ├── scene.py            ← deterministic scenes to stills and native masters (pinned Playwright)
 ├── transcribe.py       ← offline known-word alignment; WhisperX 3.8.6, Python >=3.10,<3.14
 ├── data/               ← dated delivery specs and the versioned Jev editorial rubric

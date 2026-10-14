@@ -1275,6 +1275,8 @@ elif args[:1] == ["run"]:
         with open(args[args.index("-o") + 1], "wb") as fh:
             fh.write(b"fixture png")
     note(run=args[1:], start=start, end=time.time())
+    if os.environ.get("FAKE_UV_PRINT"):
+        print(os.environ["FAKE_UV_PRINT"])
     sys.exit(int(os.environ.get("FAKE_UV_EXIT") or 0))
 else:
     sys.exit(2)
@@ -1436,9 +1438,32 @@ def test_uv(verdict, skip, cli, root: Path) -> None:
                 and "UV_PYTHON" in rows[0][2] and str(base_py) in rows[0][2]
                 and code == 1 and "FAIL  uv's interpreter for " in out and "fix: set UV_PYTHON at user scope" in out,
                 (rows, out))
+        def probe_only(run):   # the browsers-path probe: no project, offline, no package, no script
+            return "--no-project" in run and "--offline" in run and "--with" not in run \
+                and not any(a.endswith(".py") for a in run)
         verdict("the interpreter row asks only 'uv python find', with downloads and the network off, and builds "
                 "no environment", finds and all(f["downloads"] == "never" and f["offline"] == "1" for f in finds)
-                and not calls("run"), log.read_text(encoding="utf-8") if log.is_file() else "")
+                and all(probe_only(c["run"]) for c in calls("run")),
+                log.read_text(encoding="utf-8") if log.is_file() else "")
+        bundle = work / "bundle"
+        for name in (f"chromium-{R.PLAYWRIGHT_REVISION}", f"chromium_headless_shell-{R.PLAYWRIGHT_REVISION}"):
+            (bundle / name).mkdir(parents=True, exist_ok=True)
+        log.unlink(missing_ok=True)
+        with held_env(drop=plain + ["PLAYWRIGHT_BROWSERS_PATH"],   # an empty default cache, wherever the host's is
+                      **dict(env, HOME=str(work / "home"), XDG_CACHE_HOME=str(work / "home" / "cache"),
+                             FAKE_UV_SYSTEM=str(base_py), FAKE_UV_PRINT=str(bundle))):
+            seen = R.playwright_cache()
+            code, out = cli("check", "--setup")
+        verdict("check --setup finds Chromium where only a uv wrapper sets PLAYWRIGHT_BROWSERS_PATH (a system "
+                "bundle, as on NixOS), asking uv offline with no project, and names both browser folders (D49)",
+                seen == bundle and calls("run") and all(probe_only(c["run"]) for c in calls("run"))
+                and f"(chromium-{R.PLAYWRIGHT_REVISION}, chromium_headless_shell-{R.PLAYWRIGHT_REVISION})" in out,
+                (seen, out))
+        log.unlink(missing_ok=True)
+        with held_env(drop=plain, **dict(env, PLAYWRIGHT_BROWSERS_PATH=str(bundle))):
+            seen = R.playwright_cache()
+        verdict("a PLAYWRIGHT_BROWSERS_PATH already set is the browsers' folder, and uv is not asked",
+                seen == bundle and not calls("run"), seen)
         with held_env(drop=plain, **dict(env, UV_PYTHON=str(base_py))):
             named = R.uv_interpreter_rows(root)
         fake_python(venv / "bin" / "python3", [3, 14, 8], str(own_py), True)

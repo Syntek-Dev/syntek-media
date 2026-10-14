@@ -3255,7 +3255,7 @@ self_test() {
 
   # The driver's reading of card.py's own verdict (check 1), on logs in card.py's shape.
   local card_log="$tmp/card.log" why
-  local chromium="every browser case (render, transparency, the network guard, check): Chromium for Playwright 1.62.0 is not installed: uv run --with playwright==1.62.0 playwright install chromium"
+  local chromium="every browser case (render, transparency, the network guard, check): Chromium for Playwright 1.63.0 is not installed: uv run --with playwright==1.63.0 playwright install chromium"
   local font="the brand-font probe (a @font-face that loads, then one that does not): fc-match is not installed to find a font file"
   local ended="self-test incomplete: 5 case(s) passed, 1 part(s) skipped (SKIP above): a skip is never a pass"
   read_card() { # $1 = label, $2 = exit status, $3 = the log's lines, $4 = the reasons wanted ('' = judged, never skipped)

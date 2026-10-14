@@ -63,7 +63,8 @@ KINDS = ("video", "audio", "music", "stock", "image", "generated")
 LARGE = 10 * 1024 * 1024
 FLAG_RE = re.compile(r"(?:^|[^`])(?:<!--\s*|/\*\s*|#\s*)(AUTHOR TO CONFIRM|VERIFY):\s*(.*)")
 MEDIA_LAYERS = ("brand", "scripts", "production", "publishing")
-PLAYWRIGHT_REVISION = "1234"   # the Chromium build Playwright 1.62.0 installs (VERIFY on a pin change)
+PLAYWRIGHT_REVISION = "1243"   # Chromium and chromium-headless-shell in Playwright 1.63.0's browsers.json
+                               # (checked 14/10/2026; read it again on every pin change)
 SETTINGS_ALLOW = ("Bash(python3 toolkit/*.py *)", "Bash(uv run toolkit/*.py *)", "Bash(ffmpeg *)",
                   "Bash(ffprobe *)", "WebSearch", "WebFetch")
 SETTINGS_DENY = ("Edit(**/generated/**)", "Edit(**/renders/**)")   # D13; required, like the allows (D49)
@@ -567,10 +568,28 @@ def playwright_cache() -> Path:
         return Path(env)
     home = Path.home()
     if sys.platform == "darwin":
-        return home / "Library" / "Caches" / "ms-playwright"
-    if sys.platform.startswith("win"):
-        return home / "AppData" / "Local" / "ms-playwright"
-    return Path(os.environ.get("XDG_CACHE_HOME") or home / ".cache") / "ms-playwright"
+        default = home / "Library" / "Caches" / "ms-playwright"
+    elif sys.platform.startswith("win"):
+        default = home / "AppData" / "Local" / "ms-playwright"
+    else:
+        default = Path(os.environ.get("XDG_CACHE_HOME") or home / ".cache") / "ms-playwright"
+    if any(default.glob(f"chromium*-{PLAYWRIGHT_REVISION}")):
+        return default
+    # A uv wrapper may set PLAYWRIGHT_BROWSERS_PATH only for what uv launches (a system bundle, as
+    # on NixOS), and card.py runs through uv, so ask uv what a script would see (D49; offline, no project, changing nothing).
+    uv = shutil.which("uv")
+    if uv:
+        try:
+            proc = subprocess.run([uv, "run", "--no-project", "--offline", "--python", sys.executable,
+                                   "python", "-c",
+                                   "import os; print(os.environ.get('PLAYWRIGHT_BROWSERS_PATH', ''))"],
+                                  capture_output=True, text=True, timeout=10, stdin=subprocess.DEVNULL)
+            seen = proc.stdout.strip() if proc.returncode == 0 else ""
+        except (OSError, subprocess.TimeoutExpired):
+            seen = ""
+        if seen and seen != "0" and Path(seen).is_dir():
+            return Path(seen)
+    return default
 
 
 def suggested_base(root: Path) -> str:
@@ -735,8 +754,10 @@ def setup_report(root: Path) -> tuple:
                    'broken executable or missing res/sphinx/cmudict-en-us.dict'), C.INSTALL['rhubarb'])
     cache = playwright_cache()
     found = [d.name for d in cache.glob(f"chromium*-{PLAYWRIGHT_REVISION}")] if cache.is_dir() else []
-    item(bool(found), f"Chromium for Playwright 1.62.0 ({', '.join(found) or 'not installed'})",
-         "uv run --with playwright==1.62.0 playwright install chromium")
+    item(bool(found), f"Chromium for Playwright 1.63.0 ({', '.join(found) or 'not installed'})",
+         "uv run --with playwright==1.63.0 playwright install chromium; where the browsers come from "
+         "a system bundle (NixOS, where playwright install cannot write), it must ship revision "
+         f"{PLAYWRIGHT_REVISION}, set in PLAYWRIGHT_BROWSERS_PATH or by a uv wrapper")
     large = root / "brand/src/exports/large"
     exports = [f for f in C.walk_files(large) if f.name not in (".gitattributes", "CONTEXT.md", "CLAUDE.md")] \
         if large.is_dir() else []
