@@ -5,7 +5,7 @@
 #                   Media is applied to repositories syntek-author made (DESIGN.md D4, Section
 #                   8), and both templates update the same project for years. That works only if
 #                   neither can write over the other: each keeps its own answers file, its own
-#                   rules folder and its own skills, and the ten files both ship are seeds in
+#                   rules folder and its own skills, and the shared files both ship are seeds in
 #                   both — written by whichever came first, updated by neither (D11). Nothing
 #                   fails loudly when that breaks. A copy that collides stops only for want of
 #                   a terminal; an update that collides writes conflict markers into the other
@@ -39,7 +39,9 @@
 #                    11. A second syntek-author update changes nothing — no media file perturbed
 #                        its three-way merge.
 #                    12. Existing author shared paths and newly filled media shared paths
-#                        retain their bytes and link targets through both updates (D73).
+#                        retain their bytes and link targets through both updates (D73, D76:
+#                        .agents/skills and .agents/mcp_config.json, never the folder itself,
+#                        whose entries carry the fingerprint).
 #                    13. No media skill or top-level path shares a name with anything in
 #                        syntek-author's template/ — every variant, read from the live tree —
 #                        the shared files and the .claude/ container excepted.
@@ -222,8 +224,12 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
     done < <(owned_and_all "$w/b-alone" "$b/copier.yml" "$SM_ANSWERS_FILE")
   fi
 
-  # 2. Media over it, without --overwrite; B_OWNED is what its copy added.
-  sm_render "$b" "$PROJ" "$kind" >"$w/b-copy.log" 2>&1 || B_COPY=$?
+  # 2. Media over it, without --overwrite; B_OWNED is what its copy added. D76's pre-copy
+  # check (_common.sh sm_agents_copy_args): syntek-author's .agents link (its D47 at v0.3.0)
+  # takes --exclude /.agents; its D76-shaped folder, whose skills entry is a link, takes none.
+  local -a agents_args=()
+  mapfile -t agents_args < <(sm_agents_copy_args "$PROJ")
+  sm_render "$b" "$PROJ" "$kind" "${agents_args[@]}" >"$w/b-copy.log" 2>&1 || B_COPY=$?
   cat "$w/b-copy.log" >> "$log"
   hash_tree "$PROJ" > "$w/post-media.sha"
   LC_ALL=C comm -13 <(cut -f1 "$w/pre-media.sha" | LC_ALL=C sort) <(cut -f1 "$w/post-media.sha" | LC_ALL=C sort) > "$w/b-added.txt"
@@ -247,6 +253,9 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   sm_update_author "$PROJ" >>"$log" 2>&1 || A_AGAIN_STATUS=$?
   changed_paths "$PROJ" > "$w/a-again.txt"; sm_commit_all "$PROJ" 'update syntek-author again'
   for p in $SM_SHARED; do
+    # An entry under a linked folder (syntek-author's .agents -> .claude) is not a path of its
+    # own: hash_tree never follows the link, so fingerprinting through it would invent a change.
+    [[ "$p" == */* && -L "$PROJ/${p%/*}" ]] && continue
     [[ -f "$PROJ/$p" || -L "$PROJ/$p" ]] && printf '%s\t%s\n' "$p" "$(path_fingerprint "$PROJ/$p")"
   done | LC_ALL=C sort > "$w/shared-after.sha"
   sm_update "$PROJ" >>"$log" 2>&1 || B_AGAIN_STATUS=$?
@@ -278,7 +287,10 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   if [[ "$REV_B" -eq 0 ]]; then
     [[ -d "$w/rev/.git" ]] || sm_git "$w/rev" init -q
     sm_commit_all "$w/rev" 'syntek-media first'
-    sm_render_author "$a" "$w/rev" "$doc" >>"$log" 2>&1 || REV_A=$?
+    # syntek-author's own pre-copy rule (its D47): a real .agents folder takes --exclude /.agents.
+    agents_args=()
+    [[ -d "$w/rev/.agents" && ! -L "$w/rev/.agents" ]] && agents_args=(--exclude /.agents)
+    sm_render_author "$a" "$w/rev" "$doc" "${agents_args[@]}" >>"$log" 2>&1 || REV_A=$?
   fi
   return 0
 }
@@ -515,8 +527,8 @@ STUB
   probe "check 12 fires when a shared file is no longer syntek-author's" "check 12 — [author-fiction] the shared path .mcp.json"; cp "$h" "$W/shared-after.sha"
   sed -i -E 's/^(AGENTS\.md\t).*/\1changed/' "$W/shared-after.sha"
   probe "check 12 fires when a newly filled agent entrypoint changes" "check 12 — [author-fiction] the shared path AGENTS.md"; cp "$h" "$W/shared-after.sha"
-  sed -i -E 's/^(\.agents\t).*/\1changed/' "$W/shared-after.sha"
-  probe "check 12 fires when the shared alias target changes" "check 12 — [author-fiction] the shared path .agents"; cp "$h" "$W/shared-after.sha"
+  sed -i -E 's/^(\.agents\/skills\t).*/\1changed/' "$W/shared-after.sha"
+  probe "check 12 fires when the shared skills link target changes" "check 12 — [author-fiction] the shared path .agents/skills"; cp "$h" "$W/shared-after.sha"
   A_TOP_NAMES+=("toolkit"); probe "check 13 fires on a top-level name syntek-author also takes" "check 13 — media's top-level path toolkit"; unset 'A_TOP_NAMES[-1]'
   A_SKILL_NAMES+=("write-script"); probe "check 13 fires on a skill name syntek-author also takes" "check 13 — media's skill write-script"; unset 'A_SKILL_NAMES[-1]'
   mv "$PROJ/.claude/rules/syntek-author" "$tmp/held-rules"; probe "check 14 fires when a rules folder is missing" "check 14 — [author-fiction] .claude/rules/syntek-author/"; mv "$tmp/held-rules" "$PROJ/.claude/rules/syntek-author"
@@ -585,6 +597,6 @@ for kind in $KINDS; do
 done
 log ""
 [[ "$STATUS" -eq 0 ]] && { bold "✓ syntek-media and syntek-author share every project cleanly, in either order."; exit 0; }
-log "  DESIGN.md Section 9: own answers file, own rules folder, own skills, seventeen shared paths"
+log "  DESIGN.md Section 9: own answers file, own rules folder, own skills, nineteen shared paths"
 log "  seeded in both and update-gated in media; Section 10 lists what goes wrong when one slips."
 exit 1

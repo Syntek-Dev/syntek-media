@@ -23,7 +23,7 @@ Nothing here is rendered, and nothing here writes under `template/`.
 ├── docs-pairing.sh           ← folder pairs; CONTEXT, CLAUDE, workflow, guide and header shapes; piece briefs; README-only folders
 ├── line-cap.sh               ← 300 lines for every instructional .md
 ├── scrub.sh                  ← personal data, secrets, voice IDs, Claude Design links, absolute paths
-├── dev-isolation.sh          ← template skills denied in the root settings; CLAUDE.md excludes; Codex product-skill exclusions and development entrypoints/alias
+├── dev-isolation.sh          ← template skills denied in the root settings; CLAUDE.md excludes; Codex product-skill exclusions, development entrypoints and the real .agents/ folder
 ├── shipped-seeds.sh          ← seeds wired and empty; copy-only files; D13 settings; output README negations above gates
 ├── skill-conformance.sh      ← DESIGN.md Section 5's contract for every skill and mode file; the ElevenLabs guard
 ├── generate-all.sh           ← renders every BRAND_KIND × profile from a snapshot, and each over syntek-author
@@ -80,7 +80,7 @@ Grouped by what each script reads:
   not need (no audiobook folder) is n/a.
 - **`_common.sh`** is the single reader of `copier.yml` (list items, registered keys, question
   choices, gated paths, gate negation with list membership) and the single transcription of
-  `DESIGN.md` (the skill catalogue, every gated path, the seeds, the examples, the seventeen shared
+  `DESIGN.md` (the skill catalogue, every gated path, the seeds, the examples, the nineteen shared
   paths, the spine set, the companions, the D13 settings lists and the `_message_after_copy`
   lines). **It changes in the same commit as `DESIGN.md`.**
 - **`syntek-author-names.txt`** is never transcribed by hand: `coexist-test.sh --refresh-names
@@ -97,7 +97,7 @@ Grouped by what each script reads:
 
 `DESIGN.md` Section 2 allows variant tokens and conditional blocks only in the spine set. The
 audits compute it from `DESIGN.md` and `copier.yml` together: the root spine (the eight rules
-files and the answers file); the seventeen copy-only shared paths; every `_skip_if_exists` seed; every
+files and the answers file); the nineteen copy-only shared paths; every `_skip_if_exists` seed; every
 seed-once example; and every index file — a `CONTEXT.md` or `CLAUDE.md` whose folder holds a
 gated descendant. An index file's gates must be shipping gates: a `BRAND_KIND` mode gate, list
 membership exactly as `DESIGN.md` Section 3.5 writes it (`'youtube' in PLATFORMS`), or the

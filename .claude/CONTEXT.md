@@ -22,5 +22,5 @@ Nothing here ships (`_subdirectory: template`).
 ## Cross-references
 
 - `template/.claude/` — the product's configuration, which this folder isolates.
-- `.github/scripts/dev-isolation.sh` — proves every template skill is denied here and that `claudeMdExcludes` is present.
+- `.github/scripts/dev-isolation.sh` — proves every template skill is denied here, that `claudeMdExcludes` is present, and that the root `.agents/` is a real folder exposing nothing (check 6).
 - `DESIGN.md` Section 7 — the dev-isolation decision; D5 and D11 — how the product's own `.claude/` is owned.

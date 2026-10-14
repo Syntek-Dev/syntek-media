@@ -32,7 +32,10 @@
 #                         skill from a path relative to .codex, and enables no product manual
 #                         fallback (D73).
 #                      6. Development AGENTS.md and GEMINI.md route to the development manual;
-#                         .agents links to the development .claude tree (D73).
+#                         .agents is a real folder, never a link (Codex's sandbox refuses a
+#                         read-only link, D76), holding its pair and, only where the
+#                         development .claude/skills exists, skills -> ../.claude/skills;
+#                         nothing else, so it never exposes template/.claude (D73, D76).
 #
 #                    Numbers are stable identifiers. Append, never renumber.
 #
@@ -174,15 +177,39 @@ PYCLIENT
 from pathlib import Path
 import os, sys
 root = Path(sys.argv[1])
-try:
+def first_problem():
     agents = (root / 'AGENTS.md').read_text()
     gemini = (root / 'GEMINI.md').read_text()
     if ('.claude/CLAUDE.md' not in agents or 'DESIGN.md' not in agents
-            or 'AGENTS.md' not in gemini or not (root / '.agents').is_symlink()
-            or os.readlink(root / '.agents') != '.claude'):
-        print('development entrypoints must route to the manual and .agents must link to .claude')
+            or 'AGENTS.md' not in gemini):
+        return 'development entrypoints must route to the manual'
+    folder = root / '.agents'
+    if folder.is_symlink() or not folder.is_dir():
+        return ('.agents must be a real folder, never a link: Codex refuses a read-only path'
+                ' that is a link to a writable folder (D76)')
+    entries = {e.name for e in os.scandir(folder)}
+    missing = sorted({'CONTEXT.md', 'CLAUDE.md'} - entries)
+    if missing:
+        return '.agents lacks its pair: ' + ', '.join(missing)
+    allowed = {'CONTEXT.md', 'CLAUDE.md'}
+    dev_skills = root / '.claude/skills'
+    if dev_skills.is_dir() and not dev_skills.is_symlink():
+        allowed.add('skills')
+        link = folder / 'skills'
+        if not link.is_symlink() or os.readlink(link) != '../.claude/skills':
+            return '.agents/skills must link to ../.claude/skills, the development skill tree'
+    extra = sorted(entries - allowed)
+    if extra:
+        return ('.agents holds ' + ', '.join(extra) + '; it may hold only its pair'
+                + (' and the skills link' if 'skills' in allowed
+                   else ' (the development .claude has no skills)'))
+    return ''
+try:
+    found = first_problem()
+    if found:
+        print(found)
 except OSError as error:
-    print('missing development entrypoint or alias: ' + error.strerror)
+    print('missing development entrypoint or agent folder: ' + (error.strerror or str(error)))
 PYCLIENT
 )"
   [[ -z "$problem" ]] || finding "check 6 — $problem"
@@ -215,13 +242,17 @@ self_test() {
   write_clients() {
     python3 - "$tmp" "$SM_SKILLS" <<'PYCLIENT'
 from pathlib import Path
-import sys
+import shutil, sys
 root = Path(sys.argv[1])
 (root / 'AGENTS.md').write_text('Read .claude/CLAUDE.md and DESIGN.md for development.\n')
 (root / 'GEMINI.md').write_text('Read root AGENTS.md for development.\n')
-link = root / '.agents'
-if link.is_symlink(): link.unlink()
-link.symlink_to('.claude')
+folder = root / '.agents'
+if folder.is_symlink() or folder.is_file(): folder.unlink()
+elif folder.is_dir(): shutil.rmtree(folder)
+folder.mkdir()
+(folder / 'CONTEXT.md').write_text('# CONTEXT.md — .agents/\n')
+(folder / 'CLAUDE.md').write_text('# CLAUDE.md — .agents/\n')
+if (root / '.claude/skills').is_dir(): shutil.rmtree(root / '.claude/skills')
 (root / '.codex/config.toml').write_text(''.join(
     "[[skills.config]]\npath = '../template/.claude/skills/" + row.split()[0]
     + "'\nenabled = false\n" for row in sys.argv[2].splitlines() if row.strip()))
@@ -246,8 +277,21 @@ PYCLIENT
   probe "check 5 fires on a development product-manual fallback" "check 5"
   write_clients; rm "$tmp/GEMINI.md"
   probe "check 6 fires on a missing development entrypoint" "check 6"
-  write_clients; rm "$tmp/.agents"; ln -s template/.claude "$tmp/.agents"
-  probe "check 6 fires when the development alias exposes product skills" "check 6"
+  write_clients; rm -rf "$tmp/.agents"; ln -s .claude "$tmp/.agents"
+  probe "check 6 fires on the 0.4.1 development link .agents -> .claude (D76)" "check 6 — .agents must be a real folder"
+  write_clients; rm -rf "$tmp/.agents"; ln -s template/.claude "$tmp/.agents"
+  probe "check 6 fires when the development alias exposes product skills" "check 6 — .agents must be a real folder"
+  write_clients; ln -s ../template/.claude/skills "$tmp/.agents/skills"
+  probe "check 6 fires when .agents/skills exposes product skills" "check 6 — .agents holds skills"
+  write_clients; printf '{"mcpServers": {}}\n' > "$tmp/.agents/mcp_config.json"
+  probe "check 6 fires on an MCP file in the development .agents" "check 6 — .agents holds mcp_config.json"
+  write_clients; rm "$tmp/.agents/CLAUDE.md"
+  probe "check 6 fires when .agents loses its pair" "check 6 — .agents lacks its pair"
+  write_clients; mkdir -p "$tmp/.claude/skills"
+  probe "check 6 fires when development skills exist and .agents/skills is absent" "check 6 — .agents/skills must link"
+  ln -s ../.claude/skills "$tmp/.agents/skills"
+  probe_clean "a development skill tree linked as .agents/skills is accepted"
+  write_clients
 
   SM_ROOT="$real_root"; SETTINGS="$SM_ROOT/.claude/settings.json"; SKILLS="$SM_ROOT/template/.claude/skills"
   st_finish "an isolated template from a leaking one"

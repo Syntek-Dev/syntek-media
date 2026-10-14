@@ -158,7 +158,7 @@ registers carry no `model:` key (`.claude/rules/syntek-media/05-model-allocation
 |---|---|---|
 | **Template-owned** | merges the template's changes in | `.claude/rules/syntek-media/**`, the media skills' folders, every `docs/reference/` and `workflows/NN-name/`, the governance pairs (except the seeded ones), `toolkit/**`, every nested `.gitignore` and `.gitattributes`, the READMEs of the generated, renders and raw folders, and Copier's `.copier-answers.syntek-media.yml` |
 | **Seed-if-missing** | creates the file only if it is absent, then never touches it | the seeds below |
-| **Copy-only shared** | written by a copy only where absent; never touched by an update, even to recreate it | the ten shared files below |
+| **Copy-only shared** | written by a copy only where absent; never touched by an update, even to recreate it | the shared files below |
 | **Seed-once example** | ships at generation only; once deleted, stays deleted | the worked example piece, when one was generated |
 | **Author-owned** | never touches | everything you write: pieces, register rows, `docs/project/` guides, `workflows/local/` procedures, edit lists, cards, plans and packages |
 
@@ -170,10 +170,12 @@ platform): the design register, `tokens.css` and the preview cards of `brand/src
 `publishing/src/schedule.md`, `publishing/src/publish-log.md`, and every layer's `docs/project/`
 and `workflows/local/` pair.
 
-**The ten shared files** (`README.md`, `CONTEXT.md`, `.gitignore`, `.mcp.json`, and in `.claude/`
-`CLAUDE.md`, `CONTEXT.md`, `MEMORY.md`, `settings.json` and the `skills/` pair) are written by
-whichever template is applied first; nothing media needs lives only in them, and media never
-edits one.
+**The shared files** (`README.md`, `CONTEXT.md`, `.gitignore`, `.mcp.json`, `AGENTS.md`,
+`GEMINI.md`, the `.agents/` folder with its skills link and MCP file, the `.codex/` settings and
+pair, and in `.claude/` `CLAUDE.md`, `CONTEXT.md`, `MEMORY.md`, `settings.json` and the
+`skills/` pair) are written by whichever template is applied first; nothing media needs lives
+only in them, and media never edits one, except once: updating across 0.4.2 replaces a
+`.agents` link to `.claude` with the real folder.
 
 **Never edit a template-owned file.** Override instead: a same-named guide in `docs/project/`, a
 same-slug workflow in `workflows/local/`, an entry in the Workflow aliases or Overrides of

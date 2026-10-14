@@ -12,6 +12,6 @@ it does not settle. Preserve authorised work and source repositories. Follow the
 manual for tokens, formats, audits and release procedure. Development model tier labels
 identify the kind of work; use the owner's configured client model.
 
-`.agents` aliases the development .claude folder, which has no production skills.
+`.agents/` is a real folder holding only its pair: the development .claude has no skills.
 The development .codex/config.toml disables all product skills and sets no instruction
 fallback into template/. Read product files only as the source being edited.

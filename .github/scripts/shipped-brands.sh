@@ -20,7 +20,7 @@
 #                     Sections 3–5 transcribed), evaluated against the answers the render
 #                     recorded in .copier-answers.syntek-media.yml.
 #
-#                     Fourteen checks:
+#                     Fifteen checks:
 #                       1. The answers file records BRAND_KIND, PLATFORMS and MEDIA_KINDS.
 #                       2. Every skill the gates open is present, with its SKILL.md.
 #                       3. No shut-gate media skill, and no skill DESIGN.md Section 5.1 does not
@@ -44,7 +44,7 @@
 #                          record (only when generate-all.sh left a <tree>.expect beside it); a
 #                          list answer is compared as its sorted values.
 #                      11. No media top-level path, .claude/ path or skill folder is named in
-#                          syntek-author-names.txt (DESIGN.md D27). The ten shared files, and
+#                          syntek-author-names.txt (DESIGN.md D27). The shared paths, and
 #                          the folders that hold them or the per-template rules folders
 #                          (.claude, .claude/rules, .claude/skills), are shared by design. A path
 #                          check 5 already reported is not reported again. The file is read on
@@ -59,11 +59,20 @@
 #                          the render's proof. Each entry directly inside an output folder is
 #                          reported once, a folder with the count of files it holds.
 #
-#                      13. Media-supplied .agents is a relative link to .claude, and client
-#                          configurations are valid, empty of servers and owner-specific
-#                          settings (D73). Existing shared paths are outside media's scope.
-#                      14. Media-supplied AGENTS.md and GEMINI.md route to the canonical
-#                          template-owned instruction bridge (D73).
+#                      13. Media-supplied .agents is a real folder whose skills entry is the
+#                          relative link ../.claude/skills (D76, amending D73's whole-folder
+#                          link), and client configurations (.codex/config.toml,
+#                          .agents/mcp_config.json) are valid, empty of servers and
+#                          owner-specific settings (D73). Existing shared paths are outside
+#                          media's scope.
+#                      14. Media-supplied AGENTS.md and GEMINI.md route to every template's
+#                          bridge, `.claude/syntek-*-agents.md` (D73, D76), and the
+#                          template-owned bridge .claude/syntek-media-agents.md reads every other
+#                          one present.
+#                      15. Media's copy supplies no .claude/mcp_config.json: Antigravity's
+#                          workspace file is .agents/mcp_config.json, and the old path keeps its
+#                          copier.yml lines but ships no more (D76). Over syntek-author, a copy
+#                          syntek-author wrote is its own and not reported.
 #
 #                     Numbers are stable identifiers. Append, never renumber.
 #
@@ -133,11 +142,11 @@ TREE=""
 EXPECT=""
 AUTHOR_SKILLS_SKIPPED=0
 
-# Shared by design: the seventeen copy-only paths, the folders that hold them, and the per-template
+# Shared by design: the nineteen copy-only paths, the folders that hold them, and the per-template
 # rules folder's parent (DESIGN.md Section 9, rules 2 and 3).
 shared_entry() { # $1 = a top-level entry or a .claude/ path
   case "$1" in
-    .claude|.claude/rules|.claude/skills|.codex) return 0 ;;
+    .claude|.claude/rules|.claude/skills|.codex|.agents) return 0 ;;
   esac
   is_shared "$1"
 }
@@ -211,6 +220,8 @@ run_checks() {
   # ── 6. Every catalogued path, both directions ───────────────────────────────
   while read -r gate kind path; do
     [[ -z "$gate" ]] && continue
+    # Under an .agents that is not a real folder, its entries are check 13's finding.
+    [[ "$path" == .agents/* && ( -L "$TREE/.agents" || ! -d "$TREE/.agents" ) ]] && continue
     if gate_true "$gate"; then
       if [[ "$kind" == d && ! -d "$TREE/$path" ]]; then finding "check 6 — $path/ is missing (gate: $gate is open)"
       elif [[ "$kind" == f && ! -f "$TREE/$path" ]]; then finding "check 6 — $path is missing (gate: $gate is open)"; fi
@@ -321,13 +332,20 @@ run_checks() {
       fi
     done < <(cd "$TREE/$o" && find . -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)
   done
-  # ── 13–14. Native agent entrypoints, alias and configuration (D73) ───────────
-  if is_owned_file .agents && [[ -e "$TREE/.agents" || -L "$TREE/.agents" ]]; then
-    [[ -L "$TREE/.agents" && "$(readlink "$TREE/.agents")" == .claude ]] \
-      || finding "check 13 — .agents must be a relative symbolic link to .claude"
+  # ── 13–15. Native agent entrypoints, the agent folder and configuration (D73, D76) ──
+  # Media's own when its copy supplied either entry (over syntek-author) or always (standalone).
+  if { is_owned_file .agents/skills || is_owned_file .agents/mcp_config.json; } \
+      && [[ -e "$TREE/.agents" || -L "$TREE/.agents" ]]; then
+    if [[ -L "$TREE/.agents" || ! -d "$TREE/.agents" ]]; then
+      finding "check 13 — .agents must be a real folder, not a link or a file (D76): Codex mounts it read-only and cannot through a link"
+    elif [[ ! -L "$TREE/.agents/skills" || "$(readlink "$TREE/.agents/skills")" != "$SM_AGENTS_SKILLS_LINK" ]]; then
+      finding "check 13 — .agents/skills must be the relative link $SM_AGENTS_SKILLS_LINK (D76): one skill tree, never a copy or another target"
+    elif [[ ! -d "$TREE/.agents/skills" ]]; then
+      finding "check 13 — .agents/skills does not resolve to .claude/skills"
+    fi
   fi
   local problem
-  for p in .codex/config.toml .claude/mcp_config.json; do
+  for p in .codex/config.toml .agents/mcp_config.json; do
     is_owned_file "$p" || continue
     [[ -f "$TREE/$p" ]] || continue # A missing catalogued path belongs to check 6.
     problem="$(python3 - "$TREE/$p" "$p" <<'PYCLIENT'
@@ -348,9 +366,17 @@ PYCLIENT
   for p in AGENTS.md GEMINI.md; do
     is_owned_file "$p" || continue
     [[ -f "$TREE/$p" ]] || continue
-    grep -qF '.claude/syntek-media-agents.md' "$TREE/$p" \
-      || finding "check 14 — $p must route to the canonical media instruction bridge"
+    grep -qF '.claude/syntek-*-agents.md' "$TREE/$p" \
+      || finding "check 14 — $p must route to every .claude/syntek-*-agents.md bridge present (D76)"
   done
+  p=.claude/syntek-media-agents.md
+  if is_owned_file "$p" && [[ -f "$TREE/$p" ]]; then
+    grep -qF 'syntek-*-agents.md' "$TREE/$p" \
+      || finding "check 14 — $p must read every other .claude/syntek-*-agents.md present (D76)"
+  fi
+  if is_owned_file .claude/mcp_config.json && [[ -e "$TREE/.claude/mcp_config.json" ]]; then
+    finding "check 15 — .claude/mcp_config.json shipped; since 0.4.2 Antigravity's workspace file is .agents/mcp_config.json (D76)"
+  fi
 
 }
 
@@ -375,12 +401,13 @@ build_tree() { # $1 = dir — every path the catalogue says the current answers 
     printf 'MEDIA_KINDS:\n'; printf -- '- %s\n' $A_KINDS
     printf 'SEED_EXAMPLES: %s\nMODEL_MECHANICAL: opus\n' "$A_SEED"
   } > "$t/$SM_ANSWERS_FILE"
-  rmdir "$t/.agents"; ln -s .claude "$t/.agents"
+  rmdir "$t/.agents/skills"; ln -s "$SM_AGENTS_SKILLS_LINK" "$t/.agents/skills"
   printf "project_doc_fallback_filenames = ['CLAUDE.md']\n" > "$t/.codex/config.toml"
-  printf '{"mcpServers": {}}\n' > "$t/.claude/mcp_config.json"
+  printf '{"mcpServers": {}}\n' > "$t/.agents/mcp_config.json"
   for path in AGENTS.md GEMINI.md; do
-    printf 'Read .claude/syntek-media-agents.md before production work.\n' > "$t/$path"
+    printf 'Read every .claude/syntek-*-agents.md present before production work.\n' > "$t/$path"
   done
+  printf 'Read every other .claude/syntek-*-agents.md present.\n' > "$t/.claude/syntek-media-agents.md"
 }
 
 self_test() {
@@ -410,18 +437,33 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   build_tree "$TREE"
   st_baseline "a business tree built from the catalogue"
 
-  rm "$TREE/.agents"; ln -s . "$TREE/.agents"
-  probe "check 13 fires on a different agent alias target" "check 13 — .agents"
-  rm "$TREE/.agents"; ln -s .claude "$TREE/.agents"
+  mv "$TREE/.agents" "$tmp/agents-held"; ln -s .claude "$TREE/.agents"
+  probe "check 13 fires when .agents is the 0.4.1 link to .claude" "check 13 — .agents must be a real folder"
+  rm "$TREE/.agents"; mv "$tmp/agents-held" "$TREE/.agents"
+  rm "$TREE/.agents/skills"; ln -s ../.claude "$TREE/.agents/skills"
+  probe "check 13 fires when .agents/skills links anywhere but ../.claude/skills" "check 13 — .agents/skills must be the relative link"
+  rm "$TREE/.agents/skills"; ln -s "$(cd "$TREE/.claude/skills" && pwd)" "$TREE/.agents/skills"
+  probe "check 13 fires on an absolute skills link" "check 13 — .agents/skills must be the relative link"
+  rm "$TREE/.agents/skills"; cp -r "$TREE/.claude/skills" "$TREE/.agents/skills"
+  probe "check 13 fires when the skill tree is copied, not linked" "check 13 — .agents/skills must be the relative link"
+  rm -rf "$TREE/.agents/skills"; ln -s "$SM_AGENTS_SKILLS_LINK" "$TREE/.agents/skills"
   cp "$TREE/.codex/config.toml" "$tmp/client-held"; printf 'bad = [' > "$TREE/.codex/config.toml"
   probe "check 13 fires on invalid Codex configuration" "check 13 — .codex/config.toml"
   cp "$tmp/client-held" "$TREE/.codex/config.toml"
-  printf '{"mcpServers": {"example": {}}}\n' > "$TREE/.claude/mcp_config.json"
-  probe "check 13 fires when an installed server ships in the Antigravity seed" "check 13 — .claude/mcp_config.json"
+  printf '{"mcpServers": {"example": {}}}\n' > "$TREE/.agents/mcp_config.json"
+  probe "check 13 fires when an installed server ships in the Antigravity seed" "check 13 — .agents/mcp_config.json"
+  printf '{"mcpServers": {}}\n' > "$TREE/.agents/mcp_config.json"
   printf '{"mcpServers": {}}\n' > "$TREE/.claude/mcp_config.json"
+  probe "check 15 fires when a fresh copy still ships .claude/mcp_config.json" "check 15 — .claude/mcp_config.json shipped"
+  rm -f "$TREE/.claude/mcp_config.json"
   cp "$TREE/AGENTS.md" "$tmp/client-held"; printf '# An unrelated entrypoint\n' > "$TREE/AGENTS.md"
   probe "check 14 fires when an agent entrypoint loses its bridge" "check 14 — AGENTS.md"
+  printf 'Read .claude/syntek-media-agents.md before production work.\n' > "$TREE/AGENTS.md"
+  probe "check 14 fires when an entrypoint names media's bridge alone (0.4.1 wording)" "check 14 — AGENTS.md must route to every"
   cp "$tmp/client-held" "$TREE/AGENTS.md"
+  cp "$TREE/.claude/syntek-media-agents.md" "$tmp/client-held"; printf '# A bridge that reads only itself\n' > "$TREE/.claude/syntek-media-agents.md"
+  probe "check 14 fires when the bridge stops reading the other bridges" "check 14 — .claude/syntek-media-agents.md must read every other"
+  cp "$tmp/client-held" "$TREE/.claude/syntek-media-agents.md"
 
   mv "$TREE/$SM_ANSWERS_FILE" "$tmp/held"
   probe "check 1 fires when the answers file is missing" "check 1"
@@ -480,7 +522,7 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   probe "check 11 fires on a top-level path syntek-author has since taken" "check 11 — the top-level path scenes"
   rm -rf "$TREE/scenes"
   # The exemption is the three shared containers (.claude, .claude/rules, .claude/skills) and
-  # the ten shared files (FIXES A4) — not every .claude/ path syntek-author names.
+  # the shared paths (FIXES A4) — not every .claude/ path syntek-author names.
   cp "$SM_AUTHOR_NAMES_FILE" "$tmp/names.held"; printf 'claude design\n' >> "$SM_AUTHOR_NAMES_FILE"; require_author_names
   mkdir -p "$TREE/.claude/design"; printf 'x\n' > "$TREE/.claude/design/notes.md"
   probe "check 11 fires on a .claude/ path that is not a shared container" "check 11 — .claude/design is a syntek-author name"
@@ -515,6 +557,11 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   load_owned "$TREE"
   st_baseline "an over-author tree: syntek-author's Makefile, layer and skill beside media's paths"
   probe_clean "syntek-author's skills are skipped and counted, never flagged, over syntek-author"
+  printf '{"mcpServers": {}}\n' > "$f/.claude/mcp_config.json"; load_owned "$TREE"
+  probe_clean "syntek-author's own .claude/mcp_config.json is not media's, over syntek-author"
+  printf '.claude/mcp_config.json\n' >> "$f.owned"; load_owned "$TREE"
+  probe "check 15 fires when media's copy adds .claude/mcp_config.json, over syntek-author" "check 15 — .claude/mcp_config.json shipped"
+  rm -f "$f/.claude/mcp_config.json"; sed -i '/^\.claude\/mcp_config\.json$/d' "$f.owned"; load_owned "$TREE"
   mkdir -p "$f/production/src/footage/raw"; printf 'x\n' > "$f/production/src/footage/raw/cam-a.mov"
   probe_clean "a file syntek-author's side left in an output folder is not media's, over syntek-author"
   printf 'production/src/footage/raw/cam-a.mov\n' >> "$f.owned"; load_owned "$TREE"

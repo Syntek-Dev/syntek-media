@@ -29,7 +29,7 @@
 #                       author's project would, in the folder that platform gates;
 #                    8. assert.
 #
-#                  Sixteen checks per brand kind:
+#                  Nineteen checks per brand kind:
 #                    1. The project renders.
 #                    2. `copier update` succeeds.
 #                    3. The author's MEMORY.md entry survives.
@@ -59,15 +59,38 @@
 #                       author's registers and feeds stay).
 #                   14. A copy-only shared file the author deleted stays deleted, and one they
 #                       edited stays as edited (D11: copy only, never on update).
-#                       D73 extends this to all seven agent paths, preserving an edited
-#                       alias target and native configuration as well as deleted entrypoints.
+#                       D73 and D76 extend this to every agent path, preserving an edited
+#                       skills link target and native configuration as well as deleted
+#                       entrypoints, and never recreating the retired .claude/mcp_config.json.
 #                   15. A second update with no template change leaves `git status
 #                       --porcelain` empty.
 #
 #                   16. Copies over existing agent entrypoints, configuration, a real .agents
-#                       directory and a differently targeted alias preserve every prior byte
-#                       and link target and explain manual setup (D73).
-#                       A real directory uses D73's pre-copy --exclude /.agents procedure.
+#                       folder, a real .agents/skills folder, a .agents/skills link to another
+#                       folder in the project, an .agents link to another folder in the
+#                       project and the 0.4.1 link to .claude preserve every prior byte and
+#                       link target, write nothing new through or into an existing .agents
+#                       link, skills folder or skills link, and explain manual setup (D73,
+#                       D76). A copy takes D76's pre-copy check (_common.sh
+#                       sm_agents_copy_args): an .agents link or file is copied with
+#                       --exclude /.agents, a real .agents/skills folder with --exclude
+#                       /.agents/skills, and a .agents/skills link of any target with no
+#                       exclude at all (Copier skips it).
+#                   17. An update that crosses v0.4.2 from a project in the 0.4.1 shape
+#                       (.agents -> .claude, an author-edited .claude/mcp_config.json)
+#                       succeeds, and the D76 migration converts it: .agents a real folder,
+#                       .agents/skills the link ../.claude/skills, .agents/mcp_config.json
+#                       the author's bytes, .claude/mcp_config.json gone, every action printed,
+#                       and the commit hint names .claude/mcp_config.json because it moved. Run
+#                       by hand where _src_path is Copier's gh: shorthand and no
+#                       .claude/mcp_config.json exists, its 'run again' line clones a URL git
+#                       understands (no gh:) and its commit hint names only .agents.
+#                   18. The migration is idempotent: run again it changes no byte and says
+#                       nothing changed, and a further update crosses no version and runs
+#                       nothing (git status stays empty).
+#                   19. The migration leaves every other .agents untouched and says so: a real
+#                       folder, a link to another folder in the project, none at all, and a
+#                       link checked out as a text file (core.symlinks=false).
 #
 #                  Copier prints a MissingFileWarning on a fresh copy and on every update (the
 #                  previous answers are read through _external_data, D14). It is expected and
@@ -75,10 +98,10 @@
 #
 #                  Numbers are stable identifiers. Append, never renumber.
 #
-#                  What it CANNOT check: an upgrade from a released version (there is none
-#                  before 0.1.0; the first release that moves a folder writes its migration and
-#                  adds its flow here), or a project applied over syntek-author, which is
-#                  coexist-test.sh's.
+#                  What it CANNOT check: an upgrade from a real earlier release. Checks 17–19
+#                  tag the snapshot v0.4.1 and v0.4.2 and shape the old project by hand, so
+#                  they prove the migration and its version gate, not 0.4.1's own files. Nor
+#                  a project applied over syntek-author, which is coexist-test.sh's.
 #
 # SELF-TEST. --self-test runs the whole flow against the fixture media template of _common.sh,
 #            as an author-nonfiction project, so the platform taken away is podcast and the
@@ -147,7 +170,13 @@ UPDATE_LOG=""; SWITCH_STATUS=0; SWITCH_LOG=""; SWITCH_DIRTY=""; SWITCH_RECORDED=
 AGAIN_STATUS=0; AGAIN_DIRTY=""; REMOVE_STATUS=0; REMOVE_PLATFORM=""; REMOVED=""; REMOVE_CONFLICTS=""
 REMOVE_WANT=""
 DELETED=()
-declare -A FIXTURE_SUMS=() AGENT_EXPECTED=() AGENT_COPY_ROOT=() AGENT_COPY_STATUS=() AGENT_COPY_SUMS=()
+declare -A FIXTURE_SUMS=() AGENT_EXPECTED=() AGENT_COPY_ROOT=() AGENT_COPY_STATUS=() AGENT_COPY_SUMS=() AGENT_COPY_ARGS=()
+# D76's migration flow (checks 17–19).
+MIG_PROJ=""; MIG_STATUS=0; MIG_LOG=""; MIG_MCP_SUM=""; MIG_AGAIN_OUT=""; MIG_AGAIN_DIFF=""
+MIG_UPD_AGAIN_STATUS=0; MIG_UPD_AGAIN_DIRTY=""; MIG_UPD_AGAIN_RAN=false
+MIG_GH_OUT=""   # the script run by hand over a gh: _src_path with no .claude/mcp_config.json (R1, R2)
+declare -A MIG_SHAPE_STATUS=() MIG_SHAPE_DIFF=() MIG_SHAPE_SAID=()
+MIG_SHAPES="realdir otherlink missing textfile"
 
 # The author's own files in the folder the podcast platform gates (DESIGN.md D59, Section 6.17):
 # a show register and the feed as last published. Invented (Harbour Lane Studio, example.com),
@@ -215,7 +244,10 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   KIND="$2"; W="$3"; PROJ="$3/proj"; COPY_STATUS=0; UPDATE_STATUS=0; DELETED=()
   UPDATE_LOG="$3/update.log"; SWITCH_STATUS=0; SWITCH_LOG="$3/switch.log"; SWITCH_DIRTY=""; SWITCH_RECORDED=""
   AGAIN_STATUS=0; AGAIN_DIRTY=""; REMOVE_STATUS=0; REMOVE_PLATFORM=""; REMOVED=""; REMOVE_CONFLICTS=""
-  REMOVE_WANT=""; FIXTURE_SUMS=(); AGENT_EXPECTED=(); AGENT_COPY_ROOT=(); AGENT_COPY_STATUS=(); AGENT_COPY_SUMS=()
+  REMOVE_WANT=""; FIXTURE_SUMS=(); AGENT_EXPECTED=(); AGENT_COPY_ROOT=(); AGENT_COPY_STATUS=(); AGENT_COPY_SUMS=(); AGENT_COPY_ARGS=()
+  MIG_PROJ=""; MIG_STATUS=0; MIG_LOG=""; MIG_MCP_SUM=""; MIG_AGAIN_OUT=""; MIG_AGAIN_DIFF=""
+  MIG_UPD_AGAIN_STATUS=0; MIG_UPD_AGAIN_DIRTY=""; MIG_UPD_AGAIN_RAN=false; MIG_GH_OUT=""
+  MIG_SHAPE_STATUS=(); MIG_SHAPE_DIFF=(); MIG_SHAPE_SAID=()
   : > "$UPDATE_LOG"; : > "$SWITCH_LOG"
   sm_snapshot "$src" "$tpl" >>"$log" 2>&1 || die "could not snapshot $src"
 
@@ -224,30 +256,37 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   [[ -d "$PROJ/.git" ]] || sm_git "$PROJ" init -q
   sm_commit_all "$PROJ" 'generated'
 
-  # D73: fresh copies must preserve both an existing real alias directory and another link.
+  # D73, D76: fresh copies preserve a real .agents folder, a real .agents/skills folder, a link
+  # to another folder in the project, and the 0.4.1 link to .claude.
   local shape target path digest
   local -a copy_args
-  for shape in directory link; do
+  for shape in directory skills-dir skills-link link legacy; do
     target="$W/agent-copy-$shape"; AGENT_COPY_ROOT["$shape"]="$target"
     mkdir -p "$target/.claude" "$target/.codex"
     for path in AGENTS.md GEMINI.md .codex/config.toml .codex/CONTEXT.md .codex/CLAUDE.md .claude/mcp_config.json; do
+      # The 0.4.1 shape has no .claude/mcp_config.json of its own here, so a write through the
+      # link (.agents/mcp_config.json landing in .claude/) is visible as a new file.
+      [[ "$shape" == legacy && "$path" == .claude/mcp_config.json ]] && continue
       printf '# Existing author configuration: preserve it.\n' > "$target/$path"
     done
-    if [[ "$shape" == directory ]]; then
-      mkdir "$target/.agents"; printf 'Owner skill tree.\n' > "$target/.agents/keep.md"
-    else
-      mkdir "$target/.owner-agents"; printf 'Owner skill tree.\n' > "$target/.owner-agents/keep.md"
-      ln -s .owner-agents "$target/.agents"
-    fi
+    case "$shape" in
+      directory) mkdir "$target/.agents"; printf 'Owner skill tree.\n' > "$target/.agents/keep.md" ;;
+      skills-dir) mkdir -p "$target/.agents/skills/own"; printf 'Owner skill.\n' > "$target/.agents/skills/own/SKILL.md" ;;
+      skills-link) mkdir -p "$target/.owner-skills/own" "$target/.agents"
+                   printf 'Owner skill.\n' > "$target/.owner-skills/own/SKILL.md"
+                   ln -s ../.owner-skills "$target/.agents/skills" ;;
+      link) mkdir "$target/.owner-agents"; printf 'Owner skill tree.\n' > "$target/.owner-agents/keep.md"
+            ln -s .owner-agents "$target/.agents" ;;
+      legacy) mkdir -p "$target/.claude/skills"; ln -s .claude "$target/.agents" ;;
+    esac
     while IFS=$'\t' read -r path digest; do
       AGENT_COPY_SUMS["$shape:$path"]="$digest"
     done < <(hash_tree "$target")
     AGENT_COPY_STATUS["$shape"]=0
-    # D73's documented pre-copy check: Copier cannot skip a link landing on a real directory.
-    copy_args=()
-    if [[ -d "$target/.agents" && ! -L "$target/.agents" ]]; then
-      copy_args+=(--exclude /.agents)
-    fi
+    # D76's documented pre-copy check: Copier writes through an .agents link and cannot skip
+    # a link landing on a real folder.
+    mapfile -t copy_args < <(sm_agents_copy_args "$target")
+    AGENT_COPY_ARGS["$shape"]="${copy_args[*]}"
     sm_render "$tpl" "$target" "$KIND" "${copy_args[@]}" >"$W/agent-copy-$shape.log" 2>&1 || AGENT_COPY_STATUS["$shape"]=$?
     [[ -d "$target/.git" ]] || sm_git "$target" init -q
     sm_commit_all "$target" 'existing agent configuration'
@@ -266,10 +305,10 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   rm -f "$PROJ/$DELETED_SHARED"
   printf '\n%s\n' "$SHARED_MARK" >> "$PROJ/$EDITED_SHARED"
   # D73: every new shared path keeps an edit or stays deleted, including a dangling alias.
-  for e in AGENTS.md GEMINI.md .agents .codex/config.toml .codex/CONTEXT.md .codex/CLAUDE.md .claude/mcp_config.json; do
+  for e in AGENTS.md GEMINI.md .agents/skills .agents/mcp_config.json .codex/config.toml .codex/CONTEXT.md .codex/CLAUDE.md .claude/mcp_config.json; do
     case "$e" in
-      GEMINI.md|.codex/CONTEXT.md|.claude/mcp_config.json) rm -f "$PROJ/$e" ;;
-      .agents) rm -f "$PROJ/$e"; ln -s ../author-agent-tree "$PROJ/$e" ;;
+      GEMINI.md|.codex/CONTEXT.md|.agents/mcp_config.json|.claude/mcp_config.json) rm -f "$PROJ/$e" ;;
+      .agents/skills) rm -f "$PROJ/$e"; ln -s ../author-agent-tree "$PROJ/$e" ;;
       *) printf '\n# Author setting: preserve this file.\n' >> "$PROJ/$e" ;;
     esac
     AGENT_EXPECTED["$e"]="$(path_fingerprint "$PROJ/$e")"
@@ -321,7 +360,67 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
     rm -f "$before"
     sm_commit_all "$PROJ" 'a platform taken away'
   fi
+  run_migration_flow "$tpl" "$3"
   return 0
+}
+
+# D76: the first migration, across a real version gate. The snapshot is tagged v0.4.1, then an
+# empty commit v0.4.2, so the update crosses the migration's version and nothing else changes;
+# each old project is copied at v0.4.1 and shaped by hand as 0.4.1 left it (or as the author
+# changed it), committed, and updated to v0.4.2.
+mig_project() { # $1 = template, $2 = dest, $3 = shape — copy at v0.4.1, reshape, commit
+  local d="$2"
+  SM_VCS_REF=v0.4.1 sm_render "$1" "$d" "$KIND" >>"$W/mig.log" 2>&1 || return 1
+  [[ -d "$d/.git" ]] || sm_git "$d" init -q
+  rm -rf "${d:?}/.agents"
+  case "$3" in
+    legacy)    ln -s .claude "$d/.agents"
+               printf '{"mcpServers": {"author-server": {}}}\n' > "$d/.claude/mcp_config.json" ;;
+    realdir)   mkdir "$d/.agents"; printf 'Owner skill tree.\n' > "$d/.agents/keep.md"
+               printf '{"mcpServers": {}}\n' > "$d/.claude/mcp_config.json" ;;
+    otherlink) mkdir "$d/.owner-agents"; printf 'Owner skill tree.\n' > "$d/.owner-agents/keep.md"
+               ln -s .owner-agents "$d/.agents"; printf '{"mcpServers": {}}\n' > "$d/.claude/mcp_config.json" ;;
+    missing)   printf '{"mcpServers": {}}\n' > "$d/.claude/mcp_config.json" ;;
+    textfile)  printf '.claude' > "$d/.agents"; printf '{"mcpServers": {}}\n' > "$d/.claude/mcp_config.json" ;;
+  esac
+  sm_commit_all "$d" "the 0.4.1 shape: $3"
+}
+
+run_migration_flow() { # $1 = template snapshot, $2 = work dir
+  local tpl="$1" shape d before after script
+  script="$tpl/$SM_D76_MIGRATION"
+  sm_git "$tpl" tag -f v0.4.1 >/dev/null
+  sm_git "$tpl" commit -q --allow-empty -m 'D76 release' && sm_git "$tpl" tag -f "$SM_D76_VERSION" >/dev/null
+  MIG_PROJ="$2/mig-legacy"; MIG_LOG="$2/mig-update.log"; : > "$MIG_LOG"
+  if ! mig_project "$tpl" "$MIG_PROJ" legacy; then MIG_STATUS=99; return 0; fi
+  MIG_MCP_SUM="$(sha1sum < "$MIG_PROJ/.claude/mcp_config.json")"
+  SM_VCS_REF="$SM_D76_VERSION" sm_update "$MIG_PROJ" >"$MIG_LOG" 2>&1 || MIG_STATUS=$?
+  sm_commit_all "$MIG_PROJ" 'updated to v0.4.2'
+  # 18: the script again, then the update again.
+  before="$(hash_tree "$MIG_PROJ")"
+  MIG_AGAIN_OUT="$(cd "$MIG_PROJ" && python3 -I "$script" 2>&1 || true)"
+  after="$(hash_tree "$MIG_PROJ")"
+  MIG_AGAIN_DIFF="$(diff <(printf '%s\n' "$before") <(printf '%s\n' "$after") | grep -c '^[<>]' || true)"
+  SM_VCS_REF="$SM_D76_VERSION" sm_update "$MIG_PROJ" >"$2/mig-again.log" 2>&1 || MIG_UPD_AGAIN_STATUS=$?
+  grep -qF 'v0.4.2-agents-folder.py' "$2/mig-again.log" && MIG_UPD_AGAIN_RAN=true
+  MIG_UPD_AGAIN_DIRTY="$(git -C "$MIG_PROJ" status --porcelain 2>/dev/null)"
+  # 17 (R1, R2): the script by hand where _src_path is Copier's gh: shorthand and there is no
+  # .claude/mcp_config.json to move.
+  d="$2/mig-gh"; rm -rf "$d"; mkdir -p "$d/.claude/skills"
+  printf '_src_path: gh:Syntek-Dev/syntek-media\n' > "$d/$SM_ANSWERS_FILE"
+  ln -s .claude "$d/.agents"
+  sm_git "$d" init -q
+  MIG_GH_OUT="$(cd "$d" && python3 -I "$script" 2>&1 || true)"
+  # 19: every other shape, through a real update.
+  for shape in $MIG_SHAPES; do
+    d="$2/mig-$shape"; MIG_SHAPE_STATUS["$shape"]=0
+    if ! mig_project "$tpl" "$d" "$shape"; then MIG_SHAPE_STATUS["$shape"]=99; continue; fi
+    before="$(hash_tree "$d" | grep -v "^$SM_ANSWERS_FILE"$'\t')"
+    SM_VCS_REF="$SM_D76_VERSION" sm_update "$d" >"$2/mig-$shape.log" 2>&1 || MIG_SHAPE_STATUS["$shape"]=$?
+    after="$(hash_tree "$d" | grep -v "^$SM_ANSWERS_FILE"$'\t')"
+    MIG_SHAPE_DIFF["$shape"]="$(diff <(printf '%s\n' "$before") <(printf '%s\n' "$after") | { grep '^[<>]' || true; } | cut -c3- | cut -f1 | LC_ALL=C sort -u | paste -sd' ' -)"
+    MIG_SHAPE_SAID["$shape"]="$(grep -cF 'nothing changed' "$2/mig-$shape.log" || true)"
+  done
 }
 
 run_checks() {
@@ -411,6 +510,71 @@ run_checks() {
     done
     grep -qF 'manual' "$W/agent-copy-$shape.log" \
       || finding "check 16 — $L copy did not explain manual agent setup for the existing $shape"
+    # D76's pre-copy check (R5): only an .agents link or file excludes the folder, only a real
+    # .agents/skills folder excludes the skills path, and a skills link of any target needs none.
+    case "$shape" in
+      link|legacy) want='--exclude /.agents' ;;
+      skills-dir)  want='--exclude /.agents/skills' ;;
+      *)           want='' ;;
+    esac
+    [[ "${AGENT_COPY_ARGS[$shape]-}" == "$want" ]] \
+      || finding "check 16 — $L the pre-copy check gave '${AGENT_COPY_ARGS[$shape]-}' for the existing agent $shape, not '$want'"
+    # D76: nothing new through an existing link, or inside an existing skills folder.
+    while IFS=$'\t' read -r path _; do
+      [[ -n "${AGENT_COPY_SUMS[$shape:$path]:-}" ]] && continue
+      case "$shape:$path" in
+        link:.owner-agents/*|skills-dir:.agents/skills/*|skills-link:.owner-skills/*|legacy:.claude/mcp_config.json)
+          finding "check 16 — $L copy wrote $path into the author's existing agent $shape" ;;
+      esac
+    done < <(hash_tree "${AGENT_COPY_ROOT[$shape]}")
+  done
+  # ── 17–19. The D76 migration ─────────────────────────────────────────────────
+  local p_ag="$MIG_PROJ/.agents"
+  if [[ "$MIG_STATUS" -ne 0 ]]; then
+    finding "check 17 — $L the update across $SM_D76_VERSION from the 0.4.1 shape failed (exit $MIG_STATUS) — see $MIG_LOG"
+  else
+    if [[ -L "$p_ag" || ! -d "$p_ag" ]]; then
+      finding "check 17 — $L the migration left .agents as a link or absent: it was the 0.4.1 link to .claude"
+    elif [[ ! -L "$p_ag/skills" || "$(readlink "$p_ag/skills")" != "$SM_AGENTS_SKILLS_LINK" ]]; then
+      finding "check 17 — $L the migrated .agents/skills is not the link $SM_AGENTS_SKILLS_LINK"
+    elif [[ ! -f "$p_ag/mcp_config.json" || "$(sha1sum < "$p_ag/mcp_config.json")" != "$MIG_MCP_SUM" ]]; then
+      finding "check 17 — $L .agents/mcp_config.json is missing or is not the author's .claude/mcp_config.json, moved"
+    elif [[ -e "$MIG_PROJ/.claude/mcp_config.json" ]]; then
+      finding "check 17 — $L .claude/mcp_config.json is still there: the migration moves it"
+    fi
+    grep -qE 'moved +\.claude/mcp_config\.json -> \.agents/mcp_config\.json' "$MIG_LOG" 2>/dev/null \
+      || finding "check 17 — $L the update did not print what the migration did — see $MIG_LOG"
+    grep -qE 'Review and commit: git add -A \.agents \.claude/mcp_config\.json ' "$MIG_LOG" 2>/dev/null \
+      || finding "check 17 — $L the commit hint does not name the moved .claude/mcp_config.json — see $MIG_LOG"
+  fi
+  # R1 and R2: the hand run over a gh: _src_path, with no .claude/mcp_config.json to move.
+  local gh_rerun gh_hint
+  gh_rerun="$(printf '%s\n' "$MIG_GH_OUT" | grep -F 'v0.4.2-agents-folder.py' | grep -F 'git clone' || true)"
+  gh_hint="$(printf '%s\n' "$MIG_GH_OUT" | grep -F 'Review and commit:' || true)"
+  if [[ -z "$gh_rerun" ]]; then
+    finding "check 17 — $L the migration run by hand printed no 'run again' line with a clone"
+  elif [[ "$gh_rerun" == *'gh:'* || "$gh_rerun" != *'https://github.com/'* ]]; then
+    finding "check 17 — $L the 'run again' line passes Copier's gh: shorthand to git clone: $gh_rerun"
+  fi
+  if [[ -z "$gh_hint" ]]; then
+    finding "check 17 — $L the migration run by hand converted the link but printed no commit hint"
+  elif [[ "$gh_hint" == *'.claude/mcp_config.json'* ]]; then
+    finding "check 17 — $L the commit hint names .claude/mcp_config.json, which never existed (git add would stop on the pathspec): $gh_hint"
+  fi
+  if [[ "${MIG_AGAIN_DIFF:-0}" -ne 0 || "$MIG_AGAIN_OUT" != *'nothing changed'* ]]; then
+    finding "check 18 — $L the migration run again changed $MIG_AGAIN_DIFF path(s) or did not say nothing changed: it must be idempotent"
+  fi
+  if [[ "$MIG_UPD_AGAIN_STATUS" -ne 0 || -n "$MIG_UPD_AGAIN_DIRTY" ]] || $MIG_UPD_AGAIN_RAN; then
+    finding "check 18 — $L a second update at $SM_D76_VERSION was not a no-op (exit $MIG_UPD_AGAIN_STATUS; ran the migration: $MIG_UPD_AGAIN_RAN)"
+  fi
+  for shape in $MIG_SHAPES; do
+    if [[ "${MIG_SHAPE_STATUS[$shape]:-1}" -ne 0 ]]; then
+      finding "check 19 — $L the update across $SM_D76_VERSION with a $shape .agents failed (exit ${MIG_SHAPE_STATUS[$shape]:-none})"
+    elif [[ -n "${MIG_SHAPE_DIFF[$shape]}" ]]; then
+      finding "check 19 — $L the migration changed a $shape .agents project: ${MIG_SHAPE_DIFF[$shape]}"
+    elif [[ "${MIG_SHAPE_SAID[$shape]:-0}" -eq 0 ]]; then
+      finding "check 19 — $L the migration left a $shape .agents alone but did not report it"
+    fi
   done
   if [[ "$AGAIN_STATUS" -ne 0 || -n "$AGAIN_DIRTY" ]]; then
     finding "check 15 — $L a second update with no template change was not a no-op (exit $AGAIN_STATUS; $(printf '%s\n' "$AGAIN_DIRTY" | grep -c . || true) path(s) changed)"
@@ -464,9 +628,12 @@ self_test() {
   printf 'x\n' > "$PROJ/$DELETED_SHARED"; probe "check 14 fires when a deleted shared file comes back" "check 14 — [author-nonfiction] the shared $DELETED_SHARED"; rm -f "$PROJ/$DELETED_SHARED"
   cp "$PROJ/$EDITED_SHARED" "$h"; grep -vF "$SHARED_MARK" "$h" > "$PROJ/$EDITED_SHARED"
   probe "check 14 fires when the edit to a shared file is lost" "check 14 — [author-nonfiction] the author's edit"; cp "$h" "$PROJ/$EDITED_SHARED"
-  rm "$PROJ/.agents"; ln -s .claude "$PROJ/.agents"
-  probe "check 14 fires when an author alias target is replaced" "check 14 — [author-nonfiction] the author's shared agent path .agents"
-  rm "$PROJ/.agents"; ln -s ../author-agent-tree "$PROJ/.agents"
+  rm "$PROJ/.agents/skills"; ln -s "$SM_AGENTS_SKILLS_LINK" "$PROJ/.agents/skills"
+  probe "check 14 fires when an author's skills link target is replaced" "check 14 — [author-nonfiction] the author's shared agent path .agents/skills"
+  rm "$PROJ/.agents/skills"; ln -s ../author-agent-tree "$PROJ/.agents/skills"
+  printf '{"mcpServers": {}}\n' > "$PROJ/.claude/mcp_config.json"
+  probe "check 14 fires when the retired .claude/mcp_config.json reappears" "check 14 — [author-nonfiction] the author's shared agent path .claude/mcp_config.json"
+  rm -f "$PROJ/.claude/mcp_config.json"
   printf '# Recreated entrypoint\n' > "$PROJ/GEMINI.md"
   probe "check 14 fires when a deleted agent entrypoint is recreated" "check 14 — [author-nonfiction] the author's shared agent path GEMINI.md"
   rm "$PROJ/GEMINI.md"
@@ -481,6 +648,43 @@ self_test() {
   rm "$agent_root/.agents"; ln -s .claude "$agent_root/.agents"
   probe "check 16 fires when copy replaces an existing alias" "check 16 — [author-nonfiction] copy changed the author's agent link path .agents"
   rm "$agent_root/.agents"; ln -s .owner-agents "$agent_root/.agents"
+  ln -s ../.claude/skills "$agent_root/.owner-agents/skills"
+  probe "check 16 fires when copy writes through an existing .agents link" "check 16 — [author-nonfiction] copy wrote .owner-agents/skills into the author's existing agent link"
+  rm "$agent_root/.owner-agents/skills"
+  agent_root="${AGENT_COPY_ROOT[legacy]}"
+  printf '{"mcpServers": {}}\n' > "$agent_root/.claude/mcp_config.json"
+  probe "check 16 fires when copy writes .claude/mcp_config.json through the 0.4.1 link" "check 16 — [author-nonfiction] copy wrote .claude/mcp_config.json into the author's existing agent legacy"
+  rm -f "$agent_root/.claude/mcp_config.json"
+  agent_root="${AGENT_COPY_ROOT[skills-link]}"
+  ln -s ../.claude/skills/run-media-workflow "$agent_root/.owner-skills/media"
+  probe "check 16 fires when copy writes through an existing .agents/skills link" "check 16 — [author-nonfiction] copy wrote .owner-skills/media into the author's existing agent skills-link"
+  rm "$agent_root/.owner-skills/media"
+  AGENT_COPY_ARGS[skills-link]='--exclude /.agents'
+  probe "check 16 fires when a skills link elsewhere is given an exclude" "check 16 — [author-nonfiction] the pre-copy check gave '--exclude /.agents' for the existing agent skills-link"
+  AGENT_COPY_ARGS[skills-link]=''
+  AGENT_COPY_ARGS[skills-dir]='--exclude /.agents'
+  probe "check 16 fires when a real skills folder excludes the whole .agents" "check 16 — [author-nonfiction] the pre-copy check gave '--exclude /.agents' for the existing agent skills-dir"
+  AGENT_COPY_ARGS[skills-dir]='--exclude /.agents/skills'
+  MIG_STATUS=1; probe "check 17 fires when the update across v0.4.2 fails" "check 17 — [author-nonfiction] the update across"; MIG_STATUS=0
+  mv "$MIG_PROJ/.agents" "$tmp/mig-held"; ln -s .claude "$MIG_PROJ/.agents"
+  probe "check 17 fires when the 0.4.1 link survives the update" "check 17 — [author-nonfiction] the migration left .agents as a link"
+  rm "$MIG_PROJ/.agents"; mv "$tmp/mig-held" "$MIG_PROJ/.agents"
+  cp "$MIG_PROJ/.agents/mcp_config.json" "$h"; printf '{"mcpServers": {}}\n' > "$MIG_PROJ/.agents/mcp_config.json"
+  probe "check 17 fires when the author's MCP file is not the one moved" "check 17 — [author-nonfiction] .agents/mcp_config.json is missing or is not"
+  cp "$h" "$MIG_PROJ/.agents/mcp_config.json"
+  cp "$MIG_LOG" "$h"; sed -i 's/Review and commit: git add -A \.agents .*/Review and commit: git add -A .agents \&\& git status/' "$MIG_LOG"
+  probe "check 17 fires when the commit hint leaves out the moved file" "check 17 — [author-nonfiction] the commit hint does not name the moved"
+  cp "$h" "$MIG_LOG"
+  local gh_held="$MIG_GH_OUT"
+  MIG_GH_OUT="${gh_held//https:\/\/github.com\//gh:}"
+  probe "check 17 fires when the 'run again' line keeps the gh: shorthand" "check 17 — [author-nonfiction] the 'run again' line passes Copier's gh: shorthand"
+  MIG_GH_OUT="${gh_held//git add -A .agents /git add -A .agents .claude/mcp_config.json }"
+  probe "check 17 fires when the commit hint names a file that never existed" "check 17 — [author-nonfiction] the commit hint names .claude/mcp_config.json"
+  MIG_GH_OUT="$gh_held"
+  MIG_AGAIN_DIFF=2; probe "check 18 fires when a second run changes the project" "check 18 — [author-nonfiction] the migration run again changed 2"; MIG_AGAIN_DIFF=0
+  MIG_UPD_AGAIN_RAN=true; probe "check 18 fires when a second update reruns the migration" "check 18 — [author-nonfiction] a second update"; MIG_UPD_AGAIN_RAN=false
+  MIG_SHAPE_DIFF[otherlink]=".agents"; probe "check 19 fires when the migration touches a link elsewhere" "check 19 — [author-nonfiction] the migration changed a otherlink"; MIG_SHAPE_DIFF[otherlink]=""
+  MIG_SHAPE_SAID[textfile]=0; probe "check 19 fires when a skipped shape is not reported" "check 19 — [author-nonfiction] the migration left a textfile .agents alone but did not report it"; MIG_SHAPE_SAID[textfile]=1
   AGAIN_DIRTY=" M README.md"; probe "check 15 fires when a second update changes a file" "check 15"; AGAIN_DIRTY=""
   probe_clean "the fixture's updates keep every promise again once every mutation is undone"
   st_finish "an update that keeps its promises from one that breaks them"

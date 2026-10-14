@@ -17,7 +17,7 @@
 #                - copier.yml readers: list items, registered keys, question choices, gated
 #                  paths, gate negation (list membership included: DESIGN.md D15);
 #                - the DESIGN.md catalogue: skills, mode files, gated paths, seeds, examples,
-#                  the seventeen copy-only shared paths, the spine set, the identity tokens, the
+#                  the nineteen copy-only shared paths (one retired), the spine set, the identity tokens, the
 #                  companion skills, pair-only folders and pair exemptions, the D13 allow, ask
 #                  and deny lists, and the _message_after_copy lines;
 #                - a reader for a rendered tree's answers (multiselect lists included), a gate
@@ -392,10 +392,11 @@ always        f  .claude/skills/CLAUDE.md
 always        f  AGENTS.md
 always        f  GEMINI.md
 always        d  .agents
+always        d  .agents/skills
+always        f  .agents/mcp_config.json
 always        f  .codex/config.toml
 always        f  .codex/CONTEXT.md
 always        f  .codex/CLAUDE.md
-always        f  .claude/mcp_config.json
 always        f  .claude/syntek-media-agents.md
 always        f  .claude/rules/syntek-media/01-layout-and-routing.md
 always        f  .claude/rules/syntek-media/02-skills.md
@@ -587,9 +588,23 @@ SM_AUTHOR_PATH_HEADS="standards manuscript library planning research proposal ty
 SM_AUTHOR_PATH_PREFIXES=".claude/rules/syntek-author"
 SM_AUTHOR_FILE_NAMES="Makefile 00-project.md"
 
-# The seventeen copy-only shared paths (DESIGN.md D11, D73, Section 3.6).
-SM_SHARED="README.md CONTEXT.md .gitignore .mcp.json .claude/CLAUDE.md .claude/CONTEXT.md .claude/MEMORY.md .claude/settings.json .claude/skills/CONTEXT.md .claude/skills/CLAUDE.md AGENTS.md GEMINI.md .agents .codex/config.toml .codex/CONTEXT.md .codex/CLAUDE.md .claude/mcp_config.json"
+# The nineteen copy-only shared paths (DESIGN.md D11, D73, D76, Section 3.6): each has an anchored
+# _skip_if_exists line and an update-gated _exclude line, for ever. Eighteen ship on copy: the
+# .agents folder (whose own two lines cover the folder: without them an update recreates an
+# empty .agents/ where the author removed it, and fails on a dangling link there) and its two
+# entries among them. SM_SHARED_RETIRED keeps its two lines but no longer ships on copy: a third,
+# unconditional _exclude line takes it out (D76), and the file stays under template/ (D11).
+SM_SHARED="README.md CONTEXT.md .gitignore .mcp.json .claude/CLAUDE.md .claude/CONTEXT.md .claude/MEMORY.md .claude/settings.json .claude/skills/CONTEXT.md .claude/skills/CLAUDE.md AGENTS.md GEMINI.md .agents .codex/config.toml .codex/CONTEXT.md .codex/CLAUDE.md .claude/mcp_config.json .agents/skills .agents/mcp_config.json"
+SM_SHARED_RETIRED=".claude/mcp_config.json"
+SM_SHARED_SHIPPED="$(for _sm_x in $SM_SHARED; do [[ " $SM_SHARED_RETIRED " == *" $_sm_x "* ]] || printf '%s ' "$_sm_x"; done)"
+SM_SHARED_SHIPPED="${SM_SHARED_SHIPPED% }"
 SM_SHARED_GATE="_copier_operation == 'update'"
+# The D76 agent folder: a real .agents/ whose skills entry is this exact relative link, so one
+# skill tree serves every client and Codex can mount .agents read-only (D76).
+SM_AGENTS_SKILLS_LINK="../.claude/skills"
+# The first migration (DESIGN.md D76): run by an update that crosses v0.4.2.
+SM_D76_MIGRATION="migrations/v0.4.2-agents-folder.py"
+SM_D76_VERSION="v0.4.2"
 
 # Seeds (DESIGN.md Section 3.1): twenty-six, then the sixteen author-filled index-pair files.
 SM_REGISTER_SEEDS="brand/src/design-register.md scripts/src/piece-register.md production/src/rights-register.md production/src/credits-log.md publishing/src/schedule.md publishing/src/publish-log.md"
@@ -608,7 +623,7 @@ SM_EXAMPLES="scripts/src/pieces/000-example-piece production/src/edits/000-examp
 SM_EXAMPLE_GATE="_copier_operation == 'update' or not SEED_EXAMPLES"
 SM_EXAMPLE_NAME="000-example-piece"
 
-# The root spine (DESIGN.md Section 2, Token discipline). The seventeen shared paths, the seeds and
+# The root spine (DESIGN.md Section 2, Token discipline). The nineteen shared paths, the seeds and
 # the examples are spine through their own sets; index files are computed.
 SM_ROOT_SPINE="$SM_ANSWERS_FILE"
 SM_ROOT_SPINE_GLOBS=".claude/rules/syntek-media/*.md"
@@ -636,7 +651,7 @@ SM_SETTINGS_ASK=(
 )
 SM_SETTINGS_BANNED_KEYS="hooks effortLevel ultracode enabledPlugins"   # and every disable* key
 
-# What _message_after_copy must say, in DESIGN.md D13's order: (1) the seventeen shared paths and the
+# What _message_after_copy must say, in DESIGN.md D13's order: (1) the eighteen shipped shared paths and the
 # skip rule, that Copier's 'conflict' then 'skip' pair is expected, and Section 8's hand edits 2
 # and 3 (the optional line in .claude/CLAUDE.md; nothing to add to .gitignore or .mcp.json);
 # (2) the four Bash allows, the nine asks and the two Edit denies to add by hand (DESIGN.md
@@ -647,7 +662,7 @@ SM_SETTINGS_BANNED_KEYS="hooks effortLevel ultracode enabledPlugins"   # and eve
 # Copier's own file-operation lines removed. generate-all.sh check 4 and coexist-test.sh
 # check 19 read this list; shipped-seeds.sh check 12 reads the settings lists above.
 SM_AFTER_COPY_LINES=()
-for _sm_x in $SM_SHARED; do SM_AFTER_COPY_LINES+=("$_sm_x"); done
+for _sm_x in $SM_SHARED_SHIPPED; do SM_AFTER_COPY_LINES+=("$_sm_x"); done
 SM_AFTER_COPY_LINES+=("skip")
 for _sm_x in "${SM_SETTINGS_ALLOW[@]}"; do [[ "$_sm_x" == Bash\(* ]] && SM_AFTER_COPY_LINES+=("$_sm_x"); done
 SM_AFTER_COPY_LINES+=("${SM_SETTINGS_ASK[@]}")
@@ -669,7 +684,8 @@ SM_PAIR_ONLY_GLOBS="*/docs/project */workflows/local brand/src/design-system/fon
 # The folder pair's exceptions (DESIGN.md D42): syntek-author's, verbatim — build/, .git/,
 # audio/, __pycache__/, node_modules/, .claude/rules/, the inside of each skill folder, each
 # drafts/ and each .base/ — then media's: each generated/, renders/ and raw/ (README only), and
-# a handoffs/ folder media's rules create standalone (no pair, ever).
+# a handoffs/ folder media's rules create standalone (no pair, ever); and the .agents folder,
+# which holds only the skills link and Antigravity's MCP file (D76).
 exempt_dir() { # tree-relative dir; true when it needs no pair
   case "/$1/" in
     */.git/*|*/build/*|*/audio/*|*/__pycache__/*|*/node_modules/*) return 0 ;;
@@ -679,6 +695,7 @@ exempt_dir() { # tree-relative dir; true when it needs no pair
     */.base/*) return 0 ;;
     */generated/*|*/renders/*|*/raw/*) return 0 ;;
     /handoffs/*) return 0 ;;
+    /.agents/*) return 0 ;;   # D76: the agent folder holds a link and a client file, no pair
   esac
   return 1
 }
@@ -1070,10 +1087,12 @@ SM_RENDER_DESCRIPTION="A probe brand rendered by the audit suite to prove the te
 SM_RENDER_OWNER="Ada Example"
 SM_RENDER_DATE="01/01/2027"
 
+# SM_VCS_REF (default HEAD) names the ref a render or update takes: update-test.sh's D76 flow
+# tags a snapshot v0.4.1 and v0.4.2 so the migration's version gate is crossed for real.
 sm_render() { # $1 = template, $2 = dest, $3 = BRAND_KIND, then extra copier arguments
   local src="$1" dest="$2" kind="$3"; shift 3
   [[ ${#SM_COPIER[@]} -gt 0 ]] || copier_init
-  "${SM_COPIER[@]}" copy --trust --defaults --vcs-ref=HEAD \
+  "${SM_COPIER[@]}" copy --trust --defaults --vcs-ref="${SM_VCS_REF:-HEAD}" \
     --data "BRAND_NAME=$SM_RENDER_NAME" \
     --data "BRAND_DESCRIPTION=$SM_RENDER_DESCRIPTION" \
     --data "OWNER_NAME=$SM_RENDER_OWNER" \
@@ -1085,7 +1104,7 @@ sm_render() { # $1 = template, $2 = dest, $3 = BRAND_KIND, then extra copier arg
 sm_update() { # $1 = project dir, then extra copier arguments
   local proj="$1"; shift
   [[ ${#SM_COPIER[@]} -gt 0 ]] || copier_init
-  (cd "$proj" && "${SM_COPIER[@]}" update --trust --defaults --vcs-ref=HEAD \
+  (cd "$proj" && "${SM_COPIER[@]}" update --trust --defaults --vcs-ref="${SM_VCS_REF:-HEAD}" \
      --answers-file "$SM_ANSWERS_FILE" "$@" </dev/null)
 }
 
@@ -1119,6 +1138,23 @@ sm_update_author() { # $1 = project dir, then extra copier arguments
 # copied in WITHOUT --overwrite. Writes DEST.owned — the files media's copy added, whatever Git
 # ignores included — and sets OA_AUTHOR_STATUS and OA_MEDIA_STATUS. Returns non-zero when either
 # copy failed. Output goes wherever the caller sends it (generate-all.sh keeps it in DEST.log).
+# D76's pre-copy check (bridge, 'Enabling an existing project'; README.md; DESIGN.md Section
+# 3.7). Copier writes a folder's entries THROUGH an existing .agents link (into .claude, or the
+# author's own tree), so a copy over an .agents link, or over a file, passes --exclude /.agents.
+# Over a real .agents folder only a REAL DIRECTORY at .agents/skills fails (Copier asserts before
+# its skip check where a path resolving to a directory meets a link in the template), and takes
+# --exclude /.agents/skills. A .agents/skills link of any target is skipped without error and
+# left as it is, so it needs no argument. Prints the arguments, one per line (none when the copy
+# needs none). A link that leaves the project fails every copy and update before _exclude is
+# read (ForbiddenPathError, Copier 9.17.1 _main.py:810-811, read 14/10/2026): no argument
+# helps, and the caller reports it.
+sm_agents_copy_args() { # $1 = destination
+  local d="$1/.agents"
+  if [[ -L "$d" || ( -e "$d" && ! -d "$d" ) ]]; then printf -- '--exclude\n/.agents\n'; return 0; fi
+  [[ -d "$d/skills" && ! -L "$d/skills" ]] && printf -- '--exclude\n/.agents/skills\n'
+  return 0
+}
+
 OA_AUTHOR_STATUS=0
 OA_MEDIA_STATUS=0
 sm_render_over_author() { # $1 = syntek-author snapshot, $2 = media snapshot, $3 = dest, $4 = BRAND_KIND, then media arguments
@@ -1132,7 +1168,9 @@ sm_render_over_author() { # $1 = syntek-author snapshot, $2 = media snapshot, $3
   sm_git "$dest" add -A && sm_git "$dest" commit -q -m 'syntek-author' || true
   before="$(mktemp)"
   tree_files "$dest" > "$before"
-  sm_render "$msnap" "$dest" "$kind" "$@" || OA_MEDIA_STATUS=$?
+  local -a agents_args=()
+  mapfile -t agents_args < <(sm_agents_copy_args "$dest")
+  sm_render "$msnap" "$dest" "$kind" "${agents_args[@]}" "$@" || OA_MEDIA_STATUS=$?
   tree_files "$dest" | LC_ALL=C comm -13 "$before" - > "$dest.owned"
   rm -f "$before"
   return "$OA_MEDIA_STATUS"
@@ -1141,7 +1179,8 @@ sm_render_over_author() { # $1 = syntek-author snapshot, $2 = media snapshot, $3
 # ── The fixture templates ────────────────────────────────────────────────────
 #
 # sm_fixture_template: a minimal syntek-media with the real repository's shape — the house
-# delimiters, the named answers file, the seventeen copy-only shared paths, a register seed and a
+# delimiters, the named answers file, the nineteen copy-only shared paths (the retired one excluded
+# on copy as well), the D76 .agents folder and its v0.4.2 migration, a register seed and a
 # brand seed, a gated profile and platform guide per platform, the podcast platform's gate on
 # the pair-only folder of the show registers (DESIGN.md D59), the audiobook gate on a folder
 # and a skill, one seed-once example, a moded skill with its generated mode block, the D14
@@ -1163,6 +1202,10 @@ _preserve_symlinks: true
 _answers_file: .copier-answers.syntek-media.yml
 _external_data:
   prev: .copier-answers.syntek-media.yml
+_migrations:
+  - version: v0.4.2
+    command: python3 "<% _copier_conf.src_path %>/migrations/v0.4.2-agents-folder.py"
+    when: "<% _stage == 'after' %>"
 _message_before_update: |
   Before you answer: removing a platform or a media kind deletes EVERY file it generated.
     PLATFORMS without <platform>     brand/src/platforms/<platform>.md and
@@ -1180,7 +1223,7 @@ _message_before_update: |
 _message_after_copy: |
 EOF
     printf '  Shared files, written only where absent (a skip left yours exactly as it was):\n'
-    for p in $SM_SHARED; do printf '    %s\n' "$p"; done
+    for p in $SM_SHARED_SHIPPED; do printf '    %s\n' "$p"; done
     printf '    Existing agent directories, aliases and settings need manual setup.\n'
     printf '  Copier lists an existing one as %sconflict%s then %sskip%s; that pair is expected.\n' "$q" "$q" "$q" "$q"
     printf '  Optional: name .claude/rules/syntek-media/ in .claude/CLAUDE.md.\n'
@@ -1208,6 +1251,7 @@ _exclude:
   - .git
 EOF
     for p in $SM_SHARED; do printf '  - "<: if _copier_operation == %supdate%s :>/%s<: endif :>"\n' "$q" "$q" "$p"; done
+    for p in $SM_SHARED_RETIRED; do printf '  - /%s\n' "$p"; done
     for p in $SM_PLATFORMS; do
       printf '  - "<: if not (%s%s%s in PLATFORMS) :>/brand/src/platforms/%s.md<: endif :>"\n' "$q" "$p" "$q" "$p"
       printf '  - "<: if not (%s%s%s in PLATFORMS) :>/publishing/docs/reference/%s.md<: endif :>"\n' "$q" "$p" "$q" "$p"
@@ -1281,7 +1325,8 @@ EOF
   mkdir -p .codex
   printf '# AGENTS.md — fixture instructions\n' > AGENTS.md
   printf '# GEMINI.md — fixture instructions\n' > GEMINI.md
-  ln -s .claude .agents
+  mkdir .agents; ln -s "$SM_AGENTS_SKILLS_LINK" .agents/skills
+  printf '{"mcpServers": {}}\n' > .agents/mcp_config.json
   printf "project_doc_fallback_filenames = ['CLAUDE.md']\n" > .codex/config.toml
   printf '# CONTEXT.md — .codex/\n' > .codex/CONTEXT.md
   printf '# CLAUDE.md — .codex/\n' > .codex/CLAUDE.md
@@ -1333,6 +1378,10 @@ if __name__ == "__main__":
     sys.exit(2)
 EOF
   cd - >/dev/null || return 1
+  # The real D76 migration, so the fixture's update proves the script it ships (a fixture
+  # without it cannot test the first migration at all).
+  mkdir -p "$t/migrations"
+  cp "$SM_ROOT/$SM_D76_MIGRATION" "$t/$SM_D76_MIGRATION" || return 1
   sm_git "$t" init -q && sm_git "$t" add -A && sm_git "$t" commit -q -m 'fixture template'
 }
 

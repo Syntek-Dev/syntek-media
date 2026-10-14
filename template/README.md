@@ -227,12 +227,13 @@ No scene command calls a generation API.
 ## Codex and Antigravity
 
 Read `.claude/syntek-media-agents.md` for the shared read order and client setup. Root
-`AGENTS.md` and `GEMINI.md` route there, and `.agents` aliases `.claude`, exposing one skill
-tree. Codex uses the folder manuals through its fallback setting; Antigravity has an empty
-workspace MCP configuration through the alias. Configure and authenticate capabilities locally.
+`AGENTS.md` and `GEMINI.md` route there, and `.agents/` is a real folder whose `skills` link
+exposes the one skill tree in `.claude/skills/`. Codex uses the folder manuals through its
+fallback setting; Antigravity has an empty workspace MCP configuration in
+`.agents/mcp_config.json`. Configure and authenticate capabilities locally.
 The same production rules, work tiers and spending approval apply in every client.
 
-These entrypoints, the alias and client configuration are copy-only shared paths. Updates
+These entrypoints, the `.agents` folder and client configuration are copy-only shared paths. Updates
 preserve edits and deletions and never add new copy-only files. For an existing project, follow
 the bridge's temporary-generation setup and copy only missing files. Preserve existing settings,
 entrypoints, real directories and differently targeted links; agree integration with the owner.

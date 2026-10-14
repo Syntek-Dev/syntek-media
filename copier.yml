@@ -68,8 +68,12 @@ _external_data:
 # binary at all (DESIGN.md Section 10): no audio, video, image or font.
 _templates_suffix: ""
 
-# D73: .agents aliases .claude using a relative symbolic link; preserve it rather than
-# rendering a second copy of the skills, rules and memory.
+# D76 (amends D73): .agents/ is a real folder whose one link, .agents/skills, targets
+# ../.claude/skills, so Codex and Antigravity read the one skill tree without a second copy.
+# Preserve that link rather than rendering the skills twice. .agents itself is never a link
+# again: Codex mounts .agents read-only, and its bubblewrap sandbox refuses a read-only path
+# that is a link to a writable folder, so every sandboxed command failed in a project with
+# .agents -> .claude (syntek-author's reply of 14/10/2026, Codex 0.160.1).
 _preserve_symlinks: true
 
 # Tokens are written <%TOKEN%> rather than {{TOKEN}} so they cannot collide with anything a
@@ -152,7 +156,7 @@ _exclude:
   #
   # ── Shared root files: copy only, never on update (DESIGN.md D11, Section 3.6) ──
   #
-  # The seventeen shared paths (D73), including the ten syntek-author also ships.
+  # The nineteen shared paths (D73, D76), including the ten syntek-author also ships.
   # Each has TWO lines in this file and needs both:
   # this update gate, so an update never renders it and a copy the author deleted is never
   # recreated; and its anchored line in _skip_if_exists below, so a copy over a project that
@@ -186,6 +190,29 @@ _exclude:
   - "<: if _copier_operation == 'update' :>/.codex/CONTEXT.md<: endif :>"
   - "<: if _copier_operation == 'update' :>/.codex/CLAUDE.md<: endif :>"
   - "<: if _copier_operation == 'update' :>/.claude/mcp_config.json<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.agents/skills<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.agents/mcp_config.json<: endif :>"
+  #
+  # D76: two of the nineteen no longer ship as they did, and neither line above is deleted.
+  # /.agents is now the real folder that holds .agents/skills and .agents/mcp_config.json. Its
+  # two lines stay (D11) and still do work: an anchored pattern without a trailing slash
+  # matches the folder and every path below it (pathspec, as Copier 9.17.1 calls it), so the
+  # update gate keeps the whole folder out of every update, the old release's link and the new
+  # release's folder alike, and its _skip_if_exists line already covers both children. The
+  # child paths carry their own pair of lines anyway, so each shared path is protected by name
+  # and the audits can count them (Section 3.6). Neither line stops a copy creating a MISSING
+  # child inside an author's existing .agents/ folder: the skip acts only on a path that
+  # exists, which is D11's "media fills only missing paths". And neither saves a copy from a
+  # path that resolves to a real directory where the template has a link: Copier asserts
+  # before its skip check (probe, 14/10/2026), so a copy over `.agents -> .claude` or over a
+  # real .agents/skills folder needs `--exclude /.agents` or `--exclude /.agents/skills`
+  # (README.md; Section 3.7).
+  # /.claude/mcp_config.json stays in template/ and keeps both its lines (D11, Section 10), but
+  # this unconditional line stops a copy shipping it: Antigravity reads .agents/mcp_config.json,
+  # and two empty files would leave the author guessing which one the client reads. An existing
+  # project's copy is the author's; the v0.4.2 migration below moves it only where the new path
+  # is free. This is the one shared-path line that is not an update gate.
+  - /.claude/mcp_config.json
   #
   # ── Gated paths ──────────────────────────────────────────────────────────────
   #
@@ -359,7 +386,7 @@ _exclude:
 # preview cards) and why that emptiness is audited by `.github/scripts/shipped-seeds.sh`, not
 # trusted.
 #
-# The seventeen shared root paths are here for a second reason (D11): a copy over a project that
+# The nineteen shared root paths are here for a second reason (D11, D76): a copy over a project that
 # already has one must skip it rather than abort. Their update-gated lines in _exclude above
 # make them copy-only as well, so unlike every other line here they are never recreated.
 #
@@ -401,6 +428,8 @@ _skip_if_exists:
   - /.codex/CONTEXT.md
   - /.codex/CLAUDE.md
   - /.claude/mcp_config.json
+  - /.agents/skills
+  - /.agents/mcp_config.json
   # ── brand/: the design register, the design system and the spoken voice ──
   # tokens.css and the two layout components (previews/thumbnail.html and previews/card.html)
   # are the brand's source of truth, synced with its Claude Design project by the author (D18).
@@ -765,7 +794,7 @@ DATE:
 # governance pair to the new path and leaves every brief, script, edit decision list and
 # register behind — with no conflict and no error.
 #
-# NONE AT 0.1.0. The rule from the first release: folder names and workflow numbers are
+# NONE BEFORE 0.4.2. The rule from the first release: folder names and workflow numbers are
 # frozen and append-only (DESIGN.md D32), and any release that renames or moves a folder that
 # can hold author work ships a version-keyed migration IN THE SAME COMMIT, or it silently
 # strands that work.
@@ -780,9 +809,11 @@ DATE:
 # they exist, so a release that changes what a seed must contain ships that change as a
 # migration too. And a release that stops shipping a seed ships a migration that preserves it
 # first: a seed dropped from template/ is deleted from the project by the next update, filled
-# in or not (probe h2; Section 10). The seventeen shared paths are not seeds of media's to migrate:
+# in or not (probe h2; Section 10). The nineteen shared paths are not seeds of media's to migrate:
 # media never mutates a shared file (D11), so a change to what one should hold reaches a
-# project only as a hand edit that the release's notes and README.md name.
+# project only as a hand edit that the release's notes and README.md name. THE ONE STATED
+# EXCEPTION is D76's v0.4.2 migration below, which replaces the shipped .agents -> .claude link
+# with the real folder, because the link breaks every sandboxed Codex command in the project.
 #
 # House shape for a migration script: it lives in migrations/ at this repository's root
 # (outside template/, so it never ships) and is read from the template clone through
@@ -792,16 +823,26 @@ DATE:
 # destination it has not delivered) is never touched; and it always exits 0, because a
 # non-zero exit aborts every migration declared after it and leaves the project half-upgraded.
 # Key it to the release the folder MOVED in, never the release somebody noticed. Migrations
-# run in declaration order. The first entry will look like:
+# run in declaration order, from the destination folder. A script is bash or python3, standard
+# library only (the toolkit already needs Python 3.11), and ends by printing the command that
+# runs it again, because the update's clone of the template is deleted when the update ends.
 #
-#   - version: v0.2.0
-#     command: bash "<% _copier_conf.src_path %>/migrations/v0.2.0-<what>.sh"
-#     when: "<% _stage == 'after' %>"
-#
-# A `version:` entry runs only when the update crosses that version, which Copier reads from
-# the template's git tags (PEP 440): an update to an untagged HEAD that is still numbered
-# 0.1.x does not run it.
-_migrations: []
+# A `version:` entry runs only when the update crosses that version (new >= version > old),
+# which Copier reads from the template's git tags (PEP 440): an update to an untagged HEAD
+# that is still numbered 0.4.1 does not run it. It never runs on `copier copy`.
+_migrations:
+  # v0.4.2 (D76) retires the shipped `.agents -> .claude` link for a real .agents/ folder. An
+  # update never touches /.agents (its update gate above), so without this the link survives
+  # and every sandboxed Codex command keeps failing. Only where .agents is a symbolic link
+  # whose target is exactly `.claude` or `.claude/` does it act: it removes the link (never a
+  # file or folder), creates .agents/, links .agents/skills -> ../.claude/skills, and moves
+  # .claude/mcp_config.json to .agents/mcp_config.json only where the new path is free. A real
+  # folder, a link elsewhere, a text file left by core.symlinks=false or no .agents at all is
+  # left untouched and reported. It never deletes author content, is idempotent and always
+  # exits 0. This is D11's one stated exception: media changes a shared path only here.
+  - version: v0.4.2
+    command: python3 "<% _copier_conf.src_path %>/migrations/v0.4.2-agents-folder.py"
+    when: "<% _stage == 'after' %>"
 
 # ── Before an update ─────────────────────────────────────────────────────────
 #
@@ -846,6 +887,12 @@ _message_before_update: |
   A list answer replaces the whole list: --data 'PLATFORMS=[youtube, podcast]' removes every
   platform not named.
 
+  Crossing 0.4.2, one migration runs after the update (D76): where .agents is a symbolic link
+  to .claude, it replaces the link with a real .agents/ folder, links .agents/skills to
+  ../.claude/skills and moves .claude/mcp_config.json to .agents/mcp_config.json if that path
+  is free. A real .agents folder, a link anywhere else or no .agents at all is left as it is
+  and reported. It deletes nothing you wrote; review its report and commit the change.
+
   BRAND_KIND never changes: the update refuses it, because a different brand kind is a new
   project. After a platform or media-kind change, edit by hand the files that describe your
   options: README.md, CONTEXT.md and .claude/CLAUDE.md Section 1 in a standalone project (over
@@ -855,7 +902,7 @@ _message_before_update: |
 # ── After a copy ─────────────────────────────────────────────────────────────
 #
 # DESIGN.md D13 and Section 8: what coexistence leaves to the author, in D13's order — (1) the
-# seventeen shared paths and the skip rule (Copier prints an existing one as `conflict` then `skip`,
+# nineteen shared paths and the skip rule (Copier prints an existing one as `conflict` then `skip`,
 # or `identical`), with Section 8's hand edits 2 and 3: the optional index lines, and nothing
 # to add to .gitignore or .mcp.json; (2) the allow, ask and Edit deny entries for an existing
 # settings.json, exactly as the standalone seed holds them; (3) the ElevenLabs line, with the
@@ -875,10 +922,11 @@ _message_after_copy: |
     Media kinds:  <% MEDIA_KINDS | join(', ') %>
 
   1. Shared files. README.md, CONTEXT.md, .gitignore, .mcp.json, .claude/CLAUDE.md,
-     .claude/CONTEXT.md, .claude/MEMORY.md, .claude/settings.json, .claude/skills/CONTEXT.md
-     .claude/skills/CLAUDE.md, AGENTS.md, GEMINI.md, .agents, .codex/config.toml,
-     .codex/CONTEXT.md, .codex/CLAUDE.md and .claude/mcp_config.json are written only where
-     they did not exist. Any that Copier
+     .claude/CONTEXT.md, .claude/MEMORY.md, .claude/settings.json, .claude/skills/CONTEXT.md,
+     .claude/skills/CLAUDE.md, AGENTS.md, GEMINI.md, the .agents folder with .agents/skills
+     (a link to ../.claude/skills) and .agents/mcp_config.json, .codex/config.toml,
+     .codex/CONTEXT.md and .codex/CLAUDE.md are written only where they did not exist; a
+     missing one is added inside an existing .agents folder. Any that Copier
      reported as 'conflict' then 'skip', or as 'identical', was left exactly as it was, and no
      syntek-media update will touch it: that pair is expected and is not a collision.
      The media rules in .claude/rules/syntek-media/ load at launch whatever those files say,
@@ -886,8 +934,9 @@ _message_after_copy: |
      in .claude/CLAUDE.md, is optional. Nothing needs adding to .gitignore or .mcp.json:
      media's ignore rules are nested, and the ElevenLabs server is user-scoped.
      Codex and Antigravity read .claude/syntek-media-agents.md. Preserve any existing
-     entrypoint, agent settings, real .agents directory or differently targeted link;
-     follow the bridge's explicit setup instructions for missing files or manual integration.
+     entrypoint, agent settings or .agents; where .agents is a link to .claude, Codex's
+     sandbox fails on it. Follow the bridge's setup steps for missing files, a real folder
+     or manual integration of an existing .agents.
 
   2. Permissions. If .claude/settings.json was skipped, add these entries to it by hand.
      Under "permissions", in "allow" (syntek-author's settings already allow the last two):

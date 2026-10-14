@@ -9,7 +9,7 @@
 #                    manifest lands in every project and no update can retract it — so emptiness
 #                    is AUDITED, not trusted (DESIGN.md Section 3.1). Seed-once examples are the
 #                    opposite contract: copied on `copy`, excluded on `update`, so an example the
-#                    author deleted stays deleted (Section 3.2). The seventeen shared paths are a third:
+#                    author deleted stays deleted (Section 3.2). The nineteen shared paths are a third:
 #                    copy only, never on update, never recreated (D11, Section 3.6), and they need
 #                    BOTH their copier.yml lines — without the update gate a file the author
 #                    deleted comes back from media's copy inside syntek-author's project
@@ -19,7 +19,7 @@
 #                    which only a `!` negation listed above every gated _exclude line can
 #                    promise, because Copier obeys the last pattern that matches (D19, Section 3.5).
 #
-#                    Sixteen checks:
+#                    Nineteen checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
 #                         _skip_if_exists.
 #                      2. Every _skip_if_exists entry names a file under template/.
@@ -34,7 +34,7 @@
 #                         table header with no rows is empty: the website and blog profiles'
 #                         `## Sites` and the newsletter profile's `## Lists` ship that way
 #                         (DESIGN.md D61, Section 6.15).
-#                      8. Each of the seventeen shared paths has its update-gated _exclude line
+#                      8. Each of the nineteen shared paths has its update-gated _exclude line
 #                         ("_copier_operation == 'update'"), and nothing else carries that gate.
 #                      9. A Markdown register or brand seed lacks the seeded-stub banner. Index
 #                         pairs carry none: a pair is navigation.
@@ -68,8 +68,20 @@
 #                         pattern that matches a path, so a negation after a shut gate brings
 #                         its path back: the audiobook folder's two READMEs would ship to a brand
 #                         that makes no audiobooks. shipped-brands.sh check 12 proves the renders.
+#                     17. A retired shared path (D76: .claude/mcp_config.json) lacks its
+#                         unconditional, anchored _exclude line, or a shared path that still
+#                         ships carries one. The retired path keeps its two D11 lines (checks 1
+#                         and 8) and its file under template/ (check 2): only the third line
+#                         stops it shipping, on copy as on update.
+#                     18. template/.agents is not a real folder holding exactly two entries:
+#                         skills, the relative link ../.claude/skills, and mcp_config.json
+#                         (DESIGN.md D76, Section 3.7).
+#                     19. copier.yml's _migrations has no v0.4.2 entry running
+#                         migrations/v0.4.2-agents-folder.py after the update, or a migration
+#                         names a script that is not in migrations/ at this repository's root
+#                         (D76; copier.yml's house shape).
 #
-#                    Checks 1–4, 8 and 16 read copier.yml and template/ (static, once). Checks
+#                    Checks 1–4, 8 and 16–19 read copier.yml and template/ (static, once). Checks
 #                    5–7 and 9–15 read every tree given — template/ by default, or renders — and
 #                    skip a seed the tree does not ship.
 #
@@ -231,7 +243,7 @@ static_checks() {
     [[ -n "${update_gated[$s]:-}" ]] || finding "check 8 — the shared file $s has no update-gated _exclude line ($SM_SHARED_GATE) — an update would recreate it after the author deleted it (DESIGN.md Section 10)"
   done
   for s in "${!update_gated[@]}"; do
-    is_shared "$s" || finding "check 8 — /$s carries the shared files' update gate ($SM_SHARED_GATE) but is not one of the seventeen (DESIGN.md D11): it would never reach a project by update"
+    is_shared "$s" || finding "check 8 — /$s carries the shared files' update gate ($SM_SHARED_GATE) but is not one of the nineteen (DESIGN.md D11): it would never reach a project by update"
   done
 
   # ── 16. Negations: an output folder's own README.md, above every gated line ──
@@ -257,6 +269,40 @@ static_checks() {
       finding "check 16 — _exclude negates $path back in at item $n, after the first gated line (item $first_gated): a negation listed after a gate brings its path back with the gate shut — list it above every gated line (DESIGN.md Section 3.5, Section 10)"
     fi
   done
+
+  # ── 17. A retired shared path: its two lines, its file, and a third line (D76) ──
+  local -A plain=()
+  while IFS= read -r item; do
+    [[ "$item" == /* && "$item" != *'<:'* ]] && plain["${item#/}"]=1
+  done < <(yaml_list _exclude "$COPIER")
+  for s in $SM_SHARED_RETIRED; do
+    [[ -n "${plain[$s]:-}" ]] || finding "check 17 — the retired shared path /$s has no unconditional _exclude line: it still ships on copy (DESIGN.md D76)"
+  done
+  for s in $SM_SHARED_SHIPPED; do
+    [[ -n "${plain[$s]:-}" ]] && finding "check 17 — the shared path /$s carries an unconditional _exclude line: it would never ship (DESIGN.md D11, D76)"
+  done
+
+  # ── 18. The agent folder under template/ (D76) ──────────────────────────────
+  local entries
+  if [[ -L "$TPL/.agents" || ! -d "$TPL/.agents" ]]; then
+    finding "check 18 — template/.agents is not a real folder (DESIGN.md D76)"
+  else
+    entries="$(find "$TPL/.agents" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort | paste -sd' ' -)"
+    [[ "$entries" == "mcp_config.json skills" ]] || finding "check 18 — template/.agents holds '${entries:-nothing}', not exactly mcp_config.json and skills (DESIGN.md D76)"
+    [[ -L "$TPL/.agents/skills" && "$(readlink "$TPL/.agents/skills")" == "$SM_AGENTS_SKILLS_LINK" ]] \
+      || finding "check 18 — template/.agents/skills is not the relative link $SM_AGENTS_SKILLS_LINK (DESIGN.md D76)"
+  fi
+
+  # ── 19. The D76 migration is declared, and every migration's script exists ──
+  local mig
+  mig="$(awk '/^_migrations:/ { on = 1; next } on && /^[A-Za-z_]/ { exit } on' "$COPIER")"
+  if ! grep -qE "^[[:space:]]*-[[:space:]]+version:[[:space:]]+$SM_D76_VERSION[[:space:]]*$" <<< "$mig" \
+      || ! grep -qF "/$SM_D76_MIGRATION" <<< "$mig" || ! grep -qF "_stage == 'after'" <<< "$mig"; then
+    finding "check 19 — _migrations has no $SM_D76_VERSION entry running $SM_D76_MIGRATION after the update (DESIGN.md D76)"
+  fi
+  while IFS= read -r item; do
+    [[ -f "$SM_ROOT/$item" ]] || finding "check 19 — a migration runs $item, which is not in this repository (it is read from the template clone: _copier_conf.src_path)"
+  done < <(grep -oE 'src_path *%>/migrations/[^" ]+' <<< "$mig" | sed -E 's#^.*%>/##')
 }
 
 json_check() { # $1 = mode (mcp|settings|parse), $2 = file → prints one problem per line
@@ -425,17 +471,20 @@ write_fixture() { # $1 = repo root
   {
     printf '_exclude:\n  - .git\n  - /production/src/renders/**\n  - "!/production/src/renders/README.md"\n'
     for s in $SM_SHARED; do printf '  - "<: if _copier_operation == %supdate%s :>/%s<: endif :>"\n' "$q" "$q" "$s"; done
+    for s in $SM_SHARED_RETIRED; do printf '  - /%s\n' "$s"; done
     printf '  - "<: if not (%syoutube%s in PLATFORMS) :>/brand/src/platforms/youtube.md<: endif :>"\n' "$q" "$q"
     for s in $SM_EXAMPLES; do printf '  - "<: if %s :>/%s<: endif :>"\n' "$SM_EXAMPLE_GATE" "$s"; done
     printf '_skip_if_exists:\n'
     for s in $SM_SHARED $SM_SEEDS; do printf '  - /%s\n' "$s"; done
     printf 'BRAND_NAME:\n  type: str\n'
+    printf '_migrations:\n  - version: %s\n    command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_VERSION" "$SM_D76_MIGRATION" "$q" "$q"
   } > "$r/copier.yml"
   for s in $SM_SHARED $SM_SEEDS; do
-    [[ "$s" == .agents ]] && continue
+    [[ "$s" == .agents || "$s" == .agents/skills ]] && continue
     mkdir -p "$(dirname "$t/$s")"; printf '# %s\n' "${s##*/}" > "$t/$s"
   done
-  ln -s .claude "$t/.agents"
+  ln -s "$SM_AGENTS_SKILLS_LINK" "$t/.agents/skills"
+  mkdir -p "$r/migrations"; printf 'print("fixture migration")\n' > "$r/$SM_D76_MIGRATION"
   for s in $SM_REGISTER_SEEDS; do
     printf '# %s\n\n%s\n\n## Register\n\n| ID | Notes |\n|---|---|\n' "${s##*/}" "$banner" > "$t/$s"
   done
@@ -578,6 +627,31 @@ self_test() {
   probe "check 16 fires on a negation inside a gated line" "check 16 — a gated _exclude line negates /production/src/audiobook/renders/README.md"
   cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
   probe_clean "an output folder's own README.md, negated above every gated line, is the one negation allowed"
+
+  # 17: the retired path's third line, and no third line on a path that still ships.
+  sed -i '\#^  - /\.claude/mcp_config\.json$#{x;s/^/x/;/^x$/{x;d};x}' "$COPIER"; SM_SETS_FOR=""
+  probe "check 17 fires when the retired path loses its unconditional line" "check 17 — the retired shared path /.claude/mcp_config.json"
+  cp "$tmp/c" "$COPIER"
+  sed -i 's#^_skip_if_exists:#  - /.agents/mcp_config.json\n_skip_if_exists:#' "$COPIER"; SM_SETS_FOR=""
+  probe "check 17 fires when a shipped shared path is excluded outright" "check 17 — the shared path /.agents/mcp_config.json carries an unconditional"
+  cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
+  # 18: the agent folder.
+  mv "$t/.agents" "$tmp/agents-held"; ln -s .claude "$t/.agents"
+  probe "check 18 fires when .agents is the 0.4.1 link" "check 18 — template/.agents is not a real folder"
+  rm "$t/.agents"; mv "$tmp/agents-held" "$t/.agents"
+  rm "$t/.agents/skills"; ln -s ../.claude "$t/.agents/skills"
+  probe "check 18 fires when the skills link targets anything else" "check 18 — template/.agents/skills is not the relative link"
+  rm "$t/.agents/skills"; ln -s "$SM_AGENTS_SKILLS_LINK" "$t/.agents/skills"
+  printf 'x\n' > "$t/.agents/rules.md"
+  probe "check 18 fires on a third entry in the agent folder" "check 18 — template/.agents holds 'mcp_config.json rules.md skills'"
+  rm -f "$t/.agents/rules.md"
+  # 19: the migration entry and its script.
+  awk '/^_migrations:/ { exit } { print }' "$tmp/c" > "$COPIER"
+  probe "check 19 fires when the D76 migration is not declared" "check 19 — _migrations has no $SM_D76_VERSION entry"
+  cp "$tmp/c" "$COPIER"; mv "$tmp/$SM_D76_MIGRATION" "$tmp/mig-held"
+  probe "check 19 fires when a migration's script is missing" "check 19 — a migration runs $SM_D76_MIGRATION"
+  mv "$tmp/mig-held" "$tmp/$SM_D76_MIGRATION"
+  probe_clean "the retired path, the agent folder and the migration in shape"
 
   # The over-author scope: the shared files are syntek-author's, so checks 5, 6, 10, 12 and 13
   # do not read them; media's own seeds are still held to their contract.

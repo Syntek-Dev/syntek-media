@@ -367,6 +367,10 @@ self_test() {
 
   mkdir -p "$t/handoffs"; printf '# A handoff\n' > "$t/handoffs/HANDOFF-PROBE-01-01-2027.md"
   probe_clean "a handoffs/ folder created standalone carries no pair, by design"; rm -rf "$t/handoffs"
+  mkdir -p "$t/.agents" "$t/.claude/skills"; ln -s ../.claude/skills "$t/.agents/skills"; printf '{"mcpServers": {}}\n' > "$t/.agents/mcp_config.json"
+  probe_clean "the .agents folder holds a link and a client file and no pair, by design (D76)"; rm -rf "$t/.agents"
+  mkdir -p "$t/.agents/workflows"; printf '# x\n' > "$t/.agents/workflows/x.md"
+  probe_clean "nothing under .agents/ is read as a folder needing a pair (D76)"; rm -rf "$t/.agents"
   mkdir -p "$t/production/src/footage/raw"; write_pair "$t" production/src/footage
   printf '# raw/\n\nThe local mirror; Git ignores it.\n' > "$t/production/src/footage/raw/README.md"
   probe_clean "a raw/ folder with only README.md is a declared exception"; rm -rf "$t/production/src/footage"
