@@ -841,7 +841,7 @@ _migrations:
   # D76, D11's second exception: Copier checks that no destination resolves outside the
   # project BEFORE it reads _exclude (9.17.1, _main.py:810-812), so an .agents link that
   # leaves the project fails every update. Unversioned on purpose, the one pair not keyed to a
-  # release: it must run on every update. hold renames that link to .agents.syntek-media-held
+  # release: it must run on every update. hold renames that link to .agents.syntek-held
   # before the render (after Copier's dirty check) and prints the hand fix first; restore,
   # declared before every other after-stage entry, renames it back. Nothing else is touched,
   # never the link's target; both always exit 0. Migrations never run on a copy: the copy
@@ -913,8 +913,8 @@ _message_before_update: |
   and reported. It deletes nothing you wrote; review its report and commit the change.
 
   Where .agents is a symbolic link to a folder outside this project, every update renames it
-  to .agents.syntek-media-held before the render and back afterwards; its target is never
-  touched. If the update stops before it ends, run: mv .agents.syntek-media-held .agents
+  to .agents.syntek-held before the render and back afterwards; its target is never
+  touched. If the update stops before it ends, run: mv .agents.syntek-held .agents
 
   BRAND_KIND never changes: the update refuses it, because a different brand kind is a new
   project. After a platform or media-kind change, edit by hand the files that describe your

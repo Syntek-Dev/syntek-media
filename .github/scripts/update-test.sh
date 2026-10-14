@@ -94,14 +94,14 @@
 #                   20. An update across v0.4.2 where .agents is a link to a folder OUTSIDE the
 #                       project (which Copier refuses to render beneath, before _exclude is
 #                       read) succeeds through D76's unversioned hold/restore pair: the link
-#                       comes back with the same target, no .agents.syntek-media-held is left,
+#                       comes back with the same target, no .agents.syntek-held is left,
 #                       Git sees no change to either, the restore is printed, and nothing is
 #                       written in the folder the link points to (D11's second, transient
 #                       exception: the link alone is renamed, aside and back).
 #                   21. A stranded hold prints its fix: an update of that project that stops
 #                       between the stages (a refused BRAND_KIND, in a clone) leaves the link
-#                       held as .agents.syntek-media-held and prints the hand fix
-#                       'mv .agents.syntek-media-held .agents'; run as printed, the fix leaves
+#                       held as .agents.syntek-held and prints the hand fix
+#                       'mv .agents.syntek-held .agents'; run as printed, the fix leaves
 #                       the clone's work tree clean and the link's target unchanged.
 #
 #                  Copier prints a MissingFileWarning on a fresh copy and on every update (the

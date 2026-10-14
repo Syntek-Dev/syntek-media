@@ -1,6 +1,6 @@
 # syntek-author-names.txt — the names syntek-media never takes (DESIGN.md D27).
 #
-# Baseline: syntek-author 7f9ad9f plus working tree, read 14/10/2026.
+# Baseline: syntek-author 97fa5ba plus working tree, read 14/10/2026.
 # Written only by: bash .github/scripts/coexist-test.sh --refresh-names --author DIR
 # Never edit by hand. shipped-brands.sh check 11 and skill-conformance.sh check 20 read it
 # on every run; coexist-test.sh check 20 fails when syntek-author moves past it.
@@ -13,11 +13,11 @@ claude CLAUDE.md
 claude CONTEXT.md
 claude MEMORY.md
 claude hooks
-claude mcp_config.json
 claude rules
 claude settings.json
 claude skills
 claude syntek-author-agents.md
+claude syntek-author-permissions.py
 rules 00-project.md
 rules 01-layout-and-routing.md
 rules 02-skills.md

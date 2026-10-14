@@ -13,13 +13,14 @@
 #                    `_subdirectory` keeps template/ out of renders; it does nothing for
 #                    development sessions.
 #
-#                    Two layers in the ROOT .claude/settings.json close that (DESIGN.md Section 7):
-#                      permissions.deny lists Skill(<name>) for every template skill — the ten of
-#                      Section 5.1 — and an unqualified deny also blocks the nested
-#                      template:<name> form; claudeMdExcludes keeps the generated project's
-#                      manuals out.
+#                    Three layers in the ROOT .claude/settings.json close that (DESIGN.md
+#                    Section 7): permissions.deny lists Skill(<name>) for every template skill —
+#                    the ten of Section 5.1 — and an unqualified deny also blocks the nested
+#                    template:<name> form; skillOverrides sets each of them "off", which hides it
+#                    from the session's skill list as well; claudeMdExcludes keeps the generated
+#                    project's manuals out.
 #
-#                    Six checks:
+#                    Seven checks:
 #                      1. The root .claude/settings.json exists and is valid JSON.
 #                      2. Every skill folder under template/.claude/skills/ is denied as
 #                         Skill(<name>).
@@ -36,6 +37,8 @@
 #                         read-only link, D76), holding its pair and, only where the
 #                         development .claude/skills exists, skills -> ../.claude/skills;
 #                         nothing else, so it never exposes template/.claude (D73, D76).
+#                      7. Every skill checks 2 and 3 cover is set "off" in skillOverrides, so it
+#                         is hidden from the session's skill list, not only refused (D76).
 #
 #                    Numbers are stable identifiers. Append, never renumber.
 #
@@ -45,10 +48,10 @@
 #                    refuses the Skill call; it does not hide the skill. Claude Code's skills
 #                    documentation says so, and a 2.1.289 session (04/10/2026) showed it: once
 #                    a file under template/ was read, all ten were listed "from
-#                    template/.claude/skills", some with their full descriptions. Only a
-#                    skillOverrides "off" entry hides a skill, a third layer that would change
-#                    DESIGN.md Section 7 and the root settings, so it is the maintainer's to
-#                    add. A deny on the bare name covers the nested, directory-qualified form
+#                    template/.claude/skills", some with their full descriptions. A
+#                    skillOverrides "off" entry hides a skill (Claude Code settings reference,
+#                    read 14/10/2026); check 7 proves the entries are present, not that a
+#                    session honours them. A deny on the bare name covers the nested, directory-qualified form
 #                    only from Claude Code 2.1.260. Proving the refusal needs a live session,
 #                    and CI holds no credentials for one. After any Claude Code upgrade that
 #                    touches skill discovery, run this probe by hand. Start
@@ -106,7 +109,8 @@ SKILLS="$SM_ROOT/template/.claude/skills"
 EXCLUDES=("**/template/**/CLAUDE.md" "**/template/.claude/**")
 ON_DISK=0
 
-# Prints "D<TAB>entry" per deny entry and "X<TAB>pattern" per claudeMdExcludes entry, or
+# Prints "D<TAB>entry" per deny entry, "X<TAB>pattern" per claudeMdExcludes entry and
+# "O<TAB>name=value" per skillOverrides entry, or
 # "E<TAB>reason" when the file is not valid JSON.
 read_settings() {
   python3 - "$SETTINGS" <<'PY'
@@ -119,6 +123,8 @@ for d in ((data.get("permissions") or {}).get("deny") or []):
     print(f"D\t{d}")
 for x in (data.get("claudeMdExcludes") or []):
     print(f"X\t{x}")
+for name, value in (data.get("skillOverrides") or {}).items():
+    print(f"O\t{name}={value}")
 PY
 }
 
@@ -126,7 +132,7 @@ run_checks() {
   FINDINGS=()
   ON_DISK=0
   local kind val s x
-  local -A denied=() excluded=() on_disk=()
+  local -A denied=() excluded=() on_disk=() hidden=()
   if [[ ! -f "$SETTINGS" ]]; then
     finding "check 1 — there is no .claude/settings.json at the repository root — nothing isolates the template's skills"
     return 0
@@ -136,6 +142,7 @@ run_checks() {
       E) finding "check 1 — .claude/settings.json is not valid JSON ($val)"; return 0 ;;
       D) denied["$val"]=1 ;;
       X) excluded["$val"]=1 ;;
+      O) [[ "${val#*=}" == off ]] && hidden["${val%%=*}"]=1 ;;
     esac
   done < <(read_settings)
 
@@ -143,11 +150,13 @@ run_checks() {
     while IFS= read -r s; do
       on_disk["$s"]=1; ON_DISK=$((ON_DISK + 1))
       [[ -n "${denied["Skill($s)"]:-}" ]] || finding "check 2 — template skill $s is not denied as Skill($s) — it can fire in a development session"
+      [[ -n "${hidden[$s]:-}" ]] || finding "check 7 — template skill $s is not set off in skillOverrides — it is listed in a development session"
     done < <(find "$SKILLS" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | LC_ALL=C sort)
   fi
   while read -r s _; do
     [[ -z "$s" || -n "${on_disk[$s]:-}" ]] && continue
     [[ -n "${denied["Skill($s)"]:-}" ]] || finding "check 3 — DESIGN.md names the skill $s, and it is not denied — it would fire the day its folder lands"
+    [[ -n "${hidden[$s]:-}" ]] || finding "check 7 — DESIGN.md names the skill $s, and it is not set off in skillOverrides"
   done <<< "$SM_SKILLS"
   for x in "${EXCLUDES[@]}"; do
     [[ -n "${excluded[$x]:-}" ]] || finding "check 4 — claudeMdExcludes does not carry \"$x\""
@@ -221,7 +230,7 @@ self_test() {
   trap "rm -rf '$tmp'" RETURN
   SM_ROOT="$tmp"; SETTINGS="$tmp/.claude/settings.json"; SKILLS="$tmp/template/.claude/skills"
   mkdir -p "$tmp/.claude" "$SKILLS/voiceover" "$SKILLS/captions"
-  write_settings() { # $1 = names to leave out of deny, $2 = excludes JSON
+  write_settings() { # $1 = names to leave out of deny, $2 = excludes JSON, $3 = names left on
     local first=true
     {
       printf '{\n  "claudeMdExcludes": %s,\n  "permissions": {"deny": [' "$2"
@@ -230,7 +239,14 @@ self_test() {
         $first || printf ', '; first=false
         printf '"Skill(%s)"' "$s"
       done <<< "$SM_SKILLS"
-      printf ']}\n}\n'
+      printf ']},\n  "skillOverrides": {'
+      first=true
+      while read -r s _; do
+        [[ -z "$s" ]] && continue
+        $first || printf ', '; first=false
+        if [[ " ${3:-} " == *" $s "* ]]; then printf '"%s": "on"' "$s"; else printf '"%s": "off"' "$s"; fi
+      done <<< "$SM_SKILLS"
+      printf '}\n}\n'
     } > "$SETTINGS"
   }
   local ok='["**/template/**/CLAUDE.md", "**/template/.claude/**"]'
@@ -260,6 +276,9 @@ PYCLIENT
   write_settings "captions" "$ok";                                    probe "check 2 fires when a skill on disk is not denied" "check 2 — template skill captions"
   write_settings "narrate-audiobook" "$ok";                           probe "check 3 fires when a catalogued skill is not denied" "check 3 — DESIGN.md names the skill narrate-audiobook"
   write_settings "" '["**/template/**/CLAUDE.md"]';                   probe "check 4 fires when an exclusion is lost" "check 4"
+  write_settings "" "$ok" "captions";                                 probe "check 7 fires when a skill on disk is left on" "check 7 — template skill captions"
+  write_settings "" "$ok" "narrate-audiobook";                        probe "check 7 fires when a catalogued skill is left on" "check 7 — DESIGN.md names the skill narrate-audiobook"
+  write_settings "" "$ok"
 
   write_settings "" "$ok"
   printf 'bad = [' > "$tmp/.codex/config.toml"; probe "check 5 fires on invalid Codex TOML" "check 5"
@@ -301,12 +320,12 @@ fi
 bold "▸ $SCRIPT_NAME"
 run_checks
 if [[ ${#FINDINGS[@]} -eq 0 ]]; then
-  bold "✓ $ON_DISK template skill(s) on disk and every catalogued skill denied; both CLAUDE.md exclusions and client isolation present."
+  bold "✓ $ON_DISK template skill(s) on disk and every catalogued skill denied and set off; both CLAUDE.md exclusions and client isolation present."
   exit 0
 fi
 bold "✗ ${#FINDINGS[@]} finding(s):"
 print_findings
 log ""
-log "  Add Skill(<name>) to permissions.deny in the ROOT .claude/settings.json (never the one"
-log "  under template/, which ships)."
+log "  Add Skill(<name>) to permissions.deny and <name>: off to skillOverrides in the ROOT"
+log "  .claude/settings.json (never the one under template/, which ships)."
 exit 1

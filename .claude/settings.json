@@ -16,5 +16,17 @@
       "Skill(captions)",
       "Skill(cut-for-platform)"
     ]
+  },
+  "skillOverrides": {
+    "run-media-workflow": "off",
+    "write-script": "off",
+    "storyboard": "off",
+    "repurpose": "off",
+    "thumbnail-brief": "off",
+    "prepare-post": "off",
+    "voiceover": "off",
+    "narrate-audiobook": "off",
+    "captions": "off",
+    "cut-for-platform": "off"
   }
 }

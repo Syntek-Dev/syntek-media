@@ -10,13 +10,13 @@ Nothing here ships (`_subdirectory: template`).
 .claude/
 ├── CONTEXT.md        ← this file
 ├── CLAUDE.md         ← the development manual: contract, dev isolation, token discipline, recipes
-└── settings.json     ← dev isolation: a Skill(<name>) deny for every template skill, and claudeMdExcludes
+└── settings.json     ← dev isolation: a Skill(<name>) deny and a skillOverrides "off" for every template skill, and claudeMdExcludes
 ```
 
 ## What's here
 
 - `CLAUDE.md` — how to work on the template. It imports the root `CONTEXT.md` and this file, and routes every design question to `DESIGN.md`.
-- `settings.json` — **two layers of isolation, both required** (DESIGN.md Section 7). `permissions.deny` lists `Skill(<name>)` for every skill under `template/.claude/skills/`, because Claude Code loads a nested skills folder as soon as a session reads a file beneath it; `claudeMdExcludes` keeps `template/**/CLAUDE.md` and `template/.claude/**` out of development sessions. Every new template skill needs its deny line here, added or approved by the maintainer.
+- `settings.json` — **three layers of isolation, all required** (DESIGN.md Section 7). `permissions.deny` lists `Skill(<name>)` for every skill under `template/.claude/skills/`, because Claude Code loads a nested skills folder as soon as a session reads a file beneath it; `skillOverrides` sets each of them `"off"`, because a deny refuses a skill but leaves it listed; `claudeMdExcludes` keeps `template/**/CLAUDE.md` and `template/.claude/**` out of development sessions. Every new template skill needs its deny line and its `skillOverrides` entry here, added or approved by the maintainer.
 - There is no `MEMORY.md`, no hook, no skills folder and no MCP configuration: the template's own decisions live in `DESIGN.md` and `CHANGELOG.md`, where a reviewer can see them, and nothing here calls ElevenLabs.
 
 ## Cross-references

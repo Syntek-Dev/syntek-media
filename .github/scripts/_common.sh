@@ -610,7 +610,7 @@ SM_D76_VERSION="v0.4.2"
 # SM_OUTSIDE_HELD and prints SM_OUTSIDE_FIX; restore (after, declared before the v0.4.2 entry)
 # renames it back.
 SM_OUTSIDE_MIGRATION="migrations/agents-outside-link.py"
-SM_OUTSIDE_HELD=".agents.syntek-media-held"
+SM_OUTSIDE_HELD=".agents.syntek-held"
 SM_OUTSIDE_FIX="mv $SM_OUTSIDE_HELD .agents"
 
 # Seeds (DESIGN.md Section 3.1): twenty-six, then the sixteen author-filled index-pair files.
@@ -1157,8 +1157,8 @@ sm_update_author() { # $1 = project dir, then extra copier arguments
 # helps on its own. An update holds such a link aside and restores it through D76's
 # unversioned migration pair (SM_OUTSIDE_MIGRATION, DESIGN.md D11's second exception); a copy
 # runs no migration and takes the hand recipe of the bridge and README.md instead: mv .agents
-# .agents.held, copy with --exclude /.agents (the argument this prints for the link, called
-# before the mv), then mv .agents.held .agents.
+# .agents.syntek-held, copy with --exclude /.agents (the argument this prints for the link, called
+# before the mv), then mv .agents.syntek-held .agents.
 sm_agents_copy_args() { # $1 = destination
   local d="$1/.agents"
   if [[ -L "$d" || ( -e "$d" && ! -d "$d" ) ]]; then printf -- '--exclude\n/.agents\n'; return 0; fi

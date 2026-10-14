@@ -32,9 +32,10 @@
 Claude Code loads a nested `.claude/skills/` the first time a session reads a file beneath it, and nested `CLAUDE.md` files on demand. Without isolation, opening `template/` would load the product's skills and manuals into this session, where they would fire on description match and steer template development as if it were a production project.
 
 - **Layer 1 — `.claude/settings.json` denies `Skill(<name>)` for every skill under `template/.claude/skills/`**, the ten of DESIGN.md Section 5.1 in that order. An unqualified deny also blocks the nested `template:<name>` form.
-- **Layer 2 — `claudeMdExcludes`** keeps `template/**/CLAUDE.md` and everything under `template/.claude/` out of this session's memory.
+- **Layer 2 — `skillOverrides` sets each of the same ten `"off"`**, so it is not even listed: a deny refuses a skill, but leaves it in the session's skill list.
+- **Layer 3 — `claudeMdExcludes`** keeps `template/**/CLAUDE.md` and everything under `template/.claude/` out of this session's memory.
 - **Never invoke a template skill.** If one appears invocable (listed as `template:<name>`, or offered for files under `template/`), the deny list has a gap: stop and report it rather than using it.
-- **Adding a skill to the template means adding its deny line.** That is a change to this repository's permission settings, so it is the maintainer's to make or approve; propose the exact line.
+- **Adding a skill to the template means adding its deny line and its `skillOverrides` entry.** That is a change to this repository's permission settings, so it is the maintainer's to make or approve; propose the exact lines.
 - **Codex and Antigravity:** root `AGENTS.md` and `GEMINI.md` route to this development manual;
   `.agents/` is a real folder, never a link (D76), holding only its pair, and `skills -> ../.claude/skills` only if this tree ever has skills; never the product's. The development
   `.codex/config.toml` sets no `CLAUDE.md` fallback and no skill rule: Codex 0.160.1 honours `[[skills.config]]` only from user config and `-c`, matched on each `SKILL.md`. Start Codex at the root; under `template/` it finds the product skills and the product `AGENTS.md` (`.codex/CLAUDE.md` gives the user-level rule). Product manuals remain source text in every client (D73).
@@ -90,7 +91,7 @@ Each recipe ends the same way: run the audits (Section 8) and add a `CHANGELOG.m
 2. Write `template/.claude/skills/<name>/SKILL.md` to the conformance rules of DESIGN.md Section 5. A moded skill gets one mode file per brand kind (7.2).
 3. A gated skill gets one `_exclude` line in its block of `copier.yml`: `"<: if not (GATE) :>/.claude/skills/<name><: endif :>"`.
 4. Add its row to `template/.claude/rules/syntek-media/02-skills.md` Section 3, wrapped in its gate, and to the skill catalogue in `.github/scripts/_common.sh`.
-5. Propose its `Skill(<name>)` deny line for the root `.claude/settings.json` and its line in the user-level Codex recipe of `.codex/CLAUDE.md` (Section 3).
+5. Propose its `Skill(<name>)` deny line and its `"<name>": "off"` `skillOverrides` entry for the root `.claude/settings.json` and its line in the user-level Codex recipe of `.codex/CLAUDE.md` (Section 3).
 
 **7.2 Add or remove a mode file.** Write `BUSINESS.md`, `FICTION.md` or `NONFICTION.md` beside the `SKILL.md` with the four H2s, then regenerate the block of `copier.yml` between the `BEGIN`/`END generated mode excludes` markers:
 

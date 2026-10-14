@@ -58,11 +58,11 @@ write under .agents.
 
 Where .agents is a link to a folder outside the project, Copier refuses to render anything
 beneath it, exclusions included, so the link alone is moved aside and put back. Updates do
-this themselves: they rename it to .agents.syntek-media-held before the render and back
+this themselves: they rename it to .agents.syntek-held before the render and back
 afterwards, never touching its target. If an update stops before it ends, run
-`mv .agents.syntek-media-held .agents` from the project root, then update again. Before a
-copy, run `mv .agents .agents.held`, copy with --exclude /.agents, then run
-`mv .agents.held .agents`.
+`mv .agents.syntek-held .agents` from the project root, then update again. Before a
+copy, run `mv .agents .agents.syntek-held`, copy with --exclude /.agents, then run
+`mv .agents.syntek-held .agents`.
 
 Where Git checks links out as text (core.symlinks=false, usually on Windows),
 .agents/skills arrives as a small file holding its target. Enable symbolic links (Developer

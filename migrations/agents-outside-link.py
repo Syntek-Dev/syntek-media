@@ -22,7 +22,7 @@ aside and back, and the net change is zero.
 If the update stops between the stages (a refused answer, Ctrl-C at a question), the link
 stays held and the next update refuses the dirty tree. The hold stage prints the fix before
 the render starts; run it from the project root:
-  mv .agents.syntek-media-held .agents
+  mv .agents.syntek-held .agents
 
 By hand. 'python3 agents-outside-link.py restore' from the project root does the same as the
 mv line where .agents is absent. A copy runs no migration: the copy recipe is in the bridge,
@@ -35,7 +35,7 @@ import os
 import sys
 
 ALIAS = '.agents'
-HELD = '.agents.syntek-media-held'
+HELD = '.agents.syntek-held'
 BY_HAND = 'mv ' + HELD + ' ' + ALIAS
 
 
