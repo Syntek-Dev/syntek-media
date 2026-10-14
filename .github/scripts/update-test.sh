@@ -29,7 +29,7 @@
 #                       author's project would, in the folder that platform gates;
 #                    8. assert.
 #
-#                  Nineteen checks per brand kind:
+#                  Twenty-one checks per brand kind:
 #                    1. The project renders.
 #                    2. `copier update` succeeds.
 #                    3. The author's MEMORY.md entry survives.
@@ -91,6 +91,18 @@
 #                   19. The migration leaves every other .agents untouched and says so: a real
 #                       folder, a link to another folder in the project, none at all, and a
 #                       link checked out as a text file (core.symlinks=false).
+#                   20. An update across v0.4.2 where .agents is a link to a folder OUTSIDE the
+#                       project (which Copier refuses to render beneath, before _exclude is
+#                       read) succeeds through D76's unversioned hold/restore pair: the link
+#                       comes back with the same target, no .agents.syntek-media-held is left,
+#                       Git sees no change to either, the restore is printed, and nothing is
+#                       written in the folder the link points to (D11's second, transient
+#                       exception: the link alone is renamed, aside and back).
+#                   21. A stranded hold prints its fix: an update of that project that stops
+#                       between the stages (a refused BRAND_KIND, in a clone) leaves the link
+#                       held as .agents.syntek-media-held and prints the hand fix
+#                       'mv .agents.syntek-media-held .agents'; run as printed, the fix leaves
+#                       the clone's work tree clean and the link's target unchanged.
 #
 #                  Copier prints a MissingFileWarning on a fresh copy and on every update (the
 #                  previous answers are read through _external_data, D14). It is expected and
@@ -98,7 +110,7 @@
 #
 #                  Numbers are stable identifiers. Append, never renumber.
 #
-#                  What it CANNOT check: an upgrade from a real earlier release. Checks 17–19
+#                  What it CANNOT check: an upgrade from a real earlier release. Checks 17–21
 #                  tag the snapshot v0.4.1 and v0.4.2 and shape the old project by hand, so
 #                  they prove the migration and its version gate, not 0.4.1's own files. Nor
 #                  a project applied over syntek-author, which is coexist-test.sh's.
@@ -177,6 +189,10 @@ MIG_UPD_AGAIN_STATUS=0; MIG_UPD_AGAIN_DIRTY=""; MIG_UPD_AGAIN_RAN=false
 MIG_GH_OUT=""   # the script run by hand over a gh: _src_path with no .claude/mcp_config.json (R1, R2)
 declare -A MIG_SHAPE_STATUS=() MIG_SHAPE_DIFF=() MIG_SHAPE_SAID=()
 MIG_SHAPES="realdir otherlink missing textfile"
+# D76's outside-link pair (checks 20–21).
+OUT_PROJ=""; OUT_DIR=""; OUT_LOG=""; OUT_STATUS=0; OUT_TARGET=""; OUT_AFTER_TARGET=""
+OUT_SUMS_BEFORE=""; OUT_SUMS_AFTER=""; OUT_HELD_LEFT=false; OUT_DIRTY=""
+STRAND_LOG=""; STRAND_STATUS=0; STRAND_HELD=false; STRAND_FIXED_DIRTY=""; STRAND_FIXED_TARGET=""
 
 # The author's own files in the folder the podcast platform gates (DESIGN.md D59, Section 6.17):
 # a show register and the feed as last published. Invented (Harbour Lane Studio, example.com),
@@ -248,6 +264,9 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   MIG_PROJ=""; MIG_STATUS=0; MIG_LOG=""; MIG_MCP_SUM=""; MIG_AGAIN_OUT=""; MIG_AGAIN_DIFF=""
   MIG_UPD_AGAIN_STATUS=0; MIG_UPD_AGAIN_DIRTY=""; MIG_UPD_AGAIN_RAN=false; MIG_GH_OUT=""
   MIG_SHAPE_STATUS=(); MIG_SHAPE_DIFF=(); MIG_SHAPE_SAID=()
+  OUT_PROJ=""; OUT_DIR=""; OUT_LOG=""; OUT_STATUS=0; OUT_TARGET=""; OUT_AFTER_TARGET=""
+  OUT_SUMS_BEFORE=""; OUT_SUMS_AFTER=""; OUT_HELD_LEFT=false; OUT_DIRTY=""
+  STRAND_LOG=""; STRAND_STATUS=0; STRAND_HELD=false; STRAND_FIXED_DIRTY=""; STRAND_FIXED_TARGET=""
   : > "$UPDATE_LOG"; : > "$SWITCH_LOG"
   sm_snapshot "$src" "$tpl" >>"$log" 2>&1 || die "could not snapshot $src"
 
@@ -382,6 +401,8 @@ mig_project() { # $1 = template, $2 = dest, $3 = shape — copy at v0.4.1, resha
                ln -s .owner-agents "$d/.agents"; printf '{"mcpServers": {}}\n' > "$d/.claude/mcp_config.json" ;;
     missing)   printf '{"mcpServers": {}}\n' > "$d/.claude/mcp_config.json" ;;
     textfile)  printf '.claude' > "$d/.agents"; printf '{"mcpServers": {}}\n' > "$d/.claude/mcp_config.json" ;;
+    # A link to the author's own agent tree beside the project, outside it (checks 20–21).
+    outside)   ln -s "../${OUT_DIR##*/}" "$d/.agents"; printf '{"mcpServers": {}}\n' > "$d/.claude/mcp_config.json" ;;
   esac
   sm_commit_all "$d" "the 0.4.1 shape: $3"
 }
@@ -421,6 +442,35 @@ run_migration_flow() { # $1 = template snapshot, $2 = work dir
     MIG_SHAPE_DIFF["$shape"]="$(diff <(printf '%s\n' "$before") <(printf '%s\n' "$after") | { grep '^[<>]' || true; } | cut -c3- | cut -f1 | LC_ALL=C sort -u | paste -sd' ' -)"
     MIG_SHAPE_SAID["$shape"]="$(grep -cF 'nothing changed' "$2/mig-$shape.log" || true)"
   done
+  run_outside_flow "$tpl" "$2"
+}
+
+# D76, D11's second exception: an .agents link to a folder outside the project. The outside
+# folder sits beside the project in the work dir, holds an author's file, and is hashed before
+# and after every run, so a write through the link is seen.
+run_outside_flow() { # $1 = template snapshot (tagged v0.4.1 and v0.4.2), $2 = work dir
+  local tpl="$1" clone="$2/mig-outside-stranded"
+  OUT_PROJ="$2/mig-outside"; OUT_DIR="$2/outside-agents"; OUT_LOG="$2/mig-outside.log"; : > "$OUT_LOG"
+  STRAND_LOG="$2/mig-outside-stranded.log"; : > "$STRAND_LOG"
+  rm -rf "$OUT_DIR"; mkdir -p "$OUT_DIR"
+  printf "The author's own agent tree, outside the project.\n" > "$OUT_DIR/note.md"
+  OUT_SUMS_BEFORE="$(hash_tree "$OUT_DIR")"
+  if ! mig_project "$tpl" "$OUT_PROJ" outside; then OUT_STATUS=99; return 0; fi
+  OUT_TARGET="$(readlink "$OUT_PROJ/.agents")"
+  # 20: the update across v0.4.2.
+  SM_VCS_REF="$SM_D76_VERSION" sm_update "$OUT_PROJ" >"$OUT_LOG" 2>&1 || OUT_STATUS=$?
+  OUT_AFTER_TARGET="$(readlink "$OUT_PROJ/.agents" 2>/dev/null || printf 'not a link')"
+  [[ -L "$OUT_PROJ/$SM_OUTSIDE_HELD" || -e "$OUT_PROJ/$SM_OUTSIDE_HELD" ]] && OUT_HELD_LEFT=true
+  OUT_DIRTY="$(git -C "$OUT_PROJ" status --porcelain -- .agents "$SM_OUTSIDE_HELD" 2>/dev/null | paste -sd' ' -)"
+  sm_commit_all "$OUT_PROJ" 'updated to v0.4.2'
+  # 21: an update that stops between the stages, in a clone, then the printed fix.
+  git clone -q "$OUT_PROJ" "$clone" >>"$W/mig.log" 2>&1 || { STRAND_STATUS=99; return 0; }
+  SM_VCS_REF="$SM_D76_VERSION" sm_update "$clone" --data "BRAND_KIND=$(other_kind "$KIND")" >"$STRAND_LOG" 2>&1 || STRAND_STATUS=$?
+  [[ -L "$clone/$SM_OUTSIDE_HELD" && ! -L "$clone/.agents" && ! -e "$clone/.agents" ]] && STRAND_HELD=true
+  if $STRAND_HELD; then (cd "$clone" && $SM_OUTSIDE_FIX) >>"$STRAND_LOG" 2>&1 || true; fi
+  STRAND_FIXED_DIRTY="$(git -C "$clone" status --porcelain 2>/dev/null | paste -sd' ' -)"
+  STRAND_FIXED_TARGET="$(readlink "$clone/.agents" 2>/dev/null || printf 'not a link')"
+  OUT_SUMS_AFTER="$(hash_tree "$OUT_DIR")"
 }
 
 run_checks() {
@@ -576,6 +626,30 @@ run_checks() {
       finding "check 19 — $L the migration left a $shape .agents alone but did not report it"
     fi
   done
+  # ── 20–21. D76's outside-link pair ─────────────────────────────────────────────
+  if [[ "$OUT_STATUS" -ne 0 ]]; then
+    finding "check 20 — $L the update across $SM_D76_VERSION with .agents linked outside the project failed (exit $OUT_STATUS) — see $OUT_LOG"
+  else
+    [[ "$OUT_AFTER_TARGET" == "$OUT_TARGET" ]] \
+      || finding "check 20 — $L the outside .agents link was not restored unchanged: it is '$OUT_AFTER_TARGET', it was '$OUT_TARGET'"
+    $OUT_HELD_LEFT && finding "check 20 — $L the update left $SM_OUTSIDE_HELD behind"
+    [[ -z "$OUT_DIRTY" ]] || finding "check 20 — $L Git sees the outside link changed after the update: $OUT_DIRTY"
+    grep -qF "restored .agents -> $OUT_TARGET" "$OUT_LOG" 2>/dev/null \
+      || finding "check 20 — $L the update did not print the outside link's restore — see $OUT_LOG"
+  fi
+  [[ "$OUT_SUMS_AFTER" == "$OUT_SUMS_BEFORE" ]] \
+    || finding "check 20 — $L an update wrote into the folder outside the project that .agents links to"
+  if [[ "$OUT_STATUS" -eq 0 ]]; then
+    if [[ "$STRAND_STATUS" -eq 0 ]]; then
+      finding "check 21 — $L the update meant to stop between the stages (a changed BRAND_KIND) was accepted, so no stranded hold was tested"
+    elif ! $STRAND_HELD; then
+      finding "check 21 — $L the update that stopped did not leave the link held as $SM_OUTSIDE_HELD (exit $STRAND_STATUS) — see $STRAND_LOG"
+    elif ! grep -qF "$SM_OUTSIDE_FIX" "$STRAND_LOG" 2>/dev/null; then
+      finding "check 21 — $L the update that stopped with the link held did not print the hand fix '$SM_OUTSIDE_FIX'"
+    elif [[ -n "$STRAND_FIXED_DIRTY" || "$STRAND_FIXED_TARGET" != "$OUT_TARGET" ]]; then
+      finding "check 21 — $L the printed hand fix did not restore the project (status '$STRAND_FIXED_DIRTY'; .agents -> '$STRAND_FIXED_TARGET')"
+    fi
+  fi
   if [[ "$AGAIN_STATUS" -ne 0 || -n "$AGAIN_DIRTY" ]]; then
     finding "check 15 — $L a second update with no template change was not a no-op (exit $AGAIN_STATUS; $(printf '%s\n' "$AGAIN_DIRTY" | grep -c . || true) path(s) changed)"
   fi
@@ -685,6 +759,19 @@ self_test() {
   MIG_UPD_AGAIN_RAN=true; probe "check 18 fires when a second update reruns the migration" "check 18 — [author-nonfiction] a second update"; MIG_UPD_AGAIN_RAN=false
   MIG_SHAPE_DIFF[otherlink]=".agents"; probe "check 19 fires when the migration touches a link elsewhere" "check 19 — [author-nonfiction] the migration changed a otherlink"; MIG_SHAPE_DIFF[otherlink]=""
   MIG_SHAPE_SAID[textfile]=0; probe "check 19 fires when a skipped shape is not reported" "check 19 — [author-nonfiction] the migration left a textfile .agents alone but did not report it"; MIG_SHAPE_SAID[textfile]=1
+  OUT_STATUS=1; probe "check 20 fires when the update over an outside link fails" "check 20 — [author-nonfiction] the update across"; OUT_STATUS=0
+  local out_target="$OUT_AFTER_TARGET"
+  OUT_AFTER_TARGET="not a link"; probe "check 20 fires when the outside link is not restored" "check 20 — [author-nonfiction] the outside .agents link was not restored"; OUT_AFTER_TARGET="$out_target"
+  OUT_HELD_LEFT=true; probe "check 20 fires when the held link is left behind" "check 20 — [author-nonfiction] the update left $SM_OUTSIDE_HELD"; OUT_HELD_LEFT=false
+  OUT_DIRTY="D .agents"; probe "check 20 fires when Git sees the link changed" "check 20 — [author-nonfiction] Git sees the outside link changed"; OUT_DIRTY=""
+  cp "$OUT_LOG" "$h"; grep -vF 'restored .agents' "$h" > "$OUT_LOG" || true
+  probe "check 20 fires when the restore is not printed" "check 20 — [author-nonfiction] the update did not print"; cp "$h" "$OUT_LOG"
+  local out_sums="$OUT_SUMS_AFTER"
+  OUT_SUMS_AFTER="$OUT_SUMS_AFTER"$'\n''mcp_config.json\tx'; probe "check 20 fires on a write into the outside folder" "check 20 — [author-nonfiction] an update wrote into the folder outside"; OUT_SUMS_AFTER="$out_sums"
+  STRAND_HELD=false; probe "check 21 fires when a stopped update does not leave the link held" "check 21 — [author-nonfiction] the update that stopped did not leave"; STRAND_HELD=true
+  cp "$STRAND_LOG" "$h"; grep -vF "$SM_OUTSIDE_FIX" "$h" > "$STRAND_LOG" || true
+  probe "check 21 fires when a stranded hold does not print its fix" "check 21 — [author-nonfiction] the update that stopped with the link held did not print"; cp "$h" "$STRAND_LOG"
+  STRAND_FIXED_DIRTY="?? $SM_OUTSIDE_HELD"; probe "check 21 fires when the printed fix leaves the project dirty" "check 21 — [author-nonfiction] the printed hand fix"; STRAND_FIXED_DIRTY=""
   AGAIN_DIRTY=" M README.md"; probe "check 15 fires when a second update changes a file" "check 15"; AGAIN_DIRTY=""
   probe_clean "the fixture's updates keep every promise again once every mutation is undone"
   st_finish "an update that keeps its promises from one that breaks them"

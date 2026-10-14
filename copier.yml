@@ -811,9 +811,12 @@ DATE:
 # first: a seed dropped from template/ is deleted from the project by the next update, filled
 # in or not (probe h2; Section 10). The nineteen shared paths are not seeds of media's to migrate:
 # media never mutates a shared file (D11), so a change to what one should hold reaches a
-# project only as a hand edit that the release's notes and README.md name. THE ONE STATED
-# EXCEPTION is D76's v0.4.2 migration below, which replaces the shipped .agents -> .claude link
-# with the real folder, because the link breaks every sandboxed Codex command in the project.
+# project only as a hand edit that the release's notes and README.md name. THERE ARE TWO STATED
+# EXCEPTIONS (D11, D76). D76's v0.4.2 migration below replaces the shipped .agents -> .claude
+# link with the real folder, because the link breaks every sandboxed Codex command in the
+# project. And the unversioned agents-outside-link.py pair, the second and transient one,
+# renames an .agents link that leaves the project aside before the render and back after it:
+# the net change is zero, and the link's target is never touched.
 #
 # House shape for a migration script: it lives in migrations/ at this repository's root
 # (outside template/, so it never ships) and is read from the template clone through
@@ -822,15 +825,31 @@ DATE:
 # line; it guards on the folders' CONTEXT.md markers, so a folder Copier has not retired (or a
 # destination it has not delivered) is never touched; and it always exits 0, because a
 # non-zero exit aborts every migration declared after it and leaves the project half-upgraded.
-# Key it to the release the folder MOVED in, never the release somebody noticed. Migrations
-# run in declaration order, from the destination folder. A script is bash or python3, standard
-# library only (the toolkit already needs Python 3.11), and ends by printing the command that
-# runs it again, because the update's clone of the template is deleted when the update ends.
+# Key it to the release the folder MOVED in, never the release somebody noticed: every
+# migration is keyed to a release, with ONE STATED EXCEPTION, the agents-outside-link.py pair
+# at the top of the list (D76), which must run on every update and so carries no `version:`.
+# Migrations run in declaration order, from the destination folder. A script is bash or
+# python3, standard library only (the toolkit already needs Python 3.11), and ends by printing
+# the command that runs it again, because the update's clone of the template is deleted when
+# the update ends (the outside-link pair prints its one-line hand fix, an mv, instead).
 #
 # A `version:` entry runs only when the update crosses that version (new >= version > old),
 # which Copier reads from the template's git tags (PEP 440): an update to an untagged HEAD
-# that is still numbered 0.4.1 does not run it. It never runs on `copier copy`.
+# that is still numbered 0.4.1 does not run it. An entry with no `version:` runs on every
+# update (Copier 9.17.1, _template.py:429-456). No migration ever runs on `copier copy`.
 _migrations:
+  # D76, D11's second exception: Copier checks that no destination resolves outside the
+  # project BEFORE it reads _exclude (9.17.1, _main.py:810-812), so an .agents link that
+  # leaves the project fails every update. Unversioned on purpose, the one pair not keyed to a
+  # release: it must run on every update. hold renames that link to .agents.syntek-media-held
+  # before the render (after Copier's dirty check) and prints the hand fix first; restore,
+  # declared before every other after-stage entry, renames it back. Nothing else is touched,
+  # never the link's target; both always exit 0. Migrations never run on a copy: the copy
+  # recipe is in the bridge, .claude/syntek-media-agents.md, and README.md.
+  - command: python3 "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" hold
+    when: "<% _stage == 'before' %>"
+  - command: python3 "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" restore
+    when: "<% _stage == 'after' %>"
   # v0.4.2 (D76) retires the shipped `.agents -> .claude` link for a real .agents/ folder. An
   # update never touches /.agents (its update gate above), so without this the link survives
   # and every sandboxed Codex command keeps failing. Only where .agents is a symbolic link
@@ -892,6 +911,10 @@ _message_before_update: |
   ../.claude/skills and moves .claude/mcp_config.json to .agents/mcp_config.json if that path
   is free. A real .agents folder, a link anywhere else or no .agents at all is left as it is
   and reported. It deletes nothing you wrote; review its report and commit the change.
+
+  Where .agents is a symbolic link to a folder outside this project, every update renames it
+  to .agents.syntek-media-held before the render and back afterwards; its target is never
+  touched. If the update stops before it ends, run: mv .agents.syntek-media-held .agents
 
   BRAND_KIND never changes: the update refuses it, because a different brand kind is a new
   project. After a platform or media-kind change, edit by hand the files that describe your

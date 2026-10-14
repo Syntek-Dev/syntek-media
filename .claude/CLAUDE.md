@@ -37,8 +37,7 @@ Claude Code loads a nested `.claude/skills/` the first time a session reads a fi
 - **Adding a skill to the template means adding its deny line.** That is a change to this repository's permission settings, so it is the maintainer's to make or approve; propose the exact line.
 - **Codex and Antigravity:** root `AGENTS.md` and `GEMINI.md` route to this development manual;
   `.agents/` is a real folder, never a link (D76), holding only its pair, and `skills -> ../.claude/skills` only if this tree ever has skills; never the product's. The development
-  `.codex/config.toml` disables every product skill by a path relative to that folder and sets
-  no `CLAUDE.md` fallback. Product manuals remain source text in every client (D73).
+  `.codex/config.toml` sets no `CLAUDE.md` fallback and no skill rule: Codex 0.160.1 honours `[[skills.config]]` only from user config and `-c`, matched on each `SKILL.md`. Start Codex at the root; under `template/` it finds the product skills and the product `AGENTS.md` (`.codex/CLAUDE.md` gives the user-level rule). Product manuals remain source text in every client (D73).
 - `.github/scripts/dev-isolation.sh` proves the Claude layers and the native client isolation on every push.
 
 ## 4. Token discipline
@@ -91,7 +90,7 @@ Each recipe ends the same way: run the audits (Section 8) and add a `CHANGELOG.m
 2. Write `template/.claude/skills/<name>/SKILL.md` to the conformance rules of DESIGN.md Section 5. A moded skill gets one mode file per brand kind (7.2).
 3. A gated skill gets one `_exclude` line in its block of `copier.yml`: `"<: if not (GATE) :>/.claude/skills/<name><: endif :>"`.
 4. Add its row to `template/.claude/rules/syntek-media/02-skills.md` Section 3, wrapped in its gate, and to the skill catalogue in `.github/scripts/_common.sh`.
-5. Propose its `Skill(<name>)` deny line for the root `.claude/settings.json` and disabled Codex skill entry in `.codex/config.toml` (Section 3).
+5. Propose its `Skill(<name>)` deny line for the root `.claude/settings.json` and its line in the user-level Codex recipe of `.codex/CLAUDE.md` (Section 3).
 
 **7.2 Add or remove a mode file.** Write `BUSINESS.md`, `FICTION.md` or `NONFICTION.md` beside the `SKILL.md` with the four H2s, then regenerate the block of `copier.yml` between the `BEGIN`/`END generated mode excludes` markers:
 
@@ -120,7 +119,7 @@ Copier obeys the last matching pattern, so a negation below a shut gate would re
 
 **7.6 Add a question.** Add it to DESIGN.md Section 2 and to `copier.yml` in its group: an `UPPER_SNAKE` key, `>-` help written to the person answering, a validator as `<: if bad :>message<: endif :>`, and `when:` with its `BRAND_KIND` test if it is hidden for some kinds. A default must never open a gate in a render that hides the question, and `_external_data` is read in a validator only (D14). Then add a row to the questions table in `README.md` and the key to all three `examples/*.answers.yml`.
 
-**7.7 Rename or move a folder.** Do not, if it can hold author work: names and numbers are frozen. If a release must, it ships a version-keyed migration in the same commit (`copier.yml`, under `_migrations`, has the house shape). The same applies when a release changes what a seed must contain, or stops shipping one.
+**7.7 Rename or move a folder.** Do not, if it can hold author work: names and numbers are frozen. If a release must, it ships a version-keyed migration in the same commit (`copier.yml`, under `_migrations`, has the house shape). The same applies when a release changes what a seed must contain, or stops shipping one. Every migration is version-keyed, with one stated exception: D76's `agents-outside-link.py` hold/restore pair, unversioned so that it runs on every update, at the top of `_migrations`. Never add another unversioned entry without the maintainer's approval and a DESIGN.md decision.
 
 **7.8 Add a platform or a media kind.**
 
@@ -149,5 +148,5 @@ Copier obeys the last matching pattern, so a negation below a shut gate would re
 - **Never tag a release while `coexist-test.sh` reports SKIP** (D27). Run it against a syntek-author checkout and see it pass.
 - **Refresh the frozen names when syntek-author has moved:** `bash .github/scripts/coexist-test.sh --refresh-names --author DIR` rewrites `syntek-author-names.txt`. Re-check every new name against media's paths before anything else.
 - **Every release entry in `CHANGELOG.md` names the syntek-author baseline** its coexist test passed against: the commit, and the date it was read.
-- A migration is keyed to the release its change shipped in, never the release somebody noticed.
+- A migration is keyed to the release its change shipped in, never the release somebody noticed. The one exception is D76's unversioned outside-link pair (`migrations/agents-outside-link.py`), which runs on every update and is keyed to none.
 - Updates of generated projects need `-a .copier-answers.syntek-media.yml` (D3); every instruction that shows an update command says so.

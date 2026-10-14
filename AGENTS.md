@@ -13,5 +13,5 @@ manual for tokens, formats, audits and release procedure. Development model tier
 identify the kind of work; use the owner's configured client model.
 
 `.agents/` is a real folder holding only its pair: the development .claude has no skills.
-The development .codex/config.toml disables all product skills and sets no instruction
-fallback into template/. Read product files only as the source being edited.
+Run Codex from the repository root: under template/ it finds the ten product skills and the
+product AGENTS.md, and .codex/config.toml cannot disable them (it sets no instruction fallback). Read product files only as the source being edited.

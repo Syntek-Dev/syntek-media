@@ -54,8 +54,15 @@ preserve it and add --exclude /.agents/skills; a .agents/skills link of any targ
 exclude, because Copier skips it and leaves it as it is. Copier fails before its skip check when
 rendering a link onto a path that resolves to a directory. Integrate that existing skill tree
 manually after the copy; never rename or remove it to make the copy succeed. Updates never
-write under .agents. Where .agents is a link to a folder outside the project, Copier refuses
-every copy and update, exclusions included: ask the owner to make .agents a real folder first.
+write under .agents.
+
+Where .agents is a link to a folder outside the project, Copier refuses to render anything
+beneath it, exclusions included, so the link alone is moved aside and put back. Updates do
+this themselves: they rename it to .agents.syntek-media-held before the render and back
+afterwards, never touching its target. If an update stops before it ends, run
+`mv .agents.syntek-media-held .agents` from the project root, then update again. Before a
+copy, run `mv .agents .agents.held`, copy with --exclude /.agents, then run
+`mv .agents.held .agents`.
 
 Where Git checks links out as text (core.symlinks=false, usually on Windows),
 .agents/skills arrives as a small file holding its target. Enable symbolic links (Developer
@@ -78,6 +85,8 @@ These entrypoints and client settings are copy-only shared files. Copier update 
 this bridge and rules, but never creates new copy-only files in an existing project. Updating
 across 0.4.2 runs one migration: where .agents is a link to .claude, it makes the real folder
 and moves .claude/mcp_config.json into it where that path is free, and reports anything else.
+An .agents link to a folder outside the project is held aside and restored by every update,
+as Client setup says; it is never converted.
 
 1. Read .copier-answers.syntek-media.yml for the recorded source, ref and answers. Generate a
    fresh project in a separate temporary folder using that source and ref and those answers

@@ -605,6 +605,13 @@ SM_AGENTS_SKILLS_LINK="../.claude/skills"
 # The first migration (DESIGN.md D76): run by an update that crosses v0.4.2.
 SM_D76_MIGRATION="migrations/v0.4.2-agents-folder.py"
 SM_D76_VERSION="v0.4.2"
+# D76's outside-link pair, D11's second, transient exception: the only migrations keyed to no
+# release. hold (before the render) renames an .agents link that leaves the project to
+# SM_OUTSIDE_HELD and prints SM_OUTSIDE_FIX; restore (after, declared before the v0.4.2 entry)
+# renames it back.
+SM_OUTSIDE_MIGRATION="migrations/agents-outside-link.py"
+SM_OUTSIDE_HELD=".agents.syntek-media-held"
+SM_OUTSIDE_FIX="mv $SM_OUTSIDE_HELD .agents"
 
 # Seeds (DESIGN.md Section 3.1): twenty-six, then the sixteen author-filled index-pair files.
 SM_REGISTER_SEEDS="brand/src/design-register.md scripts/src/piece-register.md production/src/rights-register.md production/src/credits-log.md publishing/src/schedule.md publishing/src/publish-log.md"
@@ -1146,8 +1153,12 @@ sm_update_author() { # $1 = project dir, then extra copier arguments
 # --exclude /.agents/skills. A .agents/skills link of any target is skipped without error and
 # left as it is, so it needs no argument. Prints the arguments, one per line (none when the copy
 # needs none). A link that leaves the project fails every copy and update before _exclude is
-# read (ForbiddenPathError, Copier 9.17.1 _main.py:810-811, read 14/10/2026): no argument
-# helps, and the caller reports it.
+# read (ForbiddenPathError, Copier 9.17.1 _main.py:810-811, read 14/10/2026), so no argument
+# helps on its own. An update holds such a link aside and restores it through D76's
+# unversioned migration pair (SM_OUTSIDE_MIGRATION, DESIGN.md D11's second exception); a copy
+# runs no migration and takes the hand recipe of the bridge and README.md instead: mv .agents
+# .agents.held, copy with --exclude /.agents (the argument this prints for the link, called
+# before the mv), then mv .agents.held .agents.
 sm_agents_copy_args() { # $1 = destination
   local d="$1/.agents"
   if [[ -L "$d" || ( -e "$d" && ! -d "$d" ) ]]; then printf -- '--exclude\n/.agents\n'; return 0; fi
@@ -1203,6 +1214,10 @@ _answers_file: .copier-answers.syntek-media.yml
 _external_data:
   prev: .copier-answers.syntek-media.yml
 _migrations:
+  - command: python3 "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" hold
+    when: "<% _stage == 'before' %>"
+  - command: python3 "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" restore
+    when: "<% _stage == 'after' %>"
   - version: v0.4.2
     command: python3 "<% _copier_conf.src_path %>/migrations/v0.4.2-agents-folder.py"
     when: "<% _stage == 'after' %>"
@@ -1382,6 +1397,7 @@ EOF
   # without it cannot test the first migration at all).
   mkdir -p "$t/migrations"
   cp "$SM_ROOT/$SM_D76_MIGRATION" "$t/$SM_D76_MIGRATION" || return 1
+  cp "$SM_ROOT/$SM_OUTSIDE_MIGRATION" "$t/$SM_OUTSIDE_MIGRATION" || return 1
   sm_git "$t" init -q && sm_git "$t" add -A && sm_git "$t" commit -q -m 'fixture template'
 }
 

@@ -1,42 +1,5 @@
-# Development isolation: product skills are source text, never tools here.
-# Relative paths are resolved from this .codex folder.
-
-[[skills.config]]
-path = '../template/.claude/skills/captions'
-enabled = false
-
-[[skills.config]]
-path = '../template/.claude/skills/cut-for-platform'
-enabled = false
-
-[[skills.config]]
-path = '../template/.claude/skills/narrate-audiobook'
-enabled = false
-
-[[skills.config]]
-path = '../template/.claude/skills/prepare-post'
-enabled = false
-
-[[skills.config]]
-path = '../template/.claude/skills/repurpose'
-enabled = false
-
-[[skills.config]]
-path = '../template/.claude/skills/run-media-workflow'
-enabled = false
-
-[[skills.config]]
-path = '../template/.claude/skills/storyboard'
-enabled = false
-
-[[skills.config]]
-path = '../template/.claude/skills/thumbnail-brief'
-enabled = false
-
-[[skills.config]]
-path = '../template/.claude/skills/voiceover'
-enabled = false
-
-[[skills.config]]
-path = '../template/.claude/skills/write-script'
-enabled = false
+# Development settings for Codex. Nothing here ships, and nothing here may name a product skill.
+# Codex 0.160.1 reads [[skills.config]] only from the user's ~/.codex/config.toml and -c flags,
+# never from a project file (codex-rs/config/src/skills_config.rs, user and session layers only),
+# so product skills cannot be disabled here. Start Codex at the repository root, where it finds
+# none; for the user-level rule that hides them under template/ too, see CLAUDE.md beside this.

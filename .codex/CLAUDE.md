@@ -11,9 +11,14 @@ Keep product skills and manuals out of Codex template-development work.
 
 ## How to work here
 
-- Read existing configuration and DESIGN.md D73 before changing a skill exclusion.
-- Keep every product skill disabled using a path relative to this .codex folder.
-- Add an exclusion when an approved new product skill is added; verify with
+- Read existing configuration and DESIGN.md D73 before changing config.toml or the user-level recipe.
+- Never add [[skills.config]] here: Codex reads it only from ~/.codex/config.toml and -c flags.
+- Start Codex at the repository root. To hide product skills under template/ as well, add one
+  user-level rule per skill, to its SKILL.md (a folder path never matches):
+  [[skills.config]]
+  path = '/ABSOLUTE/PATH/TO/syntek-media/template/.claude/skills/voiceover/SKILL.md'
+  enabled = false
+- When an approved product skill is added, add its line to that recipe; verify with
   `.github/scripts/dev-isolation.sh` and the relevant source audits.
 
 ## Guardrails
@@ -24,4 +29,4 @@ Keep product skills and manuals out of Codex template-development work.
 
 ## Output & naming
 
-- config.toml holds the development skill exclusions; nothing here ships.
+- config.toml holds no skill rule and no fallback; nothing here ships.

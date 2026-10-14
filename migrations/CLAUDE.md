@@ -13,7 +13,7 @@ Carry a project across a release that moves author work, stops shipping a seed o
 - **Routing:** the rules are DESIGN.md D11, D32 and Section 10, and the decision that needs the migration; the entry and house shape are in `copier.yml` under `_migrations`; the proof is `.github/scripts/update-test.sh`.
 - **Model:** **Opus** for a new migration or any change to what one moves; the mechanical tier for report wording.
 - **Concrete steps:**
-  1. Write it in the same change as the release that needs it, named `vX.Y.Z-<what>.sh` or `.py`, keyed to the release the change shipped in, never the release somebody noticed.
+  1. Write it in the same change as the release that needs it, named `vX.Y.Z-<what>.sh` or `.py`, keyed to the release the change shipped in, never the release somebody noticed. The one exception is `agents-outside-link.py` (D76), unversioned and unprefixed because it runs on every update; never add another without the maintainer's approval and a DESIGN.md decision.
   2. Header: what moved and why the update strands it, the map, when it acts, what it never does, how it runs, `Exit codes: 0 = always`.
   3. Guard on markers, never on guesses: act only on the exact state the old release left (a link with one target, a retired folder's missing `CONTEXT.md`), and re-check it immediately before the one change.
   4. Add its `_migrations` entry: `version:`, `command:` from `<% _copier_conf.src_path %>/migrations/`, `when: "<% _stage == 'after' %>"` plus any variant test.
@@ -31,5 +31,5 @@ Carry a project across a release that moves author work, stops shipping a seed o
 
 ## Output & naming
 
-- **Hand-written:** `vX.Y.Z-<what>.sh` or `.py`, executable, one per change that needs one.
+- **Hand-written:** `vX.Y.Z-<what>.sh` or `.py`, executable, one per change that needs one; `agents-outside-link.py` is the one unversioned script.
 - **Report format:** a `▸` heading; one line per action (`removed`, `created`, `linked`, `moved`); every path left, with its reason; stale lines as `file:line`; the re-run command.

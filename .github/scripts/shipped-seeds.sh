@@ -80,8 +80,16 @@
 #                         migrations/v0.4.2-agents-folder.py after the update, or a migration
 #                         names a script that is not in migrations/ at this repository's root
 #                         (D76; copier.yml's house shape).
+#                     20. copier.yml's _migrations does not open with D76's outside-link pair,
+#                         the only entries keyed to no release (D11's second, transient
+#                         exception): first an entry with no version: running
+#                         migrations/agents-outside-link.py hold at _stage 'before', then one
+#                         running it with restore at _stage 'after', so the link is held before
+#                         the render and restored before every other after-stage migration; or
+#                         any later entry carries no version:. Where _migrations is missing
+#                         altogether, check 19 claims it and this check stays quiet.
 #
-#                    Checks 1–4, 8 and 16–19 read copier.yml and template/ (static, once). Checks
+#                    Checks 1–4, 8 and 16–20 read copier.yml and template/ (static, once). Checks
 #                    5–7 and 9–15 read every tree given — template/ by default, or renders — and
 #                    skip a seed the tree does not ship.
 #
@@ -296,13 +304,38 @@ static_checks() {
   # ── 19. The D76 migration is declared, and every migration's script exists ──
   local mig
   mig="$(awk '/^_migrations:/ { on = 1; next } on && /^[A-Za-z_]/ { exit } on' "$COPIER")"
-  if ! grep -qE "^[[:space:]]*-[[:space:]]+version:[[:space:]]+$SM_D76_VERSION[[:space:]]*$" <<< "$mig" \
+  if ! grep -qE "^[[:space:]]*-[[:space:]]+version:[[:space:]]+${SM_D76_VERSION}[[:space:]]*$" <<< "$mig" \
       || ! grep -qF "/$SM_D76_MIGRATION" <<< "$mig" || ! grep -qF "_stage == 'after'" <<< "$mig"; then
     finding "check 19 — _migrations has no $SM_D76_VERSION entry running $SM_D76_MIGRATION after the update (DESIGN.md D76)"
   fi
   while IFS= read -r item; do
     [[ -f "$SM_ROOT/$item" ]] || finding "check 19 — a migration runs $item, which is not in this repository (it is read from the template clone: _copier_conf.src_path)"
   done < <(grep -oE 'src_path *%>/migrations/[^" ]+' <<< "$mig" | sed -E 's#^.*%>/##')
+
+  # ── 20. D76's outside-link pair opens _migrations; every other entry is versioned ──
+  if [[ -n "$mig" ]]; then
+    local -a ver=() cmd=() whn=()
+    local n=0 i v c w
+    while IFS=$'\t' read -r v c w; do
+      ver+=("$v"); cmd+=("$c"); whn+=("$w"); n=$((n + 1))
+    done < <(awk '
+      /^[[:space:]]*#/ { next }
+      /^  - / { n++; sub(/^  - /, "    ") }
+      n && /^    version:/ { v[n] = $2 }
+      n && /^    command:/ { c[n] = substr($0, index($0, "command:") + 9) }
+      n && /^    when:/    { w[n] = substr($0, index($0, "when:") + 6) }
+      END { for (i = 1; i <= n; i++) printf "%s\t%s\t%s\n", (v[i] == "" ? "-" : v[i]), c[i], w[i] }
+    ' <<< "$mig")
+    if [[ "$n" -lt 2 || "${ver[0]}" != - || "${ver[1]}" != - \
+        || "${cmd[0]}" != *"/$SM_OUTSIDE_MIGRATION\" hold"* || "${whn[0]}" != *"_stage == 'before'"* \
+        || "${cmd[1]}" != *"/$SM_OUTSIDE_MIGRATION\" restore"* || "${whn[1]}" != *"_stage == 'after'"* ]]; then
+      finding "check 20 — _migrations does not open with D76's outside-link pair: an unversioned $SM_OUTSIDE_MIGRATION hold at _stage 'before', then restore at _stage 'after' (DESIGN.md D76, D11)"
+    fi
+    for ((i = 2; i < n; i++)); do
+      [[ "${ver[$i]}" != - ]] && continue
+      finding "check 20 — an unversioned _migrations entry runs $(grep -oE 'migrations/[^" ]+' <<< "${cmd[$i]}" || printf '%s' "${cmd[$i]}"): only D76's outside-link pair is keyed to no release (DESIGN.md D76; .claude/CLAUDE.md Section 9)"
+    done
+  fi
 }
 
 json_check() { # $1 = mode (mcp|settings|parse), $2 = file → prints one problem per line
@@ -477,7 +510,10 @@ write_fixture() { # $1 = repo root
     printf '_skip_if_exists:\n'
     for s in $SM_SHARED $SM_SEEDS; do printf '  - /%s\n' "$s"; done
     printf 'BRAND_NAME:\n  type: str\n'
-    printf '_migrations:\n  - version: %s\n    command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_VERSION" "$SM_D76_MIGRATION" "$q" "$q"
+    printf '_migrations:\n'
+    printf '  - command: python3 "<%% _copier_conf.src_path %%>/%s" hold\n    when: "<%% _stage == %sbefore%s %%>"\n' "$SM_OUTSIDE_MIGRATION" "$q" "$q"
+    printf '  - command: python3 "<%% _copier_conf.src_path %%>/%s" restore\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_OUTSIDE_MIGRATION" "$q" "$q"
+    printf '  - version: %s\n    command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_VERSION" "$SM_D76_MIGRATION" "$q" "$q"
   } > "$r/copier.yml"
   for s in $SM_SHARED $SM_SEEDS; do
     [[ "$s" == .agents || "$s" == .agents/skills ]] && continue
@@ -485,6 +521,7 @@ write_fixture() { # $1 = repo root
   done
   ln -s "$SM_AGENTS_SKILLS_LINK" "$t/.agents/skills"
   mkdir -p "$r/migrations"; printf 'print("fixture migration")\n' > "$r/$SM_D76_MIGRATION"
+  printf 'print("fixture outside-link migration")\n' > "$r/$SM_OUTSIDE_MIGRATION"
   for s in $SM_REGISTER_SEEDS; do
     printf '# %s\n\n%s\n\n## Register\n\n| ID | Notes |\n|---|---|\n' "${s##*/}" "$banner" > "$t/$s"
   done
@@ -651,7 +688,14 @@ self_test() {
   cp "$tmp/c" "$COPIER"; mv "$tmp/$SM_D76_MIGRATION" "$tmp/mig-held"
   probe "check 19 fires when a migration's script is missing" "check 19 — a migration runs $SM_D76_MIGRATION"
   mv "$tmp/mig-held" "$tmp/$SM_D76_MIGRATION"
-  probe_clean "the retired path, the agent folder and the migration in shape"
+  # 20: the outside-link pair first, and no other unversioned entry.
+  sed -i "0,/_stage == 'before'/s//_stage == 'after'/" "$COPIER"; SM_SETS_FOR=""
+  probe "check 20 fires when the outside-link hold does not run before the render" "check 20 — _migrations does not open with D76's outside-link pair"
+  cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
+  printf '  - command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_MIGRATION" "'" "'" >> "$COPIER"
+  probe "check 20 fires on an unversioned entry beyond the pair" "check 20 — an unversioned _migrations entry runs $SM_D76_MIGRATION"
+  cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
+  probe_clean "the retired path, the agent folder and the migrations in shape"
 
   # The over-author scope: the shared files are syntek-author's, so checks 5, 6, 10, 12 and 13
   # do not read them; media's own seeds are still held to their contract.

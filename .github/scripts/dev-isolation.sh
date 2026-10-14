@@ -28,9 +28,9 @@
 #                      4. claudeMdExcludes carries "**/template/**/CLAUDE.md" and
 #                         "**/template/.claude/**".
 #
-#                      5. The development Codex config is valid TOML, disables every product
-#                         skill from a path relative to .codex, and enables no product manual
-#                         fallback (D73).
+#                      5. The development Codex config is valid TOML, carries no [[skills.config]]
+#                         (a project file's is ignored by Codex 0.160.1, so a row there is false
+#                         assurance), and enables no product manual fallback (D73).
 #                      6. Development AGENTS.md and GEMINI.md route to the development manual;
 #                         .agents is a real folder, never a link (Codex's sandbox refuses a
 #                         read-only link, D76), holding its pair and, only where the
@@ -154,21 +154,18 @@ run_checks() {
   done
 
   local problem
-  problem="$(python3 - "$SM_ROOT" "$SM_SKILLS" <<'PYCLIENT'
+  problem="$(python3 - "$SM_ROOT" <<'PYCLIENT'
 from pathlib import Path
 import sys, tomllib
 root = Path(sys.argv[1])
-expected = {str((root / 'template/.claude/skills' / row.split()[0]).resolve())
-            for row in sys.argv[2].splitlines() if row.strip()}
 try:
     data = tomllib.loads((root / '.codex/config.toml').read_text())
-    rows = data.get('skills', {}).get('config', [])
-    paths = [str((root / '.codex' / row['path']).resolve()) for row in rows]
-    if (set(paths) != expected or len(paths) != len(expected)
-            or any(row.get('enabled') is not False for row in rows)
-            or data.get('project_doc_fallback_filenames')):
-        print('product skills must all be disabled; no product instruction fallback is allowed')
-except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
+    if data.get('skills', {}).get('config'):
+        print('[[skills.config]] in a project file is ignored by Codex (user and -c layers only);'
+              ' document the user-level SKILL.md rule in .codex/CLAUDE.md instead')
+    elif data.get('project_doc_fallback_filenames'):
+        print('no product instruction fallback is allowed')
+except (OSError, ValueError, TypeError, AttributeError) as error:
     print('invalid development Codex configuration: ' + str(error).splitlines()[0])
 PYCLIENT
 )"
@@ -253,9 +250,7 @@ folder.mkdir()
 (folder / 'CONTEXT.md').write_text('# CONTEXT.md — .agents/\n')
 (folder / 'CLAUDE.md').write_text('# CLAUDE.md — .agents/\n')
 if (root / '.claude/skills').is_dir(): shutil.rmtree(root / '.claude/skills')
-(root / '.codex/config.toml').write_text(''.join(
-    "[[skills.config]]\npath = '../template/.claude/skills/" + row.split()[0]
-    + "'\nenabled = false\n" for row in sys.argv[2].splitlines() if row.strip()))
+(root / '.codex/config.toml').write_text('# Development settings for Codex.\n')
 PYCLIENT
   }
   write_clients
@@ -269,8 +264,8 @@ PYCLIENT
   write_settings "" "$ok"
   printf 'bad = [' > "$tmp/.codex/config.toml"; probe "check 5 fires on invalid Codex TOML" "check 5"
   write_clients
-  sed -i '0,/enabled = false/s//enabled = true/' "$tmp/.codex/config.toml"
-  probe "check 5 fires when a product skill is enabled" "check 5"
+  printf "[[skills.config]]\npath = '../template/.claude/skills/voiceover/SKILL.md'\nenabled = false\n" >> "$tmp/.codex/config.toml"
+  probe "check 5 fires on an inert project skills.config row" "check 5 — [[skills.config]]"
   write_clients
   printf "project_doc_fallback_filenames = ['CLAUDE.md']\n" | cat - "$tmp/.codex/config.toml" > "$tmp/fallback.toml"
   mv "$tmp/fallback.toml" "$tmp/.codex/config.toml"

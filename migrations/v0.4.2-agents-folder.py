@@ -26,7 +26,8 @@ What it never does.
   `.agents` itself, never its target, and only after the replacement folder is complete
   beside it. Anything it creates and cannot finish it removes again; nothing else. It reads
   no git-ignored file (D50): the stale-text report uses `git grep`, which reads tracked files.
-  This is D11's one stated exception: media changes a shared path only here.
+  This is D11's first stated exception: media changes a shared path only here and, for a
+  moment, in agents-outside-link.py, which renames an outside .agents link aside and back.
 
 How it runs.
   From `copier update`, in the project root, after the update (`_migrations`, version v0.4.2,
