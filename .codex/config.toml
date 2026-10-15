@@ -3,3 +3,7 @@
 # never from a project file (codex-rs/config/src/skills_config.rs, user and session layers only),
 # so product skills cannot be disabled here. Start Codex at the repository root, where it finds
 # none; for the user-level rule that hides them under template/ too, see CLAUDE.md beside this.
+
+[mcp_servers.code-review-graph]
+command = "uvx"
+args = ["code-review-graph==2.3.9", "serve"]

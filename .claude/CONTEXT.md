@@ -17,7 +17,7 @@ Nothing here ships (`_subdirectory: template`).
 
 - `CLAUDE.md` — how to work on the template. It imports the root `CONTEXT.md` and this file, and routes every design question to `DESIGN.md`.
 - `settings.json` — **three layers of isolation, all required** (DESIGN.md Section 7). `permissions.deny` lists `Skill(<name>)` for every skill under `template/.claude/skills/`, because Claude Code loads a nested skills folder as soon as a session reads a file beneath it; `skillOverrides` sets each of them `"off"`, because a deny refuses a skill but leaves it listed; `claudeMdExcludes` keeps `template/**/CLAUDE.md` and `template/.claude/**` out of development sessions. Every new template skill needs its deny line and its `skillOverrides` entry here, added or approved by the maintainer.
-- There is no `MEMORY.md`, no hook, no skills folder and no MCP configuration: the template's own decisions live in `DESIGN.md` and `CHANGELOG.md`, where a reviewer can see them, and nothing here calls ElevenLabs.
+- There is no `MEMORY.md`, no hook and no skills folder. The one MCP server is the root `.mcp.json`'s `code-review-graph` (a local graph of this repository's code for reviews; `/.code-review-graph/` is ignored), and `settings.json` asks before its three tools that change things (`apply_refactor_tool`, `generate_wiki_tool`, `embed_graph_tool`). Never run `code-review-graph install` here: it writes hooks, skills and rules-file text the dev isolation refuses. The template's own decisions live in `DESIGN.md` and `CHANGELOG.md`, where a reviewer can see them, and nothing here calls ElevenLabs.
 
 ## Cross-references
 

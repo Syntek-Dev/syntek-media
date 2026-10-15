@@ -17,6 +17,8 @@ syntek-media/
 ├── CHANGELOG.md              ← the template's history, Keep a Changelog
 ├── AGENTS.md                 ← Codex development entrypoint; reads the development manual
 ├── GEMINI.md                 ← Antigravity development entrypoint
+├── .mcp.json                 ← development MCP: code-review-graph only (never shipped)
+├── .gitignore                ← development only: the code-review-graph database
 ├── .agents/                  ← real folder (D76) holding only its pair: no skills, no MCP file
 ├── .codex/                   ← Codex development isolation settings and their folder pair
 ├── .claude/                  ← the DEVELOPMENT manual and dev-isolation settings (never shipped)

@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Added
+
+- **code-review-graph for developing the template** (DESIGN.md Section 3.7; approved 15/10/2026). The root `.mcp.json` and `.codex/config.toml` register `uvx code-review-graph==2.3.9 serve`, a local Tree-sitter and SQLite graph of this repository's tracked code for token-efficient reviews; its database is ignored (`/.code-review-graph/`, the repository's first root `.gitignore`). `.claude/settings.json` asks before `apply_refactor_tool`, `generate_wiki_tool` and `embed_graph_tool`. Its `install` command is never run here, because it writes hooks, skills and rules-file text the dev isolation refuses. Probed 15/10/2026 in a scratch repository: the server starts and lists 30 tools. Not shipped: shipping it to generated projects belongs with syntek-author D48's shared MCP files in 0.5.0.
+
 ## [0.4.2] - 15/10/2026
 
 **Source.** syntek-author's reply of 14/10/2026 (working tree on `feat/agent-clients-followup` at `7f9ad9f`, uncommitted; v0.3.0 is `9a65902`), verified in the Codex 0.160.1 source and by run: Codex mounts `.agents` read-only, and its bubblewrap sandbox refuses a read-only path that is a link to a writable folder, so every sandboxed Codex command fails in a project with `.agents -> .claude`. The reply also notes that Antigravity's workspace MCP file is `.agents/mcp_config.json`, and that the whole-folder link exposed `.claude/rules` and `.claude/agents` to Antigravity. Approved by the maintainer on 14/10/2026 as D76 (amends D11 and D73, Sections 3.6 and 3.7). `VERSION` stays 0.4.1 until release.
