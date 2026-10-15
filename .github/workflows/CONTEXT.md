@@ -1,7 +1,8 @@
 # CONTEXT.md — .github/workflows/
 
 The template repository's CI. One workflow, `audit-template.yml`, runs every audit and test in
-`.github/scripts/` on every push to every branch, on pull requests and on demand. It exists because
+`.github/scripts/` on every push to every branch, on pull requests and on demand; a newer run on the
+same branch or pull request cancels the one it supersedes (never on `main`). It exists because
 a template defect is invisible until somebody generates, and whoever generates is not whoever
 broke it: a gate that waits for a pull request lets a branch drift unseen for as long as it lives.
 
