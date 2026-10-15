@@ -96,7 +96,7 @@ file in it. The exact command is in `production/docs/reference/elevenlabs.md`.
 
 **Requirements:** `git`; Python 3.11 or later; `ffmpeg` and `ffprobe` built with libass, x264
 and mp3lame; `uv`, for Copier and for `toolkit/card.py`, with Playwright's Chromium
-(`uv run --with playwright==1.63.0 playwright install chromium`); `git-lfs`, if you keep large
+(`uv run --with playwright==1.63.0 playwright install chromium`, or a system browser bundle at the same revision, as on NixOS); `git-lfs`, if you keep large
 design exports; and `espeak-ng` (optional, for a scratch voice track). `check --setup` reports
 each one. Optional lip sync needs Rhubarb Lip Sync 1.14.0, unzipped with its resources at user
 scope and linked onto PATH; `lipsync` checks its dictionary beside the real executable.

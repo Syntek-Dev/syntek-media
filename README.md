@@ -2,7 +2,7 @@
 
 **A Copier template that adds audio and video production to a repository — brand, scripts, production and publishing layers, a small ffmpeg toolkit and a Claude Code skill suite — for a business or an author.**
 
-![Version](https://img.shields.io/badge/version-0.4.1-blue)
+![Version](https://img.shields.io/badge/version-0.4.2-blue)
 ![Template: Copier](https://img.shields.io/badge/template-copier-blue)
 
 ```bash
@@ -98,7 +98,7 @@ Scene rendering uses the same pinned Playwright/Chromium as cards; systemd memor
 | git                                                    | Every project is a repository; updates are three-way merges.                                                                                                                                                                                                           |
 | Python 3.11 or newer                                   | The standard-library `media.py` toolkit; author data is TOML and generated timing is JSON. Optional dependency workers are described below.                                                                                                                                                                                                    |
 | ffmpeg and ffprobe                                     | Masters, cuts, encodes, loudness and burned-in captions. Built with libass, x264 and mp3lame. With libwebp, an AV1 encoder (libaom-av1 or libsvtav1) and the `avif` muxer (optional), `media.py image` also writes WebP and AVIF images; `check --setup` reports them. |
-| Playwright's Chromium                                  | Thumbnails and cards rendered to PNG. Install it once with `uv run --with playwright==1.63.0 playwright install chromium`; nothing is installed globally.                                                                                                              |
+| Playwright's Chromium                                  | Thumbnails and cards rendered to PNG. Install it once with `uv run --with playwright==1.63.0 playwright install chromium`, or use a system bundle at the same revision (NixOS); nothing is installed globally.                                                                                                              |
 | git-lfs                                                | Large design exports in `brand/src/exports/large/`, and nothing else.                                                                                                                                                                                                  |
 | espeak-ng (optional)                                   | An offline scratch voice for timing a script, labelled approximate.                                                                                                                                                                                                    |
 | An ElevenLabs MCP server named `elevenlabs` (optional) | Voiceover, narration and speech-to-text, added at user scope (see [Audio with ElevenLabs](#audio-with-elevenlabs)).                                                                                                                                                    |

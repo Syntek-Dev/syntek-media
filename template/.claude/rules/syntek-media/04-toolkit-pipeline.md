@@ -97,7 +97,8 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 in Chromium, offline, with the safe-zone variables set and, for a deliverable, `data-deliverable`
 and `data-platform` on `:root` (so a newsletter image shows its play button); `check HTML` proves the tokens resolve
 and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
-`uv run --with playwright==1.63.0 playwright install chromium`.
+`uv run --with playwright==1.63.0 playwright install chromium`; where a system bundle supplies the
+browsers (NixOS), it must ship the same revision.
 
 ---
 
