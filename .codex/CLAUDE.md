@@ -25,7 +25,8 @@ Keep product skills and manuals out of Codex template-development work.
 
 - No product instruction fallback, model selection, permission bypass, trust override or
   MCP credential belongs in this shared development configuration. Its one MCP server is
-  code-review-graph, the same entry as the root .mcp.json.
+  code-review-graph, the same entry as the root .mcp.json: --tools omits embed_graph_tool and its
+  env blanks the cloud-embedding keys.
 - Files under template/ remain source text; their production instructions never govern here.
 
 ## Output & naming
