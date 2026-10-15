@@ -26,6 +26,8 @@ the overlay PNG (card.py --transparent) + the master ──► media.py cut --ov
 a show register (publishing/src/podcast/) ──► media.py feed tag, chapters, check, write ──► the feed
 ElevenLabs (MCP) ──► generated/<piece>/takes/ (absolute output_directory) ──► media.py take add
         └──► the segment or chapter register, and a credits-log row
+an owned voice ──► media.py voice remix run (approved) ──► generated/voice-trials/<name>/ previews
+        └──► the credits-log row; the chosen preview saved through MCP create_voice_from_preview
 ```
 
 `assemble` renders any card PNG that is missing or older than its HTML or `tokens.css` first, into
@@ -75,7 +77,8 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 | `audiobook master` | `CHUNKS… --piece PIECE --chapter chNN [--head S] [--tail S] [-o OUT]` | joins takes with the pauses the chunk sidecar records, adds room tone, masters to the ACX profile | 0 · 1 · 2 |
 | `audiobook check` | `FILE…` | the ACX checks: RMS, peak, noise floor, sample rate, constant bitrate, channels, length, room tone | 0 · 1 · 2 |
 | `take add` | `FILE --piece PIECE (--segment sNN \| --chapter chNN --part pNN)` | renames a fresh ElevenLabs file to its name (`.pcm` for a `pcm_*` format) where it landed, a voiceover's in the piece's `generated/<piece>/takes/` (or the flat folder an earlier release used), numbered after the highest take in either; writes the register's `take` and `file`, and for a segment resets `status` to `generated` and `archived` to empty; appends the credits-log row | 0 · 2 |
-| `speak plan` | `PIECE [--segment sNN…]` · `--trial NAME` | offline requests, model-specific pronunciations and script delivery tags, character limits and calls, never credits; creates only the takes or trial folder | 0 · 1 · 2 |
+| `speak plan` | `PIECE [--segment sNN…]` · `--trial NAME` | offline requests, model-specific pronunciations and script delivery tags, character limits and calls, never credits; creates only the takes or trial folder (`NAME`: letters, digits, `.`, `_` and `-`, starting with a letter or digit, up to 64 characters) | 0 · 1 · 2 |
+| `voice remix plan` / `voice remix run` | `NAME --from VOICE --describe TEXT [--text TEXT]`; run requires `--approve-call` | offline request, one call and its characters, writing nothing / one approved ElevenLabs remix of a voice the account owns, the shell's user-scope `ELEVENLABS_API_KEY` never written or printed, no retry: `<name>.pNN.mp3` and `<name>.remix.json`, written to a staging folder and moved whole into the voice trial `NAME` (the rule of `speak plan --trial`), and the trial's credits-log row (the generated preview text's characters counted when no `--text` is given); refuses a trial already remixed; the chosen preview is saved through MCP | 0 · 2 |
 | `voice join` | `PIECE [-o OUT]` | approved takes in register order, with pauses, as mono 16-bit WAV at the register's rate; refuses an unapproved segment | 0 · 1 · 2 |
 | `levels` | `PIECE [--window S]` | RMS dBFS of the joined voice in 0.1 s windows by default, silence floored at -120; only a working JSON copy in the piece's timing output folder, no `-o` | 0 · 2 |
 | `feed new` | `SHOW --feed-url URL [--site SLUG] [--rekey]` | writes a show register from its skeleton with the show's identity, once; `--rekey` corrects the feed URL and every GUID only while nothing is published; refuses a project without the show-register folder | 0 · 2 |
@@ -188,7 +191,9 @@ browsers (NixOS), it must ship the same revision.
 | fontconfig's `fc-match` (optional) | the brand-font probe of `uv run toolkit/card.py --self-test`, which without it is skipped by name and the self-test ends incomplete (exit 2) |
 
 `python3 toolkit/media.py check --setup` reports every one of them, the allow, ask and deny
-entries of `.claude/settings.json`, and whether the ElevenLabs server's base path contains the
+entries of `.claude/settings.json` (the two `voice remix run` ask entries among them, each missing
+one a finding), whether `ELEVENLABS_API_KEY` is set in the shell (a note, never its value), and
+whether the ElevenLabs server's base path contains the
 project (`brand/workflows/06-check-the-setup/`). Optional tools' absence is a note naming the commands blocked; an installed tool that is broken
 is a finding with its fix. Rhubarb's version alone cannot prove its dictionary is present.
 If a tool is missing, say which one and which command it blocks. Never report a command as passed when it could not run.

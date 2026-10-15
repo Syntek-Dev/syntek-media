@@ -29,7 +29,7 @@ model: opus
 - [ ] The voiceover narrator read from `brand/src/voice/voice.md`, or chosen by the author after `mcp__elevenlabs__list_models` and a voice search. · _opus_
 - [ ] Voice, voice ID, model ID, settings, output format and date recorded the first time. · _sonnet_
 - [ ] A cloned voice has its `cleared` voice-consent row, cited in the narrator's row, before it speaks. · _opus_
-- [ ] Any trial run only on the author's word, into `production/src/voiceover/generated/voice-trials/<name>/` made by `speak plan --trial <name>` (never `mkdir`): no take, no register row, its credits-log row with `—` for the piece. · _sonnet_
+- [ ] Any trial run only on the author's word, into `production/src/voiceover/generated/voice-trials/<name>/` made by `speak plan --trial <name>` (never `mkdir`): no take, no register row, its credits-log row with `—` for the piece (a remix's previews and row written by `voice remix run`, in `production/workflows/11-design-character-voices/`). · _sonnet_
 
 **Segments and cost**
 

@@ -15,11 +15,11 @@ A row is written when the call is made, whether or not its result is kept.
 
 - Rows are appended in the order the calls were made, and never edited or deleted; a correction is a new row whose Notes name the row it corrects.
 - The Date column is DD/MM/YYYY; the Piece column is the piece's folder name, or `—` for a call no piece owns, such as a voice trial.
-- The Tool column is the MCP tool's name without its prefix, such as `text_to_speech` or `speech_to_text`.
+- The Tool column is the MCP tool's name without its prefix, such as `text_to_speech` or `speech_to_text`, or `voice remix` for the one call the toolkit makes directly (`python3 toolkit/media.py voice remix run`), which writes its own row.
 - The Calls column is the number of calls the row covers, normally one.
 - The Characters or minutes column holds the request's characters for text-to-speech, or the audio's minutes for speech-to-text.
-- The Voice column is the voice's name as `brand/src/voice/voice.md` records it; the Model column is the model ID.
-- The Output column is the file the call produced, relative to `production/src/`, or `—`.
+- The Voice column is the voice's name as `brand/src/voice/voice.md` records it, or for a voice remix the source voice's ID; the Model column is the model ID.
+- The Output column is the file the call produced, relative to `production/src/`, or for a voice remix the trial folder holding its previews, or `—`.
 
 ## Log
 

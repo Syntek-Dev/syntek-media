@@ -7,7 +7,8 @@ and the sound of a technical, Greek or Hebrew term carry the argument.
 ## Paths and unit
 
 - **Unit:** one piece. **Segment:** one spoken sentence, or one short beat read as one breath.
-- **Procedure:** `production/workflows/02-make-a-voiceover/`.
+- **Procedure:** `production/workflows/02-make-a-voiceover/`; a voice for an invented speaker in
+  an illustration is designed first through `production/workflows/11-design-character-voices/`.
 - **Voiced lines:** the script's `VO:` and `NARRATOR:` lines, and `HOST:` lines where the author
   has chosen a synthetic host voice for an introduction or a close.
 - **Register:** `production/src/voiceover/<piece>.toml`; takes in
@@ -43,6 +44,9 @@ and the sound of a technical, Greek or Hebrew term carry the argument.
   (`.claude/rules/syntek-media/03-production-ethics.md` Section 7).
 - **A quotation is voiced exactly**: its grammar is never smoothed by the request text, and an
   ellipsis in the source stays a pause the author has approved.
+- **A character voice speaks only for an invented speaker**, remixed from the author's own
+  cleared clone: never a real person, living or dead, made to sound as if speaking themselves
+  (`.claude/rules/syntek-media/03-production-ethics.md` Section 6).
 - **A synthetic host is still synthetic**: a podcast introduced in an AI voice says so in the audio
   and in the episode notes, as `publishing/docs/reference/ai-disclosure.md` sets out.
 

@@ -50,6 +50,7 @@ log ◄─ the author posts ◄─ post package and schedule (M7) ◄─ thumbna
 | 2b. Bring in a recording | `captions` | `production/workflows/08-bring-in-a-recording/` | `scripted` (M3 `n/a — recorded`) |
 | 3. Storyboard it | `storyboard` | `scripts/workflows/03-storyboard-a-piece/` | `storyboarded` |
 | 4. Voice it; log the footage | `voiceover` | `production/workflows/02-make-a-voiceover/`, `production/workflows/01-log-source-media/` | — |
+| 4a. Design a character's voice | `voiceover` | `production/workflows/11-design-character-voices/` | — |
 | 4b. Time a scene piece's joined voice | `voiceover`, `storyboard` | `production/workflows/09-time-the-voice/` | `storyboarded`, with `M4.words` and `M4.cues` dated |
 | 5. Assemble the master | `cut-for-platform` | `production/workflows/03-assemble-the-master/` | `produced` |
 | 5b. Animate a scene piece | `cut-for-platform` | production/workflows/10-animate-a-scene/ | `produced`, after `M4.stills` and every aspect's master |
@@ -106,6 +107,13 @@ before the author approves a call or an agreed batch. Only `score run --approve-
 keep the key at user scope and retain returned usage in the score result. No automatic retry.
 Scoring never approves a title or thumbnail, and text-only Jev never verifies image pixels.
 
+**ElevenLabs voice remix:** preview `media.py voice remix plan` and state its one call and its
+characters, never a credit rate, before the author approves. Only `voice remix run --approve-call`
+spends, and the project's ask rule prompts for it; the key stays in the user's shell, never
+printed or written. One call, no automatic retry; the run writes its own credits-log row.
+Run it only as `python3 toolkit/media.py voice remix run …` or the `uv run` form, never through a
+rewritten path, which the ask rule would not match.
+
 **Requirement.** A call that spends ElevenLabs credits (text-to-speech, speech-to-text, and the
 rest of the ask list in the standalone `.claude/settings.json`) is made only when the author
 asked for that audio or transcript. If nothing was asked, stop: never generate unasked, including
@@ -118,7 +126,8 @@ as a 'helpful' extra after another skill.
 - **One call at a time**, with an absolute `output_directory` inside the git-ignored generated
   folder (from `git rev-parse --show-toplevel`); `python3 toolkit/media.py take add` at once;
   stop at the first error.
-- **Every call has a row** in `production/src/credits-log.md`, written by `take add` for a take.
+- **Every call has a row** in `production/src/credits-log.md`, written by `take add` for a take
+  and by `voice remix run` for a remix.
 - **Archive what is approved** (`media.py footage add --kind generated`): M4 needs every take a
   master uses approved and archived; for an audiobook, every mastered chapter (its chunk takes
   may be archived, but need not be).
@@ -153,7 +162,10 @@ house's own transparency, owed to every viewer.
 people or private places, a likeness, a cloned voice, quoted text, a scripture translation, a
 font) has a row in `production/src/rights-register.md`, and M7 needs each one `cleared`
 (`production/workflows/07-clear-the-rights/`). **No voice is cloned without the person's recorded
-consent**, and the owner's own clone is still synthetic for disclosure.
+consent**, and the owner's own clone is still synthetic for disclosure. **A voice remix starts
+only from a voice the author owns and whose `voice-consent` row is `cleared`**, never from a
+voice library's or another person's voice, and the character's row cites that consent; a remix
+is still the author's voice, and is disclosed as synthetic.
 
 **Why this rule exists.** A piece is clipped and reposted beyond anyone's reach. A right assumed,
 or a voice used without consent, cannot be recalled once it has travelled.

@@ -11,7 +11,8 @@ production/docs/reference/
 ├── CONTEXT.md                  ← this file
 ├── CLAUDE.md                   ← operating rules
 <: if 'audiobook' in MEDIA_KINDS :>├── audiobook-narration.md      ← three routes chosen per channel; chapter text; the ACX targets
-<: endif :>├── edit-decision-lists.md      ← the master as a list of clips, overlays and sounds, rebuilt on demand
+<: endif :>├── character-voices.md         ← a character's voice remixed from the author's clone, chosen and recorded
+├── edit-decision-lists.md      ← the master as a list of clips, overlays and sounds, rebuilt on demand
 ├── elevenlabs.md               ← the user-scope server, the base path, cost before spend, one call at a time
 ├── recorded-pieces.md          ← a recording in, a transcript as its script, captions to every cut
 ├── rights-and-consent.md       ← what needs a row; clearing it; consent before a likeness or a voice
@@ -36,6 +37,9 @@ production/docs/reference/
 - `elevenlabs.md` — **read before any credit-spending call:** setting up the user-scope server so
   its base path contains the project, stating the cost first, one call at a time into a
   git-ignored folder, `take add`, speech-to-text, and the espeak-ng fallback.
+- `character-voices.md` — a character's voice designed from the author's own clone: the
+  description drafted from the source, `voice remix plan` and `run`, listening, saving through
+  the server, and the `character:<name>` row whose consent is the source clone's.
 - `voiceover.md` — why a segment is a sentence or a beat and never a caption cue, the segment
   register, and how a script line becomes a request.
 - `recorded-pieces.md` — a recorded talk or interview as a piece: the transcript and its

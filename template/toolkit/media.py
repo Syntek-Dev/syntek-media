@@ -34,6 +34,8 @@ Usage:
     python3 toolkit/media.py take add FILE --piece PIECE (--segment sNN | --chapter chNN --part pNN)
     python3 toolkit/media.py speak plan [PIECE [--segment sNN...]] [--trial NAME]
     python3 toolkit/media.py voice join PIECE [-o OUT]
+    python3 toolkit/media.py voice remix plan NAME --from VOICE --describe TEXT [--text TEXT]
+    python3 toolkit/media.py voice remix run NAME --from VOICE --describe TEXT [--text TEXT] --approve-call
     python3 toolkit/media.py levels PIECE [--window S]
     python3 toolkit/media.py transcribe PIECE [--no-cross-check] [-o WORDS]
     python3 toolkit/media.py transcribe fetch
@@ -84,13 +86,20 @@ The modules beside this file do the work and have no command of their own: media
 cut, encode, frame, still-video), media_audio.py (extract-audio, loudness, audiobook, take),
 media_captions.py (captions, script time), media_repo.py (footage, tokens, flags, where, check),
 media_image.py (image, and the GIF pass of cut) and media_feed.py (a self-hosted podcast's
-register, feed, chapters and file tags), and media_score.py (Jev option scoring). card.py renders HTML and CSS to PNG and runs through
-uv: uv run toolkit/card.py --help.
+register, feed, chapters and file tags), media_score.py (Jev option scoring) and media_voice.py
+(voice remix into a voice trial). card.py renders HTML and CSS to PNG and runs through uv:
+uv run toolkit/card.py --help.
 
 Standard library only; Python 3.11+; ffmpeg and ffprobe for every command that touches media,
-run from argument lists, never a shell string. No command calls ElevenLabs. Network access is
-limited to the author-run transcribe fetch, uv package setup and explicitly approved Jev scoring.
-Score plan is offline; score run writes JSON to stdout or a new explicit -o, never over an existing file. Exit codes: 0 = done and verified, or clean; 1 = a finding (a check failed, or an
+run from argument lists, never a shell string. Network access is limited to the author-run
+transcribe fetch, uv package setup, explicitly approved Jev scoring (DESIGN D74) and explicitly
+approved voice remix (D82), the one ElevenLabs call made here: every other ElevenLabs call,
+saving a remix preview among them, is made through MCP by a skill, after the author's yes. Score
+plan and voice remix plan are offline; score run writes JSON to stdout or a new explicit -o,
+never over an existing file; voice remix run sends one request with ELEVENLABS_API_KEY from the
+shell, never written or printed, writes the previews and their record into a new voice trial in
+production/src/voiceover/generated/voice-trials/<name>/ and appends the trial's credits-log row.
+Exit codes: 0 = done and verified, or clean; 1 = a finding (a check failed, or an
 output failed its verification); 2 = could not run (bad arguments, a missing input, a missing
 tool, named with its install hint, or the tool itself failed).
 """
@@ -119,6 +128,7 @@ import media_image as I  # noqa: E402
 import media_repo as R  # noqa: E402
 import media_video as V  # noqa: E402
 import media_score as J  # noqa: E402
+import media_voice as W  # noqa: E402
 
 
 # ── probe and presets ───────────────────────────────────────────────────────────────────
@@ -535,7 +545,8 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--trial", metavar="NAME", help="create only this voice trial's output directory")
     q.set_defaults(func=A.cmd_speak_plan)
 
-    p = sub.add_parser("voice", help="join approved voice takes")
+    p = sub.add_parser("voice", help="join approved voice takes; remix an owned voice into a voice trial "
+                       "(remix plan is offline)")
     vs = p.add_subparsers(dest="sub", metavar="action")
     q = vs.add_parser("join", help="join the approved takes in register order, with pause_after",
                      description="One mono 16-bit WAV at the register's sample rate, using each row's file "
@@ -543,6 +554,28 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("piece", metavar="PIECE")
     out(q, "the WAV path (default: production/src/renders/<piece>/<piece>.voice.wav)")
     q.set_defaults(func=A.cmd_voice_join)
+    q = vs.add_parser("remix", help="remix a voice the account owns into a voice trial's previews",
+                      description="DESIGN D82. plan is offline: it prints the request, one call and its "
+                      "characters, never a credit rate, and writes nothing. run sends that one request to "
+                      "ElevenLabs only with --approve-call, ELEVENLABS_API_KEY from the shell (never written "
+                      "or printed), no redirect, a 30-second timeout and no retry; it writes "
+                      "production/src/voiceover/generated/voice-trials/<NAME>/<NAME>.pNN.mp3 and "
+                      "<NAME>.remix.json and appends the trial's credits-log row. Either refuses a trial "
+                      "already remixed. Save a chosen preview through MCP create_voice_from_preview.")
+    rs = q.add_subparsers(dest="action", required=True)
+    for action in ("plan", "run"):
+        r = rs.add_parser(action, help="offline request preview; writes nothing" if action == "plan" else
+                          "one explicitly approved paid ElevenLabs request")
+        r.add_argument("name", metavar="NAME", help="the voice trial's folder name, the rule of speak plan --trial")
+        r.add_argument("--from", dest="source", required=True, metavar="VOICE",
+                       help="the voice ID to remix: one the account owns, with consent cleared")
+        r.add_argument("--describe", required=True, metavar="TEXT",
+                       help="the new voice's description, 5-1000 characters")
+        r.add_argument("--text", metavar="TEXT",
+                       help="the previews' text, 100-1000 characters; ElevenLabs writes it when omitted")
+        if action == "run":
+            r.add_argument("--approve-call", action="store_true", help="author has approved this paid call")
+        r.set_defaults(func=W.cmd_remix, approve_call=False)
 
     p = sub.add_parser("levels", help="RMS windows of the joined voice, as finite JSON",
                        description="Reads the joined voice. Writes only a working copy under "
@@ -940,6 +973,7 @@ def self_test() -> int:
                       ("default output paths: each piece's own folder", lambda: test_piece_defaults(verdict))]
             groups.append(('deterministic scene timing and safe zones', lambda: test_scene_timing(verdict)))
             groups.append(('offline Jev scoring and paid-call boundaries', lambda: J.self_test(verdict)))
+            groups.append(('offline voice remix plans and paid-call boundaries', lambda: W.self_test(verdict)))
             groups.append(('scene layouts, movement, interaction and local sources', lambda: test_scene_model(verdict)))
             groups.append(('streamed frame input and opt-in memory scopes', lambda: test_render_helpers(verdict, root)))
             groups.append(('eight- and nine-column storyboard input', lambda: test_storyboards(verdict, root)))
@@ -1209,7 +1243,8 @@ def write_fixture(root: Path) -> None:
     write(root / C.AUDIOBOOK / "008-fixture-voice-format.md", CHAPTER_REG_NO_FORMAT)
     write(root / C.AUDIOBOOK / "008-fixture-voice-format.ch00.md", CREDITS_CH00_MD)
     write(root / "manuscript/src/01-the-ford/01-the-ford.md", CHAPTER_MD)
-    settings = {"permissions": {"allow": list(R.SETTINGS_ALLOW), "ask": list(R.SETTINGS_ASK[:-1]),
+    settings = {"permissions": {"allow": list(R.SETTINGS_ALLOW), "ask": [entry for entry in R.SETTINGS_ASK
+                                                                    if not entry.endswith("create_voice_from_preview")],
                                 "deny": ["AskUserQuestion"]}}
     write(root / C.SETTINGS, json.dumps(settings, indent=2))
 
@@ -2340,7 +2375,12 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
     saved_home = os.environ.get("HOME")
     os.environ["HOME"] = str(home)
     try:
-        code, out = cli("check", "--setup")
+        with held_env(drop=("ELEVENLABS_API_KEY",)):
+            code, out = cli("check", "--setup")
+        verdict("check --setup reports each missing voice remix ask entry as a FAIL with the line to add (D82)",
+                code == 1 and all(f"FAIL  ask {entry} is not in" in out and f'fix: add "{entry}" to permissions.ask'
+                                  in out for entry in R.SETTINGS_ASK_COMMANDS)
+                and "ELEVENLABS_API_KEY: absent" in out, out)
         verdict("check --setup reports a missing ask rule and a base path outside the repository",
                 code == 1 and "ask mcp__elevenlabs__create_voice_from_preview is not in" in out
                 and "does not contain this repository" in out, out)
@@ -2365,6 +2405,15 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
         verdict("check --setup passes the deny entries once they are present",
                 "ok    deny Edit(**/generated/**)" in out and "ok    deny Edit(**/renders/**)" in out
                 and "FAIL  deny" not in out, out)
+        settings["permissions"]["ask"] += list(R.SETTINGS_ASK_COMMANDS)
+        write(root / C.SETTINGS, json.dumps(settings, indent=2))
+        with held_env(ELEVENLABS_API_KEY=secret):
+            code, out = cli("check", "--setup")
+        verdict("check --setup passes the voice remix ask entries once they are present (D82)",
+                all(f"ok    ask {entry}" in out for entry in R.SETTINGS_ASK_COMMANDS)
+                and "FAIL  ask Bash(" not in out, out)
+        verdict("check --setup notes ELEVENLABS_API_KEY's presence, never its value",
+                "ELEVENLABS_API_KEY: set" in out and secret not in out, out)
     finally:
         if saved_home is None:
             os.environ.pop("HOME", None)
@@ -2761,6 +2810,12 @@ def test_voice_plan(verdict, skip, cli, root: Path, have_git: bool) -> None:
                 code == 0 and trial.is_dir() and not list(trial.iterdir()) and str(trial.resolve()) in out, out)
         code, out = cli("speak", "plan", "--trial", "../escape")
         verdict("speak plan refuses a trial directory traversal", code == 2, out)
+        # --trial=-x, so the name reaches the rule rather than argparse's refusal of an option.
+        held_trials = sorted(p.name for p in trial.parent.iterdir())
+        refused = {bad: cli("speak", "plan", "--trial=" + bad)[0] for bad in ("a\nb", "a|b", "-x", "..", "a/b")}
+        made = sorted(p.name for p in trial.parent.iterdir())
+        verdict("speak plan --trial refuses a line break, a '|' and a leading '-', creating nothing",
+                all(code == 2 for code in refused.values()) and made == held_trials, (refused, made))
     finally:
         write(voice_md, held_voice)
     if not have_git:

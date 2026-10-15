@@ -10,16 +10,16 @@ model: opus
 **Language**: British English (en_GB)
 
 **What it is.** Voiceover, narration and speech-to-text come from ElevenLabs through the
-user-scope MCP server `elevenlabs`, and every call spends the author's credits. The server marks
-every tool read-only, so only this discipline and the project's ask rules stand between a request
-and the bill. The project adds nothing to `.mcp.json`.
+user-scope MCP server `elevenlabs`, and every call spends the author's credits; the one direct
+call, a voice remix, is `production/docs/reference/character-voices.md`'s. Every tool is marked
+read-only, so only this discipline and the ask rules stand between a request and the bill.
 
 ## Setting up the server
 
-The base path must **contain the project**: files land there when no `output_directory` is given,
-and speech-to-text reads no input file from anywhere else ('outside of allowed directory'; a
-symlink does not help). Use `$HOME` when every project lives under it, else the nearest folder
-holding them all. Export the key in your shell first (never type it or commit it), then re-add:
+The project adds nothing to `.mcp.json`. The base path must **contain the project**: files land
+there when no `output_directory` is given, and speech-to-text reads no input file from anywhere
+else ('outside of allowed directory'; a symlink does not help). Use `$HOME`, or the nearest folder
+holding every project. Export the key in your shell (never type or commit it), then re-add:
 
 ```bash
 claude mcp remove elevenlabs --scope user
@@ -43,7 +43,7 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
   piece's `production/src/voiceover/generated/<piece>/takes/` or a trial's
   `production/src/voiceover/generated/voice-trials/<name>/`, made by `media.py speak plan` before
   the first call (the server refuses a folder whose parent is missing; never `mkdir` it). A trial
-  is never a take: it keeps the server's name and enters no register.
+  is never a take: it keeps the server's name, a remix's previews excepted, and enters no register.
 - The server names a file by the second and can overwrite one, so run
   `python3 toolkit/media.py take add` straight after each call: it renames the take and writes its
   register and credits-log rows. Never rename a take with a shell `mv`.
@@ -63,16 +63,16 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
 
 ## How we apply it here
 
-- Run `python3 toolkit/media.py check --setup` before the first batch: it reports whether the
-  base path contains this repository and whether `.claude/settings.json` asks before every
-  credit-spending tool. No batch runs until its ElevenLabs lines are clean.
+- Run `python3 toolkit/media.py check --setup` before the first batch: it reports the base path
+  and the ask rules, and no batch runs until its ElevenLabs lines are clean.
 - Generated audio stays git-ignored, and an approved take, which cannot be made again, is
   archived with `footage add --kind generated`; voice IDs live only in the brand's own files.
 
 ## Who implements it
 
 - **Workflows:** `production/workflows/02-make-a-voiceover/`,
-  `production/workflows/08-bring-in-a-recording/` and `publishing/workflows/03-caption-a-piece/`.
+  `production/workflows/08-bring-in-a-recording/`, `production/workflows/11-design-character-voices/`
+  and `publishing/workflows/03-caption-a-piece/`.
 - **Skills:** `voiceover` (takes) and `captions` (transcripts); audiobook narration follows suit.
 
 ## Governing standard

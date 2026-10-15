@@ -52,7 +52,9 @@ any trial. A trial runs only on the author's word, costed and agreed as step 6 s
 at a time, into `production/src/voiceover/generated/voice-trials/<name>/`, which
 `python3 toolkit/media.py speak plan --trial <name>` makes before the first call (never
 `mkdir`). It is never a take and gets no `take add`: it keeps the server's name, enters no
-register, and its credits-log row has `—` for the piece. _Substantive._
+register, and its credits-log row has `—` for the piece. A character's voice remixed from the
+author's clone is designed in `production/workflows/11-design-character-voices/`, whose
+`voice remix run` names its previews and writes their row. _Substantive._
 
 ## 4. Split the script into segments
 

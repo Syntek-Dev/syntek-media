@@ -10,10 +10,9 @@ model: opus
 **Language**: British English (en_GB)
 
 **What it is.** The spoken voice is how the brand sounds when it is heard rather than read: its
-pace, its register, how its own name is said, the words it never says aloud, the narrator for
-each use, and how every hard word is pronounced. It lives in one file,
-`brand/src/voice/voice.md`, which `voiceover` reads before every call, so pieces voiced months
-apart sound like one brand. It is not the written voice, and it never restates it.
+pace, its register, how its own name is said, the words it never says aloud, the narrator for each
+use, and how every hard word is pronounced. It lives in one file, `brand/src/voice/voice.md`,
+which `voiceover` reads before every call, so pieces voiced months apart sound like one brand.
 
 ## Spoken against written
 
@@ -41,7 +40,8 @@ apart sound like one brand. It is not the written voice, and it never restates i
 - **One narrator per use.** A second voice for the same use makes the brand sound like two;
   changing one is the author's decision, recorded with the date.
 - Hearing a candidate costs credits. Say so before any trial, and run it as a voiceover
-  through `production/workflows/02-make-a-voiceover/`, which states the cost and waits for a yes.
+  through `production/workflows/02-make-a-voiceover/`; a `character:<name>` voice is remixed from
+  the author's clone in `production/workflows/11-design-character-voices/`. Both wait for a yes.
 
 ## Pronunciations
 
@@ -58,8 +58,8 @@ apart sound like one brand. It is not the written voice, and it never restates i
 - No voice is cloned without the person's recorded consent: a `voice-consent` row in
   `production/src/rights-register.md`, `cleared`, whose ID goes in the narrator's Consent column
   before the first call.
-- The brand owner's own clone needs its consent row like any other, and every synthetic voice
-  is disclosed, the owner's clone included (`publishing/docs/reference/ai-disclosure.md`).
+- The brand owner's own clone needs its consent row like any other, and a remix of it cites the
+  same row; every synthetic voice is disclosed (`publishing/docs/reference/ai-disclosure.md`).
 
 ## How we apply it here
 
@@ -69,14 +69,14 @@ apart sound like one brand. It is not the written voice, and it never restates i
 
 ## Who implements it
 
-- **Workflows:** `brand/workflows/05-write-the-spoken-voice/` and
-  `production/workflows/02-make-a-voiceover/`.
+- **Workflows:** `brand/workflows/05-write-the-spoken-voice/`,
+  `production/workflows/02-make-a-voiceover/` and
+  `production/workflows/11-design-character-voices/`.
 - **Skill:** `voiceover` reads `voice.md` before every call and records a narrator the first time
   it needs one; audiobook narration, where the project makes audiobooks, reads it too.
 
 ## Governing standard
 
 `.claude/rules/syntek-media/03-production-ethics.md` Section 6 owns consent before a voice or a
-likeness, and Section 4 never spending credits unasked;
-`.claude/rules/syntek-media/06-global-rules.md` Section 10 owns where a voice ID may be kept. The
-rules own the requirements; this guide owns how the voice is written down and used.
+likeness, and Section 4 never spending unasked; `.claude/rules/syntek-media/06-global-rules.md`
+Section 10 owns where a voice ID is kept. This guide owns how the voice is written down and used.

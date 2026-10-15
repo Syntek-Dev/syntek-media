@@ -56,7 +56,8 @@
 #                     4. The copy output (stderr, without --quiet) of each <kind>--defaults
 #                        render carries every _message_after_copy line of _common.sh's lists
 #                        (DESIGN.md D13, D73, D76): the eighteen shared paths a copy writes and the skip rule, the four allows,
-#                        nine asks and two Edit denies, the ELEVENLABS_MCP_BASE_PATH line,
+#                        nine ElevenLabs asks, the two voice remix run asks (D82) and two Edit
+#                        denies, the ELEVENLABS_MCP_BASE_PATH line,
 #                        filter.lfs.required, the setup check, and the update command with -a;
 #                        and, from Section 8, that 'conflict' then 'skip' is expected, the
 #                        optional line in .claude/CLAUDE.md, and nothing to add to .gitignore

@@ -77,7 +77,9 @@ owns a trial: its `output_directory` is `production/src/voiceover/generated/voic
 (`<name>` a kebab slug for the trial, such as `warm-narrator`), which
 `python3 toolkit/media.py speak plan --trial <name>` makes before the first call; never make it
 with `mkdir`. A trial is never a take: it keeps the server's name, enters no register, and its
-credits-log row has `—` for the piece. Never generate from this procedure directly.
+credits-log row has `—` for the piece. A `character:<name>` voice remixed from the author's
+clone goes through `production/workflows/11-design-character-voices/`, whose `voice remix run`
+names its previews and writes their row itself. Never generate from this procedure directly.
 _Substantive._
 
 ## 7. Record each narrator

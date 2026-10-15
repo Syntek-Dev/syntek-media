@@ -346,7 +346,8 @@ SM_MODE_FILES="BUSINESS.md FICTION.md NONFICTION.md"
 # The skill contract (DESIGN.md Section 5), as skill-conformance.sh compares it. The mode
 # paragraph is syntek-author's with the three names swapped, and is compared whitespace- and
 # `> `-normalised; the guard sentence is syntek-author's, verbatim, in every skill that names a
-# credit-spending ElevenLabs tool (SM_SETTINGS_ASK lists those tools).
+# credit-spending ElevenLabs tool (SM_SETTINGS_ASK lists those tools, its mcp__ entries; its two
+# Bash entries are the voice remix run asks of D82).
 SM_MODE_PARA="**Mode.** Before step 1, read the brand-kind mode file beside this one — exactly one of \`BUSINESS.md\`, \`FICTION.md\`, \`NONFICTION.md\` ships in this folder. The mode owns the domain (paths, unit, extra reads, domain rules, examples); this file owns the procedure. Where they disagree, the procedure wins and the disagreement is reported to the author."
 SM_MODE_H2S="Paths and unit|Additions to the steps|Domain rules|Examples"
 SM_GUARD_SENTENCE="If nothing was asked, stop: never generate unasked, including as a 'helpful' extra after another skill."
@@ -478,6 +479,7 @@ always        f  production/docs/reference/elevenlabs.md
 always        f  production/docs/reference/voiceover.md
 always        f  production/docs/reference/recorded-pieces.md
 always        f  production/docs/reference/scenes-as-code.md
+always        f  production/docs/reference/character-voices.md
 k:audiobook   f  production/docs/reference/audiobook-narration.md
 always        f  production/src/.gitignore
 always        f  production/src/rights-register.md
@@ -506,6 +508,7 @@ always        d  production/workflows/07-clear-the-rights
 always        d  production/workflows/08-bring-in-a-recording
 always        d  production/workflows/09-time-the-voice
 always        d  production/workflows/10-animate-a-scene
+always        d  production/workflows/11-design-character-voices
 always        d  publishing/docs/reference
 always        d  publishing/docs/project
 always        d  publishing/src
@@ -554,6 +557,7 @@ always        f  toolkit/media_repo.py
 always        f  toolkit/media_image.py
 always        f  toolkit/media_feed.py
 always        f  toolkit/media_score.py
+always        f  toolkit/media_voice.py
 always        f  toolkit/card.py
 always        f  toolkit/transcribe.py
 always        f  toolkit/data/platforms.toml
@@ -640,7 +644,7 @@ SM_IDENTITY_TOKENS="BRAND_NAME BRAND_SLUG OWNER_NAME OWNER_FIRST_NAME DATE TIMEZ
 SM_COPIER_VARS="_copier_operation _copier_answers _copier_conf"
 
 # syntek-author's skills media names in prose and never ships (DESIGN.md D10, Section 5.2).
-SM_COMPANIONS="spelling grammar comprehension flow fact-check improve-section adapt-section research grilling grill-with-docs handoff wayfinder social-media-documents run-workflow pronounce"
+SM_COMPANIONS="spelling grammar comprehension flow fact-check improve-section adapt-section research grilling grill-with-docs handoff wayfinder social-media-documents run-workflow pronounce character-voice"
 
 # The standalone settings seed (DESIGN.md D13). Arrays: the entries carry spaces.
 SM_SETTINGS_DENY=("AskUserQuestion" "Edit(**/generated/**)" "Edit(**/renders/**)")
@@ -655,13 +659,15 @@ SM_SETTINGS_ASK=(
   "mcp__elevenlabs__isolate_audio"
   "mcp__elevenlabs__text_to_voice"
   "mcp__elevenlabs__create_voice_from_preview"
+  "Bash(python3 toolkit/media.py voice remix run *)"
+  "Bash(uv run toolkit/media.py voice remix run *)"
 )
 SM_SETTINGS_BANNED_KEYS="hooks effortLevel ultracode enabledPlugins"   # and every disable* key
 
 # What _message_after_copy must say, in DESIGN.md D13's order: (1) the eighteen shipped shared paths and the
 # skip rule, that Copier's 'conflict' then 'skip' pair is expected, and Section 8's hand edits 2
 # and 3 (the optional line in .claude/CLAUDE.md; nothing to add to .gitignore or .mcp.json);
-# (2) the four Bash allows, the nine asks and the two Edit denies to add by hand (DESIGN.md
+# (2) the four Bash allows, the nine ElevenLabs asks, the two voice remix asks (D82) and the two Edit denies to add by hand (DESIGN.md
 # Section 8); (3) the user-scope `claude mcp add` line with ELEVENLABS_MCP_BASE_PATH; (4) the
 # repository-local filter.lfs.required and `git lfs install`; (5) the setup check; (6) the
 # update command with -a.

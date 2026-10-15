@@ -22,6 +22,7 @@ production/workflows/
 ├── 08-bring-in-a-recording/        ← a recording logged, transcribed, anchored and approved
 ├── 09-time-the-voice/             ← approved words and mouth timing, boards re-timed before animation
 ├── 10-animate-a-scene/           ← native layouts, stills and preview approved before M4
+├── 11-design-character-voices/   ← a character's voice remixed from the author's clone, chosen and recorded
 └── local/                          ← your own procedures; a same-slug folder here wins
 ```
 
@@ -40,7 +41,8 @@ NN-verb-first-name/
 - `production/workflows/01-log-source-media/`, `production/workflows/02-make-a-voiceover/`,
   `production/workflows/03-assemble-the-master/`, `production/workflows/07-clear-the-rights/`,
   `production/workflows/08-bring-in-a-recording/`, `production/workflows/09-time-the-voice/`,
-  `production/workflows/10-animate-a-scene/` — for every project.
+  `production/workflows/10-animate-a-scene/`, `production/workflows/11-design-character-voices/`
+  — for every project.
 <: if 'podcast' in MEDIA_KINDS :>- `production/workflows/04-master-a-podcast-episode/` — podcast episodes.
 <: endif :><: if 'audiobook' in MEDIA_KINDS :>- `production/workflows/05-narrate-an-audiobook/`, `production/workflows/06-master-an-audiobook/` —
   audiobooks.

@@ -46,7 +46,10 @@ narrator, settings and pronunciations without asking again.
 ## Output & naming
 
 - **Hand-written (with the author):** `voice.md`, one sentence per line outside its tables.
-- **Written by skills:** a narrator row, the first time, by `voiceover`.
+- **Written by skills:** a narrator row, the first time, by `voiceover`, and a character's row
+  once the author has chosen its voice
+  (`production/workflows/11-design-character-voices/`).
 - **Generated (never hand-edit):** nothing here; trial audio lands in the git-ignored
   `production/src/voiceover/generated/voice-trials/<name>/`, created before the call by
-  `python3 toolkit/media.py speak plan --trial <name>`.
+  `python3 toolkit/media.py speak plan --trial <name>`, or a remix's previews, written there by
+  `voice remix run`.

@@ -136,7 +136,8 @@ session that has not seen it.
 ## 10. Confidentiality
 
 **Requirement.** API keys live at user scope only: the ElevenLabs key in the user-scope server's
-environment, never in `.mcp.json` or a committed file, and never typed on a command line. Voice
+environment, and exported in the user's shell for `media.py voice remix run`, never in `.mcp.json`
+or a committed file, never typed on a command line, and never printed or echoed. Voice
 IDs go only in `brand/src/voice/voice.md`, Claude Design links only in
 `brand/src/design-register.md`. Never paste credentials, a release form's personal details or
 private correspondence into a handoff, a brief or a plan; name and locate them instead.
