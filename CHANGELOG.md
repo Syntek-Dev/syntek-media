@@ -1,6 +1,6 @@
 # Changelog
 
-**Last Updated**: 15/10/2026 **Version**: 0.4.3 **Maintained By**: Syntek Studio
+**Last Updated**: 15/10/2026 **Version**: 0.4.4 **Maintained By**: Syntek Studio
 **Language**: British English (en_GB)
 
 All notable changes to syntek-media are documented here.
@@ -13,9 +13,11 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
-Adds character voices designed from the author's own cloned voice. Generated projects receive the new workflow, guide and toolkit module on their next update (with `-a .copier-answers.syntek-media.yml`, D3); no migration or new Copier answer is required. Three files a project owns changed (the `.claude/settings.json` seed and the `brand/src/voice/voice.md` and `production/src/credits-log.md` seeds), and an update never rewrites a copy-only shared file or a seed (D11), so **existing projects edit them by hand**: they add two `ask` lines to `.claude/settings.json` (until they do, `python3 toolkit/media.py check --setup` reports each one missing as a FAIL, and the `allow` rule lets a voice remix spend credits without a prompt), and bring `voice.md`'s Consent rule and `credits-log.md`'s rules into line, as `_message_before_update` says.
+## [0.4.4] - 15/10/2026
 
-**syntek-author baseline.** Not yet recorded: `coexist-test.sh` must pass against a syntek-author checkout, never SKIP, before 0.4.4 is tagged (D27), and this entry then names the commit and the date it was read.
+Adds character voices designed from the author's own cloned voice, and fixes two toolkit checks: `media.py --self-test` no longer passes without ffmpeg, and the design-token check no longer accepts any word as a colour. Generated projects receive the new workflow, guide and toolkit module on their next update (with `-a .copier-answers.syntek-media.yml`, D3); no migration or new Copier answer is required. Three files a project owns changed (the `.claude/settings.json` seed and the `brand/src/voice/voice.md` and `production/src/credits-log.md` seeds), and an update never rewrites a copy-only shared file or a seed (D11), so **existing projects edit them by hand**: they add two `ask` lines to `.claude/settings.json` (until they do, `python3 toolkit/media.py check --setup` reports each one missing as a FAIL, and the `allow` rule lets a voice remix spend credits without a prompt), and bring `voice.md`'s Consent rule and `credits-log.md`'s rules into line, as `_message_before_update` says.
+
+**syntek-author baseline.** Checked against syntek-author `ee376139c88a1feca1650959bb84b0d87060c662` (its v0.4.0, PR #8, the shared skills and update report, merged and tagged 15/10/2026), read on 15/10/2026 from a clean clone. `coexist-test.sh --refresh-names` against it: 97 names, 52 skills; moved since `b4669a5`: `+ skill to-questionnaire`, which no media path or skill takes. `coexist-test.sh` and every other audit passed for all three brand kinds in CI on `main` at `9297cf6`, against that commit.
 
 ### Added
 
