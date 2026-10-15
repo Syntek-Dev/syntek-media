@@ -457,10 +457,11 @@ skip_step() { # $1 = key, $2 = what, $3 = why — a named SKIP: the tool to look
 na_step() { rec "na.$1" "$2"; }   # does not apply to this render: listed, never a SKIP
 
 # card.py --self-test exits 2, its last line 'self-test incomplete', when a part of it could not
-# run (Playwright, its Chromium or fc-match absent), each part named on a SKIP line with why. That
-# is a named SKIP here, in card.py's own words: never a pass, never a finding. Any other exit, a
-# FAIL beside a SKIP (exit 1) among them, is judged as it stands.
-card_skips() { # $1 = exit status, $2 = log → card.py's reasons on one line, or nothing
+# run (Playwright, its Chromium or fc-match absent), each part named on a SKIP line with why, and
+# media.py --self-test does the same without ffmpeg or ffprobe (D20). That is a named SKIP here, in
+# the script's own words: never a pass, never a finding. Any other exit, a FAIL beside a SKIP
+# (exit 1) among them, is judged as it stands.
+card_skips() { # $1 = exit status, $2 = log → the script's reasons on one line, or nothing
   [[ "$1" == 2 ]] && grep -q '^self-test incomplete' "$2" 2>/dev/null || return 0
   grep -E '^[[:space:]]+SKIP[[:space:]]' "$2" | sed -E 's/^[[:space:]]+SKIP[[:space:]]+//' | head -3 \
     | paste -sd '|' - | sed 's/|/; /g' | cut -c1-300 || true
@@ -507,6 +508,7 @@ smoke() { # $1 = tree — fills $RESULTS
       else
         (cd "$T" && PYTHONDONTWRITEBYTECODE=1 python3 "toolkit/$k" --self-test) \
           >"$OUT/selftest.$k.log" 2>&1 || st=$?
+        why="$(card_skips "$st" "$OUT/selftest.$k.log")"
       fi
       if [[ -n "$why" ]]; then
         skip_step 1 "$k --self-test" "$why"; cache+="$k=skip;"; SELFTEST_TAIL["$hash/$k"]="$why"; continue
@@ -3271,6 +3273,9 @@ self_test() {
   read_card "card.py's exit 2 without Chromium is a named SKIP, in card.py's words" 2 "  SKIP $chromium"$'\n'"$ended" "$chromium"
   read_card "a brand-font SKIP is named for fc-match, never for the Chromium a passing case mentions" 2 \
     "  SKIP $font"$'\n'"  ok   without Playwright's Chromium, the SKIP names the command that installs it"$'\n'"$ended" "$font"
+  local noff="every ffmpeg probe (cut, burn-in, loudness, assemble, align, audiobook, image, GIF, the podcast feed, transcribe launcher and lipsync): ffmpeg or ffprobe is not installed"
+  read_card "media.py's exit 2 without ffmpeg is a named SKIP, in media.py's words, never a pass" 2 \
+    "  SKIP $noff"$'\n'"$ended" "$noff"
   read_card "a FAIL beside a SKIP (card.py's exit 1) is judged, never skipped" 1 \
     "  FAIL render writes a PNG of exactly the size asked"$'\n'"  SKIP $font"$'\n'"self-test FAILED: 1 case(s), and 1 part(s) skipped (SKIP above)" ""
   read_card "an exit 2 that does not end 'self-test incomplete' is judged, never skipped" 2 \

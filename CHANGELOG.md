@@ -13,6 +13,11 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Fixed
+
+- **`media.py --self-test` no longer passes with ffmpeg or ffprobe missing** (D20). It skipped every ffmpeg probe on a lower-case `skip` line, then printed 'self-test passed' and exited 0. ffmpeg is the tool `media.py` drives, not an optional one, so its absence is now a `SKIP` line with the install hint, and the self-test ends 'self-test incomplete' and exits 2, as `card.py`'s does. An optional tool (Rhubarb, `systemd-run`, pandoc, an image encoder) keeps its lower-case `skip` and the exit, as D20 says. A FAIL still outranks a SKIP (exit 1); a new case proves the three outcomes. `toolkit-smoke.sh` check 1 reads `media.py`'s exit 2 as a named SKIP in its own words, as it does `card.py`'s, with one new self-test probe. CI installs ffmpeg and passes `--require-ffmpeg`, so CI never saw the false pass. Reported by syntek-base, 15/10/2026.
+- **The design-token check no longer accepts any word as a colour.** `COLOUR_RE`'s last alternative, `[a-zA-Z]+`, matched every word, so `media.py tokens` and `check` passed a misspelt `--color-*` value such as `bleu`. A bare word now passes only when CSS names it as a colour (the 148 named colours of CSS Color Level 4, `transparent` and `currentColor`, in any case); hex colours and colour functions are unchanged. Two new self-test cases. Reported by syntek-base, 15/10/2026.
+
 ## [0.4.3] - 15/10/2026
 
 Fixes the CI failure recorded on 0.4.2 and adds development tooling. Generated projects receive the `check --setup` fix on their next update (with `-a .copier-answers.syntek-media.yml`, D3); no migration, seed change or new Copier answer is required.

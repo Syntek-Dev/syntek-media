@@ -900,11 +900,13 @@ See [the guide][g] for the rest.
 
 def self_test() -> int:
     """Prove each module does what its docstring says, on fixtures written at run time."""
-    failures = []
+    failures, passes, skips = [], [], []
 
     def verdict(label, passed, detail=""):
         print(f"  {'ok  ' if passed else 'FAIL'} {label}")
-        if not passed:
+        if passed:
+            passes.append(label)
+        else:
             failures.append(label)
             print(f"         {str(detail)[-1500:]}")
 
@@ -961,9 +963,11 @@ def self_test() -> int:
                                lambda: test_transcribe(verdict, cli, root, have_git)))
                 groups.append(('Rhubarb dialogue, resources, exits and tracked mouth guards',
                                lambda: test_lipsync(verdict, skip, cli, root, have_git)))
-            else:
-                skip("every ffmpeg probe (cut, burn-in, loudness, assemble, align, audiobook, image, GIF, "
-                     "the podcast feed, transcribe launcher and lipsync)", "ffmpeg or ffprobe is not installed")
+            else:  # ffmpeg is the tool media.py drives, never optional: its absence is a SKIP, exit 2 (D20)
+                what = ("every ffmpeg probe (cut, burn-in, loudness, assemble, align, audiobook, image, GIF, "
+                        "the podcast feed, transcribe launcher and lipsync)")
+                print(f"  SKIP {what}: ffmpeg or ffprobe is not installed; {C.INSTALL['ffmpeg']}")
+                skips.append(what)
             for label, group in groups:
                 try:
                     group()
@@ -976,9 +980,28 @@ def self_test() -> int:
     changed = sorted(k for k in set(given) | set(os.environ) if given.get(k) != os.environ.get(k))
     verdict("the self-test hands back the environment it was given, git's variables included",
             not changed, f"changed: {', '.join(changed)}")
+    said = io.StringIO()
+    with contextlib.redirect_stdout(said):
+        codes = (outcome(["a case"], ["another"], ["a part"]), outcome([], ["a case"], ["a part"]),
+                 outcome([], ["a case"], []))
+    verdict("a FAIL outranks a SKIP (exit 1), a SKIP alone is exit 2 and 'incomplete', and only every case "
+            "run and passed is exit 0", codes == (1, 2, 0) and "self-test incomplete" in said.getvalue(),
+            f"{codes} {said.getvalue()}")
+    return outcome(failures, passes, skips)
+
+
+def outcome(failures: list, passes: list, skips: list) -> int:
+    """The self-test's last line and exit: 1 when a case failed, whatever was skipped; 2 when a part
+    could not run because a tool media.py drives is absent (named SKIP above, with why; an optional
+    tool's lower-case skip keeps the exit, D20); 0 only when every part ran and every case passed."""
     if failures:
-        print(f"self-test FAILED: {len(failures)} case(s)")
+        print(f"self-test FAILED: {len(failures)} case(s)"
+              + (f", and {len(skips)} part(s) skipped (SKIP above)" if skips else ""))
         return 1
+    if skips:
+        print(f"self-test incomplete: {len(passes)} case(s) passed, {len(skips)} part(s) skipped "
+              "(SKIP above): a skip is never a pass")
+        return 2
     print("self-test passed")
     return 0
 
@@ -1244,6 +1267,16 @@ def test_common(verdict, cli) -> None:
     verdict("tokens: a missing token and a caption size not in vh fail",
             code == 1 and "--radius is missing" in out and "--caption-size" in out, out)
     write(C.path(C.TOKENS), good)
+    write(C.path(C.TOKENS), good.replace("--color-accent: #d4a24c;", "--color-accent: bleu;"))
+    code, out = cli("tokens")
+    verdict("tokens: a word CSS does not name as a colour fails",
+            code == 1 and "--color-accent is 'bleu'" in out, out)
+    write(C.path(C.TOKENS), good)
+    words = ("navy", "RebeccaPurple", "transparent", "currentColor", "#fff", "oklch(70% 0.1 200)")
+    verdict("tokens: CSS's named colours, transparent, currentColor and colour functions pass; "
+            "misspelt and made-up words do not",
+            all(C.is_colour(w) for w in words) and not any(C.is_colour(w) for w in ("bleu", "notacolour", "")),
+            [w for w in words if not C.is_colour(w)])
 
 
 FAKE_UV = '''#!PYTHON
