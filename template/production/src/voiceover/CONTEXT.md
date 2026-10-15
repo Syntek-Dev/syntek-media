@@ -27,7 +27,8 @@ production/src/voiceover/
   to empty, because a new take is unheard and unarchived.
 - `production/src/voiceover/generated/` — a folder per piece: its takes in `<piece>/takes/`,
   each renamed by `take add` the moment it lands, and its espeak-ng scratch tracks in
-  `<piece>/` itself; voice trials, which no piece owns, in `voice-trials/<name>/`. Ignored by
+  `<piece>/` itself; voice trials and voice remix previews, which no piece owns, in
+  `voice-trials/<name>/`. Ignored by
   `production/src/.gitignore`; an approved take is archived as source media.
 - **A take an earlier release left flat** at the top of `generated/` stays where it is: its row's
   `file` names it, every reader opens the path the row names, and `take add` numbers the next

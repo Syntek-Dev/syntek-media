@@ -50,7 +50,8 @@
 #                         scene code left there would ship.
 #                     12. .claude/settings.json breaks DESIGN.md D13: model opus,
 #                         autoCompactEnabled false, no hooks key, exactly the three denies, the
-#                         six allows and the nine ElevenLabs asks of _common.sh's lists, and no
+#                         six allows, the nine ElevenLabs asks and the two voice remix run asks
+#                         (D82) of _common.sh's lists, and no
 #                         owner-specific key (effortLevel, ultracode, enabledPlugins, disable*).
 #                     13. .claude/settings.json does not parse as JSON. Read only where the file
 #                         is plain JSON (every render; the source while it holds no block).

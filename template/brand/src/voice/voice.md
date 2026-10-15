@@ -37,7 +37,7 @@ The written voice is syntek-author's, where present (its voice notes, standards/
 - The Model ID column holds the model found with `mcp__elevenlabs__list_models` when the narrator was chosen; it is never assumed.
 - The Stability, Similarity, Style and Speed columns hold the settings sent on every call, unchanged between calls.
 - The Output format column holds the ElevenLabs output format chosen for the deliverable; `mp3_44100_192` needs the Creator tier or above, and `pcm_44100` the Pro tier or above.
-- The Consent column holds the rights-register ID of the person's recorded consent for any cloned voice, the owner's own included, or a dash for a stock or designed voice.
+- The Consent column holds the rights-register ID of the person's recorded consent for any cloned voice, the owner's own included, or a dash for a stock or designed voice; a voice remixed from a clone cites its source clone's consent ID.
 - The Chosen column holds the date the author chose the narrator, DD/MM/YYYY.
 - Changing a narrator is the author's decision: record it in `.claude/MEMORY.md` with its date, then change the row.
 

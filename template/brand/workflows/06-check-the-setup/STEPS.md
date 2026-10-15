@@ -43,9 +43,10 @@ Explain each finding to the author: what is missing, what it blocks, and the fix
 | configured WhisperX interpreter broken or not version 3.8.6 | `transcribe`; fix MEDIA_TRANSCRIBE_PYTHON at user scope |
 | git-lfs or its filter missing while `brand/src/exports/large/` holds files | adding a large export |
 | an allow entry missing from `.claude/settings.json` | nothing, but every toolkit call asks for permission |
-| an ask entry missing from `.claude/settings.json` | every credit-spending ElevenLabs call, which would not prompt |
+| an ask entry missing from `.claude/settings.json` | every credit-spending ElevenLabs call, `voice remix run` included, which would not prompt |
 | a deny entry missing from `.claude/settings.json` | nothing, but a file in a generated or renders folder could be edited by hand |
 | the ElevenLabs base path does not contain the repository | speech-to-text and every tool that reads a project file |
+| `ELEVENLABS_API_KEY` absent from this shell (a note) | `voice remix run` only; the author exports it at user scope, never on a command line |
 
 _Substantive._
 

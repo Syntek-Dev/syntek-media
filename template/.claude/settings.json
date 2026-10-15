@@ -19,7 +19,9 @@
       "mcp__elevenlabs__voice_clone",
       "mcp__elevenlabs__isolate_audio",
       "mcp__elevenlabs__text_to_voice",
-      "mcp__elevenlabs__create_voice_from_preview"
+      "mcp__elevenlabs__create_voice_from_preview",
+      "Bash(python3 toolkit/media.py voice remix run *)",
+      "Bash(uv run toolkit/media.py voice remix run *)"
     ],
     "deny": [
       "AskUserQuestion",

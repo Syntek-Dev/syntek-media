@@ -43,6 +43,9 @@ its terms the same way every time.
   (`.claude/rules/syntek-media/03-production-ethics.md` Section 7).
 - **The owner's own cloned voice is still synthetic**: the brief's `synthetic_voice` reads
   `own-clone`, and the disclosure follows `publishing/docs/reference/ai-disclosure.md`.
+- **A persona is invented** (the customer in a walk-through): its voice is remixed from the
+  owner's own cleared clone through `production/workflows/11-design-character-voices/`, never a
+  real customer's or colleague's voice, and is disclosed like any other synthetic voice.
 - **Figures are said as the script writes them for the ear**, never rounded or expanded by the
   voice; a figure that reads badly aloud goes back to the script (`write-script`).
 

@@ -916,6 +916,16 @@ _message_before_update: |
   to .agents.syntek-held before the render and back afterwards; its target is never
   touched. If the update stops before it ends, run: mv .agents.syntek-held .agents
 
+  Updating to 0.4.4: .claude/settings.json is never updated (D11), so add these two entries
+  to "ask" under "permissions" by hand. Until you do, voice remix run spends ElevenLabs
+  credits without a prompt, and python3 toolkit/media.py check --setup reports each missing
+  one as a FAIL with the line to add:
+    "Bash(python3 toolkit/media.py voice remix run *)",
+    "Bash(uv run toolkit/media.py voice remix run *)"
+  Seeds are never updated either, so edit by hand the Consent rule of brand/src/voice/voice.md
+  (a voice remixed from a clone cites the source clone's consent ID) and the rules of
+  production/src/credits-log.md (Tool voice remix, the row voice remix run writes itself).
+
   BRAND_KIND never changes: the update refuses it, because a different brand kind is a new
   project. After a platform or media-kind change, edit by hand the files that describe your
   options: README.md, CONTEXT.md and .claude/CLAUDE.md Section 1 in a standalone project (over
@@ -970,7 +980,9 @@ _message_after_copy: |
        "WebSearch",
        "WebFetch"
      and in "ask" (every ElevenLabs tool that spends credits; the server marks each one
-     read-only, so only an ask rule makes Claude Code stop and ask):
+     read-only, so only an ask rule makes Claude Code stop and ask; and voice remix run, the
+     one ElevenLabs call the toolkit makes itself, which the toolkit allow above would
+     otherwise let run unprompted, D82 and D66):
        "mcp__elevenlabs__text_to_speech",
        "mcp__elevenlabs__speech_to_text",
        "mcp__elevenlabs__compose_music",
@@ -979,7 +991,9 @@ _message_after_copy: |
        "mcp__elevenlabs__voice_clone",
        "mcp__elevenlabs__isolate_audio",
        "mcp__elevenlabs__text_to_voice",
-       "mcp__elevenlabs__create_voice_from_preview"
+       "mcp__elevenlabs__create_voice_from_preview",
+       "Bash(python3 toolkit/media.py voice remix run *)",
+       "Bash(uv run toolkit/media.py voice remix run *)"
      and in "deny" (so nothing in a generated or renders folder is edited by hand):
        "Edit(**/generated/**)",
        "Edit(**/renders/**)"

@@ -25,8 +25,11 @@ with 'uv python find' and the interpreter's own -c answer, so no environment is 
 network is never reached), the pinned Playwright's Chromium, git-lfs where large exports exist,
 the optional espeak-ng, pandoc and fontconfig's fc-match (card.py --self-test's brand-font
 probe), the allow, ask and deny entries of .claude/settings.json (D13's two deny entries keep
-hand edits out of renders/ and generated/), and whether the user-scope ElevenLabs server's base path contains this
-repository. It reads only that one key of ~/.claude.json and prints no other value from it.
+hand edits out of renders/ and generated/; its two voice remix ask entries make 'voice remix run'
+prompt, which the broad toolkit allow would otherwise let run unprompted, D82), whether
+ELEVENLABS_API_KEY is set in this shell (a note naming its presence, never its value), and
+whether the user-scope ElevenLabs server's base path contains this repository. It reads only
+that one key of ~/.claude.json and prints no other value from it.
 
 'flags' lists both flags (DESIGN D37) across the media layers or the paths given; --piece keeps
 one piece's files: its folder under scripts/src/pieces/ and every file in scripts/, production/
@@ -71,6 +74,10 @@ SETTINGS_DENY = ("Edit(**/generated/**)", "Edit(**/renders/**)")   # D13; requir
 SETTINGS_ASK = tuple(f"mcp__elevenlabs__{t}" for t in (
     "text_to_speech", "speech_to_text", "compose_music", "text_to_sound_effects", "speech_to_speech",
     "voice_clone", "isolate_audio", "text_to_voice", "create_voice_from_preview"))
+# D82: the one ElevenLabs call the toolkit makes; the broad toolkit allow covers it, so only these
+# literal ask entries make it prompt. Each one missing is a FAIL with the line to add.
+SETTINGS_ASK_COMMANDS = ("Bash(python3 toolkit/media.py voice remix run *)",
+                         "Bash(uv run toolkit/media.py voice remix run *)")
 IGNORE_RULES = {
     "production/src/.gitignore": ["/renders/*", "!/renders/README.md", "/footage/raw/*",
                                   "!/footage/raw/README.md", "/voiceover/generated/*",
@@ -804,12 +811,23 @@ def setup_report(root: Path) -> tuple:
             item(None, f"{entry} is denied (the tool cannot run at all)")
         else:
             item(False, f"ask {entry} is not in {C.SETTINGS}", f"add \"{entry}\" to permissions.ask by hand")
+    for entry in SETTINGS_ASK_COMMANDS:
+        if entry in ask:
+            item(True, f"ask {entry}")
+        elif entry in deny:
+            item(None, f"{entry} is denied (voice remix run cannot run at all)")
+        else:
+            item(False, f"ask {entry} is not in {C.SETTINGS}: voice remix run would spend credits without a "
+                 "prompt", f"add \"{entry}\" to permissions.ask by hand")
     for entry in SETTINGS_DENY:
         item(entry in deny, f"deny {entry}" + ("" if entry in deny else f" is not in {C.SETTINGS}, so a "
              "file in a renders/ or generated/ folder can be edited by hand"),
              f"add \"{entry}\" to permissions.deny by hand")
     rows.append("      (an entry kept in .claude/settings.local.json or a user settings file is "
                 "reported absent: media never reads a file git ignores)")
+    item(None, "ELEVENLABS_API_KEY: " + ("set in this shell (voice remix run reads it; its value is never shown)"
+               if os.environ.get("ELEVENLABS_API_KEY", "").strip() else
+               "absent from this shell; only voice remix run needs it, set at user scope"))
     claude_json = Path.home() / ".claude.json"
     server, base = None, None
     try:

@@ -98,6 +98,7 @@ EDITS = "production/src/edits"
 CARDS = "production/src/cards"
 VOICEOVER = "production/src/voiceover"
 VO_GENERATED = "production/src/voiceover/generated"
+VOICE_TRIALS = "production/src/voiceover/generated/voice-trials"   # trials no piece owns (D21, D82)
 AUDIOBOOK = "production/src/audiobook"
 AB_GENERATED = "production/src/audiobook/generated"
 AB_RENDERS = "production/src/audiobook/renders"
@@ -266,6 +267,19 @@ def piece_folder(top, name, sub: str = "") -> Path:
     if key is None:
         return base
     return base / key / sub if sub else base / key
+
+
+TRIAL_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+
+
+def trial_folder(name, refusal: str = "a voice trial needs one folder name") -> Path:
+    """A voice trial's folder (DESIGN D21, D82): one name of at most 64 letters, digits, '.', '_'
+    and '-', opening with a letter or digit; never '.', '..', a path, a line break, a table's '|'
+    or an option's leading '-'. Shared by speak plan --trial and voice remix, so the two take the
+    same names; nothing is created here."""
+    if not isinstance(name, str) or name in (".", "..") or not TRIAL_NAME_RE.fullmatch(name):
+        raise Fatal(refusal)
+    return path(VOICE_TRIALS) / name
 
 
 def file_form(key: str) -> str:

@@ -1,13 +1,14 @@
 ---
 name: voiceover
 description: >-
-  Voice a piece through the ElevenLabs MCP server, only when the author asks: one
-  segment per spoken sentence or beat of the approved script, with the narrator, model and
-  pronunciations of brand/src/voice/voice.md; characters and calls stated before any call; one call at a time
-  into the piece's ignored takes/ folder, each take logged at once with 'media.py take add' and
-  archived once approved; an espeak-ng scratch track as the fallback. Use when the author says
-  'voice the script', 'make the voiceover for the trailer', 'take segment 4 again', 'choose a
-  narrator for the trailer' or 'archive the approved takes'. Not captions (`captions`). Not the
+  Voice a piece through the ElevenLabs MCP server, only when the author asks: one segment
+  per sentence or beat of the approved script, with the narrator, model and pronunciations of
+  brand/src/voice/voice.md; characters and calls stated first; one call at a time into the
+  piece's ignored takes/ folder, each take logged at once with 'media.py take add' and archived
+  once approved; an espeak-ng scratch as the fallback. Use when the author says 'voice the
+  script', 'voice the trailer', 'take segment 4 again', 'choose a narrator', 'archive the approved
+  takes' or 'remix my voice for a character'. Not a character's written voice (the
+  character-voice skill (syntek-author), where present). Not captions (`captions`). Not the
   master or any render (`cut-for-platform`). Not the script's words (`write-script`). Not an
   audiobook or its narrator (the narrate-audiobook skill, where the project makes audiobooks). Not
   a constructed word's sound or a language's narrator (the pronounce skill (syntek-author), where
@@ -26,7 +27,8 @@ before the next call.** A segment is never a caption cue: a sentence split over 
 twice, with two final intonations, and the server passes no neighbouring text to smooth the join.
 
 The author chooses the voice, hears every take and approves it. This skill never changes a word of
-the script to suit the voice, and never creates or clones a voice.
+the script to suit the voice, and never clones a voice; it saves only a character's voice the
+author chose, remixed from their own clone (`production/workflows/11-design-character-voices/`).
 
 ## Governing procedures (route here — do not restate at length)
 
@@ -37,13 +39,15 @@ are the procedure of record — do not restate them at length here.
 - Time the joined voice in `production/workflows/09-time-the-voice/`: offline `transcribe` and `lipsync`,
   writing working timing copies, then accepted copies through `-o` in `production/src/timing/`.
   Mouths are reviewed at `M4.stills` in production/workflows/10-animate-a-scene/.
-- If the layer's `workflows/local/` holds a folder with the same `NN-name` as the procedure above,
+- `production/workflows/11-design-character-voices/` — a character's voice, remixed and saved.
+- If the layer's `workflows/local/` holds a folder with the same `NN-name` as a procedure above,
   follow that procedure instead: the author's local procedure replaces the template's
   (`run-media-workflow`, step 2).
 - `production/docs/reference/voiceover.md` — segments per sentence or beat, `per_cue`, and the
   segment register.
 - `production/docs/reference/elevenlabs.md` — the server's setup and base path, the absolute
   `output_directory`, cost discipline, model discovery, `take add`, archiving and the fallback.
+- `production/docs/reference/character-voices.md` — designing, saving and recording that voice.
 - `brand/docs/reference/the-spoken-voice.md` — narrators per use, pronunciations and consent.
 - `.claude/rules/syntek-media/03-production-ethics.md` Sections 4 to 6 — never spend unasked, AI
   disclosure, and rights and consent before a voice is used.
@@ -85,7 +89,8 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
    `mcp__elevenlabs__search_voices`; and let the author choose one voice, saying first that every
    trial listen costs credits too. A trial is never a take: its `output_directory` is the absolute
    `production/src/voiceover/generated/voice-trials/<name>/`, it keeps the server's name, enters no
-   register, and its credits-log row, written by this skill, reads `—` for the piece. A cloned
+   register, and its credits-log row, written by this skill, reads `—` for the piece; a remix's
+   previews are the exception, named and logged by `voice remix run` itself. A cloned
    voice, the owner's own included, is chosen only when its `voice-consent` row in
    `production/src/rights-register.md` is `cleared`, and that row's ID goes in the Consent column.
    Record the voice name, voice ID, model ID, settings (stability, similarity, style, speed),
@@ -190,7 +195,7 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
   `take add` straight after each call, never a shell `mv`.
 - **A second narrator.** One use, one recorded voice.
 - **A voice nobody consented to.** No clone without a cleared consent row; the owner's own clone is
-  still synthetic, and is disclosed.
+  still synthetic, and is disclosed. A remix starts only from the author's own cleared clone.
 - **Committing audio, or leaving an approved take unarchived.** It is too large for plain Git, and
   once lost it cannot be made again.
 - **Retrying on error.** Stop at the first failure and report it.
@@ -204,8 +209,8 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
   `production/src/voiceover/generated/<piece>/takes/`, which `production/src/.gitignore` keeps
   out of Git.
 - `brand/src/voice/voice.md` — narrators per use, their settings, and every pronunciation.
-- `production/src/credits-log.md` — one row per call, written by `take add`, or by this skill for
-  a trial.
+- `production/src/credits-log.md` — one row per call, written by `take add`, by
+  `voice remix run` for a remix, or by this skill for a trial or a save.
 - `production/src/footage/manifest.toml` — where approved takes are archived.
 - `production/docs/reference/elevenlabs.md` — the guide this skill applies.
 - `captions` — its first route times captions from this register's approved segments.
