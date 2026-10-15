@@ -151,7 +151,7 @@ Every media folder is new, so no move has exactly one right destination, and loo
 
 The copy prints these at the end, with your answers filled in:
 
-1. **`.claude/settings.json`** — syntek-author's settings allow neither the toolkit nor ffmpeg, so every toolkit call would prompt, ask for nothing before a credit-spending call, and deny no edit in media's output folders. Add the four `Bash(…)` entries to `permissions.allow`, the nine ElevenLabs entries to `permissions.ask` and the two `Edit(…)` entries to `permissions.deny`, beside the entries already there (`WebSearch` and `WebFetch` are already allowed):
+1. **`.claude/settings.json`** — syntek-author's settings allow neither the toolkit nor ffmpeg, so every toolkit call would prompt, ask for nothing before a credit-spending call, and deny no edit in media's output folders. Add the four `Bash(…)` entries to `permissions.allow`, the nine ElevenLabs entries and the two `voice remix run` entries to `permissions.ask` and the two `Edit(…)` entries to `permissions.deny`, beside the entries already there (`WebSearch` and `WebFetch` are already allowed):
 
    ```json
    "allow": [
@@ -169,7 +169,9 @@ The copy prints these at the end, with your answers filled in:
      "mcp__elevenlabs__voice_clone",
      "mcp__elevenlabs__isolate_audio",
      "mcp__elevenlabs__text_to_voice",
-     "mcp__elevenlabs__create_voice_from_preview"
+     "mcp__elevenlabs__create_voice_from_preview",
+     "Bash(python3 toolkit/media.py voice remix run *)",
+     "Bash(uv run toolkit/media.py voice remix run *)"
    ],
    "deny": [
      "Edit(**/generated/**)",
@@ -177,7 +179,7 @@ The copy prints these at the end, with your answers filled in:
    ]
    ```
 
-   The ElevenLabs server marks every tool as read-only, so only an `ask` rule makes Claude Code stop before a call that spends credits. The two denies keep hand edits out of every `generated/` and `renders/` folder, whose files the toolkit and ElevenLabs write.
+   The ElevenLabs server marks every tool as read-only, so only an `ask` rule makes Claude Code stop before a call that spends credits. Voice remix is the one ElevenLabs call the toolkit makes itself, because the server has no remix tool; the toolkit `allow` entries would let `python3 toolkit/media.py voice remix run` spend credits unprompted, so its two `ask` entries, which take precedence over an `allow`, make Claude Code stop first. The two denies keep hand edits out of every `generated/` and `renders/` folder, whose files the toolkit and ElevenLabs write.
 
 2. **Optionally**, a row in `README.md`'s layout table and the four media layers in root `CONTEXT.md`'s tree, and a line in `.claude/CLAUDE.md` naming `.claude/rules/syntek-media/`. Optional because the media rules load at launch whatever those files say.
 3. **Nothing in `.gitignore` or `.mcp.json`.** Media's ignore rules are nested inside its own folders, and the ElevenLabs server is added at user scope.
@@ -316,6 +318,8 @@ A project rendered from a local clone at `HEAD` (see [Generating a standalone pr
 The first is 0.4.2's (D76). Earlier releases shipped `.agents` as a link to `.claude`, which makes every sandboxed Codex command fail, and an update never touches a shared path. So, only where `.agents` is a link whose target is exactly `.claude`, the migration removes that link (never `.claude`), creates the real `.agents/` folder, links `.agents/skills` to `../.claude/skills`, and moves `.claude/mcp_config.json` to `.agents/mcp_config.json` where that path is free. A real folder, a link elsewhere, a text file Git checked out in place of the link, or no `.agents` is left untouched and reported, as is every tracked line that still describes the old layout. It is the first of the two changes media ever makes to a shared path. Review its report and commit; it prints the command that runs it again.
 The second runs on every update and is keyed to no release (D76). Copier refuses to render anything beneath an `.agents` link that leaves the project, so where `.agents` is such a link, the update renames it to `.agents.syntek-held` before the render and back afterwards: the net change is zero, and its target is never touched. If an update stops before it ends (a refused answer, Ctrl-C at a question), the link stays held and the next update refuses the dirty tree: run `mv .agents.syntek-held .agents` from the project root, as the update printed, and update again. `copier update --pretend` still refuses such a project, because a pretend run skips migrations.
 
+**Settings an update cannot add.** `.claude/settings.json` is a shared file, so no update changes it. Release 0.4.4 added two `ask` entries for `voice remix run` ([the hand edits](#the-hand-edits-after-a-copy)); a project made before it adds them by hand, and until then `python3 toolkit/media.py check --setup` reports each missing one as a FAIL with the line to add. Seeds never update either: the same release changed the Consent rule of `brand/src/voice/voice.md` (a remixed voice cites its source clone's consent ID) and the rules of `production/src/credits-log.md` (the `voice remix` row), which an older project edits by hand.
+
 Commit `.copier-answers.syntek-media.yml` and never edit it by hand; it is the record every future update merges against.
 
 ---
@@ -389,7 +393,8 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
 Replace `"$HOME"` with that folder where your projects live elsewhere; when the error appears, the `captions` skill prints the exact command with a base path it has computed to contain the project.
 Export the key in your shell first rather than typing it on the command line, and never commit it. The server must be named `elevenlabs`: the skills call its tools by that name (`mcp__elevenlabs__text_to_speech`).
 
-- **Permissions.** The server marks every tool read-only, so a project's `.claude/settings.json` asks before each of the nine tools that spend credits; over syntek-author, add those `ask` entries by hand ([the hand edits](#the-hand-edits-after-a-copy)).
+- **Permissions.** The server marks every tool read-only, so a project's `.claude/settings.json` asks before each of the nine tools that spend credits and before `voice remix run`; over syntek-author, add those `ask` entries by hand ([the hand edits](#the-hand-edits-after-a-copy)).
+- **Character voices.** The workflow `production/workflows/11-design-character-voices/`, in every brand kind, designs a character's voice from your own cloned voice: it drafts a description from the manuscript or script, `python3 toolkit/media.py voice remix plan` shows the one call first, and `voice remix run --approve-call` sends it straight to ElevenLabs with the `ELEVENLABS_API_KEY` exported in your shell, saving the previews as a voice trial. You listen and choose; the chosen preview is saved through the server (`mcp__elevenlabs__create_voice_from_preview`) and recorded in `brand/src/voice/voice.md` under the consent of the voice it came from. Remix accepts only a voice your account created, never a Voice Library voice. One voice per take for now: a piece that switches voice between segments is not supported yet.
 - **The model** is discovered with `mcp__elevenlabs__list_models` and recorded per use in `brand/src/voice/voice.md`, never assumed.
 - **Voiceover** is made one segment per spoken sentence or beat, so the captions can be timed from the segments' own durations at no cost.
 - **Output formats.** The skill chooses the format for the deliverable and says when it needs a higher ElevenLabs plan: `mp3_44100_192` needs Creator or above, and `pcm_44100` Pro or above.

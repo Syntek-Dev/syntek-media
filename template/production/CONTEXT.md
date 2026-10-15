@@ -38,8 +38,8 @@ production/
 ## What's here
 
 - `production/docs/reference/` — the guides: `source-media.md`, `edit-decision-lists.md`,
-  `sound-and-loudness.md`, `rights-and-consent.md`, `elevenlabs.md`, `voiceover.md` and
-  `recorded-pieces.md` for every project<: if 'audiobook' in MEDIA_KINDS :>, and
+  `sound-and-loudness.md`, `rights-and-consent.md`, `elevenlabs.md`, `voiceover.md`,
+  `character-voices.md` and `recorded-pieces.md` for every project<: if 'audiobook' in MEDIA_KINDS :>, and
   `audiobook-narration.md` for audiobooks<: endif :>.
 - `production/docs/project/` — your own guides. The template ships only the folder's pair.
 - `production/src/` — the material. **`production/src/footage/manifest.toml` is the one list of
@@ -54,7 +54,8 @@ production/
 <: endif :><: if 'audiobook' in MEDIA_KINDS :>  narrate an audiobook, master an audiobook,
 <: endif :>  clear the rights, bring in a recording, time the approved voice and re-time a scene's boards
   through `production/workflows/09-time-the-voice/`, then review stills and the preview and render
-  native masters through `production/workflows/10-animate-a-scene/`.
+  native masters through `production/workflows/10-animate-a-scene/`, and design a character's
+  voice from the author's own clone through `production/workflows/11-design-character-voices/`.
 
 ## Cross-references
 

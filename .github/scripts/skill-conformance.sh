@@ -48,11 +48,14 @@
 #                             and, in template/, every name the catalogue gives. The file is read
 #                             on every run: a missing one is exit 2, never a SKIP. A folder this
 #                             check claims is not also reported by check 19.
-#                         21. A skill naming a credit-spending ElevenLabs tool (the nine `ask`
-#                             entries of DESIGN.md D13) carries the guard sentence verbatim — "If
-#                             nothing was asked, stop: never generate unasked, including as a
-#                             'helpful' extra after another skill." — and the strings
-#                             `output_directory` and `git rev-parse --show-toplevel` (Section 5).
+#                         21. A skill naming a credit-spending ElevenLabs call (an `ask` entry
+#                             of DESIGN.md D13: the nine mcp__ tools, or the two voice remix run
+#                             asks of D82, matched by the words `voice remix run`) carries the
+#                             guard sentence verbatim — "If nothing was asked, stop: never
+#                             generate unasked, including as a 'helpful' extra after another
+#                             skill." A skill naming an mcp__ tool also carries the strings
+#                             `output_directory` and `git rev-parse --show-toplevel` (Section 5);
+#                             the remix run writes its own folder and passes neither.
 #
 #                        Run on template/ (the default) the H1 and locale line must carry the
 #                        literal BRAND_NAME and TIMEZONE tokens; on a render, any value.
@@ -70,7 +73,8 @@
 #
 # SELF-TEST. --self-test writes a conformant moded skill, an unmoded one and an ElevenLabs one at
 #            runtime, with a fixture names file, proves them clean, then applies one mutation per
-#            check and asserts exactly one finding; then proves the over-author scope.
+#            check and asserts exactly one finding (check 21 for an mcp__ tool and for voice remix
+#            run, which needs the guard only); then proves the over-author scope.
 #
 # Requirements: bash 4+, awk, grep, sed. No network.
 #
@@ -181,17 +185,24 @@ mode_para_line() { # line number where the verbatim mode paragraph starts, or no
 # wrapped over several lines, or inside a list item or a quote, reads as written (check 21).
 flat() { sed -E 's/^[[:space:]]*>[[:space:]]?//' "$1" | tr -s '[:space:]' ' '; }
 
-# The credit-spending ElevenLabs tools a skill's files name (DESIGN.md D13, D21).
+# The credit-spending ElevenLabs calls a skill's files name (DESIGN.md D13, D21, D82): each mcp__
+# ask the files name, then the Bash asks once, as the words 'voice remix run' (both of D82's Bash
+# entries run that one command). Check 21 asks the guard of either, output_directory of mcp__ only.
 spending_tools_named() { # $1 = skill dir → one tool per line
-  local t
+  local t bash=false
   for t in "${SM_SETTINGS_ASK[@]}"; do
-    grep -qF -- "$t" "$1"/*.md 2>/dev/null && printf '%s\n' "$t"
+    if [[ "$t" == mcp__* ]]; then
+      grep -qF -- "$t" "$1"/*.md 2>/dev/null && printf '%s\n' "$t"
+    elif [[ "$t" == *'voice remix run'* ]]; then
+      bash=true
+    fi
   done
+  if $bash && grep -qF -- 'voice remix run' "$1"/*.md 2>/dev/null; then printf '%s\n' 'voice remix run'; fi
   return 0
 }
 
 check_skill() { # $1 = folder name
-  local s="$1" dir="$TREE/.claude/skills/$1" f fm desc k v n h2 last mode modes have want first_step para total longest text tools
+  local s="$1" dir="$TREE/.claude/skills/$1" f fm desc k v n h2 last mode modes have want first_step para total longest text tools mcp
   f="$dir/SKILL.md"
   SKILLS_SEEN=$((SKILLS_SEEN + 1))
   # ── 20, then 19. The name ───────────────────────────────────────────────────
@@ -274,12 +285,15 @@ check_skill() { # $1 = folder name
   [[ "$total" -le 300 ]] || finding "check 17 — $s/SKILL.md plus its longest mode file is $total lines; the cap is 300"
 
   # ── 21. The ElevenLabs guard ────────────────────────────────────────────────
-  tools="$(spending_tools_named "$dir" | paste -sd' ' -)"
+  tools="$(spending_tools_named "$dir")"
   if [[ -n "$tools" ]]; then
     text="$(flat "$f")"
-    [[ "$text" == *"$GUARD"* ]] || finding "check 21 — $s names ${tools%% *} but its SKILL.md lacks the guard sentence verbatim (\"$GUARD\")"
-    [[ "$text" == *output_directory* ]] || finding "check 21 — $s names ${tools%% *} but its SKILL.md never says output_directory — the server saves to the desktop without one (D21)"
-    [[ "$text" == *'git rev-parse --show-toplevel'* ]] || finding "check 21 — $s names ${tools%% *} but its SKILL.md does not resolve the absolute output_directory with git rev-parse --show-toplevel"
+    [[ "$text" == *"$GUARD"* ]] || finding "check 21 — $s names ${tools%%$'\n'*} but its SKILL.md lacks the guard sentence verbatim (\"$GUARD\")"
+    mcp="$(grep -m1 '^mcp__' <<< "$tools" || true)"
+    if [[ -n "$mcp" ]]; then
+      [[ "$text" == *output_directory* ]] || finding "check 21 — $s names $mcp but its SKILL.md never says output_directory — the server saves to the desktop without one (D21)"
+      [[ "$text" == *'git rev-parse --show-toplevel'* ]] || finding "check 21 — $s names $mcp but its SKILL.md does not resolve the absolute output_directory with git rev-parse --show-toplevel"
+    fi
   fi
 }
 
@@ -413,6 +427,12 @@ self_test() {
   probe "check 21 fires when no output_directory is passed" "check 21 — voiceover names mcp__elevenlabs__text_to_speech but its SKILL.md never says output_directory"; cp "$tmp/h" "$vo/SKILL.md"
   sed -i 's/(`git rev-parse --show-toplevel`)/(the root)/' "$vo/SKILL.md"
   probe "check 21 fires when the root is not resolved with git" "check 21 — voiceover names mcp__elevenlabs__text_to_speech but its SKILL.md does not resolve"; cp "$tmp/h" "$vo/SKILL.md"
+  # D82's Bash ask: naming voice remix run needs the guard, never output_directory or git.
+  cp "$ca/SKILL.md" "$tmp/h"
+  printf -- '- Send it with `python3 toolkit/media.py voice remix run NAME --approve-call`.\n' >> "$ca/SKILL.md"
+  probe "check 21 fires when a skill names voice remix run without the guard sentence" "check 21 — captions names voice remix run but its SKILL.md lacks the guard"
+  printf -- '- %s\n' "$GUARD" >> "$ca/SKILL.md"
+  probe_clean "a skill naming voice remix run with the guard needs no output_directory or git rev-parse"; cp "$tmp/h" "$ca/SKILL.md"
 
   # The over-author scope: syntek-author's skills beside media's, and .owned listing media's.
   SOURCE=false

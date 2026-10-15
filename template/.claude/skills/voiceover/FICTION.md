@@ -7,7 +7,8 @@ reading and the audiobook.
 ## Paths and unit
 
 - **Unit:** one piece. **Segment:** one spoken sentence, or one short beat read as one breath.
-- **Procedure:** `production/workflows/02-make-a-voiceover/`.
+- **Procedure:** `production/workflows/02-make-a-voiceover/`; a character's own voice is designed
+  first through `production/workflows/11-design-character-voices/`.
 - **Voiced lines:** the script's `VO:` and `NARRATOR:` lines, and each character's lines under that
   character's upper-case name.
 - **Register:** `production/src/voiceover/<piece>.toml`; takes in
@@ -28,7 +29,9 @@ reading and the audiobook.
 - **Step 2 — also name each character line's speaker.** A character with no `character:<name>`
   row is read by the narrator, or waits for the author to choose a voice at step 3.
 - **Step 3 — also keep one voice per character across every piece.** A character who sounds
-  different in the second trailer is a different character to the listener.
+  different in the second trailer is a different character to the listener. A character the
+  author wants voiced separately, with no row yet, gets one through
+  `production/workflows/11-design-character-voices/` before any line of theirs is sent.
 - **Step 5 — also take every constructed name's IPA from `voice.md`, never from memory.** Where a
   name has no row, copy its IPA from syntek-author's lexicon or names register, where present, with
   the author's agreement, and name the source. An audio tag suits a trailer (`[whispers]`) where the
@@ -38,8 +41,10 @@ reading and the audiobook.
 
 ## Domain rules
 
-- **A character's voice is a designed or a stock voice, never an imitation of a real actor or
-  reader** (`.claude/rules/syntek-media/03-production-ethics.md` Section 6).
+- **A character's voice is a designed or a stock voice, or a remix of the author's own clone
+  whose `voice-consent` row is `cleared`, never an imitation of a real actor or reader**
+  (`.claude/rules/syntek-media/03-production-ethics.md` Section 6). A remix's row cites that
+  clone's consent, and its description comes from the book's own account of the character.
 - **The lexicon is the record of how a name is said**, where syntek-author's world layer is
   present: the pronounce skill (syntek-author) is never run from here, and a voice that cannot say
   the IPA is noted as a fault of the voice, never fixed by changing the IPA.

@@ -29,8 +29,8 @@
 # ----------------------------------------------------------------------------
 # ElevenLabs takes: paid for, impossible to make again identically, and too large for plain
 # Git. An approved take is archived as source media, never committed. A piece's takes sit in
-# voiceover/generated/<piece>/takes/ and its scratch tracks in <piece>/, and voice trials in
-# voice-trials/<name>/; the pattern below ignores every folder inside generated/ whole. Takes
+# voiceover/generated/<piece>/takes/ and its scratch tracks in <piece>/, and voice trials and
+# remix previews in voice-trials/<name>/; the pattern below ignores every folder inside generated/ whole. Takes
 # an earlier release left flat at the folder's top are ignored the same way.
 /voiceover/generated/*
 !/voiceover/generated/README.md

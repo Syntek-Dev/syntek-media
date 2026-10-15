@@ -493,10 +493,10 @@ def cmd_speak_plan(args) -> int:
     """Print requests, character limits and calls offline; create only the output directory."""
     import media_captions as K
     if args.trial is not None:
-        name = args.trial
-        if args.piece or args.segment or not name or name in (".", "..") or "/" in name or "\\" in name:
-            raise C.Fatal("speak plan --trial needs one folder name, without PIECE or --segment")
-        folder = C.path(C.VO_GENERATED) / "voice-trials" / name
+        refusal = "speak plan --trial needs one folder name, without PIECE or --segment"
+        if args.piece or args.segment:
+            raise C.Fatal(refusal)
+        folder = C.trial_folder(args.trial, refusal)
         folder.mkdir(parents=True, exist_ok=True)
         print(f"voice trial output_directory: {folder.resolve()}")
         return 0
@@ -1444,11 +1444,11 @@ def take_folder(src: Path, piece: str) -> tuple:
                 print(f"  note: {C.shown(src)} is flat in {C.VO_GENERATED}/, where an earlier release kept "
                       f"takes: it is named there; this release's calls write to {C.shown(takes)}/ (D64)")
             return home, homes
-    trials = (flat / "voice-trials").resolve()
+    trials = C.path(C.VOICE_TRIALS).resolve()
     if parent == trials or trials in parent.parents:
-        raise C.Fatal(f"{C.shown(src)} is a voice trial, which is never a take: it keeps the server's name, "
-                      "enters no register and takes its credits-log row from the skill, with '—' for the "
-                      "piece (DESIGN D21, D44)")
+        raise C.Fatal(f"{C.shown(src)} is a voice trial, which is never a take: it enters no register, and its "
+                      "credits-log row has '—' for the piece, written by the skill, or by voice remix run "
+                      "for a remix's previews (DESIGN D21, D44, D82)")
     raise C.Fatal(f"{C.shown(src)} is not in {C.shown(takes)}/, where this piece's takes live (or flat in "
                   f"{C.shown(flat)}/, where an earlier release kept them)")
 

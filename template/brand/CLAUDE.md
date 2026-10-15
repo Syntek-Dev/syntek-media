@@ -63,6 +63,6 @@ voice is drawn from it and nothing about the brand is invented piece by piece.
 - **Generated (never hand-edit):** nothing in this layer; a proof rendered from a preview card
   goes, through `-o`, to the git-ignored `production/src/renders/proofs/<what>-DD-MM-YYYY/`, and
   a voice trial's audio to the git-ignored
-  `production/src/voiceover/generated/voice-trials/<name>/`, made by `speak plan --trial <name>`;
-  no piece owns either.
+  `production/src/voiceover/generated/voice-trials/<name>/`, made by `speak plan --trial <name>`
+  or, for a remix's previews, by `voice remix run`; no piece owns either.
 - Filenames kebab-case; dates DD/MM/YYYY in prose and DD-MM-YYYY in filenames.

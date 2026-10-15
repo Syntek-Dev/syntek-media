@@ -118,7 +118,9 @@ This skill runs procedures; it never replaces one, and it never paraphrases one 
      `production/workflows/10-animate-a-scene/`. When all four pass but M4 is undated, return to
      that scene procedure to review the master. These sub-checks are progress within
      `storyboarded`, not a status disagreement. For other pieces, use
-     `production/workflows/02-make-a-voiceover/` where the script has generated lines,
+     `production/workflows/02-make-a-voiceover/` where the script has generated lines (first
+     `production/workflows/11-design-character-voices/` for a character the author wants voiced
+     separately whose `character:<name>` row in `brand/src/voice/voice.md` is missing),
      `production/workflows/01-log-source-media/` for footage not yet logged, then
      `production/workflows/03-assemble-the-master/` (M4); a podcast episode's master comes from
      the podcast procedure, where the project makes podcasts.

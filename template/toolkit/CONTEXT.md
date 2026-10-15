@@ -4,8 +4,9 @@ The supporting layer that holds the machinery: the one command that turns tracke
 masters, deliverables and images (and, where the project self-hosts a podcast, its feed), the one
 script that turns a layout into a PNG, the word aligner, the platform data and fallback layouts.
 It is minimal: standard-library Python driving ffmpeg and ffprobe, with heavy dependencies in
-pinned PEP 723 scripts; no server or web interface. Only the author's `transcribe fetch` reaches
-the network deliberately, uv's first package install aside. Run it from the repository root;
+pinned PEP 723 scripts; no server or web interface. The network is reached deliberately only by
+the author's `transcribe fetch`, uv's first package install, and two author-approved paid calls:
+`score run` and `voice remix run`. Run it from the repository root;
 you do not keep work here. The rules it serves live in
 `.claude/rules/syntek-media/04-toolkit-pipeline.md`; if the two ever disagree, `--help` is right
 and the rules file is reported as stale.
@@ -25,6 +26,7 @@ toolkit/
 ├── media_repo.py       ← footage, real sources, tokens, flags, check, where
 ├── media_image.py      ← image, and the GIF pass of cut (a newsletter's preview GIF)
 ├── media_score.py      ← offline title/thumbnail requests and approved Jev scoring
+├── media_voice.py      ← voice remix: offline plan, one approved ElevenLabs call into a voice trial
 ├── media_scene.py     ← deterministic frame timing, native mouth sampling and safe zones
 ├── media_feed.py       ← feed: a self-hosted podcast's register, RSS feed, chapters and file tags
 ├── card.py             ← HTML and CSS to PNG in headless Chromium (uv run; Playwright 1.63.0, pinned)
@@ -40,12 +42,12 @@ toolkit/
   `python3 toolkit/media.py <command>`: probe, presets, script time, assemble, cut, encode, frame,
   image, still-video, extract-audio, captions, loudness, audiobook, take add, speak plan, voice join,
   levels, transcribe, lipsync, cues, real, feed, footage,
-  tokens, flags, where, score and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
+  tokens, flags, where, score, voice remix and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
   shapes Playwright and VHS write (WebM, MP4, animated GIF, none with sound), SRT, TOML, a show
   register and a git repository at run time and exercises every module; a probe that needs
   ffmpeg, or an encoder this ffmpeg lacks, is skipped by name, never passed.
 - `media_common.py`, `media_video.py`, `media_audio.py`, `media_captions.py`, `media_repo.py`,
-  `media_image.py`, `media_feed.py` — the helper modules `media.py` imports. **They have no
+  `media_image.py`, `media_feed.py`, `media_score.py`, `media_voice.py` — the helper modules `media.py` imports. **They have no
   command of their own**; each opens with a docstring saying what it owns.
 - **The brand's own channels** (sites, blogs and newsletters): web video is `cut` or `encode` to a
   `website.*` or `blog.*` key; a silent loop is a cut whose table sets `audio_tracks = 0`, and gets
@@ -125,13 +127,19 @@ toolkit/
   never its content. `where <piece>` lists a piece's tracked files and names its ignored
   per-piece folders, saying whether each exists, never listing what is inside. Outside a git
   work tree every file is read.
-- **Nothing here spends.** No command calls ElevenLabs; only the author's model fetch uses the network. `take add`
+- **Nothing here spends without approval.** `voice remix run` is the one command that calls
+  ElevenLabs, and `score run` the one that calls Jev; each sends one request only
+  with `--approve-call` and a user-scope key from the shell, never written or printed. `take add`
   names and logs a file a skill has already generated with the author's yes.
 
 `media.py score plan/run` evaluates title–thumbnail text options with the versioned
 `data/packaging-score.toml` rubric. Plan is offline; run is one author-approved paid request.
 Project rubric copies and dated platform/surface guidance keep later evaluations current;
 results retain uncertainty and never approve an image or package.
+
+`media.py voice remix plan/run` remixes a voice the author owns into a voice trial, for a
+character's voice. Plan is offline and writes nothing; run is one author-approved request whose
+previews, record and credits-log row it writes; saving a preview stays on MCP.
 
 ## Cross-references
 

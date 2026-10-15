@@ -61,7 +61,9 @@ has agreed, with every take named, logged and kept.
 - **Also writes:** credits-log rows (through `take add`), the narrator record the first time, and
   a footage-manifest row for each archived take; a scratch track in `generated/<piece>/`, beside
   its takes folder. A voice trial is never a take: it keeps the server's name in
-  `voice-trials/<name>/`, enters no register, and its credits-log row has `—` for the piece.
+  `voice-trials/<name>/`, enters no register, and its credits-log row has `—` for the piece. A
+  remix's previews are named and logged by `voice remix run`
+  (`production/workflows/11-design-character-voices/`).
 - **Also writes:** the joined mono 16-bit voice in the piece's production renders folder, and
   `M4.takes` in a scene piece's brief after the used takes are approved and archived.
 - **Does not touch:** the script or the brief's other gates.

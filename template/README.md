@@ -92,7 +92,10 @@ lists its tracked files and names its output folders without listing their conte
 **Audio** comes from ElevenLabs, through an MCP server named `elevenlabs` that you add once at
 user scope; the template adds nothing to `.mcp.json`, and your API key never enters the
 repository. The server's base path must contain this project, or speech-to-text refuses every
-file in it. The exact command is in `production/docs/reference/elevenlabs.md`.
+file in it. The exact command is in `production/docs/reference/elevenlabs.md`. One call is made
+directly: `python3 toolkit/media.py voice remix run`, which designs a character's voice from your
+own cloned voice (`production/workflows/11-design-character-voices/`), reads the same key from
+your shell and asks before it runs.
 
 **Requirements:** `git`; Python 3.11 or later; `ffmpeg` and `ffprobe` built with libass, x264
 and mp3lame; `uv`, for Copier and for `toolkit/card.py`, with Playwright's Chromium
