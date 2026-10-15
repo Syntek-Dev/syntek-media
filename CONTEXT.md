@@ -29,6 +29,8 @@ syntek-media/
 │   ├── CONTEXT.md · CLAUDE.md
 │   ├── scripts/              ← the audits and tests (DESIGN.md Section 7) and syntek-author-names.txt
 │   └── workflows/audit-template.yml   ← CI: every audit, on every push
+├── handoffs/                 ← development handoffs between sessions, never shipped
+│   └── CONTEXT.md · CLAUDE.md · HANDOFF-*.md
 ├── migrations/               ← update-time scripts, never shipped (v0.4.2-agents-folder.py, D76)
 │   └── CONTEXT.md · CLAUDE.md
 ├── examples/                 ← invented answers files, one per brand kind

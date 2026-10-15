@@ -1,3 +1,5 @@
 # Development only; nothing here ships (template/ carries its own).
 # code-review-graph's local SQLite graph of this repository (.mcp.json).
 /.code-review-graph/
+# Development handoffs stay on the maintainer's machine; only their folder pair is committed.
+/handoffs/HANDOFF-*.md
