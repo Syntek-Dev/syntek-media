@@ -32,6 +32,13 @@ Adds character voices designed from the author's own cloned voice. Generated pro
 - **DESIGN.md brought into line with D82.** D20 and the summaries of D58 and rules 04 no longer call `transcribe fetch` the toolkit's only deliberate network step (D74's `score run` had already made that untrue); D67's deferral of ElevenLabs forced alignment now says D21 allows one direct call, the voice remix; the credits-log Tool vocabulary gains `voice remix` (Section 6.13); `voice.md`'s Consent column takes the source clone's ID for a remixed voice (Section 6.14); Section 6.16 names the previews and their record; Section 8's hand edits and Section 10's hazards carry the two new asks; Section 11 records what D82 defers.
 - **DESIGN.md Section 3.5's copy of `_message_before_update` matches `copier.yml` again.** It still read 'Updating from before 0.4.2' and put the `BRAND_KIND` paragraph before the `.agents` paragraphs; it now carries `copier.yml`'s 'Crossing 0.4.2' text in `copier.yml`'s order, with the 0.4.4 paragraph added.
 
+### Fixed
+
+- **`media.py --self-test` no longer passes with ffmpeg or ffprobe missing** (D20). It skipped every ffmpeg probe on a lower-case `skip` line, then printed 'self-test passed' and exited 0. ffmpeg is the tool `media.py` drives, not an optional one, so its absence is now a `SKIP` line with the install hint, and the self-test ends 'self-test incomplete' and exits 2, as `card.py`'s does. An optional tool (Rhubarb, `systemd-run`, pandoc, an image encoder) keeps its lower-case `skip` and the exit, as D20 says. A FAIL still outranks a SKIP (exit 1); a new case proves the three outcomes. `toolkit-smoke.sh` check 1 reads `media.py`'s exit 2 as a named SKIP in its own words, as it does `card.py`'s, with one new self-test probe. CI installs ffmpeg and passes `--require-ffmpeg`, so CI never saw the false pass. Reported by syntek-base, 15/10/2026.
+- **The design-token check no longer accepts any word as a colour.** `COLOUR_RE`'s last alternative, `[a-zA-Z]+`, matched every word, so `media.py tokens` and `check` passed a misspelt `--color-*` value such as `bleu`. A bare word now passes only when CSS names it as a colour (the 148 named colours of CSS Color Level 4, `transparent` and `currentColor`, in any case); hex colours and colour functions are unchanged. Two new self-test cases. Reported by syntek-base, 15/10/2026.
+
+||||||| fc6de5c
+
 ### Deferred
 
 - **Multi-voice takes in one piece** (DESIGN.md D82, Section 11): a voice per segment in the segment register, and Voice Changer takes made from a recording. A segment register keeps one `voice_use`. Also deferred: the remix's iteration parameters (a remix session, `prompt_strength`, `seed`, `guidance_scale`, `loudness`) and saving a preview through the API.
