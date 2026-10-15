@@ -13,6 +13,14 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Fixed
+
+- **`check --setup` names the two Chromium folders in a fixed order.** It listed them in the order `glob()` returned, which differs by filesystem, so `media.py --self-test`'s case for a uv-supplied browser bundle failed on CI (the v0.4.2 release run, 15/10/2026) while passing locally. The names are now sorted (`chromium-1243, chromium_headless_shell-1243`).
+
+### Changed
+
+- **CI cancels superseded runs** (DESIGN.md Section 7; approved 15/10/2026). A `concurrency` group per workflow, event and ref cancels a branch's or pull request's earlier run when a newer push arrives; runs on `main` are never cancelled, and every push to every branch is still audited.
+
 ## [0.4.2] - 15/10/2026
 
 **Source.** syntek-author's reply of 14/10/2026 (working tree on `feat/agent-clients-followup` at `7f9ad9f`, uncommitted; v0.3.0 is `9a65902`), verified in the Codex 0.160.1 source and by run: Codex mounts `.agents` read-only, and its bubblewrap sandbox refuses a read-only path that is a link to a writable folder, so every sandboxed Codex command fails in a project with `.agents -> .claude`. The reply also notes that Antigravity's workspace MCP file is `.agents/mcp_config.json`, and that the whole-folder link exposed `.claude/rules` and `.claude/agents` to Antigravity. Approved by the maintainer on 14/10/2026 as D76 (amends D11 and D73, Sections 3.6 and 3.7). `VERSION` stays 0.4.1 until release.

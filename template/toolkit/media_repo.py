@@ -753,7 +753,7 @@ def setup_report(root: Path) -> tuple:
         item(works, 'rhubarb for lipsync: ' + ('dictionary ready beside its real path' if works else
                    'broken executable or missing res/sphinx/cmudict-en-us.dict'), C.INSTALL['rhubarb'])
     cache = playwright_cache()
-    found = [d.name for d in cache.glob(f"chromium*-{PLAYWRIGHT_REVISION}")] if cache.is_dir() else []
+    found = sorted(d.name for d in cache.glob(f"chromium*-{PLAYWRIGHT_REVISION}")) if cache.is_dir() else []
     item(bool(found), f"Chromium for Playwright 1.63.0 ({', '.join(found) or 'not installed'})",
          "uv run --with playwright==1.63.0 playwright install chromium; where the browsers come from "
          "a system bundle (NixOS, where playwright install cannot write), it must ship revision "
