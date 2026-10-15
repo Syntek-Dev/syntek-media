@@ -1,6 +1,6 @@
 # Changelog
 
-**Last Updated**: 06/10/2026 **Version**: 0.4.1 **Maintained By**: Syntek Studio
+**Last Updated**: 15/10/2026 **Version**: 0.4.3 **Maintained By**: Syntek Studio
 **Language**: British English (en_GB)
 
 All notable changes to syntek-media are documented here.
@@ -12,6 +12,12 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 ---
 
 ## [Unreleased]
+
+## [0.4.3] - 15/10/2026
+
+Fixes the CI failure recorded on 0.4.2 and adds development tooling. Generated projects receive the `check --setup` fix on their next update (with `-a .copier-answers.syntek-media.yml`, D3); no migration, seed change or new Copier answer is required.
+
+**syntek-author baseline.** Checked against syntek-author `b4669a51f3e81912df1b7f63321122a9674c54b6` (PR #7, its outside-link pair, merged 15/10/2026; unreleased), read on 15/10/2026 from a clean clone. `coexist-test.sh` passed for all three brand kinds in CI on `main` at `b841fd4` (run 38716598838, 15/10/2026), as did every other audit. `coexist-test.sh --refresh-names` against it: 96 names, 51 skills, nothing moved since `97fa5ba`; only the header of `.github/scripts/syntek-author-names.txt` changes.
 
 ### Added
 
