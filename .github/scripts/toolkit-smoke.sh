@@ -54,7 +54,10 @@
 #                         check` is clean on the fresh copy, then flags a plain-blob LFS file, and
 #                         flags an LFS-marked file when a fake git-lfs on PATH prints a version but
 #                         no filter.lfs.* is configured; with the tripwire of copier.yml applied
-#                         (DESIGN.md D19), `git add` of that file fails.
+#                         (DESIGN.md D19), `git add` of that file fails. Every git step runs with
+#                         a scratch HOME, XDG_CONFIG_HOME and GIT_CONFIG_GLOBAL and no system
+#                         config or attributes, so the machine's own LFS filter, attributes or
+#                         ignore rules never mask a finding.
 #                      9. A synthetic edit decision list end to end: a lavfi clip, a still with
 #                         push-in, a colour clip, one card as a clip and as an overlay at one size
 #                         (cards SKIP by name without Chromium), a fade, a voiceover register of
@@ -183,9 +186,11 @@
 #
 #                    What it CANNOT check: that a render LOOKS right — only that it is made to
 #                    the preset; a person watches the master. Nor ElevenLabs itself, which is
-#                    never called. The self-test proves the judging of every check; the driver
-#                    that runs the commands is proved by the real run, which names every step it
-#                    could not run.
+#                    never called. The self-test proves the judging of every check, and of the
+#                    driver only the browser workspace and the scratch git's isolation; the rest
+#                    of the driver is proved by the real run, which names every step it could
+#                    not run. Nor the system attributes file GIT_ATTR_NOSYSTEM shuts out: it sits
+#                    under git's install prefix, where no probe may write.
 #
 # SELF-TEST. --self-test writes a results file at run time — what a clean smoke of a fixture
 #            render records — proves it clean, then changes one recorded fact per probe and
@@ -271,8 +276,16 @@ load_results() { # $1 = results file → RES
   return 0
 }
 
-tgit() { # git in the scratch copy, with a scratch HOME and no system config: no filter leaks in
-  HOME="$GHOME" GIT_CONFIG_NOSYSTEM=1 git -C "$T" -c user.name='syntek-media audit' \
+isolated() { # run "$@" with the scratch HOME and none of the machine's git config: no filter leaks in
+  # HOME alone is not enough: git also reads config, ignore and attributes files under
+  # $XDG_CONFIG_HOME/git/ and the file $GIT_CONFIG_GLOBAL names, either of which a machine may set
+  # (home-manager exports XDG_CONFIG_HOME), and the system config and attributes files.
+  HOME="$GHOME" XDG_CONFIG_HOME="$GHOME/.config" GIT_CONFIG_GLOBAL="$GHOME/.gitconfig" \
+    GIT_CONFIG_NOSYSTEM=1 GIT_ATTR_NOSYSTEM=1 "$@"
+}
+
+tgit() { # git in the scratch copy, isolated (above), as a fixed audit identity
+  isolated git -C "$T" -c user.name='syntek-media audit' \
     -c user.email='audit@example.com' -c commit.gpgsign=false "$@"
 }
 
@@ -679,19 +692,19 @@ SHIM
   rec git.notignored "${missing% }"; rec git.readme.ignored "${leaked% }"; rec git.tracked.ignored "${tracked% }"
   rec git.attr.large "$(tgit check-attr filter -- brand/src/exports/large/smoke.png 2>/dev/null | sed 's/^.*: //')"
   rec git.attr.pair "$(for f in CONTEXT.md CLAUDE.md; do tgit check-attr filter -- "brand/src/exports/large/$f" | sed 's/^.*: //'; done | sort -u | paste -sd' ' -)"
-  st=0; HOME="$GHOME" GIT_CONFIG_NOSYSTEM=1 tk gitfresh check || st=$?; rec git.fresh "$st"
+  st=0; isolated tk gitfresh check || st=$?; rec git.fresh "$st"
   tgit config --local --unset-all filter.lfs.required >/dev/null 2>&1 || true
   mkdir -p "$T/brand/src/exports/large"; printf 'not an lfs pointer\n%.0s' 1 2 3 4 > "$T/$hero"
   tgit add -A >/dev/null 2>&1 || true; tgit commit -q -m 'toolkit-smoke: a plain blob' >/dev/null 2>&1 || true
-  st=0; HOME="$GHOME" GIT_CONFIG_NOSYSTEM=1 tk gitblob check || st=$?
+  st=0; isolated tk gitblob check || st=$?
   rec git.blob "$st"; rec git.blob.said "$(said gitblob 'smoke-hero')"
   tgit rm -q --cached -- "$hero" >/dev/null 2>&1 || true; tgit commit -q -m 'toolkit-smoke: untracked again' >/dev/null 2>&1 || true
   printf '#!/bin/sh\necho "git-lfs/3.4.1 (toolkit-smoke fake)"\n' > "$W/fakebin/git-lfs"; chmod 755 "$W/fakebin/git-lfs"
-  st=0; HOME="$GHOME" GIT_CONFIG_NOSYSTEM=1 PATH="$W/fakebin:$PATH" tk gitfake check || st=$?
+  st=0; PATH="$W/fakebin:$PATH" isolated tk gitfake check || st=$?
   rec git.fake "$st"; rec git.fake.said "$(said gitfake 'smoke-hero')"
   # The tripwire, exactly as copier.yml's copy-time task runs it (DESIGN.md D19).
   if [[ -n "$TRIPWIRE" ]]; then
-    (cd "$T" && HOME="$GHOME" GIT_CONFIG_NOSYSTEM=1 sh -c "$TRIPWIRE") >"$OUT/tripwire.log" 2>&1 || true
+    (cd "$T" && isolated sh -c "$TRIPWIRE") >"$OUT/tripwire.log" 2>&1 || true
     st=0; tgit add -- "$hero" >"$OUT/tripadd.log" 2>&1 || st=$?; rec git.tripwire.add "$st"
   else
     rec git.tripwire.add none
@@ -1928,7 +1941,7 @@ smoke_voice() {
   mkdir -p "$gen/$p/takes"
   ff -f lavfi -i 'sine=frequency=440:sample_rate=8000:duration=0.2' -c:a pcm_s16le -f s16le "$gen/$p.s01.t1.pcm"
   ff -f lavfi -i 'sine=frequency=880:sample_rate=8000:duration=0.17' -c:a pcm_s16le -f s16le "$gen/$p/takes/fresh.mp3"
-  HOME="$GHOME" GIT_CONFIG_NOSYSTEM=1 PYTHONDONTWRITEBYTECODE=1 python3 - "$T" "$p" > "$OUT/voice.results" <<'PY'
+  PYTHONDONTWRITEBYTECODE=1 isolated python3 - "$T" "$p" > "$OUT/voice.results" <<'PY'
 import json, math, os, subprocess, sys, wave
 from pathlib import Path
 root, piece = Path(sys.argv[1]), sys.argv[2]
@@ -3365,6 +3378,65 @@ PYTEST
   else
     ST_FAILS=$((ST_FAILS + 1)); log "  ✗ unrelated workspace was not protected (read $tmp/workspace.log)"
     cat "$tmp/workspace.log"
+  fi
+  # The scratch git (check 8) reads none of the machine's own git files, by any route git finds
+  # them: HOME (~/.gitconfig, and ~/.config/git/ when XDG_CONFIG_HOME is unset), XDG_CONFIG_HOME
+  # (its git/config, git/attributes and git/ignore), GIT_CONFIG_GLOBAL and GIT_CONFIG_SYSTEM, each
+  # tried alone, since GIT_CONFIG_GLOBAL hides the other two config files but not XDG's ignore and
+  # attributes files. Each fact is an LFS filter in config, an lfs attribute and an ignore rule for
+  # probe.bin. The plain read must see each route's plant first, or the probe proves nothing.
+  local leak="$tmp/leak" routes="home xdg" want="" raw="" seen="" v r s gv
+  gv="$(git --version)"; gv="${gv#git version }"
+  if [[ "$gv" =~ ^([0-9]+)\.([0-9]+) ]] && (( BASH_REMATCH[1] > 2 || (BASH_REMATCH[1] == 2 && BASH_REMATCH[2] >= 32) )); then
+    routes+=" global system"
+  else
+    skip_named "toolkit-smoke --self-test, the scratch git's GIT_CONFIG_GLOBAL and GIT_CONFIG_SYSTEM routes" \
+      "git $gv is older than 2.32, the first to read either"
+  fi
+  mkdir -p "$leak/home/.config/git" "$leak/xdg/git"
+  git init -q "$leak/repo"
+  for v in home xdg global system; do
+    case "$v" in
+      (home) r="$leak/home/.gitconfig" ;;
+      (xdg) r="$leak/xdg/git/config" ;;
+      (*) r="$leak/$v" ;;
+    esac
+    printf '[filter "lfs"]\n\tprocess = toolkit-smoke-%s\n' "$v" > "$r"
+  done
+  for r in "$leak/home/.config/git" "$leak/xdg/git"; do
+    printf '* filter=lfs\n' > "$r/attributes"; printf 'probe.bin\n' > "$r/ignore"
+  done
+  vector() { # $1 = home, xdg, global or system: plant only that route (call it in a subshell)
+    unset GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM XDG_CONFIG_HOME; export HOME="$leak/none"
+    case "$1" in
+      (home) export HOME="$leak/home" ;;
+      (xdg) export XDG_CONFIG_HOME="$leak/xdg" ;;
+      (global) export XDG_CONFIG_HOME="$leak/none" GIT_CONFIG_GLOBAL="$leak/global" ;;
+      (system) export XDG_CONFIG_HOME="$leak/none" GIT_CONFIG_SYSTEM="$leak/system" ;;
+    esac
+  }
+  facts() { # "$@" = a git command line → the probe's three facts: config, attribute, ignored
+    local c a i
+    c="$("$@" config --get filter.lfs.process 2>/dev/null || true)"
+    a="$("$@" check-attr filter -- probe.bin 2>/dev/null || true)"; a="${a##*: }"
+    if "$@" check-ignore -q -- probe.bin 2>/dev/null; then i=ignored; else i=kept; fi
+    printf '%s|%s|%s' "${c:-none}" "${a:-none}" "$i"
+  }
+  for v in $routes; do
+    case "$v" in
+      (home|xdg) want+="${want:+ }$v=toolkit-smoke-$v|lfs|ignored" ;;
+      (*) want+="${want:+ }$v=toolkit-smoke-$v|unspecified|kept" ;;
+    esac
+    r="$( (vector "$v"; facts git -C "$leak/repo") )"
+    s="$( (vector "$v"; GHOME="$tmp/ghome" T="$leak/repo" facts tgit) )"
+    raw+="${raw:+ }$v=$r"; [[ "$s" == "none|unspecified|kept" ]] || seen+="${seen:+; }$v: $s"
+  done
+  ST_PROBES=$((ST_PROBES + 1))
+  if [[ "$raw" == "$want" && -z "$seen" ]]; then
+    log "  ✓ the scratch git reads no filter, attribute or ignore rule from HOME, XDG_CONFIG_HOME, GIT_CONFIG_GLOBAL or GIT_CONFIG_SYSTEM"
+  else
+    ST_FAILS=$((ST_FAILS + 1))
+    log "  ✗ the scratch git is not isolated (planted: '$raw'; it saw: '${seen:-nothing}')"
   fi
   st_finish "a toolkit made to its presets from one that is not"
 }
