@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Fixed
+
+- **Five awk lines in the audits now read the same under mawk as under gawk.** mawk 1.3.4 (20240819) does not match an empty `.*` before a `$` anchor, so under it `doc-references.sh` read `skills: [voiceover, captions]` as ending in a skill named `captions]`, and `_common.sh`'s two YAML readers kept a comment marker with no text after it. `check-template-tokens.sh`, `doc-references.sh`, `docs-pairing.sh` and the two `_common.sh` readers now write `.*` without the anchor, which matches the same text under both. `.github/scripts/CLAUDE.md`'s lint step names the pitfall.
+
 ## [0.4.4] - 15/10/2026
 
 Adds character voices designed from the author's own cloned voice, and fixes two toolkit checks: `media.py --self-test` no longer passes without ffmpeg, and the design-token check no longer accepts any word as a colour. Generated projects receive the new workflow, guide and toolkit module on their next update (with `-a .copier-answers.syntek-media.yml`, D3); no migration or new Copier answer is required. Three files a project owns changed (the `.claude/settings.json` seed and the `brand/src/voice/voice.md` and `production/src/credits-log.md` seeds), and an update never rewrites a copy-only shared file or a seed (D11), so **existing projects edit them by hand**: they add two `ask` lines to `.claude/settings.json` (until they do, `python3 toolkit/media.py check --setup` reports each one missing as a FAIL, and the `allow` rule lets a voice remix spend credits without a prompt), and bring `voice.md`'s Consent rule and `credits-log.md`'s rules into line, as `_message_before_update` says.
