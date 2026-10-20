@@ -176,7 +176,7 @@ yaml_list() { # $1 = key, $2 = file
         }
         return out
       }
-      sub(/[ \t]+#.*$/, "", s); sub(/[ \t]+$/, "", s)
+      sub(/[ \t]+#.*/, "", s); sub(/[ \t]+$/, "", s)
       return s
     }
     $0 ~ "^" key ":" { on = 1; next }
@@ -196,7 +196,7 @@ question_choices() { # $1 = key, $2 = copier.yml
   [[ -f "$2" ]] || return 0
   awk -v key="$1" '
     function unq(s) {
-      sub(/^[ \t]+/, "", s); sub(/[ \t]+#.*$/, "", s); sub(/[ \t]+$/, "", s)
+      sub(/^[ \t]+/, "", s); sub(/[ \t]+#.*/, "", s); sub(/[ \t]+$/, "", s)
       if (s ~ /^".*"$/ || s ~ /^\047.*\047$/) s = substr(s, 2, length(s) - 2)
       return s
     }

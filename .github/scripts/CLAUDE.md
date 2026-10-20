@@ -47,7 +47,8 @@ Run, read and maintain the audits that prove the template keeps every promise `D
   7. Lint after any change:
      `uvx --from shellcheck-py shellcheck -x -P SCRIPTDIR -S warning .github/scripts/*.sh`.
      Write awk that mawk also runs (no multibyte bracket classes — use `(├|└)`, not `[├└]`; no
-     `{n}` intervals).
+     `{n}` intervals; no `.*$`, which mawk 1.3.4 fails to match when `.*` is empty, so
+     `sub(/:.*$/, "")` leaves `body:` untouched — write `sub(/:.*/, "")`).
 - **Definition of done:** the changed script's `--self-test` passes, and `run-all.sh` exits 0
   with no SKIP, or exits 1 only with findings that are genuinely the template's to fix.
 

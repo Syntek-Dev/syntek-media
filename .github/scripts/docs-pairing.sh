@@ -188,7 +188,7 @@ check_context() { # $1 = rel
     inb && /^```/ { inb = 0 }
     inb && /^(├|└)── / {
       row = $0; sub(/^(├|└)── /, "", row)
-      name = row; sub(/[[:space:]].*$/, "", name)
+      name = row; sub(/[[:space:]].*/, "", name)
       rest = substr(row, length(name) + 1); gsub(/[[:space:]]/, "", rest)
       if (rest == "") print name
     }')
