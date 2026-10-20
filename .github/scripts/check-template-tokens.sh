@@ -153,7 +153,7 @@ function check_var(c,   t) {
 }
 function check_block(c,   t, word, rest, top) {
   t = trimctl(c)
-  word = t; sub(/[ \t].*$/, "", word)
+  word = t; sub(/[ \t].*/, "", word)
   rest = t; sub(/^[^ \t]*[ \t]*/, "", rest)
   if (word == "raw") { inraw = 1; return }
   if (word == "endraw") { emit(3, "endraw with no raw before it"); return }

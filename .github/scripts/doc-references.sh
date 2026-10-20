@@ -148,7 +148,7 @@ NR == 1 && $0 == "---" { infm = 1; next }
 infm && /^---[[:space:]]*$/ { infm = 0; next }
 infm {
   if ($0 ~ /^skills:[[:space:]]*\[/) {
-    s = $0; sub(/^skills:[[:space:]]*\[/, "", s); sub(/\].*$/, "", s)
+    s = $0; sub(/^skills:[[:space:]]*\[/, "", s); sub(/\].*/, "", s)
     n = split(s, a, ",")
     for (i = 1; i <= n; i++) { v = a[i]; gsub(/[[:space:]"\047]/, "", v); if (v != "") print "F\t" NR "\t-\t" v }
   } else if ($0 ~ /^skills:[[:space:]]*$/) { inlist = 1 }
