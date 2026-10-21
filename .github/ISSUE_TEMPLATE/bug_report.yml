@@ -1,0 +1,159 @@
+name: Bug report
+description: Something in the template is broken — a copy or update fails, a render is wrong, the toolkit or an audit misbehaves, or a file says something the template does not do
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting. **If this is a security vulnerability, stop**: report it
+        [privately](https://github.com/Syntek-Dev/syntek-media/security/advisories/new) instead,
+        as [SECURITY.md](https://github.com/Syntek-Dev/syntek-media/blob/main/SECURITY.md) says.
+
+        This repository is the template. A problem with a piece in your own project belongs in
+        that project, and a problem in syntek-author's own files belongs to
+        [syntek-author](https://github.com/Syntek-Dev/syntek-author/issues). Reproduce the problem
+        in a fresh project with an invented brand where you can, and shorten paths.
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Personal data
+      options:
+        - label: I removed personal data. This report holds no API key, voice ID, Claude Design link, channel handle, real brand or person, or private recording.
+          required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where is it?
+      description: The part of the template the problem is in. Pick the closest.
+      options:
+        - The questions or copier.yml
+        - A rendered rule, skill, workflow or guide
+        - The toolkit (toolkit/*.py)
+        - Applying over a syntek-author project
+        - copier update or a migration
+        - The audits or CI
+        - The documentation (README.md, CONTRIBUTING.md and the like)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: brand-kind
+    attributes:
+      label: BRAND_KIND
+      description: The brand kind of the project, as `BRAND_KIND` records it in `.copier-answers.syntek-media.yml`.
+      options:
+        - business
+        - author-fiction
+        - author-nonfiction
+        - Not applicable (not about a generated project)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: setting
+    attributes:
+      label: Standalone or beside syntek-author?
+      description: Whether the project also holds `.copier-answers.syntek-author.yml`.
+      options:
+        - Standalone
+        - Beside syntek-author
+        - Not applicable (not about a generated project)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened
+      description: What happened, or what the file says, with the path (and line) of the file or the step where it happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+      description: What should have happened (for a mistake in a file, what it should say), and where the README or a shipped file says so, if it does.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: >
+        The exact commands, from the directory you ran them in, with every flag. The example
+        renders a fresh project from a clone of this repository; replace it with what you ran, or
+        clear it if no command was involved.
+      render: shell
+      value: |
+        # from a clone of syntek-media; <kind> is business, author-fiction or author-nonfiction
+        uvx copier copy --trust --data-file examples/<kind>.answers.yml gh:Syntek-Dev/syntek-media /tmp/repro
+    validations:
+      required: false
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Full output
+      description: Everything the command printed, including the error. Remove anything personal first. Leave it blank if you ran no command.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: media-commit
+    attributes:
+      label: syntek-media version
+      description: "`_commit` in your project's `.copier-answers.syntek-media.yml`, the release you generated from, or the release or branch of the file you read."
+      placeholder: v0.4.4
+    validations:
+      required: true
+
+  - type: input
+    id: author-commit
+    attributes:
+      label: syntek-author version
+      description: "`_commit` in `.copier-answers.syntek-author.yml`, where the project has one."
+      placeholder: v0.4.0
+    validations:
+      required: false
+
+  - type: input
+    id: copier-version
+    attributes:
+      label: Copier version
+      description: The output of `uvx copier --version`. Leave it blank if no command was involved.
+      placeholder: copier 9.6.0
+    validations:
+      required: false
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: The system and its version, and the shell if it matters. Leave it blank if no command was involved.
+      placeholder: Ubuntu 24.04, macOS 15, Windows 11 with WSL
+    validations:
+      required: false
+
+  - type: input
+    id: ffmpeg-version
+    attributes:
+      label: ffmpeg version
+      description: The first line of `ffmpeg -version`, where the toolkit was involved.
+      placeholder: ffmpeg version 7.1
+    validations:
+      required: false
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      description: The output of `python3 --version`, where the toolkit or a migration was involved.
+      placeholder: Python 3.12.3
+    validations:
+      required: false

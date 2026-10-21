@@ -7,10 +7,11 @@ name: Audit — Template Integrity
 # seventeen commits ran blind and five shipped a template that could not generate at all). A
 # gate that waits for a pull request lets a feature branch drift for as long as it lives.
 #
-# THREE JOBS, in parallel. [1/3] reads the template source; [2/3] renders every brand kind and
-# profile once, standalone and over syntek-author, and audits the renders; [3/3] performs a real
-# update, and applies media over a real syntek-author project and the other way round, each in
-# its own scratch project. Every script's --self-test runs before its real run: a detector nobody
+# THREE JOBS, in parallel. [1/3] reads the template source and the repository root (its
+# settings and community files); [2/3] renders every brand kind and profile once, standalone
+# and over syntek-author, and audits the renders; [3/3] performs a real update, and applies
+# media over a real syntek-author project and the other way round, each in its own scratch
+# project. Every script's --self-test runs before its real run: a detector nobody
 # has seen fail is a detector nobody knows works. Failures ACCUMULATE as ::error:: lines and the
 # job fails at the end, so one broken gate never hides the next.
 #
@@ -65,14 +66,14 @@ jobs:
           python-version: "3.12"
 
       # Tokens, the generated mode-file block, pairs and routed shapes, the line cap, personal
-      # data, development isolation, seeds and skills — every one reads template/ or the
-      # repository root, and none renders anything. skill-conformance.sh check 20 reads the
-      # frozen syntek-author names and never skips.
+      # data, development isolation, the community files (D83), seeds and skills — every one
+      # reads template/ or the repository root, and none renders anything. skill-conformance.sh
+      # check 20 reads the frozen syntek-author names and never skips.
       - name: Prove each detector, then run it on the template source
         run: |
           status=0
           for s in check-template-tokens gen-mode-excludes docs-pairing line-cap scrub \
-                   dev-isolation shipped-seeds skill-conformance; do
+                   dev-isolation community-files shipped-seeds skill-conformance; do
             echo "::group::$s"
             bash ".github/scripts/$s.sh" --self-test \
               || { echo "::error::$s — the self-test no longer separates good input from bad"; status=1; }

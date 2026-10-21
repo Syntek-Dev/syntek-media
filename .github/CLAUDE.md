@@ -9,14 +9,17 @@ about to change.
 ## Purpose (one line)
 
 Keep the template honest: every promise `DESIGN.md` makes about a generated project, standalone
-or beside syntek-author, is checked here, on every push, before any author meets the failure.
+or beside syntek-author, is checked here, on every push, before any author meets the failure; and
+show a contributor the way in (the issue forms, the pull-request template, the code owners; D83).
 
 ## How to work here
 
 - **Routing:** what an audit checks and how → `scripts/`; when and where CI runs it →
   `workflows/`; what the audits check AGAINST → `DESIGN.md` (and `scripts/_common.sh`, its
   transcription); the coexistence partner → a syntek-author checkout, named with `--author DIR`
-  (default `../syntek-author`) or `SYNTEK_AUTHOR_DIR`.
+  (default `../syntek-author`) or `SYNTEK_AUTHOR_DIR`; the issue forms, the pull-request template
+  and `CODEOWNERS` → this folder's `CONTEXT.md` (`ISSUE_TEMPLATE/` has no pair; all three change
+  only with the maintainer's explicit approval, D83).
 - **Model:** **Opus** for a new check, a changed rule or a diagnosis; the mechanical tier for
   re-running audits and reading their output.
 - **Concrete steps:**
@@ -45,7 +48,14 @@ or beside syntek-author, is checked here, on every push, before any author meets
   `gen-mode-excludes.sh`, writes the generated block of `copier.yml`; `coexist-test.sh
   --refresh-names` alone rewrites `scripts/syntek-author-names.txt`.
 - **No personal data, anywhere.** Fixtures use invented brands and people; a real brand's name
-  never appears in a script, a fixture or a pattern.
+  never appears in a script, a fixture or a pattern, but for one line: the `LICENSE` holder that
+  `scripts/community-files.sh` embeds for check 2, which is the root `LICENSE`'s own text and
+  changes only with it. The `CODEOWNERS` handle is the maintainer's GitHub account,
+  `@Syntek-Studio`, named for the business; the links in `ISSUE_TEMPLATE/` are the repositories'
+  own (this one's, and syntek-author's issues for its own files). No real email address is
+  written anywhere in `.github/`: the addresses in fixtures and in CI's git identity are
+  invented, and the one real address in the repository is the Code of Conduct's
+  (`scripts/community-files.sh` check 5 keeps it the only one among the community files).
 - **A workflow file never contains the dollar-brace-brace sequence** — GitHub parses it even
   inside a `run:` block. Loop in the shell instead of using a matrix, and pass values through
   `$GITHUB_ENV`.
@@ -53,6 +63,8 @@ or beside syntek-author, is checked here, on every push, before any author meets
 ## Output & naming
 
 - **Hand-written:** kebab-case `.sh` scripts named as `DESIGN.md` Section 7 names them; one
-  workflow, `audit-template.yml`.
+  workflow, `audit-template.yml`; and the community files under the names GitHub reads,
+  `CODEOWNERS`, `PULL_REQUEST_TEMPLATE.md` and, in `ISSUE_TEMPLATE/`, `bug_report.yml`,
+  `template_improvement.yml` and `config.yml` (D83), never a Markdown file there.
 - **Generated (never commit):** renders, logs and scratch projects go under `${TMPDIR:-/tmp}`
   (`$RUNNER_TEMP` in CI), never into this repository.

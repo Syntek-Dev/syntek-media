@@ -23,7 +23,7 @@ project (DESIGN.md D11).
 - `audit-template.yml` — three jobs, each running every script's `--self-test` before its real
   run and reporting failures as `::error::` lines that accumulate:
   - **[1/3] Template source** — tokens, the mode-file block, pairs and shapes, the line cap,
-    personal data, development isolation, seeds, skills.
+    personal data, development isolation, the community files at the root (D83), seeds, skills.
   - **[2/3] Renders** — installs uv and ffmpeg, renders every brand kind and profile once (and
     each kind over syntek-author where it could be fetched), and runs the per-render audits over
     all of them, the toolkit smoke test under `--require-ffmpeg`. Playwright's Chromium is not

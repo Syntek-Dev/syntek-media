@@ -21,7 +21,11 @@ _min_copier_version: "9.6.0"
 
 # Everything that ships lives at its real path under template/ (DESIGN.md D1). The repository
 # root holds the template's OWN state — DESIGN.md, this file, VERSION, CHANGELOG.md, the audits
-# in .github/scripts/ and the example answers in examples/ — and none of it is rendered.
+# in .github/scripts/, the example answers in examples/ and its community files (LICENSE,
+# CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, and .github/'s issue forms, pull-request
+# template and CODEOWNERS; D83) — and none of it is rendered. No community file needs an
+# _exclude line, and none is placed under template/: a generated project's licence is its
+# owner's choice.
 #
 # This is why there is no anchored list of root state files below, no .copier/ staging folder
 # and no `mv` seed task: syntek-media is not itself a production project, so nothing at this
