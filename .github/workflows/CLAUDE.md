@@ -18,21 +18,24 @@ Keep `audit-template.yml` a thin, honest runner of `.github/scripts/`: every che
 - **Concrete steps:**
   1. A new audit joins the loop of the job that matches its input (source, renders, or its own
      scratch project), with its `--self-test` immediately before its real run.
-  2. Check the file still holds no dollar-brace-brace sequence:
-     `grep -c '[$][{][{]' .github/workflows/audit-template.yml` must print 0 (the bracket form
-     works in every grep; an escaped `\{` is an interval to GNU grep, which then exits 2).
+  2. Check the dollar-brace-brace sequence appears only in the `concurrency` block (`group` and
+     `cancel-in-progress`): `grep -n '[$][{][{]' .github/workflows/audit-template.yml` must
+     print those two lines and no other (the bracket form works in every grep; an escaped `\{`
+     is an interval to GNU grep, which then exits 2).
   3. Lint it: `uvx --from actionlint-py actionlint .github/workflows/audit-template.yml`.
-- **Definition of done:** actionlint is clean, the file holds no expression syntax, and the run
-  on the branch is green — or red only with findings the template must fix.
+- **Definition of done:** actionlint is clean, the dollar-brace-brace sequence appears nowhere
+  outside the `concurrency` block, and the run on the branch is green — or red only with
+  findings the template must fix.
 
 ## Guardrails
 
 - **No path filter and no branch filter on push.** The defect this catches is invisible in the
   branch that caused it.
 - **`permissions: contents: read`, and nothing more.** The audits read; they never write.
-- **No dollar-brace-brace sequence, ever** — no matrix, no concurrency group, no expression in a
-  `run:` block, no secret. GitHub parses that syntax anywhere in the file. Use shell loops,
-  `$RUNNER_TEMP` and `$GITHUB_ENV`.
+- **The dollar-brace-brace sequence stays out of the steps.** It appears only in the
+  `concurrency` block (`group` and `cancel-in-progress`); no `run:` step, matrix or secret uses
+  it (the one step condition, `if: always()`, needs none). GitHub parses it anywhere in the
+  file, even inside a `run:` block. Use shell loops, `$RUNNER_TEMP` and `$GITHUB_ENV`.
 - **syntek-author arrives through a plain shell step**, never a second checkout action: a clone
   that fails must degrade to a warning and a named SKIP, not a red job, and must never be
   reported as a pass.

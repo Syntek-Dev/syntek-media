@@ -21,11 +21,11 @@ name: Audit — Template Integrity
 # pass, and never grounds for a release tag. A second checkout action would turn a missing or
 # private repository into a red job, and a token would need expression syntax.
 #
-# NO JOB MATRIX, NO CONCURRENCY GROUP AND NO SECRET. All three need GitHub's expression syntax,
-# and this file must never contain the dollar-brace-brace sequence at all: GitHub parses it
-# anywhere in a workflow file, even inside a run block. Render paths are a shell loop instead,
-# and values pass between steps through $GITHUB_ENV. No step has an ElevenLabs key: no test
-# calls the service.
+# NO JOB MATRIX AND NO SECRET. Both need GitHub's expression syntax, which GitHub parses
+# anywhere in a workflow file, even inside a run block. The dollar-brace-brace sequence appears
+# only in the concurrency block (group and cancel-in-progress); no run: step, matrix or secret
+# uses it. Render paths are a shell loop instead, and values pass between steps through
+# $GITHUB_ENV. No step has an ElevenLabs key: no test calls the service.
 #
 # Locally, one command does all three: bash .github/scripts/run-all.sh --author ../syntek-author
 on:

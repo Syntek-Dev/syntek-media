@@ -595,7 +595,7 @@ SM_COMMUNITY_FILES="LICENSE CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md .gith
 SM_PRIVATE_REPORT_URL="https://github.com/Syntek-Dev/syntek-media/security/advisories/new"
 
 # syntek-author's paths, which a standalone media render never ships (DESIGN.md Section 9,
-# "Media never ships"). Its 51 skill folders are added from syntek-author-names.txt.
+# "Media never ships"). Its 52 skill folders are added from syntek-author-names.txt.
 SM_AUTHOR_NEVER="Makefile .claude/hooks .claude/rules/syntek-author handoffs learning assets build manuscript library planning research proposal typeset world standards tooling"
 
 # The first segments of syntek-author's paths, and its two named files, that media never

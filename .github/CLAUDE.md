@@ -56,9 +56,10 @@ show a contributor the way in (the issue forms, the pull-request template, the c
   written anywhere in `.github/`: the addresses in fixtures and in CI's git identity are
   invented, and the one real address in the repository is the Code of Conduct's
   (`scripts/community-files.sh` check 5 keeps it the only one among the community files).
-- **A workflow file never contains the dollar-brace-brace sequence** — GitHub parses it even
-  inside a `run:` block. Loop in the shell instead of using a matrix, and pass values through
-  `$GITHUB_ENV`.
+- **The dollar-brace-brace sequence stays out of the workflow's steps.** It appears only in the
+  `concurrency` block (`group` and `cancel-in-progress`); no `run:` step, matrix or secret uses
+  it (the one step condition, `if: always()`, needs none). GitHub parses it even inside a `run:`
+  block: loop in the shell instead of using a matrix, and pass values through `$GITHUB_ENV`.
 
 ## Output & naming
 

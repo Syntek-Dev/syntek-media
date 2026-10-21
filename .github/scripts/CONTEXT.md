@@ -53,10 +53,12 @@ Grouped by what each script reads:
   trees only), `doc-references.sh`, `toolkit-smoke.sh`, and `docs-pairing.sh`, `shipped-seeds.sh`,
   `skill-conformance.sh`, `line-cap.sh` again. On an over-author tree each reads `<render>.owned`,
   the files media's copy added, and checks only those.
-- **Their own scratch projects**: `update-test.sh` (sixteen checks per brand kind: author work
-  kept, template work delivered, a `BRAND_KIND` change refused, agent copy/update preservation, a removed platform taking exactly
-  the files it generated — the one with the most catalogue paths, so `podcast` where a project has
-  it, with a fixture show register and saved feed that must survive in its folder) and
+- **Their own scratch projects**: `update-test.sh` (twenty-one checks per brand kind: author work
+  kept, template work delivered, a `BRAND_KIND` change refused, agent copy/update preservation,
+  the v0.4.2 `.agents` migration (converted, idempotent, other shapes left alone) and D76's
+  outside-link hold and restore, a removed platform taking exactly the files it generated — the
+  one with the most catalogue paths, so `podcast` where a project has it, with a fixture show
+  register and saved feed that must survive in its folder) and
   `coexist-test.sh` (twenty-one checks: the real syntek-author first, then media, both updated
   twice, the other order, a removed platform and media kind, syntek-author's own
   `doc-references.sh` on the composite). Their self-tests run the whole flow against the two

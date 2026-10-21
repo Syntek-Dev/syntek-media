@@ -19,7 +19,7 @@ syntek-media/
 ├── AGENTS.md                 ← Codex development entrypoint; reads the development manual
 ├── GEMINI.md                 ← Antigravity development entrypoint
 ├── .mcp.json                 ← development MCP: code-review-graph only (never shipped)
-├── .gitignore                ← development only: the code-review-graph database
+├── .gitignore                ← development only: the code-review-graph database and the handoff files (/handoffs/HANDOFF-*.md)
 ├── .agents/                  ← real folder (D76) holding only its pair: no skills, no MCP file
 ├── .codex/                   ← Codex development isolation settings and their folder pair
 ├── .claude/                  ← the DEVELOPMENT manual and dev-isolation settings (never shipped)
@@ -35,7 +35,7 @@ syntek-media/
 │   └── CODEOWNERS            ← @Syntek-Studio reviews every path, with the closer reads named
 ├── handoffs/                 ← development handoffs between sessions, never shipped
 │   └── CONTEXT.md · CLAUDE.md · HANDOFF-*.md
-├── migrations/               ← update-time scripts, never shipped (v0.4.2-agents-folder.py, D76)
+├── migrations/               ← update-time scripts, never shipped (v0.4.2-agents-folder.py; agents-outside-link.py, run on every update; D76)
 │   └── CONTEXT.md · CLAUDE.md
 ├── examples/                 ← invented answers files, one per brand kind
 │   ├── CONTEXT.md · CLAUDE.md
@@ -60,7 +60,7 @@ syntek-media/
 - `.github/scripts/` — the audits, each with a `--self-test`; `README.md` lists what each checks. CI runs all of them on every push. `syntek-author-names.txt` freezes the names media must never take (D27).
 - `examples/` — invented answers files, one per brand kind, for `copier copy --data-file` and for the audits; together they turn on every platform and every media kind. There are no adoption scripts (DESIGN.md Section 8).
 - `VERSION`, `CHANGELOG.md` — the template's own release state. A generated project starts its own history; nothing here is copied into it.
-- `migrations/` — the scripts `copier update` runs when a project crosses a release that moves something an author or a shared path holds; none ships. The first, `v0.4.2-agents-folder.py`, replaces an `.agents -> .claude` link with the real folder (D76). The rule and the house shape are in `copier.yml`, under `_migrations`.
+- `migrations/` — the scripts `copier update` runs, mostly when a project crosses a release that moves something an author or a shared path holds; none ships. The first, `v0.4.2-agents-folder.py`, replaces an `.agents -> .claude` link with the real folder (D76). `agents-outside-link.py` is keyed to no release: two unversioned entries run it on every update, holding an `.agents` link that leaves the project aside before the render and restoring it after (D76). The rule and the house shape are in `copier.yml`, under `_migrations`.
 - `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md` and, in `.github/`, `CODEOWNERS`, `PULL_REQUEST_TEMPLATE.md` and `ISSUE_TEMPLATE/` — the community files (D83). **None of them ships**: `_subdirectory: template` keeps the whole root out of every generated project, so none needs an `_exclude` line, and a generated project's licence stays its owner's choice. Each repository of the family writes its own. `LICENSE` is the MIT Licence alone, 'Copyright (c) 2026 Sam Bailey t/a Syntek', byte for byte the family's, so GitHub detects it; the licence and its permission for generated projects are in the README's 'Licence' section and `CONTRIBUTING.md` ('Licence'), in the family's words, and `CONTRIBUTING.md` takes contributions under the same terms (inbound = outbound), with no CLA. `SECURITY.md` takes reports only through GitHub's private vulnerability reporting; `CODE_OF_CONDUCT.md` is the Contributor Covenant 2.1 and the one file that names its enforcement contact. `ISSUE_TEMPLATE/` holds GitHub's own YAML files and no pair, a house rule that `.github/CONTEXT.md` explains; `.github/scripts/community-files.sh` checks them all.
 
 ## Cross-references

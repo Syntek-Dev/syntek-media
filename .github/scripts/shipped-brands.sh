@@ -79,8 +79,8 @@
 #                     Over-author scope (DESIGN.md Section 7): on a <kind>--over-author tree,
 #                     whose <tree>.owned lists the files media's copy added, checks 5 and 8 are
 #                     skipped (syntek-author's paths are there by design; coexist-test.sh check 6
-#                     proves ownership), and checks 3, 7, 9, 11 and 12 read media-owned paths
-#                     only.
+#                     proves ownership), and checks 3, 7, 9, 11, 12, 13, 14 and 15 read
+#                     media-owned paths only.
 #
 #                     What it CANNOT check: a file's CONTENT — a gated row inside an index file
 #                     that names an absent path is doc-references.sh's, and a shared file that

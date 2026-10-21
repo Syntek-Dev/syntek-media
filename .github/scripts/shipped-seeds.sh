@@ -19,7 +19,7 @@
 #                    which only a `!` negation listed above every gated _exclude line can
 #                    promise, because Copier obeys the last pattern that matches (D19, Section 3.5).
 #
-#                    Nineteen checks:
+#                    Twenty checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
 #                         _skip_if_exists.
 #                      2. Every _skip_if_exists entry names a file under template/.

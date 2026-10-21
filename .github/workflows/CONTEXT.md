@@ -39,4 +39,4 @@ project (DESIGN.md D11).
 - `.github/scripts/CONTEXT.md` — what each script checks.
 - `.github/scripts/run-all.sh` — the same run, locally, in one command.
 - `DESIGN.md` Section 7 — the CI paragraph: every push, no path filter, the three jobs, the
-  syntek-author clone, no expression syntax.
+  syntek-author clone, the dollar-brace-brace sequence only in the `concurrency` block.
