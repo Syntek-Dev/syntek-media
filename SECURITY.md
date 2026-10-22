@@ -108,7 +108,8 @@ syntek-media is maintained by a small studio alongside client work, so we handle
 best-effort basis. We will acknowledge your report. Beyond that we make no fixed promise of
 timescales, but we will look into it, tell you what we conclude (including when we decide
 something is not a vulnerability, and why), and keep you informed while a fix is prepared. We do
-not offer a bug bounty. If you would like credit, say so and we will name you in the advisory.
+not offer a bug bounty. GitHub adds you to the advisory's credits when you report; accept or
+decline the credit there, or tell us if you would rather not be named.
 
 ## Disclosure
 
