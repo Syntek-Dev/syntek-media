@@ -180,7 +180,7 @@ the CI workflow:
 |---|---|
 | bash and rsync | The runner and the renders |
 | git, with a user name and email set | Copier reads the template over git and commits in the update and coexistence tests' scratch repositories |
-| [uv](https://docs.astral.sh/uv/) (`uvx`) | Copier 9.6.0 or newer (`_min_copier_version` in `copier.yml`), and the toolkit's browser scripts |
+| [uv](https://docs.astral.sh/uv/) (`uvx`) | Copier 9.12.0 or newer (`_min_copier_version` in `copier.yml`), and the toolkit's browser scripts |
 | Python 3.11 or newer (CI uses 3.12) | The toolkit, the migrations and the audits' helpers |
 | ffmpeg and ffprobe, with libass, x264 and mp3lame | `toolkit-smoke.sh`; without them it prints a named SKIP |
 | Playwright 1.63.0's Chromium | Cards, thumbnails and scenes in `toolkit-smoke.sh`; `--skip-thumbnails` drops them |

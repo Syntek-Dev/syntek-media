@@ -14,22 +14,23 @@ Carry a project across a release that moves author work, stops shipping a seed o
 - **Model:** **Opus** for a new migration or any change to what one moves; the mechanical tier for report wording.
 - **Concrete steps:**
   1. Write it in the same change as the release that needs it, named `vX.Y.Z-<what>.sh` or `.py`, keyed to the release the change shipped in, never the release somebody noticed. The one exception is `agents-outside-link.py` (D76), unversioned and unprefixed because it runs on every update; never add another without the maintainer's approval and a DESIGN.md decision.
-  2. Header: what moved and why the update strands it, the map, when it acts, what it never does, how it runs, `Exit codes: 0 = always`.
+  2. Header: what moved and why the update strands it, the map, when it acts, what it never does, how it runs, `Exit codes: 0 = always` (the vendored `agents-outside-link.py` excepted: it follows syntek-author's shape).
   3. Guard on markers, never on guesses: act only on the exact state the old release left (a link with one target, a retired folder's missing `CONTEXT.md`), and re-check it immediately before the one change.
   4. Add its `_migrations` entry: `version:`, `command:` from `<% _copier_conf.src_path %>/migrations/`, `when: "<% _stage == 'after' %>"` plus any variant test.
   5. Prove it in `update-test.sh`: render at the previous tag, set up every state the script must act on or leave, update to the snapshot tagged with `VERSION`, assert the result, then run it again and assert nothing changes.
-  6. End the report with the command that runs it again.
+  6. End the report with the command that runs it again (the vendored `agents-outside-link.py` excepted: it prints the hand fix instead).
 - **Definition of done:** an update across the release fixes every project with exactly one correct result, reports every other, and a second run changes nothing.
 
 ## Guardrails
 
-- **Always exit 0.** A non-zero exit aborts every later migration and leaves the project half-upgraded.
+- **Always exit 0.** A non-zero exit aborts every later migration and leaves the project half-upgraded. The vendored `agents-outside-link.py` keeps the rule where an update runs it: each stage always exits 0 (`--self-test`, which no update runs, exits 1 when a probe fails).
 - **Never overwrite, never delete a file anyone wrote.** An existing destination is reported and both stay. Remove only what the old release shipped and this run replaces, after its replacement is complete.
 - **Standard library only.** bash, or python3 without third-party packages.
+- **Never edit `agents-outside-link.py` or its `_migrations` block here.** Both are syntek-author's family-shared bytes (syntek-author D48), vendored byte for byte from a syntek-author release tag and checked against that tag's `family-shared.json` (D85): the script whole, and the block as the lines strictly between syntek-author's `# BEGIN`/`# END family-shared migrations (D48)` markers in `copier.yml`; `shipped-seeds.sh` checks 21 and 22 pin both. Every family-shared file media carries comes from that one tag, and each adoption re-vendors and re-checks them all, with the texts that describe them; a change goes to syntek-author first and arrives with its next tag.
 - **Never read a git-ignored file** (D50): `git grep`, never `grep -r`.
 - **No personal data.** Fixtures use invented brands and files.
 
 ## Output & naming
 
-- **Hand-written:** `vX.Y.Z-<what>.sh` or `.py`, executable, one per change that needs one; `agents-outside-link.py` is the one unversioned script.
-- **Report format:** a `▸` heading; one line per action (`removed`, `created`, `linked`, `moved`); every path left, with its reason; stale lines as `file:line`; the re-run command.
+- **Hand-written:** `vX.Y.Z-<what>.sh` or `.py`, executable, one per change that needs one; `agents-outside-link.py` is the one unversioned script, and is vendored, not hand-written (D85).
+- **Report format:** a `▸` heading; one line per action (`removed`, `created`, `linked`, `moved`); every path left, with its reason; stale lines as `file:line`; the re-run command (the vendored `agents-outside-link.py` excepted: it follows syntek-author's shape).

@@ -59,9 +59,29 @@ write under .agents.
 Where .agents is a link to a folder outside the project, Copier refuses to render anything
 beneath it, exclusions included, so the link alone is moved aside and put back. Updates do
 this themselves: they rename it to .agents.syntek-held before the render and back
-afterwards, never touching its target. If an update stops before it ends, run
-`mv .agents.syntek-held .agents` from the project root, then update again. Before a
-copy, run `mv .agents .agents.syntek-held`, copy with --exclude /.agents, then run
+afterwards, never touching its target. If an update stops before it ends (a refused answer,
+Ctrl-C at a question, or Copier failing as it cleans up after the render), the link stays
+held as `.agents.syntek-held`, and the next update refuses the changed tree; where the link
+is committed and the update stopped after its render, Copier has already put an identical
+`.agents` link back. Put the link back from the project root, in a POSIX shell (Terminal on
+macOS and Linux, Git Bash on Windows; never PowerShell's `rm`), before anything else, and
+before discarding the stopped update with `git reset --hard` and `git clean -fd`, which
+would delete a held link Git does not track. First check what stands at `.agents`:
+`ls -ld .agents .agents.syntek-held`. Where it shows no `.agents.syntek-held`, nothing is
+held: stop here and change nothing. Where `.agents` is a link (its line shows `->`), remove
+that link alone with `rm .agents` (never `rm -r`, never a trailing slash); where it is a
+folder or a file, move it aside to a name nothing holds yet (`ls -ld .agents.from-update`
+finds nothing) with `mv .agents .agents.from-update` (no trailing slash), which holds what
+the update wrote (check it, and delete nothing in it that is yours). Then, once
+`ls -ld .agents` finds nothing, run `mv .agents.syntek-held .agents` (no trailing slash).
+Never run that `mv` while `.agents` stands: it would put the held link inside it, and inside
+the folder outside the project where `.agents` is a link. Then update again; where
+`git status` still shows changes (a stop after the render), discard the stopped update
+first: run `git clean -n -d`, a dry run, move out of the project anything of yours it lists,
+then `git reset --hard && git clean -fd`. Where the held link was committed beside an
+identical `.agents` link, the next update moves nothing, says so, and asks you to remove the
+held link (`rm .agents.syntek-held`), commit, and update again. Before a copy, run
+`mv .agents .agents.syntek-held`, copy with --exclude /.agents, then run
 `mv .agents.syntek-held .agents`.
 
 Where Git checks links out as text (core.symlinks=false, usually on Windows),

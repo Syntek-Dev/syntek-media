@@ -26,8 +26,8 @@
 #                - syntek-author's names: the frozen file (syntek-author-names.txt, D27), the
 #                  generator that lists a live tree's names, and the drift between the two;
 #                - the rendering helpers (snapshot a working tree, render media, render
-#                  syntek-author, apply media over it) and the two fixture templates the
-#                  integration self-tests run against.
+#                  syntek-author, apply media over it), the family-shared migrations block
+#                  (D85) and the two fixture templates the integration self-tests run against.
 #
 #              The catalogue is DESIGN.md transcribed. When DESIGN.md changes, this file
 #              changes in the same commit; every audit that reads it then moves together.
@@ -628,11 +628,22 @@ SM_D76_MIGRATION="migrations/v0.4.2-agents-folder.py"
 SM_D76_VERSION="v0.4.2"
 # D76's outside-link pair, D11's second, transient exception: the only migrations keyed to no
 # release. hold (before the render) renames an .agents link that leaves the project to
-# SM_OUTSIDE_HELD and prints SM_OUTSIDE_FIX; restore (after, declared before the v0.4.2 entry)
-# renames it back.
+# SM_OUTSIDE_HELD and prints the hand fix, SM_OUTSIDE_CHECK its first step and SM_OUTSIDE_FIX
+# its last; restore (after, declared before the v0.4.2 entry) renames it back.
 SM_OUTSIDE_MIGRATION="migrations/agents-outside-link.py"
 SM_OUTSIDE_HELD=".agents.syntek-held"
 SM_OUTSIDE_FIX="mv $SM_OUTSIDE_HELD .agents"
+SM_OUTSIDE_CHECK="ls -ld .agents $SM_OUTSIDE_HELD"
+# D85: the script is syntek-author's family-shared copy (syntek-author D48), vendored byte for
+# byte from one syntek-author release tag and never edited here. The tag, and the script's
+# sha256 and Git mode as that tag's family-shared.json records them ("mode": "755"), are
+# transcribed by hand from the tag; shipped-seeds.sh check 21 holds the script to them.
+SM_OUTSIDE_RELEASE="v0.5.0"
+SM_OUTSIDE_SHA256="e6ed85d3078c81a72981e27a54d231ee48c28d2fae1a18e786b9ae243577b5f2"
+SM_OUTSIDE_MODE="100755"
+# update-test.sh check 23 tags a clone of its snapshot with this release, whose copier.yml alone
+# carries a failing after-stage entry above restore: a stop after the render.
+SM_CRASH_VERSION="v0.4.3"
 
 # Seeds (DESIGN.md Section 3.1): twenty-six, then the sixteen author-filled index-pair files.
 SM_REGISTER_SEEDS="brand/src/design-register.md scripts/src/piece-register.md production/src/rights-register.md production/src/credits-log.md publishing/src/schedule.md publishing/src/publish-log.md"
@@ -1211,11 +1222,45 @@ sm_render_over_author() { # $1 = syntek-author snapshot, $2 = media snapshot, $3
   return "$OA_MEDIA_STATUS"
 }
 
+# The family-shared migrations block (syntek-author D48), markers included, byte for byte as
+# syntek-author's SM_OUTSIDE_RELEASE copier.yml carries it; the lines strictly between the two
+# markers hash to SM_FAMILY_MIGRATIONS_SHA256, the value that tag's family-shared.json records
+# (shipped-seeds.sh check 22). The markers' D48 is syntek-author's number, never media's.
+# Media's copier.yml takes the block first in _migrations (D85). sm_fixture_template below and
+# shipped-seeds.sh's self-test fixture print it, so the fixture's updates run the vendored
+# script as the real ones do: with the interpreter running Copier, _copier_python.
+SM_FAMILY_MIGRATIONS_BEGIN="# BEGIN family-shared migrations (D48)"
+SM_FAMILY_MIGRATIONS_END="# END family-shared migrations (D48)"
+SM_FAMILY_MIGRATIONS_SHA256="4e22f625dbc6ad6ef0cb0159c962e25b17ec81f1cb5eb20428b73978d9a1a4c1"
+sm_family_migrations_block() {
+  cat <<'EOF'
+# BEGIN family-shared migrations (D48)
+  # Unversioned on purpose, so they run on every update and never on a copy. Where .agents
+  # is a link that resolves outside the project, which Copier refuses to render beneath even
+  # where _exclude names it, hold renames the link to .agents.syntek-held before the render
+  # and restore renames it back after; the link's target is never touched. Both always exit
+  # 0. Keep this pair first: restore must run before every other after-stage migration.
+  - command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" hold'
+    when: "<% _stage == 'before' %>"
+  - command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" restore'
+    when: "<% _stage == 'after' %>"
+# END family-shared migrations (D48)
+EOF
+}
+
+# The SHA-256 of standard input, as hex: sha256sum (Linux) or shasum (macOS).
+sm_sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum | cut -c1-64
+  elif command -v shasum >/dev/null 2>&1; then shasum -a 256 | cut -c1-64
+  else die "neither sha256sum nor shasum is installed"; fi
+}
+
 # ── The fixture templates ────────────────────────────────────────────────────
 #
 # sm_fixture_template: a minimal syntek-media with the real repository's shape — the house
 # delimiters, the named answers file, the nineteen copy-only shared paths (the retired one excluded
-# on copy as well), the D76 .agents folder and its v0.4.2 migration, a register seed and a
+# on copy as well), the D76 .agents folder and its v0.4.2 migration after the family-shared
+# migrations block (D85: the vendored outside-link pair), a register seed and a
 # brand seed, a gated profile and platform guide per platform, the podcast platform's gate on
 # the pair-only folder of the show registers (DESIGN.md D59), the audiobook gate on a folder
 # and a skill, one seed-once example, a moded skill with its generated mode block, the D14
@@ -1231,17 +1276,16 @@ sm_fixture_template() { # $1 = dest (created, git-initialised and committed)
   rm -rf "$t"; mkdir -p "$t/template"
   {
     cat <<'EOF'
-_min_copier_version: "9.6.0"
+_min_copier_version: "9.12.0"
 _subdirectory: template
 _preserve_symlinks: true
 _answers_file: .copier-answers.syntek-media.yml
 _external_data:
   prev: .copier-answers.syntek-media.yml
 _migrations:
-  - command: python3 "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" hold
-    when: "<% _stage == 'before' %>"
-  - command: python3 "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" restore
-    when: "<% _stage == 'after' %>"
+EOF
+    sm_family_migrations_block
+    cat <<'EOF'
   - version: v0.4.2
     command: python3 "<% _copier_conf.src_path %>/migrations/v0.4.2-agents-folder.py"
     when: "<% _stage == 'after' %>"
@@ -1433,7 +1477,7 @@ sm_author_fixture_template() { # $1 = dest (created, git-initialised and committ
   local t="$1" d
   rm -rf "$t"; mkdir -p "$t/template"
   cat > "$t/copier.yml" <<'EOF'
-_min_copier_version: "9.6.0"
+_min_copier_version: "9.12.0"
 _subdirectory: template
 _answers_file: .copier-answers.syntek-author.yml
 _external_data:

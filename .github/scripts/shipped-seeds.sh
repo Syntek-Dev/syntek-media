@@ -19,7 +19,7 @@
 #                    which only a `!` negation listed above every gated _exclude line can
 #                    promise, because Copier obeys the last pattern that matches (D19, Section 3.5).
 #
-#                    Twenty checks:
+#                    Twenty-two checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
 #                         _skip_if_exists.
 #                      2. Every _skip_if_exists entry names a file under template/.
@@ -89,10 +89,36 @@
 #                         the render and restored before every other after-stage migration; or
 #                         any later entry carries no version:. Where _migrations is missing
 #                         altogether, check 19 claims it and this check stays quiet.
+#                     21. migrations/agents-outside-link.py is not syntek-author's family-shared
+#                         script as media vendored it (DESIGN.md D85; syntek-author D48): its
+#                         SHA-256 is not _common.sh's SM_OUTSIDE_SHA256, the value the release
+#                         tag it was vendored from (SM_OUTSIDE_RELEASE) records for it in
+#                         family-shared.json; or Git's index does not hold it at mode 100755
+#                         (read with git ls-files -s). Only where this repository is not a Git
+#                         work tree is the file's executable bit read instead; a .git that Git
+#                         will not read (an ownership mismatch before safe.directory is set,
+#                         say) stops the run with exit 2, never a fallback. The script is
+#                         never edited here: one changed byte and media's updates print a hand
+#                         fix that its README, its bridge and syntek-author's script do not. A
+#                         missing script is check 19's.
+#                     22. copier.yml's family-shared migrations block (D85; syntek-author D48)
+#                         is not the family's byte for byte: the marker lines
+#                         '# BEGIN family-shared migrations (D48)' and
+#                         '# END family-shared migrations (D48)' do not each occur exactly once,
+#                         or the lines strictly between them do not have _common.sh's
+#                         SM_FAMILY_MIGRATIONS_SHA256, the value the same tag's
+#                         family-shared.json records for the block. The block is how the
+#                         vendored script runs: with Copier's own interpreter, hold first,
+#                         restore before every other after-stage entry. Where _migrations is
+#                         missing (check 19) or does not open with the outside-link pair
+#                         (check 20), those claim it and this check stays quiet. An extra
+#                         unversioned entry inside the block is two faults, so two findings:
+#                         check 20's for the entry, this check's for the bytes.
 #
-#                    Checks 1–4, 8 and 16–20 read copier.yml and template/ (static, once). Checks
-#                    5–7 and 9–15 read every tree given — template/ by default, or renders — and
-#                    skip a seed the tree does not ship.
+#                    Checks 1–4, 8 and 16–22 read copier.yml, template/ and migrations/ (static,
+#                    once; check 21 also reads Git's index). Checks 5–7 and 9–15 read every tree
+#                    given — template/ by default, or renders — and skip a seed the tree does
+#                    not ship.
 #
 #                    Over-author scope (DESIGN.md Section 7): on a <kind>--over-author tree,
 #                    whose <tree>.owned lists the files media's copy added, checks 5, 6, 10, 12
@@ -104,18 +130,26 @@
 #                    What it CANNOT check: that a writing rule in a seed is generic rather than
 #                    one brand's preference. "No entries" is decidable; "no personal
 #                    preferences" is not — scrub.sh catches the names, a reviewer the rest.
+#                    Nor that SM_OUTSIDE_SHA256 and SM_FAMILY_MIGRATIONS_SHA256 are still the
+#                    family's: checks 21 and 22 hold media to the tag it last vendored from, and
+#                    a later tag is re-read by hand against its family-shared.json (D85). Check
+#                    21 reads the mode the index holds, which a plain `git commit` records;
+#                    `git commit -a` records the working tree's bit instead, which only CI's
+#                    run on the pushed commit then reads.
 #
 # SELF-TEST. --self-test writes a fixture repository at runtime with every seed in shape,
 #            proves it clean, then applies one mutation per check and asserts exactly one
 #            finding each; then proves the over-author scope on a tree with a .owned list.
 #
-# Requirements: bash 4+, grep, awk, python3 (checks 10, 12 and 13). No network.
+# Requirements: bash 4+, grep, awk, python3 (checks 10, 12 and 13), sha256sum or shasum
+#               (checks 21 and 22), git (check 21, and the self-test). No network.
 #
 # Usage: shipped-seeds.sh [--root DIR] [--quiet] [--self-test] [--help] [<tree>...]
 #
 # Exit codes:  0 = every seed is wired and empty, every pair-only folder clean
 #              1 = finding(s), or the self-test no longer separates
-#              2 = script error (bad arguments, no copier.yml, no python3)
+#              2 = script error (bad arguments, no copier.yml, no python3, no sha256 tool, no git,
+#                  or a .git that Git will not read)
 
 set -euo pipefail
 SCRIPT_NAME="shipped-seeds.sh"
@@ -314,6 +348,7 @@ static_checks() {
   done < <(grep -oE 'src_path *%>/migrations/[^" ]+' <<< "$mig" | sed -E 's#^.*%>/##')
 
   # ── 20. D76's outside-link pair opens _migrations; every other entry is versioned ──
+  local pair_ok=false
   if [[ -n "$mig" ]]; then
     local -a ver=() cmd=() whn=()
     local n=0 i v c w
@@ -331,11 +366,51 @@ static_checks() {
         || "${cmd[0]}" != *"/$SM_OUTSIDE_MIGRATION\" hold"* || "${whn[0]}" != *"_stage == 'before'"* \
         || "${cmd[1]}" != *"/$SM_OUTSIDE_MIGRATION\" restore"* || "${whn[1]}" != *"_stage == 'after'"* ]]; then
       finding "check 20 — _migrations does not open with D76's outside-link pair: an unversioned $SM_OUTSIDE_MIGRATION hold at _stage 'before', then restore at _stage 'after' (DESIGN.md D76, D11)"
+    else
+      pair_ok=true
     fi
     for ((i = 2; i < n; i++)); do
       [[ "${ver[$i]}" != - ]] && continue
       finding "check 20 — an unversioned _migrations entry runs $(grep -oE 'migrations/[^" ]+' <<< "${cmd[$i]}" || printf '%s' "${cmd[$i]}"): only D76's outside-link pair is keyed to no release (DESIGN.md D76; .claude/CLAUDE.md Section 9)"
     done
+  fi
+
+  # ── 21. The vendored outside-link script is the family's, byte for byte (D85) ──
+  # The bytes are read from disk; the mode from Git's index, which a plain `git commit` records,
+  # and from the executable bit only where SM_ROOT is in no Git work tree and holds no .git. A
+  # .git that Git will not read (an ownership mismatch, say) is a script error, never a fallback.
+  local ol="$SM_ROOT/$SM_OUTSIDE_MIGRATION" got mode
+  if [[ -f "$ol" ]]; then
+    got="$(sm_sha256 < "$ol")"
+    [[ "$got" == "$SM_OUTSIDE_SHA256" ]] \
+      || finding "check 21 — $SM_OUTSIDE_MIGRATION has SHA-256 ${got:0:12}…, not ${SM_OUTSIDE_SHA256:0:12}…, the value syntek-author's $SM_OUTSIDE_RELEASE records for it in family-shared.json: it is vendored byte for byte and never edited here (DESIGN.md D85; syntek-author D48)"
+    if [[ "$(git -C "$SM_ROOT" rev-parse --is-inside-work-tree 2>/dev/null)" == true ]]; then
+      mode="$(git -C "$SM_ROOT" ls-files -s -- "$SM_OUTSIDE_MIGRATION" 2>/dev/null | awk 'NR == 1 { print $1 }')"
+      [[ "$mode" == "$SM_OUTSIDE_MODE" ]] \
+        || finding "check 21 — Git's index holds $SM_OUTSIDE_MIGRATION at mode ${mode:-none (it is not in the index)}, not $SM_OUTSIDE_MODE, the mode syntek-author's $SM_OUTSIDE_RELEASE records for it (git update-index --chmod=+x; DESIGN.md D85)"
+    elif [[ -e "$SM_ROOT/.git" || -L "$SM_ROOT/.git" ]]; then
+      die "check 21 cannot read Git's index: $SM_ROOT/.git stands, but Git will not read it (an ownership mismatch? see git config safe.directory)"
+    else
+      [[ -x "$ol" ]] \
+        || finding "check 21 — $SM_OUTSIDE_MIGRATION is not executable (outside a Git work tree, the executable bit stands for Git's $SM_OUTSIDE_MODE, the mode syntek-author's $SM_OUTSIDE_RELEASE records for it; DESIGN.md D85)"
+    fi
+  fi
+
+  # ── 22. The family-shared migrations block is the family's, byte for byte (D85) ──
+  # Where _migrations is missing (check 19) or does not open with the pair (check 20), those
+  # claim it and this check stays quiet. An extra unversioned entry inside the block is two
+  # faults: check 20 names the entry, this check the bytes.
+  local nb ne blk
+  nb="$(grep -cxF "$SM_FAMILY_MIGRATIONS_BEGIN" "$COPIER" || true)"
+  ne="$(grep -cxF "$SM_FAMILY_MIGRATIONS_END" "$COPIER" || true)"
+  if ! $pair_ok; then
+    :
+  elif [[ "$nb" -ne 1 || "$ne" -ne 1 ]]; then
+    finding "check 22 — copier.yml carries $nb '$SM_FAMILY_MIGRATIONS_BEGIN' and $ne '$SM_FAMILY_MIGRATIONS_END' line(s), not one of each: the family-shared migrations block is taken whole (DESIGN.md D85; syntek-author D48)"
+  else
+    blk="$(awk -v b="$SM_FAMILY_MIGRATIONS_BEGIN" -v e="$SM_FAMILY_MIGRATIONS_END" '$0 == e { on = 0 } on { print } $0 == b { on = 1 }' "$COPIER" | sm_sha256)"
+    [[ "$blk" == "$SM_FAMILY_MIGRATIONS_SHA256" ]] \
+      || finding "check 22 — the lines between copier.yml's family-shared migrations markers have SHA-256 ${blk:0:12}…, not ${SM_FAMILY_MIGRATIONS_SHA256:0:12}…, the value syntek-author's $SM_OUTSIDE_RELEASE records for the block in family-shared.json: it is taken byte for byte and never edited here (DESIGN.md D85; syntek-author D48)"
   fi
 }
 
@@ -512,8 +587,7 @@ write_fixture() { # $1 = repo root
     for s in $SM_SHARED $SM_SEEDS; do printf '  - /%s\n' "$s"; done
     printf 'BRAND_NAME:\n  type: str\n'
     printf '_migrations:\n'
-    printf '  - command: python3 "<%% _copier_conf.src_path %%>/%s" hold\n    when: "<%% _stage == %sbefore%s %%>"\n' "$SM_OUTSIDE_MIGRATION" "$q" "$q"
-    printf '  - command: python3 "<%% _copier_conf.src_path %%>/%s" restore\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_OUTSIDE_MIGRATION" "$q" "$q"
+    sm_family_migrations_block
     printf '  - version: %s\n    command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_VERSION" "$SM_D76_MIGRATION" "$q" "$q"
   } > "$r/copier.yml"
   for s in $SM_SHARED $SM_SEEDS; do
@@ -523,6 +597,7 @@ write_fixture() { # $1 = repo root
   ln -s "$SM_AGENTS_SKILLS_LINK" "$t/.agents/skills"
   mkdir -p "$r/migrations"; printf 'print("fixture migration")\n' > "$r/$SM_D76_MIGRATION"
   printf 'print("fixture outside-link migration")\n' > "$r/$SM_OUTSIDE_MIGRATION"
+  chmod 755 "$r/$SM_OUTSIDE_MIGRATION"
   for s in $SM_REGISTER_SEEDS; do
     printf '# %s\n\n%s\n\n## Register\n\n| ID | Notes |\n|---|---|\n' "${s##*/}" "$banner" > "$t/$s"
   done
@@ -575,7 +650,7 @@ write_fixture() { # $1 = repo root
 }
 
 self_test() {
-  local tmp real_root="$SM_ROOT" real_tpl="$TPL" real_copier="$COPIER" t f
+  local tmp real_root="$SM_ROOT" real_tpl="$TPL" real_copier="$COPIER" real_ol_sha="$SM_OUTSIDE_SHA256" t f
   bold "▸ $SCRIPT_NAME --self-test"; log ""
   command -v python3 >/dev/null 2>&1 || die "python3 is not installed"
   tmp="$(sm_mktemp)"
@@ -583,6 +658,12 @@ self_test() {
   trap "rm -rf '$tmp'" RETURN
   write_fixture "$tmp"
   SM_ROOT="$tmp"; TPL="$tmp/template"; COPIER="$tmp/copier.yml"; TREE="$TPL"; SM_SETS_FOR=""
+  # Check 21 holds the fixture's stand-in script to its own bytes; the real run, to the family's.
+  SM_OUTSIDE_SHA256="$(sm_sha256 < "$tmp/$SM_OUTSIDE_MIGRATION")"
+  # The fixture is in no Git work tree until check 21's probes make it one: the ceiling stops
+  # Git from finding a repository above the temporary folder.
+  local -x GIT_CEILING_DIRECTORIES
+  GIT_CEILING_DIRECTORIES="$(dirname "$tmp")"
   load_owned "$TREE"
   t="$TPL"
   st_baseline "a fixture with every seed and shared file in shape"
@@ -696,6 +777,47 @@ self_test() {
   printf '  - command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_MIGRATION" "'" "'" >> "$COPIER"
   probe "check 20 fires on an unversioned entry beyond the pair" "check 20 — an unversioned _migrations entry runs $SM_D76_MIGRATION"
   cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
+  # 21: one byte of the vendored script; then its mode, outside a Git work tree (the executable
+  # bit) and inside one (the index alone: the working tree's bit is not what a commit records).
+  cp "$tmp/$SM_OUTSIDE_MIGRATION" "$tmp/h"; sed -i '1s/p/q/' "$tmp/$SM_OUTSIDE_MIGRATION"
+  probe "check 21 fires when one byte of the vendored outside-link script changes" "check 21 — $SM_OUTSIDE_MIGRATION has SHA-256"
+  cp "$tmp/h" "$tmp/$SM_OUTSIDE_MIGRATION"
+  chmod 644 "$tmp/$SM_OUTSIDE_MIGRATION"
+  probe "check 21 fires outside a Git work tree when the vendored script is not executable" "check 21 — $SM_OUTSIDE_MIGRATION is not executable"
+  if ! { sm_git "$tmp" init -q && sm_git "$tmp" add -- "$SM_OUTSIDE_MIGRATION" \
+    && sm_git "$tmp" update-index --chmod=+x -- "$SM_OUTSIDE_MIGRATION"; }; then
+    die "could not make the fixture a Git work tree"
+  fi
+  probe_clean "in a Git work tree, check 21 reads the index's $SM_OUTSIDE_MODE, not the working tree's 644"
+  chmod 755 "$tmp/$SM_OUTSIDE_MIGRATION"
+  sm_git "$tmp" update-index --chmod=-x -- "$SM_OUTSIDE_MIGRATION"
+  probe "check 21 fires when Git's index holds the vendored script at 100644, though the file is executable" "check 21 — Git's index holds $SM_OUTSIDE_MIGRATION at mode 100644"
+  sm_git "$tmp" update-index --force-remove -- "$SM_OUTSIDE_MIGRATION"
+  probe "check 21 fires when the vendored script is not in Git's index" "check 21 — Git's index holds $SM_OUTSIDE_MIGRATION at mode none"
+  rm -rf "$tmp/.git"
+  # A .git that Git will not read (here, a gitfile naming no repository) stops the run with
+  # exit 2: the executable bit stands in for the index only where there is no repository.
+  local rc=0 err
+  printf 'gitdir: %s\n' "$tmp/no-such-repository" > "$tmp/.git"
+  err="$( (run_checks) 2>&1 >/dev/null )" || rc=$?
+  rm -f "$tmp/.git"
+  ST_PROBES=$((ST_PROBES + 1))
+  if [[ $rc -eq 2 && "$err" == *"check 21 cannot read Git's index"* ]]; then
+    log "  ✓ check 21 stops with exit 2 where a .git stands that Git will not read"
+  else
+    ST_FAILS=$((ST_FAILS + 1))
+    printf '\033[31m  ✗ check 21 exited %d, not 2, where a .git stands that Git will not read: %s\033[0m\n' "$rc" "${err:-(no message)}"
+  fi
+  # 22: the family-shared migrations block: one byte of it, a marker gone, a marker twice.
+  sed -i 's/Keep this pair first/Keep this pair First/' "$COPIER"; SM_SETS_FOR=""
+  probe "check 22 fires when one byte of the family-shared migrations block changes" "check 22 — the lines between copier.yml's family-shared migrations markers have SHA-256"
+  cp "$tmp/c" "$COPIER"
+  sed -i '/^# END family-shared migrations (D48)$/d' "$COPIER"; SM_SETS_FOR=""
+  probe "check 22 fires when the block loses its END marker" "check 22 — copier.yml carries 1 '$SM_FAMILY_MIGRATIONS_BEGIN' and 0 '$SM_FAMILY_MIGRATIONS_END'"
+  cp "$tmp/c" "$COPIER"
+  printf '%s\n' "$SM_FAMILY_MIGRATIONS_BEGIN" >> "$COPIER"; SM_SETS_FOR=""
+  probe "check 22 fires when a marker occurs twice" "check 22 — copier.yml carries 2 '$SM_FAMILY_MIGRATIONS_BEGIN' and 1 '$SM_FAMILY_MIGRATIONS_END'"
+  cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
   probe_clean "the retired path, the agent folder and the migrations in shape"
 
   # The over-author scope: the shared files are syntek-author's, so checks 5, 6, 10, 12 and 13
@@ -711,7 +833,7 @@ self_test() {
   probe "check 7 still fires on a media seed, over syntek-author" "check 7 — $f"; cp "$tmp/h" "$t/$f"
   rm -f "$t.owned"; SM_OWNED_MODE=false; SM_OWNED=()
 
-  SM_ROOT="$real_root"; TPL="$real_tpl"; COPIER="$real_copier"; SM_SETS_FOR=""
+  SM_ROOT="$real_root"; TPL="$real_tpl"; COPIER="$real_copier"; SM_OUTSIDE_SHA256="$real_ol_sha"; SM_SETS_FOR=""
   st_finish "wired, empty seeds from polluted or unwired ones"
 }
 
@@ -723,6 +845,8 @@ fi
 [[ -f "$COPIER" ]] || die "no copier.yml at $SM_ROOT"
 [[ -d "$TPL" ]] || die "no template/ directory at $SM_ROOT"
 command -v python3 >/dev/null 2>&1 || die "python3 is not installed"
+command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1 || die "neither sha256sum nor shasum is installed"
+command -v git >/dev/null 2>&1 || die "git is not installed (check 21 reads the vendored script's mode from Git's index)"
 
 bold "▸ $SCRIPT_NAME"
 STATUS=0

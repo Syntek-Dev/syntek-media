@@ -68,7 +68,11 @@ jobs:
       # Tokens, the generated mode-file block, pairs and routed shapes, the line cap, personal
       # data, development isolation, the community files (D83), seeds and skills — every one
       # reads template/ or the repository root, and none renders anything. skill-conformance.sh
-      # check 20 reads the frozen syntek-author names and never skips.
+      # check 20 reads the frozen syntek-author names and never skips. Then the self-test of
+      # migrations/agents-outside-link.py, syntek-author's family-shared script vendored byte
+      # for byte (DESIGN.md D76, D85; syntek-author D48; shipped-seeds.sh check 21 pins it): both
+      # stages in temporary folders, after a normal update and after a stop that left a link, a
+      # folder or a file at .agents, with the printed hand fix run step by step under sh.
       - name: Prove each detector, then run it on the template source
         run: |
           status=0
@@ -84,6 +88,10 @@ jobs:
             fi
             echo "::endgroup::"
           done
+          echo "::group::agents-outside-link.py"
+          python3 migrations/agents-outside-link.py --self-test \
+            || { echo "::error::agents-outside-link.py — the vendored migration's self-test failed"; status=1; }
+          echo "::endgroup::"
           exit $status
 
   renders:

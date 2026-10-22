@@ -8,16 +8,21 @@
 # User guide: README.md. Design contract: DESIGN.md — where this file and DESIGN.md disagree,
 # DESIGN.md wins and this file is the one that is wrong.
 
-# 9.6.0, not 9.0.0 (03/10/2026; DESIGN.md D2). The copy-only shared files, the seed-once
-# example gates in _exclude and the copy-only _tasks below all read `_copier_operation`, which
-# did not exist until Copier 9.6.0. On anything older the expression is undefined, and it fails
-# in BOTH directions at once: the copy-only tasks hold SHUT, so a fresh generation never runs
-# `git init` or sets the LFS tripwire, and the update gates hold OPEN, so every shared file and
-# every example an author deleted comes back on the next update — the shared ones inside
-# syntek-author's project. A floor that admits a Copier which cannot read the file's own safety
-# mechanism is not a floor. `multiselect`, which PLATFORMS and MEDIA_KINDS need, predates it
-# (proven on 9.18.2).
-_min_copier_version: "9.6.0"
+# 9.12.0 since 0.4.5 (22/10/2026; DESIGN.md D2, D85); 9.6.0 before it (03/10/2026), never
+# 9.0.0. The copy-only shared files, the seed-once example gates in _exclude and the copy-only
+# _tasks below all read `_copier_operation`, which did not exist until Copier 9.6.0. On anything
+# older the expression is undefined, and it fails in BOTH directions at once: the copy-only
+# tasks hold SHUT, so a fresh generation never runs `git init` or sets the LFS tripwire, and the
+# update gates hold OPEN, so every shared file and every example an author deleted comes back on
+# the next update — the shared ones inside syntek-author's project. A floor that admits a
+# Copier which cannot read the file's own safety mechanism is not a floor. Nor is 9.6.0 itself
+# one: it fails every update (ValueError: Invalid choice, as it replays a multiselect answer),
+# and 9.10.3 and 9.11.0 refuse an .agents link outside the project with ForbiddenPathError
+# before D76's hold can move it aside. 9.12.0 is the lowest release measured to pass every
+# update-test.sh check (22/10/2026: a real run on 9.12.0 and 9.19.1, the self-test on every
+# release from 9.12.0 to 9.19.1). `multiselect`, which PLATFORMS and MEDIA_KINDS need,
+# predates it (proven on 9.18.2).
+_min_copier_version: "9.12.0"
 
 # Everything that ships lives at its real path under template/ (DESIGN.md D1). The repository
 # root holds the template's OWN state — DESIGN.md, this file, VERSION, CHANGELOG.md, the audits
@@ -835,7 +840,7 @@ DATE:
 # Migrations run in declaration order, from the destination folder. A script is bash or
 # python3, standard library only (the toolkit already needs Python 3.11), and ends by printing
 # the command that runs it again, because the update's clone of the template is deleted when
-# the update ends (the outside-link pair prints its one-line hand fix, an mv, instead).
+# the update ends (the outside-link pair needs no clone and prints its hand fix instead).
 #
 # A `version:` entry runs only when the update crosses that version (new >= version > old),
 # which Copier reads from the template's git tags (PEP 440): an update to an untagged HEAD
@@ -848,12 +853,28 @@ _migrations:
   # release: it must run on every update. hold renames that link to .agents.syntek-held
   # before the render (after Copier's dirty check) and prints the hand fix first; restore,
   # declared before every other after-stage entry, renames it back. Nothing else is touched,
-  # never the link's target; both always exit 0. Migrations never run on a copy: the copy
-  # recipe is in the bridge, .claude/syntek-media-agents.md, and README.md.
-  - command: python3 "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" hold
+  # never the link's target; each stage always exits 0 (--self-test, which no update runs,
+  # exits 1 when a probe fails). Migrations never run on a copy: the copy recipe is in the
+  # bridge, .claude/syntek-media-agents.md, and README.md.
+  #
+  # Since 0.4.5 the pair is syntek-author's family-shared 'migrations' block (D85; syntek-author
+  # D48): the lines strictly between the two marker lines below are that block's bytes at
+  # syntek-author's v0.5.0 tag, as migrations/agents-outside-link.py is its script. Never edit
+  # either here; both come again only from a later syntek-author tag (shipped-seeds.sh checks
+  # 21 and 22 pin them). The marker lines are syntek-author's too, byte for byte, so that its
+  # family-shared.sh finds the block: their D48 is syntek-author's decision, never media's D48.
+  # The entries run the script with _copier_python, the interpreter running Copier.
+# BEGIN family-shared migrations (D48)
+  # Unversioned on purpose, so they run on every update and never on a copy. Where .agents
+  # is a link that resolves outside the project, which Copier refuses to render beneath even
+  # where _exclude names it, hold renames the link to .agents.syntek-held before the render
+  # and restore renames it back after; the link's target is never touched. Both always exit
+  # 0. Keep this pair first: restore must run before every other after-stage migration.
+  - command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" hold'
     when: "<% _stage == 'before' %>"
-  - command: python3 "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" restore
+  - command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/agents-outside-link.py" restore'
     when: "<% _stage == 'after' %>"
+# END family-shared migrations (D48)
   # v0.4.2 (D76) retires the shipped `.agents -> .claude` link for a real .agents/ folder. An
   # update never touches /.agents (its update gate above), so without this the link survives
   # and every sandboxed Codex command keeps failing. Only where .agents is a symbolic link
@@ -919,7 +940,9 @@ _message_before_update: |
 
   Where .agents is a symbolic link to a folder outside this project, every update renames it
   to .agents.syntek-held before the render and back afterwards; its target is never
-  touched. If the update stops before it ends, run: mv .agents.syntek-held .agents
+  touched. If the update stops before it ends, put the link back in the order the update
+  printed, or as README.md 'Updating a project' (Migrations), at the template's source,
+  says. Never move the held link back while .agents still stands.
 
   Updating to 0.4.4: .claude/settings.json is never updated (D11), so add these two entries
   to "ask" under "permissions" by hand. Until you do, voice remix run spends ElevenLabs
