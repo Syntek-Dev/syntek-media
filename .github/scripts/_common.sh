@@ -2,7 +2,7 @@
 #
 # _common.sh — the one home for what every syntek-media audit reads. Sourced, never run.
 #
-#              Twenty audits ask overlapping questions of the same four inputs: copier.yml
+#              Sixteen audits ask overlapping questions of the same four inputs: copier.yml
 #              (what is gated, what is seeded, which tokens are registered), DESIGN.md (what
 #              each brand kind, platform and media kind must ship), a tree (the template source,
 #              a standalone render, or a render applied over syntek-author), and the frozen list
@@ -19,7 +19,8 @@
 #                - the DESIGN.md catalogue: skills, mode files, gated paths, seeds, examples,
 #                  the nineteen copy-only shared paths (one retired), the spine set, the identity tokens, the
 #                  companion skills, pair-only folders and pair exemptions, the D13 allow, ask
-#                  and deny lists, and the _message_after_copy lines;
+#                  and deny lists, the _message_after_copy lines, and the D83 community files
+#                  and private-reporting URL;
 #                - a reader for a rendered tree's answers (multiselect lists included), a gate
 #                  evaluator, and the over-author scope (<render>.owned, DESIGN.md Section 7);
 #                - syntek-author's names: the frozen file (syntek-author-names.txt, D27), the
@@ -579,11 +580,22 @@ EOF
 SM_LAYERS="brand scripts production publishing"
 
 # Paths that must never reach a generated project: the template repository's own state, the
-# retired agent and command tiers (D6), and the root files no template seeds (Section 9).
-SM_NEVER="copier.yml DESIGN.md CHANGELOG.md VERSION examples template .copier-answers.yml .github .claude/agents .claude/commands CLAUDE.md .gitattributes"
+# retired agent and command tiers (D6), the root files no template seeds (Section 9), and the
+# four community files at the root (D83; the three in .github/ are covered by .github).
+SM_NEVER="copier.yml DESIGN.md CHANGELOG.md VERSION examples template .copier-answers.yml .github .claude/agents .claude/commands CLAUDE.md .gitattributes LICENSE CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md"
+
+# The community files (DESIGN.md D83): what GitHub shows a visitor and a contributor, at the
+# repository root and in .github/ only, never shipped (_subdirectory: template). Each family
+# repository writes its own. community-files.sh checks every one; SM_NEVER above lists the four
+# at the root, so shipped-brands.sh check 8 proves no standalone render carries one.
+SM_COMMUNITY_FILES="LICENSE CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md .github/CODEOWNERS .github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE/bug_report.yml .github/ISSUE_TEMPLATE/template_improvement.yml .github/ISSUE_TEMPLATE/config.yml"
+# The one route for a security report (D83): this repository's GitHub private vulnerability
+# reporting, switched on 20/10/2026. config.yml links it (community-files.sh check 4), and
+# SECURITY.md names it (check 6).
+SM_PRIVATE_REPORT_URL="https://github.com/Syntek-Dev/syntek-media/security/advisories/new"
 
 # syntek-author's paths, which a standalone media render never ships (DESIGN.md Section 9,
-# "Media never ships"). Its 51 skill folders are added from syntek-author-names.txt.
+# "Media never ships"). Its 52 skill folders are added from syntek-author-names.txt.
 SM_AUTHOR_NEVER="Makefile .claude/hooks .claude/rules/syntek-author handoffs learning assets build manuscript library planning research proposal typeset world standards tooling"
 
 # The first segments of syntek-author's paths, and its two named files, that media never

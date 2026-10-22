@@ -151,9 +151,6 @@
 #                     23. The D66 writer replaces a committed clean named timing copy atomically;
 #                         dirty, staged, untracked and outside-Git copies, and unrelated files,
 #                         are refused without changing their bytes.
-#                     26. Missing WhisperX is an optional setup note naming transcribe fetch;
-#                         absent Rhubarb is a note naming lipsync, but an executable whose version
-#                         succeeds without its dictionary is broken and reports a finding.
 #                     24. `where` on a fixture piece prints its files Git tracks or would track
 #                         across scripts/, production/ and publishing/, its timing file among
 #                         them, names its three ignored per-piece folders, each existing or
@@ -173,6 +170,22 @@
 #                         the picture, to the first video deliverable with sound that 4 s fits,
 #                         passes its own checks and ends its sound with its picture (within half
 #                         a frame). With no such deliverable the encode is n/a.
+#                     26. Missing WhisperX is an optional setup note naming transcribe fetch;
+#                         absent Rhubarb is a note naming lipsync, but an executable whose version
+#                         succeeds without its dictionary is broken and reports a finding.
+#                     27. `assemble` with a memory limit set runs ffmpeg under systemd-run with
+#                         that limit and zero swap, where systemd-run and a user service manager
+#                         exist (SKIP by name otherwise); with no limit it says it runs uncapped;
+#                         an invalid memory-scope setup is exit 2.
+#                     28. A scene end to end, offline, on fixtures written at run time (D71; SKIP
+#                         by name without Chromium, and `render` also without ffmpeg): `stills` at
+#                         a landscape and a vertical size writes both frames of each board and
+#                         <piece>.stills.json, each sprite showing the shape whose cue holds that
+#                         frame's middle, and is exit 1 on each layout mutation; a missing sprite
+#                         frame is exit 2; `render` at both sizes writes each master with the
+#                         scene's frame count, its sound as long as its picture and within ±1 LU
+#                         of its loudness target; one frame captured twice is identical; an edit
+#                         decision list with a [[clip]] row is exit 2.
 #
 #                    Numbers are stable identifiers. Append, never renumber.
 #

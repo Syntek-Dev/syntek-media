@@ -46,9 +46,9 @@
 #                      11. No media top-level path, .claude/ path or skill folder is named in
 #                          syntek-author-names.txt (DESIGN.md D27). The shared paths, and
 #                          the folders that hold them or the per-template rules folders
-#                          (.claude, .claude/rules, .claude/skills), are shared by design. A path
-#                          check 5 already reported is not reported again. The file is read on
-#                          every run: a missing one is exit 2, never a SKIP.
+#                          (.claude, .claude/rules, .claude/skills, .codex, .agents), are shared
+#                          by design. A path check 5 already reported is not reported again. The
+#                          file is read on every run: a missing one is exit 2, never a SKIP.
 #                      12. No file but its README.md in any generated/, renders/ or raw/ folder,
 #                          at any depth: no stray render, no per-piece output folder and nothing
 #                          in one (DESIGN.md D19, D42, D64). Copier's _exclude takes everything
@@ -79,8 +79,8 @@
 #                     Over-author scope (DESIGN.md Section 7): on a <kind>--over-author tree,
 #                     whose <tree>.owned lists the files media's copy added, checks 5 and 8 are
 #                     skipped (syntek-author's paths are there by design; coexist-test.sh check 6
-#                     proves ownership), and checks 3, 7, 9, 11 and 12 read media-owned paths
-#                     only.
+#                     proves ownership), and checks 3, 7, 9, 11, 12, 13, 14 and 15 read
+#                     media-owned paths only.
 #
 #                     What it CANNOT check: a file's CONTENT — a gated row inside an index file
 #                     that names an absent path is doc-references.sh's, and a shared file that

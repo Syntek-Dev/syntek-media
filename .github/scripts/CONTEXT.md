@@ -24,6 +24,7 @@ Nothing here is rendered, and nothing here writes under `template/`.
 ├── line-cap.sh               ← 300 lines for every instructional .md
 ├── scrub.sh                  ← personal data, secrets, voice IDs, Claude Design links, absolute paths
 ├── dev-isolation.sh          ← template skills denied in the root settings; CLAUDE.md excludes; Codex product-skill exclusions, development entrypoints and the real .agents/ folder
+├── community-files.sh        ← the root's community files (D83): all present as files, not links, LICENSE byte-exact, no Markdown in ISSUE_TEMPLATE/, issue forms and config.yml, one address, private reporting
 ├── shipped-seeds.sh          ← seeds wired and empty; copy-only files; D13 settings; output README negations above gates
 ├── skill-conformance.sh      ← DESIGN.md Section 5's contract for every skill and mode file; the ElevenLabs guard
 ├── generate-all.sh           ← renders every BRAND_KIND × profile from a snapshot, and each over syntek-author
@@ -39,9 +40,12 @@ Nothing here is rendered, and nothing here writes under `template/`.
 
 Grouped by what each script reads:
 
-- **The template source** (`copier.yml`, `template/`, `examples/`, the root settings):
-  `check-template-tokens.sh`, `gen-mode-excludes.sh`, `docs-pairing.sh`, `line-cap.sh`,
-  `scrub.sh`, `dev-isolation.sh`, `shipped-seeds.sh`, `skill-conformance.sh`.
+- **The template source** (`copier.yml`, `template/`, `examples/`, the root settings and
+  community files): `check-template-tokens.sh`, `gen-mode-excludes.sh`, `docs-pairing.sh`,
+  `line-cap.sh`, `scrub.sh`, `dev-isolation.sh`, `community-files.sh`, `shipped-seeds.sh`,
+  `skill-conformance.sh`. `community-files.sh` is the one audit of the root's GitHub files
+  (D83); it holds the approved `LICENSE` text itself, pinned by its sha256, and reads the issue
+  forms with a top-level-key reader in awk, since the source job installs no YAML library.
 - **The renders** that `generate-all.sh` produces (twelve, named `<kind>--<profile>` because the
   kinds carry a hyphen: business, author-fiction and author-nonfiction × defaults, all, minimal,
   and over-author; `business--minimal` ships `blog` without `website`, so a file that backticks a
@@ -49,10 +53,12 @@ Grouped by what each script reads:
   trees only), `doc-references.sh`, `toolkit-smoke.sh`, and `docs-pairing.sh`, `shipped-seeds.sh`,
   `skill-conformance.sh`, `line-cap.sh` again. On an over-author tree each reads `<render>.owned`,
   the files media's copy added, and checks only those.
-- **Their own scratch projects**: `update-test.sh` (sixteen checks per brand kind: author work
-  kept, template work delivered, a `BRAND_KIND` change refused, agent copy/update preservation, a removed platform taking exactly
-  the files it generated — the one with the most catalogue paths, so `podcast` where a project has
-  it, with a fixture show register and saved feed that must survive in its folder) and
+- **Their own scratch projects**: `update-test.sh` (twenty-one checks per brand kind: author work
+  kept, template work delivered, a `BRAND_KIND` change refused, agent copy/update preservation,
+  the v0.4.2 `.agents` migration (converted, idempotent, other shapes left alone) and D76's
+  outside-link hold and restore, a removed platform taking exactly the files it generated — the
+  one with the most catalogue paths, so `podcast` where a project has it, with a fixture show
+  register and saved feed that must survive in its folder) and
   `coexist-test.sh` (twenty-one checks: the real syntek-author first, then media, both updated
   twice, the other order, a removed platform and media kind, syntek-author's own
   `doc-references.sh` on the composite). Their self-tests run the whole flow against the two
@@ -81,8 +87,9 @@ Grouped by what each script reads:
 - **`_common.sh`** is the single reader of `copier.yml` (list items, registered keys, question
   choices, gated paths, gate negation with list membership) and the single transcription of
   `DESIGN.md` (the skill catalogue, every gated path, the seeds, the examples, the nineteen shared
-  paths, the spine set, the companions, the D13 settings lists and the `_message_after_copy`
-  lines). **It changes in the same commit as `DESIGN.md`.**
+  paths, the spine set, the companions, the D13 settings lists, the `_message_after_copy`
+  lines, and the D83 community files with the private-reporting URL). **It changes in the same
+  commit as `DESIGN.md`.**
 - **`syntek-author-names.txt`** is never transcribed by hand: `coexist-test.sh --refresh-names
   --author DIR` writes it (a dated header naming syntek-author's commit "plus working tree", then
   one sorted `top`, `claude`, `skill` or `rules` line per name). `shipped-brands.sh` check 11 and

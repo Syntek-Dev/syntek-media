@@ -2,14 +2,15 @@
 #
 # run-all.sh — Run every audit and test in DESIGN.md Section 7, rendering the template once.
 #
-#              Fifteen scripts, three kinds of input: the template source (tokens, mode
-#              excludes, pairs, line cap, scrub, isolation, seeds, skills), the renders (shipped
-#              brands, byte identity, references, pairs, seeds, skills, line cap, toolkit), and
-#              their own scratch projects (update, coexistence). Rendering is the expensive
-#              part, so it happens once, and every per-tree audit reads the same twelve renders:
-#              nine standalone, three over syntek-author. byte-identity.sh reads the standalone
-#              trees only; on an over-author tree every other audit reads <render>.owned and
-#              checks media's paths (DESIGN.md Section 7).
+#              Sixteen scripts, three kinds of input: the template source and the repository
+#              root (tokens, mode excludes, pairs, line cap, scrub, isolation, community files,
+#              seeds, skills), the renders (shipped brands, byte identity, references, pairs,
+#              seeds, skills, line cap, toolkit), and their own scratch projects (update,
+#              coexistence). Rendering is the expensive part, so it happens once, and every
+#              per-tree audit reads the same twelve renders: nine standalone, three over
+#              syntek-author. byte-identity.sh reads the standalone trees only; on an
+#              over-author tree every other audit reads <render>.owned and checks media's paths
+#              (DESIGN.md Section 7).
 #
 #              Discipline, from SB: every script's --self-test runs FIRST, because a detector
 #              nobody has seen fail is a detector nobody knows works (rule 38); failures
@@ -27,7 +28,7 @@
 #
 #              Numbers are stable identifiers. Append, never renumber.
 #
-#              What it CANNOT check: anything the fifteen cannot. It adds no check of its own
+#              What it CANNOT check: anything the sixteen cannot. It adds no check of its own
 #              to the template; it only refuses to let one of theirs go unrun or unread.
 #
 # SELF-TEST. --self-test points the runner at stub scripts written at runtime, proves an
@@ -102,12 +103,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-STATIC=(check-template-tokens gen-mode-excludes docs-pairing line-cap scrub dev-isolation shipped-seeds skill-conformance)
+STATIC=(check-template-tokens gen-mode-excludes docs-pairing line-cap scrub dev-isolation community-files shipped-seeds skill-conformance)
 PER_TREE=(shipped-brands byte-identity doc-references docs-pairing shipped-seeds skill-conformance line-cap toolkit-smoke)
 INTEGRATED=(update-test coexist-test)
 ALL_SCRIPTS=(check-template-tokens gen-mode-excludes generate-all shipped-brands byte-identity docs-pairing
              doc-references shipped-seeds skill-conformance line-cap update-test coexist-test
-             toolkit-smoke scrub dev-isolation)
+             toolkit-smoke scrub dev-isolation community-files)
 
 RESULTS=()   # "name<TAB>status"
 ERRORS=0
@@ -168,7 +169,7 @@ run_checks() {
   for s in "${STATIC[@]}"; do
     case "$s" in
       gen-mode-excludes) step "$s --check" bash "$SCRIPTS/$s.sh" --check --root "$SM_ROOT" ;;
-      dev-isolation|scrub|check-template-tokens) step "$s" bash "$SCRIPTS/$s.sh" --root "$SM_ROOT" ;;
+      dev-isolation|community-files|scrub|check-template-tokens) step "$s" bash "$SCRIPTS/$s.sh" --root "$SM_ROOT" ;;
       *) step "$s (template/)" bash "$SCRIPTS/$s.sh" --root "$SM_ROOT" ;;
     esac
   done
