@@ -108,7 +108,8 @@ syntek-media is maintained by a small studio alongside client work, so we handle
 best-effort basis. We will acknowledge your report. Beyond that we make no fixed promise of
 timescales, but we will look into it, tell you what we conclude (including when we decide
 something is not a vulnerability, and why), and keep you informed while a fix is prepared. We do
-not offer a bug bounty. If you would like credit, say so and we will name you in the advisory.
+not offer a bug bounty. GitHub adds you to the advisory's credits when you report; accept or
+decline the credit there, or tell us if you would rather not be named.
 
 ## Disclosure
 
@@ -120,7 +121,8 @@ keep the details private until the advisory is published.
 ## How a fix reaches a project
 
 - **Template-owned files** (the rules, the skills, the toolkit, the guides and the workflows)
-  arrive with the update, on a branch:
+  arrive with the update, on a branch, run with Git's housekeeping off as the README's
+  [Updating a project](README.md#updating-a-project) shows:
   `uvx copier update --trust -a .copier-answers.syntek-media.yml`.
 - **Copy-only shared files and seeds never change on update** (D11), and `.claude/settings.json`
   is one of them. When a fix lands in one, the advisory and `CHANGELOG.md` give the hand edit, and

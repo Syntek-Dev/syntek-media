@@ -150,8 +150,13 @@ published with the next push, and spent by whoever finds it.
 ## 11. Answers change through Copier
 
 **Requirement.** The answers are recorded in `.copier-answers.syntek-media.yml`; never edit it by
-hand. A changed answer goes through `uvx copier update --trust -a .copier-answers.syntek-media.yml`,
-and Section 1 of `.claude/rules/syntek-media/01-layout-and-routing.md` follows on its own.
+hand. A changed answer goes through an update with Git's automatic housekeeping off for the run,
+and Section 1 of `.claude/rules/syntek-media/01-layout-and-routing.md` follows on its own:
+
+```bash
+GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false \
+  uvx copier update --trust -a .copier-answers.syntek-media.yml
+```
 
 - **`BRAND_KIND` never changes**: the update refuses it. A different brand kind is a new project.
 - **Removing a platform or a media kind deletes every file it generated**, filled seeds included,
