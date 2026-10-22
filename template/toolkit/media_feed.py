@@ -162,8 +162,9 @@ def need_folder() -> Path:
     folder = C.path(C.PODCAST)
     if not folder.is_dir():
         raise C.Fatal(f"this project has no {C.PODCAST}/: the podcast platform is not chosen. Add podcast to "
-                      "PLATFORMS with 'uvx copier update --trust -a .copier-answers.syntek-media.yml', which "
-                      "adds the folder; the toolkit never makes it")
+                      "PLATFORMS with 'uvx copier update --trust -a .copier-answers.syntek-media.yml' (run "
+                      "with Git's housekeeping off, as the template's README.md 'Updating a project' shows), "
+                      "which adds the folder; the toolkit never makes it")
     return folder
 
 

@@ -357,10 +357,15 @@ SM_SKILL_H1_TOKEN="<%BRAND_NAME%>"
 SM_GOVERNING_LINE="## Governing procedures (route here — do not restate at length)"
 
 # The shared MEMORY.md's six headings (DESIGN.md Section 4.1, syntek-author's), and the texts an
-# update must print or refuse with (D14, D16).
+# update must print or refuse with (D14, D16; the crash pointer, DESIGN.md Sections 3.5 and 10).
 SM_MEMORY_H2S=("Facts" "Decisions" "Feedback" "Status" "Open questions" "Sensitivities")
 SM_KIND_REFUSAL="BRAND_KIND cannot change on update"
 SM_BEFORE_UPDATE_MARK="Before you answer: removing a platform or a media kind deletes"
+SM_BEFORE_UPDATE_CRASH="If this update stops with OSError: [Errno 39] Directory not empty, never commit what it left"
+# The pointer's last words. Copier prints its own "Updating to template version X" or "Keeping
+# template version X" straight after _message_before_update (9.19.1 _main.py:1389-1390,
+# _print_template_update_info), so a message that ends with the pointer is followed by one.
+SM_BEFORE_UPDATE_CRASH_END="gives the recovery and the command to use."
 
 mode_for_kind() { # business → BUSINESS.md
   case "$1" in business) echo BUSINESS.md ;; author-fiction) echo FICTION.md ;; author-nonfiction) echo NONFICTION.md ;; esac
@@ -682,7 +687,7 @@ SM_SETTINGS_BANNED_KEYS="hooks effortLevel ultracode enabledPlugins"   # and eve
 # (2) the four Bash allows, the nine ElevenLabs asks, the two voice remix asks (D82) and the two Edit denies to add by hand (DESIGN.md
 # Section 8); (3) the user-scope `claude mcp add` line with ELEVENLABS_MCP_BASE_PATH; (4) the
 # repository-local filter.lfs.required and `git lfs install`; (5) the setup check; (6) the
-# update command with -a.
+# update command with -a, with Git's housekeeping off (DESIGN.md Section 10).
 # Each entry is a fragment the copy output must carry, matched with whitespace collapsed and
 # Copier's own file-operation lines removed. generate-all.sh check 4 and coexist-test.sh
 # check 19 read this list; shipped-seeds.sh check 12 reads the settings lists above.
@@ -693,7 +698,8 @@ for _sm_x in "${SM_SETTINGS_ALLOW[@]}"; do [[ "$_sm_x" == Bash\(* ]] && SM_AFTER
 SM_AFTER_COPY_LINES+=("${SM_SETTINGS_ASK[@]}")
 for _sm_x in "${SM_SETTINGS_DENY[@]}"; do [[ "$_sm_x" == Edit\(* ]] && SM_AFTER_COPY_LINES+=("$_sm_x"); done
 SM_AFTER_COPY_LINES+=("claude mcp add" "ELEVENLABS_MCP_BASE_PATH=" "filter.lfs.required" "git lfs install"
-                      "python3 toolkit/media.py check --setup" "copier update" "-a $SM_ANSWERS_FILE")
+                      "python3 toolkit/media.py check --setup" "copier update" "-a $SM_ANSWERS_FILE"
+                      "GIT_CONFIG_KEY_1=maintenance.auto")
 SM_AFTER_COPY_LINES+=("'conflict' then 'skip'" ".claude/rules/syntek-media/ in .claude/CLAUDE.md"
                       "Nothing needs adding to .gitignore or .mcp.json")
 unset _sm_x
@@ -1253,6 +1259,10 @@ _message_before_update: |
     MEDIA_KINDS without long-video   nothing in this fixture
     MEDIA_KINDS without voiceover    nothing in this fixture
   BRAND_KIND never changes.
+
+  If this update stops with OSError: [Errno 39] Directory not empty, never commit what it
+  left: README.md 'Updating a project', at the template's source, gives the recovery and the
+  command to use.
 _message_after_copy: |
 EOF
     printf '  Shared files, written only where absent (a skip left yours exactly as it was):\n'
@@ -1269,7 +1279,7 @@ EOF
     printf '    with --env ELEVENLABS_MCP_BASE_PATH="$HOME": the base path must contain the project.\n'
     printf '  This copy may have set filter.lfs.required in .git/config; git lfs install makes it harmless.\n'
     printf '  Then run: python3 toolkit/media.py check --setup\n'
-    printf '  Update with: uvx copier update --trust -a .copier-answers.syntek-media.yml\n'
+    printf '  Update with: GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false uvx copier update --trust -a .copier-answers.syntek-media.yml\n'
     cat <<'EOF'
 _templates_suffix: ""
 _envops:

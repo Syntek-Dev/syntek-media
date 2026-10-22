@@ -29,7 +29,7 @@
 #                       author's project would, in the folder that platform gates;
 #                    8. assert.
 #
-#                  Twenty-one checks per brand kind:
+#                  Twenty-two checks per brand kind:
 #                    1. The project renders.
 #                    2. `copier update` succeeds.
 #                    3. The author's MEMORY.md entry survives.
@@ -103,6 +103,12 @@
 #                       held as .agents.syntek-held and prints the hand fix
 #                       'mv .agents.syntek-held .agents'; run as printed, the fix leaves
 #                       the clone's work tree clean and the link's target unchanged.
+#                   22. _message_before_update ends with the crash pointer (DESIGN.md Sections
+#                       3.5 and 10): 'If this update stops with OSError: [Errno 39] Directory
+#                       not empty, never commit what it left', which sends the owner to
+#                       README.md 'Updating a project' for the recovery; the protected command
+#                       itself cannot go in the message, which prints after the command was
+#                       typed.
 #
 #                  Copier prints a MissingFileWarning on a fresh copy and on every update (the
 #                  previous answers are read through _external_data, D14). It is expected and
@@ -113,7 +119,9 @@
 #                  What it CANNOT check: an upgrade from a real earlier release. Checks 17–21
 #                  tag the snapshot v0.4.1 and v0.4.2 and shape the old project by hand, so
 #                  they prove the migration and its version gate, not 0.4.1's own files. Nor
-#                  a project applied over syntek-author, which is coexist-test.sh's.
+#                  a project applied over syntek-author, which is coexist-test.sh's. Check 22
+#                  proves only that the pointer is printed last: nothing here reproduces
+#                  Copier's Errno 39 clean-up crash or runs the README's recovery.
 #
 # SELF-TEST. --self-test runs the whole flow against the fixture media template of _common.sh,
 #            as an author-nonfiction project, so the platform taken away is podcast and the
@@ -517,6 +525,15 @@ run_checks() {
       [[ "$text" == *"$e"* ]] || finding "check 12 — $L the removal warning does not name $e"
     done
   fi
+  text="$(copier_message_text "$UPDATE_LOG")"
+  if [[ "$text" != *"$SM_BEFORE_UPDATE_CRASH"* ]]; then
+    finding "check 22 — $L _message_before_update does not end with the crash pointer (none is printed)"
+  else
+    text="${text##*"$SM_BEFORE_UPDATE_CRASH"}"
+    [[ "$text" == *"$SM_BEFORE_UPDATE_CRASH_END Updating to template version"* \
+      || "$text" == *"$SM_BEFORE_UPDATE_CRASH_END Keeping template version"* ]] \
+      || finding "check 22 — $L _message_before_update does not end with the crash pointer"
+  fi
   if [[ -z "$REMOVE_PLATFORM" ]]; then
     finding "check 13 — $L the project's PLATFORMS name no gated platform that could be taken away"
   elif [[ "$REMOVE_STATUS" -ne 0 ]]; then
@@ -689,6 +706,10 @@ self_test() {
   probe "check 12 fires when the removal warning is not printed" "check 12 — [author-nonfiction] copier update printed no removal warning"; cp "$h" "$UPDATE_LOG"
   sed -i 's/facebook/f-book/g' "$UPDATE_LOG"
   probe "check 12 fires when the warning leaves a platform out" "check 12 — [author-nonfiction] the removal warning does not name facebook"; cp "$h" "$UPDATE_LOG"
+  grep -vF "If this update stops" "$h" > "$UPDATE_LOG" || true
+  probe "check 22 fires when the crash pointer is not printed" "check 22 — [author-nonfiction] _message_before_update does not end with the crash pointer (none"; cp "$h" "$UPDATE_LOG"
+  sed -i "/command to use\.\$/a\\A line after the pointer." "$UPDATE_LOG"
+  probe "check 22 fires when the message does not end with the pointer" "check 22 — [author-nonfiction] _message_before_update does not end with the crash pointer"; cp "$h" "$UPDATE_LOG"
   REMOVE_STATUS=1; probe "check 13 fires when taking a platform away fails" "check 13 — [author-nonfiction] the update taking"; REMOVE_STATUS=0
   REMOVED="$REMOVED production/src/audiobook/CONTEXT.md"
   probe "check 13 fires when taking a platform away deletes something else" "check 13 — [author-nonfiction] taking podcast away deleted"; REMOVED="${REMOVED% *}"

@@ -875,7 +875,8 @@ _migrations:
 # and an _external_data read here aborts the update (probe c3). So it is static text naming
 # what removing each platform and each media kind deletes, workflows by full folder name
 # (D32), and the author reads the lines for theirs. update-test.sh check 12 proves it is
-# printed, naming every platform and media kind; a quiet run (--quiet) suppresses it. The
+# printed, naming every platform and media kind, and check 22 that it ends with the crash
+# pointer (DESIGN.md Section 10); a quiet run (--quiet) suppresses it. The
 # text is DESIGN.md Section 3.5's, verbatim; since 0.2.0 it names the three own-channel
 # platforms (D53) and what taking podcast away also deletes — the feed's folder pair,
 # workflow and guide, never the show registers and saved feeds the author's project wrote
@@ -936,6 +937,10 @@ _message_before_update: |
   syntek-author they are syntek-author's), and any rows for a removed platform in
   brand/src/platforms/overrides.toml. The brand section of the media rules updates itself.
 
+  If this update stops with OSError: [Errno 39] Directory not empty, never commit what it
+  left: README.md 'Updating a project', at the template's source, gives the recovery and the
+  command to use.
+
 # ── After a copy ─────────────────────────────────────────────────────────────
 #
 # DESIGN.md D13 and Section 8: what coexistence leaves to the author, in D13's order — (1) the
@@ -944,7 +949,8 @@ _message_before_update: |
 # to add to .gitignore or .mcp.json; (2) the allow, ask and Edit deny entries for an existing
 # settings.json, exactly as the standalone seed holds them; (3) the ElevenLabs line, with the
 # rule that its base path must contain the project; (4) the LFS tripwire's write to this
-# repository's .git/config; (5) the setup check (D49); (6) the update command with `-a`.
+# repository's .git/config; (5) the setup check (D49); (6) the update command with `-a`,
+# with Git's housekeeping off (DESIGN.md Section 10).
 # Unlike the message before an update it renders answers (probe c1), but never _external_data
 # (D14). Messages go to stderr, and --quiet suppresses them.
 #
@@ -1021,8 +1027,10 @@ _message_after_copy: |
        python3 toolkit/media.py check --setup
 
   6. Update this template on its own, from a clean, committed tree, always naming its
-     answers file:
-       uvx copier update --trust -a .copier-answers.syntek-media.yml
+     answers file, with Git's automatic housekeeping off for the run (README.md 'Updating
+     a project', at the template's source, says why and gives the recovery if it stops):
+       GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false \
+         uvx copier update --trust -a .copier-answers.syntek-media.yml
 
 # ── Post-generation ──────────────────────────────────────────────────────────
 

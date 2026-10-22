@@ -120,7 +120,8 @@ keep the details private until the advisory is published.
 ## How a fix reaches a project
 
 - **Template-owned files** (the rules, the skills, the toolkit, the guides and the workflows)
-  arrive with the update, on a branch:
+  arrive with the update, on a branch, run with Git's housekeeping off as the README's
+  [Updating a project](README.md#updating-a-project) shows:
   `uvx copier update --trust -a .copier-answers.syntek-media.yml`.
 - **Copy-only shared files and seeds never change on update** (D11), and `.claude/settings.json`
   is one of them. When a fix lands in one, the advisory and `CHANGELOG.md` give the hand edit, and
