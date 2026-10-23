@@ -1078,8 +1078,15 @@ def mix_audio(audio_rows: list, piece: str, ar: int, total_samples: int, add, gr
         else:
             graph.append("[voxmix]anullsink")
         for d, label in enumerate(ducked):
+            # sidechaincompress ends as soon as either input ends, dropping the bed's samples still
+            # waiting for the key's (the voice, or the clips' own sound where there is none). How many
+            # depends on the timing of ffmpeg's own threads, so a bed's tail vanished at random (seen on
+            # ffmpeg 7.1, 8.1 and 9.0). So neither input ends: each is padded with
+            # silence for ever, and atrim ends the bed with the master.
             graph.append(f"[sc{d}]apad[scp{d}]")
-            graph.append(f"[{label}][scp{d}]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[dk{d}]")
+            graph.append(f"[{label}]apad[mp{d}]")
+            graph.append(f"[mp{d}][scp{d}]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400,"
+                         f"atrim=end_sample={total_samples}[dk{d}]")
             mix.append(f"dk{d}")
     elif key:
         mix.append(key)

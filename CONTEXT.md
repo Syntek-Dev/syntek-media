@@ -13,7 +13,7 @@ syntek-media/
 ├── README.md                 ← the user guide: applying over syntek-author, standalone, the questions, updating, coexistence, audio, audits, the licence
 ├── DESIGN.md                 ← the build contract; where any file disagrees with it, DESIGN.md wins
 ├── copier.yml                ← questions, gated _exclude, _skip_if_exists, messages, _tasks, _migrations
-├── VERSION                   ← the template's release number (0.4.5)
+├── VERSION                   ← the template's release number (0.4.6)
 ├── CHANGELOG.md              ← the template's history, Keep a Changelog
 ├── LICENSE · CONTRIBUTING.md · SECURITY.md · CODE_OF_CONDUCT.md   ← community files (D83), never shipped: MIT; changes to the template; private vulnerability reports; Contributor Covenant 2.1
 ├── AGENTS.md                 ← Codex development entrypoint; reads the development manual

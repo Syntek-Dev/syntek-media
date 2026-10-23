@@ -1730,6 +1730,9 @@ def test_shared_mix(verdict) -> None:
             difference = max(abs(a - b) for a, b in zip(*results))
             verdict('both master routes share offsets ranges fades gain and ducking with sample-exact sound',
                     difference <= 2, f'maximum PCM difference: {difference}')
+            last = [max((i for i in range(48000) if r[2 * i] or r[2 * i + 1]), default=-1) for r in results]
+            verdict('a ducked bed that ends inside the master keeps its tail to its last sample, in both routes',
+                    min(last) >= 38000, f'last sound at frames {last}; the bed ends at frame 38400')
             A.joined_voice(piece).unlink()
             try:
                 V.mix_audio(rows, piece, 48000, 48000, lambda args: 0, [], 'base', joined=True)
