@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Changed
+
+- **CI tests against the syntek-author release media vendors from, not its moving `main`** (DESIGN.md Section 7, D85; approved by the maintainer on 23/10/2026). Jobs 2 and 3 of `audit-template.yml` clone syntek-author at `SYNTEK_AUTHOR_TAG`, named once at the top of the workflow (now `v0.5.0`) and bumped at each adoption together with `syntek-author-names.txt`; `coexist-test.sh` check 20 fails while the two disagree. A fourth job, 'syntek-author main (advisory)', runs `coexist-test.sh` against syntek-author's default branch and reports what it finds as warnings, never failing the run and never a required check. So a syntek-author merge no longer turns media's checks red (as syntek-author's v0.5.0 merge did to `main`'s run 39805834557), and syntek-author's v0.6.0 merge no longer waits on media's 0.6.0. `CONTRIBUTING.md` (D83) now says 'Its jobs need no secret'; `.claude/CLAUDE.md` Section 9 adds the bump to the names refresh.
+
 ## [0.4.6] - 23/10/2026
 
 Fixes a ducked music bed losing its tail at random in a master. Generated projects receive the fixed `toolkit/media_video.py` on their next update, with Copier 9.12.0 or later, `-a .copier-answers.syntek-media.yml` (D3) and the five `GIT_CONFIG_*` variables of `README.md` 'Updating a project'. No migration, seed change, new Copier answer or hand edit is required.

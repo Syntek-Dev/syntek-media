@@ -7,15 +7,18 @@ name: Audit — Template Integrity
 # seventeen commits ran blind and five shipped a template that could not generate at all). A
 # gate that waits for a pull request lets a feature branch drift for as long as it lives.
 #
-# THREE JOBS, in parallel. [1/3] reads the template source and the repository root (its
+# THREE JOBS, in parallel, and an advisory fourth. [1/3] reads the template source and the repository root (its
 # settings and community files); [2/3] renders every brand kind and profile once, standalone
 # and over syntek-author, and audits the renders; [3/3] performs a real update, and applies
 # media over a real syntek-author project and the other way round, each in its own scratch
 # project. Every script's --self-test runs before its real run: a detector nobody
 # has seen fail is a detector nobody knows works. Failures ACCUMULATE as ::error:: lines and the
-# job fails at the end, so one broken gate never hides the next.
+# job fails at the end, so one broken gate never hides the next. The fourth, 'syntek-author main
+# (advisory)', runs coexist-test.sh against syntek-author's default branch and reports what it
+# finds as warnings only: it never fails the run and is not a required check.
 #
-# SYNTEK-AUTHOR ARRIVES BY A PLAIN SHELL STEP (DESIGN.md D27). Jobs 2 and 3 clone it into the
+# SYNTEK-AUTHOR ARRIVES BY A PLAIN SHELL STEP (DESIGN.md D27), AT A PINNED TAG (D85). Jobs 2 and
+# 3 clone it at SYNTEK_AUTHOR_TAG, the release media vendors from, into the
 # runner's temporary folder and export SYNTEK_AUTHOR_DIR through the environment file. A clone
 # that fails prints a warning and the scripts that need it report a named SKIP, exit 0 — never a
 # pass, and never grounds for a release tag. A second checkout action would turn a missing or
@@ -51,6 +54,10 @@ env:
   GIT_AUTHOR_EMAIL: audit@example.com
   GIT_COMMITTER_NAME: syntek-media audit
   GIT_COMMITTER_EMAIL: audit@example.com
+  # The syntek-author release media vendors from (DESIGN.md D85, Section 7). Jobs 2 and 3 test
+  # against it, so syntek-author's main moving never turns this run red; bump it at each
+  # adoption, with coexist-test.sh --refresh-names (check 20 fails while the two disagree).
+  SYNTEK_AUTHOR_TAG: v0.5.0
 
 jobs:
   source:
@@ -120,11 +127,11 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
           ffmpeg -hide_banner -version | head -n 1
 
-      - name: Fetch syntek-author, or warn
+      - name: Fetch syntek-author at its pinned tag, or warn
         run: |
-          if git clone --quiet --depth 1 https://github.com/Syntek-Dev/syntek-author "$RUNNER_TEMP/syntek-author"; then
+          if git clone --quiet --depth 1 --branch "$SYNTEK_AUTHOR_TAG" https://github.com/Syntek-Dev/syntek-author "$RUNNER_TEMP/syntek-author"; then
             echo "SYNTEK_AUTHOR_DIR=$RUNNER_TEMP/syntek-author" >> "$GITHUB_ENV"
-            echo "syntek-author at $(git -C "$RUNNER_TEMP/syntek-author" rev-parse --short HEAD)"
+            echo "syntek-author at $SYNTEK_AUTHOR_TAG ($(git -C "$RUNNER_TEMP/syntek-author" rev-parse --short HEAD))"
           else
             echo "::warning::syntek-author could not be cloned — the renders over it will report SKIP, which is never a pass"
           fi
@@ -191,11 +198,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch syntek-author, or warn
+      - name: Fetch syntek-author at its pinned tag, or warn
         run: |
-          if git clone --quiet --depth 1 https://github.com/Syntek-Dev/syntek-author "$RUNNER_TEMP/syntek-author"; then
+          if git clone --quiet --depth 1 --branch "$SYNTEK_AUTHOR_TAG" https://github.com/Syntek-Dev/syntek-author "$RUNNER_TEMP/syntek-author"; then
             echo "SYNTEK_AUTHOR_DIR=$RUNNER_TEMP/syntek-author" >> "$GITHUB_ENV"
-            echo "syntek-author at $(git -C "$RUNNER_TEMP/syntek-author" rev-parse --short HEAD)"
+            echo "syntek-author at $SYNTEK_AUTHOR_TAG ($(git -C "$RUNNER_TEMP/syntek-author" rev-parse --short HEAD))"
           else
             echo "::warning::syntek-author could not be cloned — coexist-test.sh will report SKIP, which is never a pass and never grounds for a release"
           fi
@@ -216,3 +223,34 @@ jobs:
             echo "::endgroup::"
           done
           exit $status
+
+  author-main:
+    name: syntek-author main (advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # Advisory only (DESIGN.md Section 7): syntek-author's default branch, not the pinned tag.
+      # What coexist-test.sh finds here is printed as warnings and the job always exits 0, so a
+      # syntek-author merge is seen before media adopts it, and never turns this run red. Job 3
+      # runs the same script's self-test.
+      - name: Coexist against syntek-author's main, or warn
+        run: |
+          if git clone --quiet --depth 1 https://github.com/Syntek-Dev/syntek-author "$RUNNER_TEMP/syntek-author-main"; then
+            echo "syntek-author main at $(git -C "$RUNNER_TEMP/syntek-author-main" rev-parse --short HEAD); pinned for the required jobs: $SYNTEK_AUTHOR_TAG"
+            uvx copier --version
+            bash .github/scripts/coexist-test.sh --author "$RUNNER_TEMP/syntek-author-main" \
+              || echo "::warning::coexist-test.sh against syntek-author's main reported findings or could not run (advisory: the release media vendors from is $SYNTEK_AUTHOR_TAG)"
+          else
+            echo "::warning::syntek-author's main could not be cloned (advisory)"
+          fi
+          exit 0

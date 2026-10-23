@@ -148,7 +148,7 @@ Copier obeys the last matching pattern, so a negation below a shut gate would re
 
 - `VERSION` and `CHANGELOG.md` move together; the release is tagged `vX.Y.Z`. `copier copy` takes the latest tag, so unreleased work is rendered with `--vcs-ref=HEAD`.
 - **Never tag a release while `coexist-test.sh` reports SKIP** (D27). Run it against a syntek-author checkout and see it pass.
-- **Refresh the frozen names when syntek-author has moved:** `bash .github/scripts/coexist-test.sh --refresh-names --author DIR` rewrites `syntek-author-names.txt`. Re-check every new name against media's paths before anything else.
+- **Refresh the frozen names when syntek-author has moved:** `bash .github/scripts/coexist-test.sh --refresh-names --author DIR` rewrites `syntek-author-names.txt`; bump `SYNTEK_AUTHOR_TAG` in `.github/workflows/audit-template.yml` to the same release in the same commit (D85). Re-check every new name against media's paths before anything else.
 - **Every release entry in `CHANGELOG.md` names the syntek-author baseline** its coexist test passed against: the commit, and the date it was read.
 - A migration is keyed to the release its change shipped in, never the release somebody noticed. The one exception is D76's unversioned outside-link pair (`migrations/agents-outside-link.py`), which runs on every update and is keyed to none.
 - Updates of generated projects need `-a .copier-answers.syntek-media.yml` (D3); every instruction that shows an update command says so, and gives it with Git's housekeeping off (the five `GIT_CONFIG_*` variables of `README.md` 'Updating a project') or beside a sentence that says to add them. A comment, an issue-form placeholder, or a line that points to a section giving the protected form may show it bare.

@@ -202,7 +202,7 @@ the CI workflow:
   audits' transcription of the catalogue has to follow it (`.github/CONTEXT.md`).
 - **Do not bump the version.** `VERSION` and `CHANGELOG.md` move together in the maintainer's
   release commit, and the maintainer tags releases (`.claude/CLAUDE.md` Section 9).
-- **CI must be green.** Its three jobs need no secret: the workflow reads the repository only and
+- **CI must be green.** Its jobs need no secret: the workflow reads the repository only and
   clones syntek-author publicly. Fill in the pull-request checklist, and read the CI run rather
   than ticking a box by hand.
 - We are a small studio and maintain this alongside client work, so a reply may take a while.

@@ -31,7 +31,8 @@ are syntek-author's.
   `syntek-author-names.txt`, the names media must never take (D27). **A change to `DESIGN.md`
   changes `_common.sh` in the same commit.**
 - `workflows/` — `audit-template.yml`, three parallel jobs (template source, renders, update and
-  coexistence) that run every self-test before every real run.
+  coexistence) that run every self-test before every real run, and an advisory fourth against
+  syntek-author's `main`.
 - `ISSUE_TEMPLATE/`, `PULL_REQUEST_TEMPLATE.md`, `CODEOWNERS` — the community files GitHub reads
   from this folder (D83); `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md`
   sit at the repository root. `ISSUE_TEMPLATE/` holds two issue forms, a bug report and a
