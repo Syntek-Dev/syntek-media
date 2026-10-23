@@ -1,6 +1,6 @@
 # Changelog
 
-**Last Updated**: 22/10/2026 **Version**: 0.4.5 **Maintained By**: Syntek Studio
+**Last Updated**: 23/10/2026 **Version**: 0.4.6 **Maintained By**: Syntek Studio
 **Language**: British English (en_GB)
 
 All notable changes to syntek-media are documented here.
@@ -12,6 +12,16 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 ---
 
 ## [Unreleased]
+
+## [0.4.6] - 23/10/2026
+
+Fixes a ducked music bed losing its tail at random in a master. Generated projects receive the fixed `toolkit/media_video.py` on their next update, with Copier 9.12.0 or later, `-a .copier-answers.syntek-media.yml` (D3) and the five `GIT_CONFIG_*` variables of `README.md` 'Updating a project'. No migration, seed change, new Copier answer or hand edit is required.
+
+**syntek-author baseline.** Unchanged since 0.4.5: syntek-author `9609a2e169a6a3f34c9b083f8dab6764ca7b08a7` (its v0.5.0), read again on 23/10/2026 from a clean clone. Its `main` has since moved to `7edf0d6`, changing only its `CHANGELOG.md`, its `README.md` and `family-shared.json`'s `release` field (now 'unreleased'), no template path, so no frozen name moved. `coexist-test.sh` passed against a clean clone at that tag for all three brand kinds, in both orders, on 23/10/2026, at this release's tree.
+
+### Fixed
+
+- **A ducked music bed no longer loses its tail at random** (DESIGN.md D71, Sections 6.4 and 7). Where a bed with `duck = true` ended before the master did, ffmpeg's `sidechaincompress` ended its output as soon as the bed ended and dropped the bed's samples still waiting for the key's (the voice, or the clips' own sound where there is none). How much was lost depended on the timing of ffmpeg's own threads: in tests, on ffmpeg 7.1, 8.1 and 9.0 alike, in up to about half the runs depending on the edit (up to 1.4 s of a 1.9 s bed on 7.1), while 6.1 never showed it. `mix_audio` (`toolkit/media_video.py`), the one mix both master routes use (`media.py assemble` and `scene.py render`, D71), now pads the bed with silence as well as the key, so neither input to the compressor ends, and trim the ducked bed at the master's last sample. A master now comes out the same on every run, and its sound changes only where the tail used to be lost. The compressor now runs to the end of the master: a one-hour audio master with a 10 s ducked bed took about 11 s instead of 2 s in `assemble`. `media.py --self-test`'s 'both master routes' case, which this made fail intermittently, passed in every run (0 failures in 50 to 300 runs on each ffmpeg from 6.1.6 to 9.0.2), and a new case requires the bed's tail in both routes.
 
 ## [0.4.5] - 22/10/2026
 
