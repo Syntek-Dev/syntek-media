@@ -15,13 +15,13 @@ project (DESIGN.md D11).
 .github/workflows/
 ├── CONTEXT.md            ← this file
 ├── CLAUDE.md             ← operating rules for the workflow
-└── audit-template.yml    ← three parallel jobs: template source, renders, update and coexistence
+└── audit-template.yml    ← three parallel jobs (source, renders, update and coexistence) and an advisory fourth
 ```
 
 ## What's here
 
-- `audit-template.yml` — three jobs, each running every script's `--self-test` before its real
-  run and reporting failures as `::error::` lines that accumulate:
+- `audit-template.yml` — three required jobs, each running every script's `--self-test` before
+  its real run and reporting failures as `::error::` lines that accumulate:
   - **[1/3] Template source** — tokens, the mode-file block, pairs and shapes, the line cap,
     personal data, development isolation, the community files at the root (D83), seeds, skills;
     then, in the same step, the vendored `migrations/agents-outside-link.py --self-test` (D85).
@@ -31,13 +31,18 @@ project (DESIGN.md D11).
     installed, so the thumbnail and card renders are named as skipped, never passed.
   - **[3/3] Update and coexistence** — a real `copier update` in its own scratch project, and
     media applied over a real syntek-author project and the other way round.
-- Jobs 2 and 3 first clone syntek-author into the runner's temporary folder with a plain shell
-  step and export `SYNTEK_AUTHOR_DIR`; when the clone fails they print a warning, and the scripts
-  that need it report a named SKIP (DESIGN.md D27).
+- Jobs 2 and 3 first clone syntek-author, at the tag in the workflow's `SYNTEK_AUTHOR_TAG` (the
+  release media vendors from, D85), into the runner's temporary folder with a plain shell step and
+  export `SYNTEK_AUTHOR_DIR`; when the clone fails they print a warning, and the scripts that need
+  it report a named SKIP (DESIGN.md D27).
+- **syntek-author main (advisory)** runs `coexist-test.sh` against syntek-author's default
+  branch and prints what it finds as warnings; it always exits 0 and is not a required check, so a
+  syntek-author merge shows here before media adopts it, without turning the run red.
 
 ## Cross-references
 
 - `.github/scripts/CONTEXT.md` — what each script checks.
 - `.github/scripts/run-all.sh` — the same run, locally, in one command.
-- `DESIGN.md` Section 7 — the CI paragraph: every push, no path filter, the three jobs, the
-  syntek-author clone, the dollar-brace-brace sequence only in the `concurrency` block.
+- `DESIGN.md` Section 7 — the CI paragraph: every push, no path filter, the three jobs and the
+  advisory fourth, the pinned syntek-author clone, the dollar-brace-brace sequence only in the
+  `concurrency` block.
