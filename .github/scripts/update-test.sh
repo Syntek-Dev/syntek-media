@@ -29,7 +29,7 @@
 #                       author's project would, in the folder that platform gates;
 #                    8. assert.
 #
-#                  Twenty-two checks per brand kind:
+#                  Twenty-three checks per brand kind:
 #                    1. The project renders.
 #                    2. `copier update` succeeds.
 #                    3. The author's MEMORY.md entry survives.
@@ -100,15 +100,38 @@
 #                       exception: the link alone is renamed, aside and back).
 #                   21. A stranded hold prints its fix: an update of that project that stops
 #                       between the stages (a refused BRAND_KIND, in a clone) leaves the link
-#                       held as .agents.syntek-held and prints the hand fix
-#                       'mv .agents.syntek-held .agents'; run as printed, the fix leaves
-#                       the clone's work tree clean and the link's target unchanged.
+#                       held as .agents.syntek-held, and the hold stage itself prints the hand
+#                       fix, whose first step is 'ls -ld .agents .agents.syntek-held' and
+#                       whose last is 'mv .agents.syntek-held .agents'; that last step, run
+#                       once .agents is absent, leaves the clone's work tree clean and the
+#                       link's target unchanged. No line the update prints but the hold
+#                       stage's own (each carries 'agents-outside-link:') holds that bare mv
+#                       (since 0.4.5 _message_before_update points to the fix instead, D85):
+#                       run while .agents stands, it moves the held link into the folder
+#                       outside the project.
 #                   22. _message_before_update ends with the crash pointer (DESIGN.md Sections
 #                       3.5 and 10): 'If this update stops with OSError: [Errno 39] Directory
 #                       not empty, never commit what it left', which sends the owner to
 #                       README.md 'Updating a project' for the recovery; the protected command
 #                       itself cannot go in the message, which prints after the command was
 #                       typed.
+#                   23. A stop after the render (DESIGN.md D76, D85): an update over a
+#                       committed outside link that stops after its render (a failing
+#                       after-stage entry, declared above restore in a scratch release
+#                       v0.4.3, stands in for Copier's clean-up crash) leaves the link held
+#                       and .agents absent: /.agents is in _skip_if_exists, and Copier 9.12.0
+#                       and later leave every such path out of the diff they apply, so Copier
+#                       never puts it back. The hand fix, run step by step as the hold stage
+#                       prints it, puts the held link back there, and discarding the stopped
+#                       update then leaves the project clean. On a copy where .agents stands
+#                       again after git reset --hard (which restores the committed link and
+#                       keeps the untracked held link: what an owner meets who runs it before
+#                       the fix, and what syntek-author's update leaves beside media), the
+#                       hand fix (rm .agents, then the mv) puts the held link back too.
+#                       Neither writes anything outside the project. On another such copy the
+#                       bare mv, run first, writes the held link into the outside folder (the
+#                       control). And a held link committed beside an identical .agents makes
+#                       the next update move nothing and ask for 'rm .agents.syntek-held'.
 #
 #                  Copier prints a MissingFileWarning on a fresh copy and on every update (the
 #                  previous answers are read through _external_data, D14). It is expected and
@@ -117,11 +140,18 @@
 #                  Numbers are stable identifiers. Append, never renumber.
 #
 #                  What it CANNOT check: an upgrade from a real earlier release. Checks 17–21
-#                  tag the snapshot v0.4.1 and v0.4.2 and shape the old project by hand, so
-#                  they prove the migration and its version gate, not 0.4.1's own files. Nor
-#                  a project applied over syntek-author, which is coexist-test.sh's. Check 22
-#                  proves only that the pointer is printed last: nothing here reproduces
-#                  Copier's Errno 39 clean-up crash or runs the README's recovery.
+#                  and 23 tag the snapshot v0.4.1 and v0.4.2 (and 23 a clone of it v0.4.3)
+#                  and shape the old project by hand, so they prove the migration and its
+#                  version gate, not 0.4.1's own files. Nor a project applied over
+#                  syntek-author, which is coexist-test.sh's. Check 22 proves only that the
+#                  pointer is printed last. Check 23 stops Copier where its Errno 39
+#                  clean-up crash stops it (after the render and the diff, before restore),
+#                  but by a failing task, not the crash itself, and it runs the README's
+#                  recovery only as far as the hand fix and the discard. It stands .agents up
+#                  again with git reset --hard, never with syntek-author's update. It proves
+#                  the committed link only: a git-ignored link, which git clean would delete
+#                  once held, is the vendored script's own --self-test's case (run-all.sh,
+#                  CI), not a real update's.
 #
 # SELF-TEST. --self-test runs the whole flow against the fixture media template of _common.sh,
 #            as an author-nonfiction project, so the platform taken away is podcast and the
@@ -201,6 +231,11 @@ MIG_SHAPES="realdir otherlink missing textfile"
 OUT_PROJ=""; OUT_DIR=""; OUT_LOG=""; OUT_STATUS=0; OUT_TARGET=""; OUT_AFTER_TARGET=""
 OUT_SUMS_BEFORE=""; OUT_SUMS_AFTER=""; OUT_HELD_LEFT=false; OUT_DIRTY=""
 STRAND_LOG=""; STRAND_STATUS=0; STRAND_HELD=false; STRAND_FIXED_DIRTY=""; STRAND_FIXED_TARGET=""
+# A stop after the render, the hand fix run step by step, its control, and a held link committed
+# beside .agents (check 23).
+CRASH_LOG=""; CRASH_STATUS=0; CRASH_HELD=false; CRASH_LEFT=""; CRASH_FIXED=""; CRASH_STANDING=""; CRASH_STANDING_FIXED=""
+CRASH_FIXED_DIRTY=""; CRASH_FIXED_TARGET=""; CRASH_SUMS_BEFORE=""; CRASH_SUMS_AFTER=""
+CRASH_CONTROL_WROTE=false; CRASH_FOUND_HELD=false; CRASH_FOUND_MOVED=""
 
 # The author's own files in the folder the podcast platform gates (DESIGN.md D59, Section 6.17):
 # a show register and the feed as last published. Invented (Harbour Lane Studio, example.com),
@@ -275,6 +310,9 @@ run_flow() { # $1 = template repo, $2 = BRAND_KIND, $3 = work dir — fills the 
   OUT_PROJ=""; OUT_DIR=""; OUT_LOG=""; OUT_STATUS=0; OUT_TARGET=""; OUT_AFTER_TARGET=""
   OUT_SUMS_BEFORE=""; OUT_SUMS_AFTER=""; OUT_HELD_LEFT=false; OUT_DIRTY=""
   STRAND_LOG=""; STRAND_STATUS=0; STRAND_HELD=false; STRAND_FIXED_DIRTY=""; STRAND_FIXED_TARGET=""
+  CRASH_LOG=""; CRASH_STATUS=0; CRASH_HELD=false; CRASH_LEFT=""; CRASH_FIXED=""; CRASH_STANDING=""; CRASH_STANDING_FIXED=""
+  CRASH_FIXED_DIRTY=""; CRASH_FIXED_TARGET=""; CRASH_SUMS_BEFORE=""; CRASH_SUMS_AFTER=""
+  CRASH_CONTROL_WROTE=false; CRASH_FOUND_HELD=false; CRASH_FOUND_MOVED=""
   : > "$UPDATE_LOG"; : > "$SWITCH_LOG"
   sm_snapshot "$src" "$tpl" >>"$log" 2>&1 || die "could not snapshot $src"
 
@@ -451,6 +489,7 @@ run_migration_flow() { # $1 = template snapshot, $2 = work dir
     MIG_SHAPE_SAID["$shape"]="$(grep -cF 'nothing changed' "$2/mig-$shape.log" || true)"
   done
   run_outside_flow "$tpl" "$2"
+  run_crash_flow "$tpl" "$2"
 }
 
 # D76, D11's second exception: an .agents link to a folder outside the project. The outside
@@ -479,6 +518,110 @@ run_outside_flow() { # $1 = template snapshot (tagged v0.4.1 and v0.4.2), $2 = w
   STRAND_FIXED_DIRTY="$(git -C "$clone" status --porcelain 2>/dev/null | paste -sd' ' -)"
   STRAND_FIXED_TARGET="$(readlink "$clone/.agents" 2>/dev/null || printf 'not a link')"
   OUT_SUMS_AFTER="$(hash_tree "$OUT_DIR")"
+}
+
+# 23: a stop AFTER the render. A failing after-stage entry, declared above restore, stands in for
+# Copier's clean-up crash (Errno 39): Copier has rendered and applied its diff, and stops before
+# restore runs (a task that exits non-zero ends the update; after-stage entries run in declared
+# order). The entry is committed only in a clone of the snapshot, tagged SM_CRASH_VERSION, so no
+# other flow sees it; the real copier.yml never carries it, and shipped-seeds.sh reads the real
+# one. Copier never puts media's .agents back: /.agents is in _skip_if_exists (D11), and Copier
+# 9.12.0 and later leave every file the diff touches that matches _skip_if_exists out of the
+# diff they apply (git apply --exclude; 9.19.1 _main.py:1552-1586). So the stop leaves .agents
+# absent, and the hand fix runs there. .agents stands again after a discard (git reset --hard
+# restores the committed link and keeps the untracked held link) or beside syntek-author, whose
+# update puts it back; that state is made with git reset --hard on two copies of the stopped
+# project: the hand fix runs on one, and the control, the bare mv run first, on the other. Each
+# project is a clone of OUT_PROJ (its outside link committed, at v0.4.2) in a folder of its own
+# beside its own copy of the outside folder, so its relative .agents link leaves the project to
+# that copy and check 20's folder is never touched.
+run_crash_flow() { # $1 = template snapshot (tagged v0.4.1 and v0.4.2), $2 = work dir
+  local tpl="$1" ctpl="$2/tpl-crash" o="${OUT_DIR##*/}" d="$2/crash" s="$2/crash-standing"
+  local c="$2/crash-control" f="$2/crash-found" q="'" moved="" sums copy
+  CRASH_LOG="$2/crash.log"; : > "$CRASH_LOG"
+  if [[ "$OUT_STATUS" -ne 0 || ! -d "$OUT_PROJ/.git" ]]; then CRASH_STATUS=99; return 0; fi
+  git clone -q "$tpl" "$ctpl" >>"$W/mig.log" 2>&1 || { CRASH_STATUS=99; return 0; }
+  awk -v q="$q" '/agents-outside-link\.py" restore/ && !done {
+      print "  - command: \"false\""; print "    when: \"<% _stage == " q "after" q " %>\""; done = 1 }
+    { print }' "$ctpl/copier.yml" > "$2/copier.yml.crash" && mv "$2/copier.yml.crash" "$ctpl/copier.yml"
+  grep -qxF '  - command: "false"' "$ctpl/copier.yml" || { CRASH_STATUS=99; return 0; }
+  sm_commit_all "$ctpl" 'a stop after the render (update-test.sh check 23 only)'
+  sm_git "$ctpl" tag -f "$SM_CRASH_VERSION" >/dev/null
+  # The stopped update. Copier takes an update's source only from the answers file, so the
+  # clone's _src_path is pointed at the scratch release (a harness device; nothing else moves).
+  mkdir -p "$d"; cp -a "$OUT_DIR" "$d/$o"
+  git clone -q "$OUT_PROJ" "$d/proj" >>"$W/mig.log" 2>&1 || { CRASH_STATUS=99; return 0; }
+  awk -v src="$ctpl" '/^_src_path:/ { print "_src_path: " src; next } { print }' "$d/proj/$SM_ANSWERS_FILE" > "$d/answers" \
+    && mv "$d/answers" "$d/proj/$SM_ANSWERS_FILE"
+  sm_commit_all "$d/proj" 'the scratch release as the source'
+  CRASH_SUMS_BEFORE="$(hash_tree "$d/$o")"
+  SM_VCS_REF="$SM_CRASH_VERSION" sm_update "$d/proj" >"$CRASH_LOG" 2>&1 || CRASH_STATUS=$?
+  [[ -L "$d/proj/$SM_OUTSIDE_HELD" && "$(readlink "$d/proj/$SM_OUTSIDE_HELD")" == "$OUT_TARGET" ]] && CRASH_HELD=true
+  CRASH_LEFT="$(stands_at "$d/proj/.agents")"
+  if $CRASH_HELD && [[ "$CRASH_LEFT" == absent ]]; then
+    # The same stop with .agents standing again, as git reset --hard leaves it, twice: once for
+    # the hand fix, once for the control, the bare mv run first.
+    for copy in "$s" "$c"; do
+      mkdir -p "$copy"; cp -a "$OUT_DIR" "$copy/$o"; cp -a "$d/proj" "$copy/proj"
+      git -C "$copy/proj" reset -q --hard >>"$CRASH_LOG" 2>&1 || true
+    done
+    CRASH_STANDING="$(stands_at "$s/proj/.agents")"
+    (cd "$c/proj" && $SM_OUTSIDE_FIX) >>"$CRASH_LOG" 2>&1 || true
+    [[ -L "$c/$o/$SM_OUTSIDE_HELD" ]] && CRASH_CONTROL_WROTE=true
+    CRASH_STANDING_FIXED="$(hand_fix "$s/proj")"
+    [[ "$(hash_tree "$s/$o")" == "$CRASH_SUMS_BEFORE" ]] || CRASH_STANDING_FIXED+=" (wrote outside)"
+    # The stopped project as Copier left it: the hand fix, then the discard (the dry run first).
+    CRASH_FIXED="$(hand_fix "$d/proj")"
+    (cd "$d/proj" && git clean -n -d && git reset --hard && git clean -fd) >>"$CRASH_LOG" 2>&1 || true
+  fi
+  CRASH_FIXED_DIRTY="$(git -C "$d/proj" status --porcelain 2>/dev/null | paste -sd' ' -)"
+  CRASH_FIXED_TARGET="$(readlink "$d/proj/.agents" 2>/dev/null || printf 'not a link')"
+  CRASH_SUMS_AFTER="$(hash_tree "$d/$o")"
+  # found_held(): a held link committed beside an identical .agents. The next update must move
+  # nothing, say so, and ask for the held link's removal; Copier then refuses the outside link.
+  mkdir -p "$f"; cp -a "$OUT_DIR" "$f/$o"
+  git clone -q "$OUT_PROJ" "$f/proj" >>"$W/mig.log" 2>&1 || return 0
+  ln -s "$OUT_TARGET" "$f/proj/$SM_OUTSIDE_HELD"
+  sm_commit_all "$f/proj" 'a held link committed beside .agents'
+  sums="$(hash_tree "$f/$o")"
+  SM_VCS_REF="$SM_D76_VERSION" sm_update "$f/proj" >"$2/crash-found.log" 2>&1 || true
+  grep -F 'agents-outside-link: found' "$2/crash-found.log" 2>/dev/null | grep -qF "rm $SM_OUTSIDE_HELD" && CRASH_FOUND_HELD=true
+  [[ "$(readlink "$f/proj/.agents" 2>/dev/null)" == "$OUT_TARGET" ]] || moved+=" .agents"
+  [[ "$(readlink "$f/proj/$SM_OUTSIDE_HELD" 2>/dev/null)" == "$OUT_TARGET" ]] || moved+=" $SM_OUTSIDE_HELD"
+  [[ "$(hash_tree "$f/$o")" == "$sums" ]] || moved+=" the outside folder"
+  CRASH_FOUND_MOVED="${moved# }"
+}
+
+# What stands at a path, as the vendored script words it: absent, a link to <target>, a folder
+# or a file.
+stands_at() { # $1 = path
+  if [[ -L "$1" ]]; then printf 'a link to %s' "$(readlink "$1")"
+  elif [[ -d "$1" ]]; then printf 'a folder'
+  elif [[ -e "$1" ]]; then printf 'a file'
+  else printf 'absent'; fi
+}
+
+# The hand fix, step by step, as the hold stage prints it and README.md 'Migrations' gives it:
+# 1. ls -ld .agents .agents.syntek-held, and where it shows no held link, stop and change
+# nothing; 2. a link at .agents removed alone (rm .agents), a folder or a file moved aside
+# (mv .agents .agents.from-update); 3. once ls -ld .agents finds nothing,
+# mv .agents.syntek-held .agents. Prints what then stands at .agents, and whether a held link
+# is left.
+hand_fix() { # $1 = project
+  local out
+  out="$(cd "$1" && $SM_OUTSIDE_CHECK 2>&1)" || true
+  printf '%s\n' "$out" >>"$CRASH_LOG"
+  if grep -qE '[[:space:]]\.agents\.syntek-held( -> |$)' <<< "$out"; then
+    if grep -qE '[[:space:]]\.agents -> ' <<< "$out"; then
+      (cd "$1" && rm .agents) >>"$CRASH_LOG" 2>&1 || true
+    elif [[ -e "$1/.agents" ]]; then
+      (cd "$1" && mv .agents .agents.from-update) >>"$CRASH_LOG" 2>&1 || true
+    fi
+    if ! (cd "$1" && ls -ld .agents) >/dev/null 2>&1; then
+      (cd "$1" && $SM_OUTSIDE_FIX) >>"$CRASH_LOG" 2>&1 || true
+    fi
+  fi
+  printf '%s; held link %s' "$(stands_at "$1/.agents")" "$([[ -L "$1/$SM_OUTSIDE_HELD" ]] && printf left || printf gone)"
 }
 
 run_checks() {
@@ -663,8 +806,42 @@ run_checks() {
       finding "check 21 — $L the update that stopped did not leave the link held as $SM_OUTSIDE_HELD (exit $STRAND_STATUS) — see $STRAND_LOG"
     elif ! grep -qF "$SM_OUTSIDE_FIX" "$STRAND_LOG" 2>/dev/null; then
       finding "check 21 — $L the update that stopped with the link held did not print the hand fix '$SM_OUTSIDE_FIX'"
+    elif ! grep -F 'agents-outside-link:' "$STRAND_LOG" 2>/dev/null | grep -qF "$SM_OUTSIDE_CHECK"; then
+      finding "check 21 — $L the hold stage did not print the hand fix's first step '$SM_OUTSIDE_CHECK'"
+    elif grep -vF 'agents-outside-link:' "$STRAND_LOG" 2>/dev/null | grep -qF "$SM_OUTSIDE_FIX"; then
+      finding "check 21 — $L the update printed the bare '$SM_OUTSIDE_FIX' outside the hold stage's fix (_message_before_update?): run while .agents stands, it moves the held link into the folder outside the project"
     elif [[ -n "$STRAND_FIXED_DIRTY" || "$STRAND_FIXED_TARGET" != "$OUT_TARGET" ]]; then
       finding "check 21 — $L the printed hand fix did not restore the project (status '$STRAND_FIXED_DIRTY'; .agents -> '$STRAND_FIXED_TARGET')"
+    fi
+  fi
+  # ── 23. A stop after the render: the hand fix, its control, and a held link found ──
+  local fixed="a link to $OUT_TARGET; held link gone"
+  if [[ "$OUT_STATUS" -eq 0 && "$CRASH_STATUS" -eq 99 ]]; then
+    finding "check 23 — $L the stop after the render could not be set up (a clone, or the scratch $SM_CRASH_VERSION) — see $W/mig.log"
+  elif [[ "$OUT_STATUS" -eq 0 ]]; then
+    if [[ "$CRASH_STATUS" -eq 0 ]]; then
+      finding "check 23 — $L the update meant to stop after its render (a failing after-stage entry in $SM_CRASH_VERSION) succeeded, so no stop after the render was tested — see $CRASH_LOG"
+    elif ! $CRASH_HELD; then
+      finding "check 23 — $L the update that stopped after its render did not leave the link held as $SM_OUTSIDE_HELD — see $CRASH_LOG"
+    elif [[ "$CRASH_LEFT" != absent ]]; then
+      finding "check 23 — $L the update that stopped after its render left .agents as $CRASH_LEFT, not absent: /.agents is in _skip_if_exists, so Copier must leave it out of the diff it applies and never put it back (DESIGN.md D76, D85) — see $CRASH_LOG"
+    elif [[ "$CRASH_FIXED" != "$fixed" ]]; then
+      finding "check 23 — $L the hand fix, run step by step where the stop left .agents absent, did not put the held link back: $CRASH_FIXED — see $CRASH_LOG"
+    elif [[ "$CRASH_STANDING" != "a link to $OUT_TARGET" ]]; then
+      finding "check 23 — $L git reset --hard on the stopped project left .agents as ${CRASH_STANDING:-nothing}, not the committed link, so the hand fix with .agents standing was not tested — see $CRASH_LOG"
+    elif [[ "$CRASH_STANDING_FIXED" != "$fixed" ]]; then
+      finding "check 23 — $L the hand fix, run step by step with .agents standing again after git reset --hard, did not put the held link back: $CRASH_STANDING_FIXED — see $CRASH_LOG"
+    elif [[ -n "$CRASH_FIXED_DIRTY" || "$CRASH_FIXED_TARGET" != "$OUT_TARGET" ]]; then
+      finding "check 23 — $L discarding the stopped update after the hand fix did not leave the project clean (status '$CRASH_FIXED_DIRTY'; .agents -> '$CRASH_FIXED_TARGET')"
+    elif ! $CRASH_CONTROL_WROTE; then
+      finding "check 23 — $L the control no longer shows the hazard: the bare '$SM_OUTSIDE_FIX', run while .agents stands again after git reset --hard, did not write the held link into the folder outside the project"
+    fi
+    [[ "$CRASH_SUMS_AFTER" == "$CRASH_SUMS_BEFORE" ]] \
+      || finding "check 23 — $L the stop after the render, or the hand fix, wrote into the folder outside the project that .agents links to"
+    if ! $CRASH_FOUND_HELD; then
+      finding "check 23 — $L with a held link committed beside an identical .agents, the next update's hold stage did not say so and ask for 'rm $SM_OUTSIDE_HELD' — see $W/crash-found.log"
+    elif [[ -n "$CRASH_FOUND_MOVED" ]]; then
+      finding "check 23 — $L with a held link committed beside an identical .agents, the next update moved something: $CRASH_FOUND_MOVED"
     fi
   fi
   if [[ "$AGAIN_STATUS" -ne 0 || -n "$AGAIN_DIRTY" ]]; then
@@ -793,6 +970,23 @@ self_test() {
   cp "$STRAND_LOG" "$h"; grep -vF "$SM_OUTSIDE_FIX" "$h" > "$STRAND_LOG" || true
   probe "check 21 fires when a stranded hold does not print its fix" "check 21 — [author-nonfiction] the update that stopped with the link held did not print"; cp "$h" "$STRAND_LOG"
   STRAND_FIXED_DIRTY="?? $SM_OUTSIDE_HELD"; probe "check 21 fires when the printed fix leaves the project dirty" "check 21 — [author-nonfiction] the printed hand fix"; STRAND_FIXED_DIRTY=""
+  sed -i 's/agents-outside-link: //' "$STRAND_LOG"
+  probe "check 21 fires when the fix's first step does not come from the hold stage" "check 21 — [author-nonfiction] the hold stage did not print the hand fix's first step"; cp "$h" "$STRAND_LOG"
+  printf '  If the update stops before it ends, run: %s\n' "$SM_OUTSIDE_FIX" >> "$STRAND_LOG"
+  probe "check 21 fires when the message prints the bare mv again" "check 21 — [author-nonfiction] the update printed the bare"; cp "$h" "$STRAND_LOG"
+  local crash_status="$CRASH_STATUS" crash_fixed="$CRASH_FIXED" crash_sums="$CRASH_SUMS_AFTER"
+  local crash_left="$CRASH_LEFT" crash_standing="$CRASH_STANDING" crash_standing_fixed="$CRASH_STANDING_FIXED"
+  CRASH_STATUS=0; probe "check 23 fires when the update meant to stop after its render succeeds" "check 23 — [author-nonfiction] the update meant to stop after its render"; CRASH_STATUS="$crash_status"
+  CRASH_HELD=false; probe "check 23 fires when the stop after the render leaves no held link" "check 23 — [author-nonfiction] the update that stopped after its render did not leave"; CRASH_HELD=true
+  CRASH_LEFT="a link to $OUT_TARGET"; probe "check 23 fires when the stop puts .agents back" "check 23 — [author-nonfiction] the update that stopped after its render left .agents as a link to"; CRASH_LEFT="$crash_left"
+  CRASH_FIXED="a link to $OUT_TARGET; held link left"; probe "check 23 fires when the hand fix leaves the held link" "check 23 — [author-nonfiction] the hand fix, run step by step where the stop left"; CRASH_FIXED="$crash_fixed"
+  CRASH_STANDING="absent"; probe "check 23 fires when .agents does not stand again for the second state" "check 23 — [author-nonfiction] git reset --hard on the stopped project left .agents as absent"; CRASH_STANDING="$crash_standing"
+  CRASH_STANDING_FIXED="a link to $OUT_TARGET; held link gone (wrote outside)"; probe "check 23 fires when the hand fix writes outside with .agents standing" "check 23 — [author-nonfiction] the hand fix, run step by step with .agents standing"; CRASH_STANDING_FIXED="$crash_standing_fixed"
+  CRASH_FIXED_DIRTY="?? $SM_OUTSIDE_HELD"; probe "check 23 fires when the discard leaves the project dirty" "check 23 — [author-nonfiction] discarding the stopped update"; CRASH_FIXED_DIRTY=""
+  CRASH_CONTROL_WROTE=false; probe "check 23 fires when the control no longer shows the hazard" "check 23 — [author-nonfiction] the control no longer shows"; CRASH_CONTROL_WROTE=true
+  CRASH_SUMS_AFTER="$CRASH_SUMS_AFTER"$'\n'"$SM_OUTSIDE_HELD"$'\t''x'; probe "check 23 fires on a write into the outside folder" "check 23 — [author-nonfiction] the stop after the render, or the hand fix, wrote"; CRASH_SUMS_AFTER="$crash_sums"
+  CRASH_FOUND_HELD=false; probe "check 23 fires when a held link beside .agents is not reported" "check 23 — [author-nonfiction] with a held link committed beside an identical .agents, the next update's hold stage"; CRASH_FOUND_HELD=true
+  CRASH_FOUND_MOVED=".agents"; probe "check 23 fires when a held link beside .agents makes the update move something" "check 23 — [author-nonfiction] with a held link committed beside an identical .agents, the next update moved"; CRASH_FOUND_MOVED=""
   AGAIN_DIRTY=" M README.md"; probe "check 15 fires when a second update changes a file" "check 15"; AGAIN_DIRTY=""
   probe_clean "the fixture's updates keep every promise again once every mutation is undone"
   st_finish "an update that keeps its promises from one that breaks them"
@@ -813,7 +1007,7 @@ for kind in $KINDS; do
   run_flow "$SM_ROOT" "$kind" "$work"
   run_checks
   if [[ ${#FINDINGS[@]} -eq 0 ]]; then
-    log "  ✓ $kind — edits kept, examples still gone, publish-log.md recreated, own piece untouched, $TARGET_REL updated; shared files left alone; BRAND_KIND change refused untouched; warning printed; $REMOVE_PLATFORM taken away with exactly its $(wc -w <<< "$REMOVE_WANT") file(s)${FIXTURE_SUMS[*]:+, the show register and saved feed kept}; a second update a no-op"
+    log "  ✓ $kind — edits kept, examples still gone, publish-log.md recreated, own piece untouched, $TARGET_REL updated; shared files left alone; BRAND_KIND change refused untouched; warning printed; $REMOVE_PLATFORM taken away with exactly its $(wc -w <<< "$REMOVE_WANT") file(s)${FIXTURE_SUMS[*]:+, the show register and saved feed kept}; a second update a no-op; a stop after the render undone by the hand fix, with .agents absent and standing again"
     sm_rmtree "$work"
   else
     bold "✗ $kind — ${#FINDINGS[@]} finding(s) (work kept in $work; Copier's output in $work/flow.log):"

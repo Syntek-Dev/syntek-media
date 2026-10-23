@@ -13,7 +13,7 @@ syntek-media/
 ├── README.md                 ← the user guide: applying over syntek-author, standalone, the questions, updating, coexistence, audio, audits, the licence
 ├── DESIGN.md                 ← the build contract; where any file disagrees with it, DESIGN.md wins
 ├── copier.yml                ← questions, gated _exclude, _skip_if_exists, messages, _tasks, _migrations
-├── VERSION                   ← the template's release number (0.4.4)
+├── VERSION                   ← the template's release number (0.4.5)
 ├── CHANGELOG.md              ← the template's history, Keep a Changelog
 ├── LICENSE · CONTRIBUTING.md · SECURITY.md · CODE_OF_CONDUCT.md   ← community files (D83), never shipped: MIT; changes to the template; private vulnerability reports; Contributor Covenant 2.1
 ├── AGENTS.md                 ← Codex development entrypoint; reads the development manual
@@ -35,7 +35,7 @@ syntek-media/
 │   └── CODEOWNERS            ← @Syntek-Studio reviews every path, with the closer reads named
 ├── handoffs/                 ← development handoffs between sessions, never shipped
 │   └── CONTEXT.md · CLAUDE.md · HANDOFF-*.md
-├── migrations/               ← update-time scripts, never shipped (v0.4.2-agents-folder.py; agents-outside-link.py, run on every update; D76)
+├── migrations/               ← update-time scripts, never shipped (v0.4.2-agents-folder.py; agents-outside-link.py, run on every update, vendored from syntek-author; D76, D85)
 │   └── CONTEXT.md · CLAUDE.md
 ├── examples/                 ← invented answers files, one per brand kind
 │   ├── CONTEXT.md · CLAUDE.md
@@ -53,14 +53,14 @@ syntek-media/
 
 ## What's here
 
-- `DESIGN.md` — the decisions (D1–D76, D82 and D83; D77–D81 and D84 are reserved), the questions, the ownership classes and gating table, the generated tree, the skills, the formats, the audits, applying over syntek-author and coexistence. **Read the sections your change touches before changing anything**; comments in `copier.yml` cite it by section.
+- `DESIGN.md` — the decisions (D1–D76, D82, D83 and D85; D77–D81 and D84 are reserved), the questions, the ownership classes and gating table, the generated tree, the skills, the formats, the audits, applying over syntek-author and coexistence. **Read the sections your change touches before changing anything**; comments in `copier.yml` cite it by section.
 - `copier.yml` — the contract Copier executes. **Every gated path is one `_exclude` line whose gate is copied verbatim from DESIGN.md Section 3.5** (`'youtube' in PLATFORMS`, `'audiobook' in MEDIA_KINDS`), each of the nineteen shared root paths has an update-gated `_exclude` line beside its `_skip_if_exists` line (and `/.claude/mcp_config.json` one more, unconditional, that stops a copy shipping it, D76), the one path ever negated back in is an output folder's own `README.md`, listed above every gated line (DESIGN.md Section 3.5, D19), and the mode-file block between its `BEGIN`/`END generated mode excludes` markers is written by `.github/scripts/gen-mode-excludes.sh`, never by hand.
 - `template/` — the product. **Every file in it is rendered**, so the delimiters `<%`, `<:` and `<~` appear only where a token is meant (token discipline: `.claude/CLAUDE.md` Section 4), HTML, CSS, TOML and SRT included.
 - `.claude/` — the development manual. Its settings deny every skill under `template/.claude/skills/` and exclude the template's `CLAUDE.md` files from development sessions, so the product's instructions never steer the people building it.
 - `.github/scripts/` — the audits, each with a `--self-test`; `README.md` lists what each checks. CI runs all of them on every push. `syntek-author-names.txt` freezes the names media must never take (D27).
 - `examples/` — invented answers files, one per brand kind, for `copier copy --data-file` and for the audits; together they turn on every platform and every media kind. There are no adoption scripts (DESIGN.md Section 8).
 - `VERSION`, `CHANGELOG.md` — the template's own release state. A generated project starts its own history; nothing here is copied into it.
-- `migrations/` — the scripts `copier update` runs, mostly when a project crosses a release that moves something an author or a shared path holds; none ships. The first, `v0.4.2-agents-folder.py`, replaces an `.agents -> .claude` link with the real folder (D76). `agents-outside-link.py` is keyed to no release: two unversioned entries run it on every update, holding an `.agents` link that leaves the project aside before the render and restoring it after (D76). The rule and the house shape are in `copier.yml`, under `_migrations`.
+- `migrations/` — the scripts `copier update` runs, mostly when a project crosses a release that moves something an author or a shared path holds; none ships. The first, `v0.4.2-agents-folder.py`, replaces an `.agents -> .claude` link with the real folder (D76). `agents-outside-link.py` is keyed to no release: two unversioned entries run it on every update, holding an `.agents` link that leaves the project aside before the render and restoring it after (D76). Since 0.4.5 the script and those two entries are syntek-author's family-shared bytes, vendored from a syntek-author release tag and never edited here (D85). The rule and the house shape are in `copier.yml`, under `_migrations`.
 - `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md` and, in `.github/`, `CODEOWNERS`, `PULL_REQUEST_TEMPLATE.md` and `ISSUE_TEMPLATE/` — the community files (D83). **None of them ships**: `_subdirectory: template` keeps the whole root out of every generated project, so none needs an `_exclude` line, and a generated project's licence stays its owner's choice. Each repository of the family writes its own. `LICENSE` is the MIT Licence alone, 'Copyright (c) 2026 Sam Bailey t/a Syntek', byte for byte the family's, so GitHub detects it; the licence and its permission for generated projects are in the README's 'Licence' section and `CONTRIBUTING.md` ('Licence'), in the family's words, and `CONTRIBUTING.md` takes contributions under the same terms (inbound = outbound), with no CLA. `SECURITY.md` takes reports only through GitHub's private vulnerability reporting; `CODE_OF_CONDUCT.md` is the Contributor Covenant 2.1 and the one file that names its enforcement contact. `ISSUE_TEMPLATE/` holds GitHub's own YAML files and no pair, a house rule that `.github/CONTEXT.md` explains; `.github/scripts/community-files.sh` checks them all.
 
 ## Cross-references

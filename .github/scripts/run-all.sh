@@ -10,7 +10,11 @@
 #              per-tree audit reads the same twelve renders: nine standalone, three over
 #              syntek-author. byte-identity.sh reads the standalone trees only; on an
 #              over-author tree every other audit reads <render>.owned and checks media's paths
-#              (DESIGN.md Section 7).
+#              (DESIGN.md Section 7). The self-tests also run the --self-test of
+#              migrations/agents-outside-link.py, syntek-author's family-shared script vendored
+#              byte for byte (DESIGN.md D76, D85; syntek-author D48): both stages in temporary
+#              folders, after a normal update and after a stop that left a link, a folder or a
+#              file at .agents, with the printed hand fix run step by step under sh.
 #
 #              Discipline, from SB: every script's --self-test runs FIRST, because a detector
 #              nobody has seen fail is a detector nobody knows works (rule 38); failures
@@ -28,13 +32,14 @@
 #
 #              Numbers are stable identifiers. Append, never renumber.
 #
-#              What it CANNOT check: anything the sixteen cannot. It adds no check of its own
-#              to the template; it only refuses to let one of theirs go unrun or unread.
+#              What it CANNOT check: anything the sixteen and the vendored script's self-test
+#              cannot. It adds no check of its own to the template; it only refuses to let one
+#              of theirs go unrun or unread.
 #
-# SELF-TEST. --self-test points the runner at stub scripts written at runtime, proves an
-#            all-green run is green, then breaks one stub per check and asserts exactly one
-#            finding naming it — and that a stub which SKIPs is listed as SKIP, not PASS, and
-#            is not a finding.
+# SELF-TEST. --self-test points the runner at stub scripts written at runtime (a stub
+#            outside-link script among them), proves an all-green run is green, then breaks one
+#            stub per check and asserts exactly one finding naming it — and that a stub which
+#            SKIPs is listed as SKIP, not PASS, and is not a finding.
 #
 # Requirements: those of the scripts it runs (bash, git, rsync, uvx, python3, ffmpeg; uv and
 #               Playwright's Chromium optional).
@@ -109,6 +114,8 @@ INTEGRATED=(update-test coexist-test)
 ALL_SCRIPTS=(check-template-tokens gen-mode-excludes generate-all shipped-brands byte-identity docs-pairing
              doc-references shipped-seeds skill-conformance line-cap update-test coexist-test
              toolkit-smoke scrub dev-isolation community-files)
+# The vendored family-shared migration (DESIGN.md D85): its own --self-test runs with the others.
+OUTSIDE_PY="$SM_ROOT/$SM_OUTSIDE_MIGRATION"
 
 RESULTS=()   # "name<TAB>status"
 ERRORS=0
@@ -163,6 +170,7 @@ run_checks() {
   if $SELF_TESTS; then
     section "Self-tests"
     for s in "${ALL_SCRIPTS[@]}"; do step "$s --self-test" bash "$SCRIPTS/$s.sh" --self-test; done
+    step "agents-outside-link.py --self-test" python3 "$OUTSIDE_PY" --self-test
   fi
 
   section "The template source"
@@ -259,6 +267,8 @@ fi
 exit 0
 EOF
   done
+  printf 'import os, sys\nsys.exit(1 if os.environ.get("STUB_FAIL") == "agents-outside-link:self:1" else 0)\n' \
+    > "$d/agents-outside-link.py"
 }
 
 probe_skip() { # $1 = label, $2 = the step label that must read SKIP
@@ -273,24 +283,26 @@ probe_skip() { # $1 = label, $2 = the step label that must read SKIP
 }
 
 self_test() {
-  local tmp real_scripts="$SCRIPTS"
+  local tmp real_scripts="$SCRIPTS" real_ol="$OUTSIDE_PY"
   bold "▸ $SCRIPT_NAME --self-test"; log ""
   tmp="$(sm_mktemp)"
   # shellcheck disable=SC2064
   trap "rm -rf '$tmp'" RETURN
   write_stubs "$tmp/stubs"
-  SCRIPTS="$tmp/stubs"; OUT="$tmp/out"; STEP_SINK="$tmp/sink"
+  SCRIPTS="$tmp/stubs"; OUTSIDE_PY="$tmp/stubs/agents-outside-link.py"; OUT="$tmp/out"; STEP_SINK="$tmp/sink"
   export STUB_FAIL="" STUB_SKIP=""
   st_baseline "a run of stubs that all pass"
   STUB_FAIL="scrub:run:1";         probe "check 1 fires when an audit reports findings" "check 1 — scrub reported findings"
   STUB_FAIL="byte-identity:run:2"; probe "check 2 fires when an audit cannot run" "check 2 — byte-identity (standalone renders) could not run"
   STUB_FAIL="line-cap:self:1";     probe "check 3 fires when a self-test stops separating" "check 3 — line-cap --self-test"
+  STUB_FAIL="agents-outside-link:self:1"
+  probe "check 3 fires when the vendored outside-link script's self-test fails" "check 3 — agents-outside-link.py --self-test"
   STUB_FAIL="generate-all:run:1";  probe "check 1 fires when a render fails" "check 1 — generate-all: a render failed"
   STUB_FAIL=""
   STUB_SKIP="coexist-test:run";    probe_skip "a test that SKIPs is listed as SKIP, never PASS, and is not a finding" "coexist-test"
   STUB_SKIP="generate-all:run";    probe_skip "a render that SKIPs is listed as SKIP, never PASS" "generate-all"
   STUB_SKIP=""
-  SCRIPTS="$real_scripts"; OUT=""; STEP_SINK=""
+  SCRIPTS="$real_scripts"; OUTSIDE_PY="$real_ol"; OUT=""; STEP_SINK=""
   st_finish "a run that reports every failure from one that hides them"
 }
 

@@ -17,7 +17,7 @@ Nothing here is rendered, and nothing here writes under `template/`.
 ├── CLAUDE.md                 ← how to run, read, add to and change the audits
 ├── _common.sh                ← sourced library: copier.yml readers, DESIGN.md catalogue, harness, scope, names, fixtures
 ├── syntek-author-names.txt   ← syntek-author's names at the baseline, which media never takes (D27); written only by coexist-test.sh --refresh-names
-├── run-all.sh                ← renders once, runs every self-test and audit, keeps PASS, FINDINGS, ERROR and SKIP apart
+├── run-all.sh                ← renders once, runs every self-test (the vendored outside-link migration's too) and audit, keeps PASS, FINDINGS, ERROR and SKIP apart
 ├── check-template-tokens.sh  ← token syntax, registration, the spine-set discipline, list-membership index gates
 ├── gen-mode-excludes.sh      ← writes, or --check's, copier.yml's generated BRAND_KIND mode-file block
 ├── docs-pairing.sh           ← folder pairs; CONTEXT, CLAUDE, workflow, guide and header shapes; piece briefs; README-only folders
@@ -25,7 +25,7 @@ Nothing here is rendered, and nothing here writes under `template/`.
 ├── scrub.sh                  ← personal data, secrets, voice IDs, Claude Design links, absolute paths
 ├── dev-isolation.sh          ← template skills denied in the root settings; CLAUDE.md excludes; Codex product-skill exclusions, development entrypoints and the real .agents/ folder
 ├── community-files.sh        ← the root's community files (D83): all present as files, not links, LICENSE byte-exact, no Markdown in ISSUE_TEMPLATE/, issue forms and config.yml, one address, private reporting
-├── shipped-seeds.sh          ← seeds wired and empty; copy-only files; D13 settings; output README negations above gates
+├── shipped-seeds.sh          ← seeds wired and empty; copy-only files; D13 settings; output README negations above gates; the vendored family-shared bytes
 ├── skill-conformance.sh      ← DESIGN.md Section 5's contract for every skill and mode file; the ElevenLabs guard
 ├── generate-all.sh           ← renders every BRAND_KIND × profile from a snapshot, and each over syntek-author
 ├── shipped-brands.sh         ← skills, modes, gates, no syntek-author name; output folders ship only their README
@@ -53,12 +53,16 @@ Grouped by what each script reads:
   trees only), `doc-references.sh`, `toolkit-smoke.sh`, and `docs-pairing.sh`, `shipped-seeds.sh`,
   `skill-conformance.sh`, `line-cap.sh` again. On an over-author tree each reads `<render>.owned`,
   the files media's copy added, and checks only those.
-- **Their own scratch projects**: `update-test.sh` (twenty-two checks per brand kind: author work
-  kept, template work delivered, a `BRAND_KIND` change refused, agent copy/update preservation,
-  the v0.4.2 `.agents` migration (converted, idempotent, other shapes left alone) and D76's
-  outside-link hold and restore, the crash pointer the update prints, a removed platform taking
-  exactly the files it generated — the one with the most catalogue paths, so `podcast` where a
-  project has it, with a fixture show register and saved feed that must survive in its folder) and
+- **Their own scratch projects**: `update-test.sh` (twenty-three checks per brand kind: author
+  work kept, template work delivered, a `BRAND_KIND` change refused, agent copy/update
+  preservation, the v0.4.2 `.agents` migration (converted, idempotent, other shapes left alone)
+  and D76's outside-link hold and restore, the hand fix the hold stage itself prints and no bare
+  `mv` anywhere else, the crash pointer the update prints, a stop after the render undone by the
+  hand fix step by step, with `.agents` absent after the stop and standing again after a discard
+  (the bare `mv`'s hazard shown in a control, and a held link committed beside `.agents`
+  reported, not moved), a removed platform taking exactly the files it generated — the one with
+  the most catalogue paths, so `podcast` where a project has it, with a fixture show register
+  and saved feed that must survive in its folder) and
   `coexist-test.sh` (twenty-one checks: the real syntek-author first, then media, both updated
   twice, the other order, a removed platform and media kind, syntek-author's own
   `doc-references.sh` on the composite). Their self-tests run the whole flow against the two
