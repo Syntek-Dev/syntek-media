@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Changed
+
+- **`family-shared.json` records `unreleased` again** after the `v0.5.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9), as `shipped-seeds.sh --write-manifest` writes it on the first commit after a release tag, so check 23 holds. Development only, nothing ships.
+
 ## [0.5.0] - 24/10/2026
 
 Adopts the rest of syntek-author's family-shared set from its `v0.5.0` tag, byte for byte, and holds it to a manifest of media's own (D80): the seven working-practice skills (`grilling`, `grill-me`, `grill-with-docs`, `wayfinder`, `handoff`, `to-questionnaire`, `wait-what`), with a routing-only `MEDIA-<KIND>.md` mode file beside five of them; the two session hooks that hand off instead of compacting, registered in the settings seed with the data-root guard; the `handoffs/` pair; the Gemini CLI and OpenCode files beside the Codex and Antigravity ones, each written only for the coding agents ticked in the new `AGENT_CLIENTS` answer; the Scrapling and code-review-graph MCP servers and their rules; the permissions script; the data-root resolver, beside a map that claims no folder; and the fifteen family-shared questions. Generated projects receive media's own share on their next update (the rules, the skills, guides and workflows that now name the family skills, the `MEDIA-<KIND>.md` mode files, the bridge, the resolver, its empty map and the permissions script), with Copier 9.12.0 or later, `-a .copier-answers.syntek-media.yml` (D3) and the five `GIT_CONFIG_*` variables of `README.md` 'Updating a project'. The update asks the fifteen new questions once; their defaults keep the project as it is (no coding agent, so no client file is written, and the store syntek-author already records, or else `repo`), so no migration is required, and `_message_before_update` says so. A new `_message_after_update` reports where the data-root answers disagree with syntek-author's. Python stays 3.11 or later, and Copier's floor stays 9.12.0.
