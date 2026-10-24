@@ -92,8 +92,8 @@ The mode file adds this kind of book's source, the words it cannot say unaided, 
    are written, and M2 is dated, or the author has the plan with what it still lacks.
 
 4. **Check the narrator, or choose one with the author (AI route).** The ElevenLabs tools come
-   from a server the author configures once at user scope under the name `elevenlabs`; the project
-   adds nothing to `.mcp.json`. Load them with ToolSearch, searching for 'elevenlabs'. Before any
+   from a server the author configures once at user scope under the name `elevenlabs`; the project's
+   `.mcp.json` names no ElevenLabs server. Load them with ToolSearch, searching for 'elevenlabs'. Before any
    batch, run `python3 toolkit/media.py check --setup` and stop on any ElevenLabs finding
    (`.claude/rules/syntek-media/03-production-ethics.md` Section 4). If the tools are absent and
    `command -v espeak-ng` finds the program, offer a scratch read of step 5's chunks for timing

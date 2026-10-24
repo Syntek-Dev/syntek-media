@@ -24,7 +24,7 @@
 - **`DESIGN.md` wins.** Where any file — `copier.yml`, a skill, this manual, a comment — disagrees with it, that file is wrong. Fix the file, or, if the design itself must change, change `DESIGN.md` first.
 - **`DESIGN.md` changes only with the maintainer's explicit approval.** Propose the edit, say which decision (D-number) or section it touches and why, and wait. Never edit it to make a failing audit pass.
 - **Cite it by number.** Comments in `copier.yml` and the audits name the decision or section they implement ("DESIGN.md Section 3.5", "D11"), and a decision media inherits unchanged cites syntek-author's number ("syntek-author D35"), so a later reader can check the reason still holds.
-- **Source repositories are read-only.** `DESIGN.md` names syntek-author, whose conventions this template copies and whose projects it is applied to, and syntek-base, the house Copier idiom. Read them to port a format; never modify them. Under `template/`, syntek-author is named only as a companion ('the spelling skill (syntek-author), where present') and none of its paths, files or skills is backticked; syntek-base is never named there.
+- **Source repositories are read-only.** `DESIGN.md` names syntek-author, whose conventions this template copies and whose projects it is applied to, and syntek-base, the house Copier idiom. Read them to port a format; never modify them. Under `template/`, syntek-author is named only as a companion ('the spelling skill (syntek-author), where present') and none of its paths, files or skills is backticked; syntek-base is never named there. The one exception is the family-shared set vendored from syntek-author's release tag (D80): its text is syntek-author's, byte for byte, and is never edited here (Section 4).
 - **syntek-author is still moving.** Before you port a format, re-read its `DESIGN.md` and the file you are copying, and record any drift that changes this contract in `CHANGELOG.md`.
 - **The community files at the root (D83) change only with the maintainer's explicit approval.** They never ship and never move under `template/`. `LICENSE` holds the MIT text alone, byte for byte the family's, so GitHub detects it. The licence words in the README's 'Licence' section and in `CONTRIBUTING.md` ('Licence') are the family's: they change only together with syntek-author's, never here alone. `community-files.sh` checks the set (Section 8).
 
@@ -32,8 +32,8 @@
 
 Claude Code loads a nested `.claude/skills/` the first time a session reads a file beneath it, and nested `CLAUDE.md` files on demand. Without isolation, opening `template/` would load the product's skills and manuals into this session, where they would fire on description match and steer template development as if it were a production project.
 
-- **Layer 1 — `.claude/settings.json` denies `Skill(<name>)` for every skill under `template/.claude/skills/`**, the ten of DESIGN.md Section 5.1 in that order. An unqualified deny also blocks the nested `template:<name>` form.
-- **Layer 2 — `skillOverrides` sets each of the same ten `"off"`**, so it is not even listed: a deny refuses a skill, but leaves it in the session's skill list.
+- **Layer 1 — `.claude/settings.json` denies `Skill(<name>)` for every skill under `template/.claude/skills/`**, the ten of DESIGN.md Section 5.1, then the seven family-shared skills of Section 5.3 (D80), in that order. An unqualified deny also blocks the nested `template:<name>` form.
+- **Layer 2 — `skillOverrides` sets each of the same seventeen `"off"`**, so it is not even listed: a deny refuses a skill, but leaves it in the session's skill list.
 - **Layer 3 — `claudeMdExcludes`** keeps `template/**/CLAUDE.md` and everything under `template/.claude/` out of this session's memory.
 - **Never invoke a template skill.** If one appears invocable (listed as `template:<name>`, or offered for files under `template/`), the deny list has a gap: stop and report it rather than using it.
 - **Adding a skill to the template means adding its deny line and its `skillOverrides` entry.** That is a change to this repository's permission settings, so it is the maintainer's to make or approve; propose the exact lines.
@@ -52,12 +52,13 @@ Every file under `template/` is rendered (`_templates_suffix: ""`) with the hous
 | `<: if X :>…<: endif :>` | A block |
 | `<~ … ~>` | A comment (never rendered) |
 
-- **Registered tokens** are the question keys in `copier.yml` (every top-level `UPPER_SNAKE` key) plus `_copier_operation`, `_copier_answers` and `_copier_conf`. Nothing else may appear inside a delimiter. `check-template-tokens.sh` derives the set from `copier.yml`, so only questions may be top-level `UPPER_SNAKE` keys there.
+- **Registered tokens** are the question keys in `copier.yml` (every top-level `UPPER_SNAKE` key) plus `_copier_operation`, `_copier_answers` and `_copier_conf`. Under `template/`, nothing else may appear inside a delimiter. `check-template-tokens.sh` scans `template/` only and derives the set from `copier.yml`, so only questions may be top-level `UPPER_SNAKE` keys there. `copier.yml`'s own messages, validators and defaults may also read Copier's names (`_external_data`, `_folder_name`, `UNSET`), as the family-shared questions block does (D80).
 - **Identity and locale tokens may appear anywhere:** `BRAND_NAME`, `BRAND_SLUG`, `OWNER_NAME`, `OWNER_FIRST_NAME`, `DATE`, `TIMEZONE`.
-- **Variant tokens and `<: if :>` blocks appear only in the spine set** (DESIGN.md Section 2): the root spine (`.claude/rules/syntek-media/*.md` and `.copier-answers.syntek-media.yml`); the nineteen copy-only shared paths; every seed and seed-once example; and **index files**. Variant tokens are `BRAND_KIND`, `PLATFORMS`, `MEDIA_KINDS`, `BRAND_DESCRIPTION`, `AUDIENCE_TEST`, `SEED_EXAMPLES`, `MODEL_MECHANICAL` and every later answer.
+- **Variant tokens and `<: if :>` blocks appear only in the spine set** (DESIGN.md Section 2): the root spine (`.claude/rules/syntek-media/*.md` and `.copier-answers.syntek-media.yml`); the copy-only shared paths (thirty-six since 0.5.0, D11, D80); every seed and seed-once example; and **index files**. Variant tokens are `BRAND_KIND`, `PLATFORMS`, `MEDIA_KINDS`, `BRAND_DESCRIPTION`, `AUDIENCE_TEST`, `SEED_EXAMPLES`, `MODEL_MECHANICAL` and every later answer.
 - **An index file** is a `CONTEXT.md` or `CLAUDE.md` whose folder is an ancestor of a gated path. It wraps each row, tree line or cross-reference that names a gated path in `<: if GATE :>…<: endif :>`, where `GATE` is the exact string of DESIGN.md Section 3.5 — the same string `copier.yml` negates for that path — or names the path only in prose. It never gates a row on `SEED_EXAMPLES` and never names an example path (D43).
 - **Every other shipped file is shared and byte-identical** in every render that ships it. Put a brand-kind difference in a mode file and a platform or media-kind difference in a gated file, never in a conditional. A shared or mode file never backticks a path or skill gated by `PLATFORMS` or `MEDIA_KINDS`: it names it in prose ("the audiobook folder, where the project makes audiobooks"), or the line carries `<!-- doc-references: variant-only -->`. `byte-identity.sh` enforces this.
 - **A multiselect is a list.** Gate with `'tiktok' in PLATFORMS`, never `PLATFORMS == 'tiktok'`; render it with `<% PLATFORMS | join(', ') %>`, never a loop variable inside `<% %>` (the token audit rejects lower-case names), or one gated line per item.
+- **Vendored family files are never edited** (D80). Their bytes are syntek-author's release tag's, recorded in the root `family-shared.json`. Three of them, `template/.codex/config.toml`, `template/.gemini/settings.json` and `template/opencode.json`, carry syntek-author's own tokens on the family-shared questions by design: never 'fix' them. Every other vendored file, and the 'rules-web-tools' block, holds no delimiter; the 'questions' block in `copier.yml` uses them as any question's validator does. A change goes to syntek-author first and arrives with its next tag (7.9).
 - **Never put a token inside `_…_` emphasis.** Prettier rewrites the underscores and the token stops rendering.
 - **Never write a delimiter you do not mean.** HTML, CSS, TOML, SRT and ffmpeg filter strings may hold `{{` and `{%` freely, because the house delimiters differ, but never `<%`, `<:` or `<~`. A guide that must show one wraps it in `<: raw :>…<: endraw :>`; otherwise rephrase.
 
@@ -71,12 +72,12 @@ Every file under `template/` is rendered (`_templates_suffix: ""`) with the hous
 
 ## 6. House formats (the owner is `DESIGN.md`; this is the checklist)
 
-- **Every directory under `template/` has a `CONTEXT.md` and `CLAUDE.md` pair**, except syntek-author's exceptions (`build/`, `.git/`, `audio/`, `__pycache__/`, `node_modules/`, `.claude/rules/`, the inside of each skill folder, each `drafts/` and each `.base/`), the template root (`CONTEXT.md` only), and media's own (D42): each `generated/`, `renders/` and `raw/` folder carries only its `README.md`, and a folder inside one carries nothing at all (D64). A `handoffs/` folder created in a standalone project carries no pair at all, nor does the `.agents/` folder (D76). Every piece folder carries its own pair.
+- **Every directory under `template/` has a `CONTEXT.md` and `CLAUDE.md` pair**, except syntek-author's exceptions (`build/`, `.git/`, `audio/`, `__pycache__/`, `node_modules/`, `.claude/rules/`, the inside of each skill folder, each `drafts/` and each `.base/`), the template root (`CONTEXT.md` only), and media's own (D42): each `generated/`, `renders/` and `raw/` folder carries only its `README.md`, and a folder inside one carries nothing at all (D64). The `.agents/` folder carries no pair (D76); since 0.5.0 `handoffs/`, `.claude/hooks/` and `.gemini/` carry the family's pairs, vendored (D42, D80). Every piece folder carries its own pair.
 - **Metadata header** on guides, rules, STEPS, CHECKLIST and seeds: `**Last Updated**: <%DATE%> **Version**: 0.1.0 **Maintained By**: <%OWNER_NAME%>`, then `**Language**: British English (en_GB)`.
 - **Workflow folders** hold `CONTEXT.md`, `CLAUDE.md`, `STEPS.md` and `CHECKLIST.md`, with routing frontmatter (`workflow`, `phase`, `skills`, `model`; no `agent` key). STEPS steps open `> **Skill:** … · **Guide:** …` and end `_Substantive._` or `_Mechanical._`; CHECKLIST items end ` · _opus_` or ` · _sonnet_`. Every CHECKLIST's `> **See**` line names its guide and the ladder gate it serves, as `M2 (briefed → scripted)`, or the fixed gate-less form of DESIGN.md D17.
 - **Guides** follow DESIGN.md Section 4.3 (54–82 lines; `skills:` lists only skills that ship whenever the guide does). **Skills** follow DESIGN.md Section 5, moded skills carry the mode paragraph verbatim, and mode files use the four H2s of D7.
 - **Cite a workflow by its full folder name** (`production/workflows/02-make-a-voiceover/`), never by its number alone (D32).
-- **Companions are named, never shipped** (D10): unbackticked, never in `skills:`, always 'the spelling skill (syntek-author), where present'.
+- **Companions are named, never shipped** (D10): unbackticked, never in `skills:`, always 'the spelling skill (syntek-author), where present'. The four former companions `grilling`, `grill-with-docs`, `handoff` and `wayfinder` ship since 0.5.0 as family-shared skills (D80), with `grill-me`, `to-questionnaire` and `wait-what`: name them as 'the `grill-with-docs` skill, where present' (they are copy-only, so a project updated from before 0.5.0 lacks them), never in `skills:`, and put media's routing in their `MEDIA-<KIND>.md` mode files.
 - **Every instructional `.md` stays within 300 lines** (D31); `src/` artefacts and `README.md` are exempt.
 - **Locale:** en_GB, single quotation marks, DD/MM/YYYY in prose, `DD-MM-YYYY` in filenames, timecodes `HH:MM:SS.mmm`, "Section 3.2" and never the section sign.
 
@@ -88,13 +89,13 @@ Each recipe ends the same way: run the audits (Section 8) and add a `CHANGELOG.m
 
 **7.1 Add a skill.**
 
-1. Add its row to DESIGN.md Section 5 (approved first, Section 2 above). A name in `syntek-author-names.txt` is refused (D27).
+1. Add its row to DESIGN.md Section 5 (approved first, Section 2 above). A name in `syntek-author-names.txt` is refused (D27). A family-shared skill is never added or written here: it arrives with a syntek-author tag (7.9).
 2. Write `template/.claude/skills/<name>/SKILL.md` to the conformance rules of DESIGN.md Section 5. A moded skill gets one mode file per brand kind (7.2).
 3. A gated skill gets one `_exclude` line in its block of `copier.yml`: `"<: if not (GATE) :>/.claude/skills/<name><: endif :>"`.
 4. Add its row to `template/.claude/rules/syntek-media/02-skills.md` Section 3, wrapped in its gate, and to the skill catalogue in `.github/scripts/_common.sh`.
 5. Propose its `Skill(<name>)` deny line and its `"<name>": "off"` `skillOverrides` entry for the root `.claude/settings.json` and its line in the user-level Codex recipe of `.codex/CLAUDE.md` (Section 3).
 
-**7.2 Add or remove a mode file.** Write `BUSINESS.md`, `FICTION.md` or `NONFICTION.md` beside the `SKILL.md` with the four H2s, then regenerate the block of `copier.yml` between the `BEGIN`/`END generated mode excludes` markers:
+**7.2 Add or remove a mode file.** Write `BUSINESS.md`, `FICTION.md` or `NONFICTION.md` beside the `SKILL.md` with the four H2s (beside a family-shared skill, `MEDIA-BUSINESS.md`, `MEDIA-FICTION.md` or `MEDIA-NONFICTION.md`, routing only: D7 as D80 amends it), then regenerate the block of `copier.yml` between the `BEGIN`/`END generated mode excludes` markers:
 
 ```bash
 bash .github/scripts/gen-mode-excludes.sh
@@ -119,7 +120,7 @@ Copier obeys the last matching pattern, so a negation below a shut gate would re
 
 **7.5 Add a seed.** Add it to DESIGN.md Section 3.1 and to `_skip_if_exists` in `copier.yml`, **anchored with a leading slash** (an unanchored name matches at every depth and would freeze template-owned files of the same name). Ship it empty of entries. A gated seed also needs its `_exclude` line. **Never stop shipping a seed** without a migration that preserves it first: a seed the template drops is deleted from every project on its next update, filled in or not. **A shared root file, once shipped, is never removed from `template/` or renamed, and neither of its two lines in `copier.yml` is ever deleted** (D11, DESIGN.md Section 10).
 
-**7.6 Add a question.** Add it to DESIGN.md Section 2 and to `copier.yml` in its group: an `UPPER_SNAKE` key, `>-` help written to the person answering, a validator as `<: if bad :>message<: endif :>`, and `when:` with its `BRAND_KIND` test if it is hidden for some kinds. A default must never open a gate in a render that hides the question, and `_external_data` is read in a validator only (D14). Then add a row to the questions table in `README.md` and the key to all three `examples/*.answers.yml`.
+**7.6 Add a question.** Add it to DESIGN.md Section 2 and to `copier.yml` in its group: an `UPPER_SNAKE` key, `>-` help written to the person answering, a validator as `<: if bad :>message<: endif :>`, and `when:` with its `BRAND_KIND` test if it is hidden for some kinds. A default must never open a gate in a render that hides the question, and `_external_data` is read only in `BRAND_KIND`'s validator, the family-shared questions block and `_message_after_update` (D14 as D80 widens it). The family-shared questions are syntek-author's block, byte for byte between its marker lines: never add a question inside it. Then add a row to the questions table in `README.md` and the key to all three `examples/*.answers.yml`.
 
 **7.7 Rename or move a folder.** Do not, if it can hold author work: names and numbers are frozen. If a release must, it ships a version-keyed migration in the same commit (`copier.yml`, under `_migrations`, has the house shape). The same applies when a release changes what a seed must contain, or stops shipping one. Every migration is version-keyed, with one stated exception: D76's `agents-outside-link.py` hold/restore pair, unversioned so that it runs on every update, at the top of `_migrations`. Never add another unversioned entry without the maintainer's approval and a DESIGN.md decision.
 
@@ -132,6 +133,13 @@ Copier obeys the last matching pattern, so a negation below a shut gate would re
 5. Its row in `README.md`'s platforms or media-kinds table, and its rows in `_common.sh`'s path catalogue.
 6. Turn it on in at least one `examples/*.answers.yml`, so the three still cover every value, and check that it appears in the `all` renders and not in the `minimal` ones.
 
+**7.9 Adopt a new syntek-author tag (the family-shared set, D80).** Change `DESIGN.md` first: D80 names the tag media vendors from.
+
+1. Re-read the tag's `DESIGN.md`, its `family-shared.json` and its release notes for media. Take each entry and block with `git show <tag>:<path>` from a clean clone, byte for byte, under media's names (`syntek-media` for `<template>`); never edit one.
+2. A new family path gets its `copier.yml` lines (7.5, 7.3) and its `_common.sh` rows; `SM_FAMILY_SHARED` lists every vendored file.
+3. Bump `SM_FAMILY_RELEASE` in `_common.sh` and `SYNTEK_AUTHOR_TAG` in the workflow together, with the names refresh (Section 9).
+4. Write the record: `bash .github/scripts/shipped-seeds.sh --write-manifest`, never a hand edit of `family-shared.json`. `coexist-test.sh` check 22 then holds it to the tag's own, entry by entry.
+
 ## 8. Before you commit
 
 - **Run the audits.** All of them, or at least those your change touches:
@@ -140,7 +148,7 @@ Copier obeys the last matching pattern, so a negation below a shut gate would re
   bash .github/scripts/run-all.sh --author ../syntek-author
   ```
 
-  `generate-all.sh` renders every brand kind and profile from a copy of the working tree; `shipped-brands.sh <tree>` checks one rendered tree. A change to `copier.yml`, a gate or a seed is not done until a render proves it. The renders over syntek-author and `coexist-test.sh` need a syntek-author checkout (`--author DIR`); without one they report SKIP, which is never a pass.
+  `generate-all.sh` renders every brand kind and profile from a copy of the working tree; `shipped-brands.sh <tree>` checks one rendered tree. A change to `copier.yml`, a gate or a seed is not done until a render proves it. The renders over syntek-author, the over-author half of `update-test.sh` check 24 and `coexist-test.sh` need a syntek-author checkout (`--author DIR`); without one they report SKIP, which is never a pass. Check 24 also needs this repository's release tags, so it SKIPs in a clone made without them.
 - **Never commit rendered output, audio, video or images.** Renders go to a temporary directory and stay there; fixtures are generated at run time (`ffmpeg -f lavfi …`).
 - **Commit only when the maintainer asks**, on a branch, with a `CHANGELOG.md` entry.
 
@@ -149,6 +157,7 @@ Copier obeys the last matching pattern, so a negation below a shut gate would re
 - `VERSION` and `CHANGELOG.md` move together; the release is tagged `vX.Y.Z`. `copier copy` takes the latest tag, so unreleased work is rendered with `--vcs-ref=HEAD`.
 - **Never tag a release while `coexist-test.sh` reports SKIP** (D27). Run it against a syntek-author checkout and see it pass.
 - **Refresh the frozen names when syntek-author has moved:** `bash .github/scripts/coexist-test.sh --refresh-names --author DIR` rewrites `syntek-author-names.txt`; bump `SYNTEK_AUTHOR_TAG` in `.github/workflows/audit-template.yml` to the same release in the same commit (D85). Re-check every new name against media's paths before anything else.
+- **`family-shared.json` follows the family's release rule** (syntek-author D48): `v` + `VERSION` on the release commit and on the tagged one. The first commit after the tag runs `bash .github/scripts/shipped-seeds.sh --write-manifest`, which records `unreleased`; until then `shipped-seeds.sh` check 23 fails.
 - **Every release entry in `CHANGELOG.md` names the syntek-author baseline** its coexist test passed against: the commit, and the date it was read.
 - A migration is keyed to the release its change shipped in, never the release somebody noticed. The one exception is D76's unversioned outside-link pair (`migrations/agents-outside-link.py`), which runs on every update and is keyed to none.
 - Updates of generated projects need `-a .copier-answers.syntek-media.yml` (D3); every instruction that shows an update command says so, and gives it with Git's housekeeping off (the five `GIT_CONFIG_*` variables of `README.md` 'Updating a project') or beside a sentence that says to add them. A comment, an issue-form placeholder, or a line that points to a section giving the protected form may show it bare.

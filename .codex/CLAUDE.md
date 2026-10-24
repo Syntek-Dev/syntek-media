@@ -18,6 +18,11 @@ Keep product skills and manuals out of Codex template-development work.
   [[skills.config]]
   path = '/ABSOLUTE/PATH/TO/syntek-media/template/.claude/skills/voiceover/SKILL.md'
   enabled = false
+- One rule for each of the seventeen folders under template/.claude/skills/: the ten media
+  skills of DESIGN.md Section 5.1 and the seven family skills of Section 5.3 (D80) — grilling,
+  grill-with-docs, grill-me, handoff, wayfinder, to-questionnaire and wait-what — which Codex
+  finds through template/.agents/skills like the others. A rule is matched on the path, so it
+  never hides a user-level skill of the same name elsewhere.
 - When an approved product skill is added, add its line to that recipe; verify with
   `.github/scripts/dev-isolation.sh` and the relevant source audits.
 

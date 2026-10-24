@@ -10,11 +10,15 @@
 #              per-tree audit reads the same twelve renders: nine standalone, three over
 #              syntek-author. byte-identity.sh reads the standalone trees only; on an
 #              over-author tree every other audit reads <render>.owned and checks media's paths
-#              (DESIGN.md Section 7). The self-tests also run the --self-test of
-#              migrations/agents-outside-link.py, syntek-author's family-shared script vendored
-#              byte for byte (DESIGN.md D76, D85; syntek-author D48): both stages in temporary
+#              (DESIGN.md Section 7). The self-tests also run the --self-test of each
+#              family-shared script media vendors byte for byte (DESIGN.md D76, D80, D85;
+#              syntek-author D48): migrations/agents-outside-link.py (both stages in temporary
 #              folders, after a normal update and after a stop that left a link, a folder or a
-#              file at .agents, with the printed hand fix run step by step under sh.
+#              file at .agents, with the printed hand fix run step by step under sh), and the
+#              data-root resolver and the permissions script under media's names,
+#              template/.claude/syntek-media-dataroot.py and syntek-media-permissions.py, which
+#              ship in every project. Those three run with SYNTEK_DATA_ROOT unset (env -u), so
+#              no self-test ever reaches a maintainer's real data root.
 #
 #              Discipline, from SB: every script's --self-test runs FIRST, because a detector
 #              nobody has seen fail is a detector nobody knows works (rule 38); failures
@@ -32,14 +36,15 @@
 #
 #              Numbers are stable identifiers. Append, never renumber.
 #
-#              What it CANNOT check: anything the sixteen and the vendored script's self-test
+#              What it CANNOT check: anything the sixteen and the vendored scripts' self-tests
 #              cannot. It adds no check of its own to the template; it only refuses to let one
 #              of theirs go unrun or unread.
 #
-# SELF-TEST. --self-test points the runner at stub scripts written at runtime (a stub
-#            outside-link script among them), proves an all-green run is green, then breaks one
-#            stub per check and asserts exactly one finding naming it — and that a stub which
-#            SKIPs is listed as SKIP, not PASS, and is not a finding.
+# SELF-TEST. --self-test points the runner at stub scripts written at runtime (a stub for each
+#            vendored script among them), proves an all-green run is green, then breaks one stub
+#            per check and asserts exactly one finding naming it — and that a stub which SKIPs is
+#            listed as SKIP, not PASS, and is not a finding, and that no vendored script's
+#            self-test sees a SYNTEK_DATA_ROOT the runner itself holds.
 #
 # Requirements: those of the scripts it runs (bash, git, rsync, uvx, python3, ffmpeg; uv and
 #               Playwright's Chromium optional).
@@ -76,8 +81,9 @@ Usage: run-all.sh [--out DIR] [--keep] [--author DIR] [--no-self-test] [--skip-i
 
   --out DIR           Render into DIR (default: a temporary directory)
   --keep              Keep the renders afterwards
-  --author DIR        The syntek-author repository, passed to generate-all.sh and
-                      coexist-test.sh (default: $SYNTEK_AUTHOR_DIR, else ../syntek-author)
+  --author DIR        The syntek-author repository, passed to generate-all.sh,
+                      update-test.sh (check 24) and coexist-test.sh (default:
+                      $SYNTEK_AUTHOR_DIR, else ../syntek-author)
   --no-self-test      Skip each script's --self-test (faster; not for CI)
   --skip-integration  Skip update-test and coexist-test
   --require-ffmpeg    Passed to toolkit-smoke.sh
@@ -114,8 +120,11 @@ INTEGRATED=(update-test coexist-test)
 ALL_SCRIPTS=(check-template-tokens gen-mode-excludes generate-all shipped-brands byte-identity docs-pairing
              doc-references shipped-seeds skill-conformance line-cap update-test coexist-test
              toolkit-smoke scrub dev-isolation community-files)
-# The vendored family-shared migration (DESIGN.md D85): its own --self-test runs with the others.
+# The vendored family-shared scripts (DESIGN.md D80, D85): each one's own --self-test runs with
+# the others, the outside-link migration at the root and the two that ship under template/.
 OUTSIDE_PY="$SM_ROOT/$SM_OUTSIDE_MIGRATION"
+DATAROOT_PY="$SM_ROOT/template/.claude/syntek-media-dataroot.py"
+PERMISSIONS_PY="$SM_ROOT/template/.claude/syntek-media-permissions.py"
 
 RESULTS=()   # "name<TAB>status"
 ERRORS=0
@@ -170,7 +179,9 @@ run_checks() {
   if $SELF_TESTS; then
     section "Self-tests"
     for s in "${ALL_SCRIPTS[@]}"; do step "$s --self-test" bash "$SCRIPTS/$s.sh" --self-test; done
-    step "agents-outside-link.py --self-test" python3 "$OUTSIDE_PY" --self-test
+    step "agents-outside-link.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$OUTSIDE_PY" --self-test
+    step "syntek-media-dataroot.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$DATAROOT_PY" --self-test
+    step "syntek-media-permissions.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$PERMISSIONS_PY" --self-test
   fi
 
   section "The template source"
@@ -222,8 +233,8 @@ run_checks() {
     section "Update and coexistence"
     for s in "${INTEGRATED[@]}"; do
       case "$s" in
-        coexist-test) step "$s" bash "$SCRIPTS/$s.sh" --root "$SM_ROOT" "${AUTHOR_ARGS[@]}" ;;
-        *)            step "$s" bash "$SCRIPTS/$s.sh" --root "$SM_ROOT" ;;
+        coexist-test|update-test) step "$s" bash "$SCRIPTS/$s.sh" --root "$SM_ROOT" "${AUTHOR_ARGS[@]}" ;;
+        *)                        step "$s" bash "$SCRIPTS/$s.sh" --root "$SM_ROOT" ;;
       esac
     done
   fi
@@ -267,8 +278,10 @@ fi
 exit 0
 EOF
   done
-  printf 'import os, sys\nsys.exit(1 if os.environ.get("STUB_FAIL") == "agents-outside-link:self:1" else 0)\n' \
-    > "$d/agents-outside-link.py"
+  for s in agents-outside-link syntek-media-dataroot syntek-media-permissions; do
+    printf 'import os, sys\nif "SYNTEK_DATA_ROOT" in os.environ:\n    print("%s: saw SYNTEK_DATA_ROOT"); sys.exit(2)\nsys.exit(1 if os.environ.get("STUB_FAIL") == "%s:self:1" else 0)\n' \
+      "$s" "$s" > "$d/$s.py"
+  done
 }
 
 probe_skip() { # $1 = label, $2 = the step label that must read SKIP
@@ -283,13 +296,14 @@ probe_skip() { # $1 = label, $2 = the step label that must read SKIP
 }
 
 self_test() {
-  local tmp real_scripts="$SCRIPTS" real_ol="$OUTSIDE_PY"
+  local tmp real_scripts="$SCRIPTS" real_ol="$OUTSIDE_PY" real_dr="$DATAROOT_PY" real_pm="$PERMISSIONS_PY"
   bold "▸ $SCRIPT_NAME --self-test"; log ""
   tmp="$(sm_mktemp)"
   # shellcheck disable=SC2064
   trap "rm -rf '$tmp'" RETURN
   write_stubs "$tmp/stubs"
   SCRIPTS="$tmp/stubs"; OUTSIDE_PY="$tmp/stubs/agents-outside-link.py"; OUT="$tmp/out"; STEP_SINK="$tmp/sink"
+  DATAROOT_PY="$tmp/stubs/syntek-media-dataroot.py"; PERMISSIONS_PY="$tmp/stubs/syntek-media-permissions.py"
   export STUB_FAIL="" STUB_SKIP=""
   st_baseline "a run of stubs that all pass"
   STUB_FAIL="scrub:run:1";         probe "check 1 fires when an audit reports findings" "check 1 — scrub reported findings"
@@ -297,12 +311,19 @@ self_test() {
   STUB_FAIL="line-cap:self:1";     probe "check 3 fires when a self-test stops separating" "check 3 — line-cap --self-test"
   STUB_FAIL="agents-outside-link:self:1"
   probe "check 3 fires when the vendored outside-link script's self-test fails" "check 3 — agents-outside-link.py --self-test"
+  STUB_FAIL="syntek-media-dataroot:self:1"
+  probe "check 3 fires when the vendored data-root resolver's self-test fails" "check 3 — syntek-media-dataroot.py --self-test"
+  STUB_FAIL="syntek-media-permissions:self:1"
+  probe "check 3 fires when the vendored permissions script's self-test fails" "check 3 — syntek-media-permissions.py --self-test"
   STUB_FAIL="generate-all:run:1";  probe "check 1 fires when a render fails" "check 1 — generate-all: a render failed"
   STUB_FAIL=""
   STUB_SKIP="coexist-test:run";    probe_skip "a test that SKIPs is listed as SKIP, never PASS, and is not a finding" "coexist-test"
   STUB_SKIP="generate-all:run";    probe_skip "a render that SKIPs is listed as SKIP, never PASS" "generate-all"
   STUB_SKIP=""
-  SCRIPTS="$real_scripts"; OUTSIDE_PY="$real_ol"; OUT=""; STEP_SINK=""
+  export SYNTEK_DATA_ROOT="$tmp/decoy"
+  probe_clean "no vendored script's self-test sees a SYNTEK_DATA_ROOT the runner itself holds"
+  unset SYNTEK_DATA_ROOT
+  SCRIPTS="$real_scripts"; OUTSIDE_PY="$real_ol"; DATAROOT_PY="$real_dr"; PERMISSIONS_PY="$real_pm"; OUT=""; STEP_SINK=""
   st_finish "a run that reports every failure from one that hides them"
 }
 

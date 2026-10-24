@@ -16,7 +16,7 @@ read-only, so only this discipline and the ask rules stand between a request and
 
 ## Setting up the server
 
-The project adds nothing to `.mcp.json`. The base path must **contain the project**: files land
+The project's `.mcp.json` names no ElevenLabs server. The base path must **contain the project**: files land
 there when no `output_directory` is given, and speech-to-text reads no input file from anywhere
 else ('outside of allowed directory'; a symlink does not help). Use `$HOME`, or the nearest folder
 holding every project. Export the key in your shell (never type or commit it), then re-add:

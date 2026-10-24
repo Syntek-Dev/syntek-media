@@ -10,14 +10,14 @@ model: opus
 **Last Updated**: <%DATE%> **Version**: 0.1.0 **Maintained By**: <%OWNER_NAME%>
 **Language**: British English (en_GB)
 
-> **See** `scripts/docs/reference/the-piece-ladder.md` and the grill-with-docs skill
-> (syntek-author), where present. This procedure passes gate M1 (idea → briefed). Gates are cited
+> **See** `scripts/docs/reference/the-piece-ladder.md` and the `grill-with-docs` skill,
+> where present. This procedure passes gate M1 (idea → briefed). Gates are cited
 > from the ladder guide by number and the move they guard, and never restated here.
 
 ## Pre-Conditions
 
 - [ ] Read `.claude/CLAUDE.md` and `.claude/MEMORY.md`, then this folder's `CONTEXT.md` and `CLAUDE.md`. · _sonnet_
-- [ ] Checked whether the grill-with-docs skill (syntek-author) is present; where it is not, said so and questioned in rounds instead. · _sonnet_
+- [ ] Checked whether the `grill-with-docs` skill is present; where it is not, said so and questioned in rounds instead. · _sonnet_
 - [ ] The piece and its working title confirmed with the author. · _opus_
 
 ## Execution Checklist

@@ -16,11 +16,17 @@
 #                - logging, findings, the named SKIP and the self-test harness (SB house shape);
 #                - copier.yml readers: list items, registered keys, question choices, gated
 #                  paths, gate negation (list membership included: DESIGN.md D15);
-#                - the DESIGN.md catalogue: skills, mode files, gated paths, seeds, examples,
-#                  the nineteen copy-only shared paths (one retired), the spine set, the identity tokens, the
-#                  companion skills, pair-only folders and pair exemptions, the D13 allow, ask
-#                  and deny lists, the _message_after_copy lines, and the D83 community files
-#                  and private-reporting URL;
+#                - the DESIGN.md catalogue: skills (media's and the seven family skills),
+#                  mode files, gated paths (AGENT_CLIENTS's included), seeds, examples, the
+#                  copy-only shared paths (one retired) and the two client folders' update
+#                  gates, the spine set, the identity tokens, the companion skills, pair-only
+#                  folders and pair exemptions, the D13 allow, ask, deny and hook lists, the
+#                  _message_after_copy lines, and the D83 community files and
+#                  private-reporting URL;
+#                - SM_FAMILY_SHARED, the family-shared set media vendors from one syntek-author
+#                  tag (DESIGN.md D80, D85; syntek-author D48), the one list every audit's
+#                  family exemption reads, and sm_family_py, the reader (and writer) of the
+#                  root family-shared.json that records it;
 #                - a reader for a rendered tree's answers (multiselect lists included), a gate
 #                  evaluator, and the over-author scope (<render>.owned, DESIGN.md Section 7);
 #                - syntek-author's names: the frozen file (syntek-author-names.txt, D27), the
@@ -34,9 +40,12 @@
 #              syntek-author's names are never transcribed here: they are read from
 #              syntek-author-names.txt, which only `coexist-test.sh --refresh-names` writes.
 #
-#              Nothing here writes to the repository. Fixtures and snapshots go to mktemp.
+#              Nothing here writes to the repository, except sm_family_py's write mode, which
+#              only shipped-seeds.sh --write-manifest runs: it rewrites the root
+#              family-shared.json from the vendored files. Fixtures and snapshots go to mktemp.
 #
-# Requirements: bash 4.3+, git, grep, awk, sed. rsync and uvx only for the rendering helpers.
+# Requirements: bash 4.3+, git, grep, awk, sed. rsync and uvx only for the rendering helpers;
+#               python3 for sm_family_py.
 
 # This file is a library: its catalogue variables are read by the scripts that source it.
 # shellcheck disable=SC2034
@@ -285,16 +294,24 @@ negate_gate() {
 #
 # Gates are written in a small vocabulary so a tree's answers can be tested against them:
 #   always · optional · business · fiction · nonfiction · author · seed · p:<platform> ·
-#   k:<media kind> — joined with & for "and". p: and k: are list membership in PLATFORMS and
-#   MEDIA_KINDS, which are always asked and never empty, so they carry no BRAND_KIND test
-#   (DESIGN.md D15). `author` (BRAND_KIND != 'business') is vocabulary only: no Section 3.5
-#   path ships on it, so it is not a shipping gate an index row may use.
+#   k:<media kind> · agents · agents-md · gemini-md · cl-<client> — joined with & for "and".
+#   p: and k: are list membership in PLATFORMS and MEDIA_KINDS, which are always asked and
+#   never empty, so they carry no BRAND_KIND test (DESIGN.md D15). `author` (BRAND_KIND !=
+#   'business') is vocabulary only: no Section 3.5 path ships on it, so it is not a shipping
+#   gate an index row may use. The last four are the client gates of the family-shared
+#   question block (DESIGN.md D80; syntek-author D47), as syntek-author's audits spell them:
+#   `agents` is AGENT_CLIENTS | length > 0 (the .agents folder), `agents-md` Codex or OpenCode
+#   (AGENTS.md), `gemini-md` Gemini CLI or Antigravity (GEMINI.md), `cl-<client>` one client's
+#   own files. AGENT_CLIENTS is always asked and may be empty: a project that ticks none is
+#   Claude-only.
 
 SM_KINDS="business author-fiction author-nonfiction"
 # The three own-channel platforms joined in 0.2.0 (DESIGN.md D53); the per-kind defaults below
 # did not change (D54).
 SM_PLATFORMS="youtube tiktok instagram linkedin facebook podcast website blog newsletter"
 SM_MEDIA_KINDS="short-video long-video podcast audiobook trailer voiceover"
+# AGENT_CLIENTS's values, the family's gate strings (syntek-author D47), never renamed.
+SM_CLIENTS="codex gemini-cli antigravity opencode"
 
 declare -A SM_GATE_EXPR=(
   [business]="BRAND_KIND == 'business'"
@@ -304,11 +321,16 @@ declare -A SM_GATE_EXPR=(
 )
 for _sm_x in $SM_PLATFORMS;   do SM_GATE_EXPR["p:$_sm_x"]="'$_sm_x' in PLATFORMS"; done
 for _sm_x in $SM_MEDIA_KINDS; do SM_GATE_EXPR["k:$_sm_x"]="'$_sm_x' in MEDIA_KINDS"; done
+for _sm_x in $SM_CLIENTS;     do SM_GATE_EXPR["cl-$_sm_x"]="'$_sm_x' in AGENT_CLIENTS"; done
+SM_GATE_EXPR[agents]="AGENT_CLIENTS | length > 0"
+SM_GATE_EXPR[agents-md]="'codex' in AGENT_CLIENTS or 'opencode' in AGENT_CLIENTS"
+SM_GATE_EXPR[gemini-md]="'gemini-cli' in AGENT_CLIENTS or 'antigravity' in AGENT_CLIENTS"
 unset _sm_x
 
-# The shipping gates of DESIGN.md Section 3.5, in the vocabulary: the three mode gates and
-# every list-membership gate. Index rows may use exactly these (check-template-tokens.sh check 9).
-SM_SHIPPING_ATOMS="business fiction nonfiction$(for p in $SM_PLATFORMS; do printf ' p:%s' "$p"; done)$(for k in $SM_MEDIA_KINDS; do printf ' k:%s' "$k"; done)"
+# The shipping gates of DESIGN.md Section 3.5, in the vocabulary: the three mode gates, every
+# list-membership gate and the client gates. Index rows may use exactly these
+# (check-template-tokens.sh check 9).
+SM_SHIPPING_ATOMS="business fiction nonfiction$(for p in $SM_PLATFORMS; do printf ' p:%s' "$p"; done)$(for k in $SM_MEDIA_KINDS; do printf ' k:%s' "$k"; done) agents agents-md gemini-md$(for c in $SM_CLIENTS; do printf ' cl-%s' "$c"; done)"
 
 # Per-kind defaults (DESIGN.md Section 2), as values; and the syntek-author variant each kind
 # is applied over (DESIGN.md D4, D28).
@@ -344,6 +366,32 @@ EOF
 
 SM_MODE_FILES="BUSINESS.md FICTION.md NONFICTION.md"
 
+# The family skills (DESIGN.md D80, its own table in Section 5; syntek-author D51): the seven
+# working-practice skills whose SKILL.md media vendors byte for byte (SM_FAMILY_SHARED below),
+# copy-only, and beside five of them media's own routing-only mode files, MEDIA-BUSINESS.md,
+# MEDIA-FICTION.md and MEDIA-NONFICTION.md, gated on BRAND_KIND like every media mode file and
+# template-owned. The prefix keeps them apart from syntek-author's own mode files in the same
+# folders (BUSINESS.md, FICTION.md, THEOLOGY.md) in a project that takes both. name · gate ·
+# modes, as SM_SKILLS. Their SKILL.md keeps the family's H1 (no brand name), locale line (no
+# time zone) and neutral Mode paragraph, so skill-conformance.sh checks 8, 9 and 14 never read
+# it; and syntek-author ships the same folders by design, so no D27 name check reports them.
+# This catalogue gives each family skill its gate and modes only: which skills are family
+# skills, and so every exemption, is read from SM_FAMILY_SHARED below (SM_FAMILY_SKILLS). A name
+# here that list lacks is judged as a media skill, and a family skill missing here is
+# shipped-brands.sh check 3's.
+SM_FAMILY_SKILLS_CAT=$(cat <<'EOF'
+grill-me          always  -
+grill-with-docs   always  BFN
+grilling          always  BFN
+handoff           always  BFN
+to-questionnaire  always  BFN
+wait-what         always  -
+wayfinder         always  BFN
+EOF
+)
+SM_FAMILY_MODE_FILES="MEDIA-BUSINESS.md MEDIA-FICTION.md MEDIA-NONFICTION.md"
+is_family_skill() { [[ " $SM_FAMILY_SKILLS " == *" $1 "* ]]; }   # SM_FAMILY_SKILLS: below
+
 # The skill contract (DESIGN.md Section 5), as skill-conformance.sh compares it. The mode
 # paragraph is syntek-author's with the three names swapped, and is compared whitespace- and
 # `> `-normalised; the guard sentence is syntek-author's, verbatim, in every skill that names a
@@ -367,23 +415,29 @@ SM_BEFORE_UPDATE_CRASH="If this update stops with OSError: [Errno 39] Directory 
 # _print_template_update_info), so a message that ends with the pointer is followed by one.
 SM_BEFORE_UPDATE_CRASH_END="gives the recovery and the command to use."
 
-mode_for_kind() { # business → BUSINESS.md
-  case "$1" in business) echo BUSINESS.md ;; author-fiction) echo FICTION.md ;; author-nonfiction) echo NONFICTION.md ;; esac
+mode_for_kind() { # business → BUSINESS.md; $2 = MEDIA- for a family skill's mode file
+  case "$1" in business) echo "${2:-}BUSINESS.md" ;; author-fiction) echo "${2:-}FICTION.md" ;; author-nonfiction) echo "${2:-}NONFICTION.md" ;; esac
 }
-kind_for_mode() { # BUSINESS.md → business
-  case "$1" in BUSINESS.md) echo business ;; FICTION.md) echo author-fiction ;; NONFICTION.md) echo author-nonfiction ;; esac
+kind_for_mode() { # BUSINESS.md or MEDIA-BUSINESS.md → business
+  case "${1#MEDIA-}" in BUSINESS.md) echo business ;; FICTION.md) echo author-fiction ;; NONFICTION.md) echo author-nonfiction ;; esac
 }
-modes_list() { # BFN → BUSINESS.md FICTION.md NONFICTION.md
+modes_list() { # BFN → BUSINESS.md FICTION.md NONFICTION.md; $2 = MEDIA- for a family skill
   local out=""
-  [[ "$1" == *B* ]] && out+="BUSINESS.md "
-  [[ "$1" == *F* ]] && out+="FICTION.md "
-  [[ "$1" == *N* ]] && out+="NONFICTION.md "
+  [[ "$1" == *B* ]] && out+="${2:-}BUSINESS.md "
+  [[ "$1" == *F* ]] && out+="${2:-}FICTION.md "
+  [[ "$1" == *N* ]] && out+="${2:-}NONFICTION.md "
   printf '%s' "${out% }"
+}
+mode_prefix() { # skill name → MEDIA- for a family skill, nothing for a media skill
+  is_family_skill "$1" && printf 'MEDIA-'
+  return 0
 }
 
 # Required and gated paths (DESIGN.md Sections 3–4; MANIFEST). Skills and mode files are
-# SM_SKILLS's; folder pairs are docs-pairing.sh's; a workflow's STEPS.md and CHECKLIST.md are
-# docs-pairing.sh check 12's. kind: d = directory, f = file.
+# SM_SKILLS's and SM_FAMILY_SKILLS_CAT's; folder pairs are docs-pairing.sh's; a workflow's
+# STEPS.md and CHECKLIST.md are docs-pairing.sh check 12's. kind: d = directory, f = file.
+# The client files ship only for the clients AGENT_CLIENTS ticks (DESIGN.md D80, Section 3.5;
+# syntek-author's seven gate lines); every other family-shared file ships always.
 SM_PATHS=$(cat <<'EOF'
 always        f  .copier-answers.syntek-media.yml
 always        f  README.md
@@ -396,15 +450,30 @@ always        f  .claude/MEMORY.md
 always        f  .claude/settings.json
 always        f  .claude/skills/CONTEXT.md
 always        f  .claude/skills/CLAUDE.md
-always        f  AGENTS.md
-always        f  GEMINI.md
-always        d  .agents
-always        d  .agents/skills
-always        f  .agents/mcp_config.json
-always        f  .codex/config.toml
-always        f  .codex/CONTEXT.md
-always        f  .codex/CLAUDE.md
+agents-md     f  AGENTS.md
+gemini-md     f  GEMINI.md
+agents        d  .agents
+agents        d  .agents/skills
+cl-antigravity f  .agents/mcp_config.json
+cl-codex      f  .codex/config.toml
+cl-codex      f  .codex/CONTEXT.md
+cl-codex      f  .codex/CLAUDE.md
+cl-gemini-cli f  .gemini/settings.json
+cl-gemini-cli f  .gemini/CONTEXT.md
+cl-gemini-cli f  .gemini/CLAUDE.md
+cl-opencode   f  opencode.json
 always        f  .claude/syntek-media-agents.md
+always        f  .claude/syntek-media-dataroot.py
+always        f  .claude/syntek-media-permissions.py
+always        f  .claude/syntek-media-dataroot.json
+always        d  .claude/hooks
+always        f  .claude/hooks/CONTEXT.md
+always        f  .claude/hooks/CLAUDE.md
+always        f  .claude/hooks/context-threshold-handoff.sh
+always        f  .claude/hooks/pre-compact-handoff.sh
+always        d  handoffs
+always        f  handoffs/CONTEXT.md
+always        f  handoffs/CLAUDE.md
 always        f  .claude/rules/syntek-media/01-layout-and-routing.md
 always        f  .claude/rules/syntek-media/02-skills.md
 always        f  .claude/rules/syntek-media/03-production-ethics.md
@@ -600,23 +669,36 @@ SM_COMMUNITY_FILES="LICENSE CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md .gith
 SM_PRIVATE_REPORT_URL="https://github.com/Syntek-Dev/syntek-media/security/advisories/new"
 
 # syntek-author's paths, which a standalone media render never ships (DESIGN.md Section 9,
-# "Media never ships"). Its 52 skill folders are added from syntek-author-names.txt.
-SM_AUTHOR_NEVER="Makefile .claude/hooks .claude/rules/syntek-author handoffs learning assets build manuscript library planning research proposal typeset world standards tooling"
+# "Media never ships"). Its skill folders are added from syntek-author-names.txt, less the seven
+# family skills (SM_FAMILY_SKILLS). Since D80 media ships the family's .claude/hooks/ (its pair
+# and the two session hooks) and the handoffs/ pair, so neither is syntek-author's alone.
+SM_AUTHOR_NEVER="Makefile .claude/rules/syntek-author learning assets build manuscript library planning research proposal typeset world standards tooling"
 
 # The first segments of syntek-author's paths, and its two named files, that media never
-# backticks (doc-references.sh check 6).
-SM_AUTHOR_PATH_HEADS="standards manuscript library planning research proposal typeset world tooling handoffs learning assets"
+# backticks (doc-references.sh check 6). handoffs/ ships in media since D80, so it is not one.
+SM_AUTHOR_PATH_HEADS="standards manuscript library planning research proposal typeset world tooling learning assets"
 SM_AUTHOR_PATH_PREFIXES=".claude/rules/syntek-author"
 SM_AUTHOR_FILE_NAMES="Makefile 00-project.md"
 
-# The nineteen copy-only shared paths (DESIGN.md D11, D73, D76, Section 3.6): each has an anchored
-# _skip_if_exists line and an update-gated _exclude line, for ever. Eighteen ship on copy: the
-# .agents folder (whose own two lines cover the folder: without them an update recreates an
-# empty .agents/ where the author removed it, and fails on a dangling link there) and its two
-# entries among them. SM_SHARED_RETIRED keeps its two lines but no longer ships on copy: a third,
-# unconditional _exclude line takes it out (D76), and the file stays under template/ (D11).
-SM_SHARED="README.md CONTEXT.md .gitignore .mcp.json .claude/CLAUDE.md .claude/CONTEXT.md .claude/MEMORY.md .claude/settings.json .claude/skills/CONTEXT.md .claude/skills/CLAUDE.md AGENTS.md GEMINI.md .agents .codex/config.toml .codex/CONTEXT.md .codex/CLAUDE.md .claude/mcp_config.json .agents/skills .agents/mcp_config.json"
+# The copy-only shared paths (DESIGN.md D11, D73, D76, D80, Section 3.6): each has an anchored
+# _skip_if_exists line and an update-gated _exclude line, for ever. The first nineteen are
+# D11's own; eighteen of them ship on copy: the .agents folder (whose own two lines cover the
+# folder: without them an update recreates an empty .agents/ where the author removed it, and
+# fails on a dangling link there) and its two entries among them. SM_SHARED_RETIRED keeps its
+# two lines but no longer ships on copy: a third, unconditional _exclude line takes it out
+# (D76), and the file stays under template/ (D11). The next seventeen arrived with D80, file by
+# file, as syntek-author lists them (never a folder: the family skill folders also hold
+# media's template-owned MEDIA-*.md mode files): Gemini CLI's pair and settings and OpenCode's
+# file (syntek-author D47), then the family's working practice (syntek-author D51), the seven
+# skills, the two session hooks with the .claude/hooks/ pair, and the handoffs/ pair. All are
+# family-shared bytes (SM_FAMILY_SHARED); the client files among them also carry a client gate.
+SM_SHARED="README.md CONTEXT.md .gitignore .mcp.json .claude/CLAUDE.md .claude/CONTEXT.md .claude/MEMORY.md .claude/settings.json .claude/skills/CONTEXT.md .claude/skills/CLAUDE.md AGENTS.md GEMINI.md .agents .codex/config.toml .codex/CONTEXT.md .codex/CLAUDE.md .claude/mcp_config.json .agents/skills .agents/mcp_config.json .gemini/settings.json .gemini/CONTEXT.md .gemini/CLAUDE.md opencode.json .claude/skills/grill-me/SKILL.md .claude/skills/grill-with-docs/SKILL.md .claude/skills/grilling/SKILL.md .claude/skills/handoff/SKILL.md .claude/skills/to-questionnaire/SKILL.md .claude/skills/wait-what/SKILL.md .claude/skills/wayfinder/SKILL.md .claude/hooks/pre-compact-handoff.sh .claude/hooks/context-threshold-handoff.sh .claude/hooks/CONTEXT.md .claude/hooks/CLAUDE.md handoffs/CONTEXT.md handoffs/CLAUDE.md"
 SM_SHARED_RETIRED=".claude/mcp_config.json"
+# The two client folders that take an update gate of their own and no _skip_if_exists line, as
+# syntek-author's copier.yml writes them (D80): Copier creates an EMPTY folder on an update that
+# crosses the release which introduced it, even where every path inside it is excluded.
+# shipped-seeds.sh check 8 accepts exactly these beside the shared paths.
+SM_SHARED_DIRS=".codex .gemini"
 SM_SHARED_SHIPPED="$(for _sm_x in $SM_SHARED; do [[ " $SM_SHARED_RETIRED " == *" $_sm_x "* ]] || printf '%s ' "$_sm_x"; done)"
 SM_SHARED_SHIPPED="${SM_SHARED_SHIPPED% }"
 SM_SHARED_GATE="_copier_operation == 'update'"
@@ -635,15 +717,109 @@ SM_OUTSIDE_HELD=".agents.syntek-held"
 SM_OUTSIDE_FIX="mv $SM_OUTSIDE_HELD .agents"
 SM_OUTSIDE_CHECK="ls -ld .agents $SM_OUTSIDE_HELD"
 # D85: the script is syntek-author's family-shared copy (syntek-author D48), vendored byte for
-# byte from one syntek-author release tag and never edited here. The tag, and the script's
-# sha256 and Git mode as that tag's family-shared.json records them ("mode": "755"), are
-# transcribed by hand from the tag; shipped-seeds.sh check 21 holds the script to them.
-SM_OUTSIDE_RELEASE="v0.5.0"
-SM_OUTSIDE_SHA256="e6ed85d3078c81a72981e27a54d231ee48c28d2fae1a18e786b9ae243577b5f2"
-SM_OUTSIDE_MODE="100755"
+# byte from one syntek-author release tag and never edited here. Since D80 its sha256 and mode
+# are read from this repository's own family-shared.json (SM_FAMILY_SHARED below), never
+# transcribed here; shipped-seeds.sh check 21 holds the script to that entry.
 # update-test.sh check 23 tags a clone of its snapshot with this release, whose copier.yml alone
 # carries a failing after-stage entry above restore: a stop after the render.
 SM_CRASH_VERSION="v0.4.3"
+
+# ── The family-shared set (DESIGN.md D80, D85; syntek-author D48, D50, D51, D54) ──
+#
+# What media vendors byte for byte from ONE syntek-author release tag and never edits here: the
+# client files, the .agents/ folder's two entries, the MCP declarations, the working-practice
+# skills, hooks and handoffs pair, the data-root resolver and the permissions script under
+# media's names, the outside-link migration, and three blocks: the 'questions' and 'migrations'
+# blocks of copier.yml and the 'rules-web-tools' block of rules 06. This repository's root
+# family-shared.json records each in the family's own format (format 1, owner syntek-media,
+# release v + VERSION or unreleased, each file's source, bytes, sha256 and mode, each link's
+# target, each block's markers, bytes and sha256, and rules-web-tools's destination), so that
+# syntek-author's family-shared.sh --sibling can compare it and media's audits can read it:
+# shipped-seeds.sh checks 21–27 hold the files and blocks to it, and coexist-test.sh check 22
+# holds it to the --author tree's own manifest. Nothing here transcribes a hash.
+#
+# SM_FAMILY_RELEASE is the syntek-author tag the set comes from: the tag CI pins as
+# SYNTEK_AUTHOR_TAG, re-vendored whole at each adoption (D85: one tag for every family file).
+# syntek-author's manifest also lists migrations/family-update.py and its 'update' block, which
+# media takes in D81 (0.6.0): SM_FAMILY_DEFERRED names them, so coexist-test.sh check 22 knows
+# them from a family file media has never heard of.
+SM_FAMILY_RELEASE="v0.5.0"
+SM_FAMILY_MANIFEST="family-shared.json"
+SM_FAMILY_OWNER="syntek-media"
+# destination path · source in this repository · scope (blank: project, under template/). The
+# destination is the family's, `<template>` its literal placeholder for each template's name;
+# listed in byte order of the destination, as the manifest lists them.
+SM_FAMILY_SHARED=$(cat <<'EOF'
+.agents/mcp_config.json                     template/.agents/mcp_config.json
+.agents/skills                              template/.agents/skills
+.claude/hooks/CLAUDE.md                     template/.claude/hooks/CLAUDE.md
+.claude/hooks/CONTEXT.md                    template/.claude/hooks/CONTEXT.md
+.claude/hooks/context-threshold-handoff.sh  template/.claude/hooks/context-threshold-handoff.sh
+.claude/hooks/pre-compact-handoff.sh        template/.claude/hooks/pre-compact-handoff.sh
+.claude/skills/grill-me/SKILL.md            template/.claude/skills/grill-me/SKILL.md
+.claude/skills/grill-with-docs/SKILL.md     template/.claude/skills/grill-with-docs/SKILL.md
+.claude/skills/grilling/SKILL.md            template/.claude/skills/grilling/SKILL.md
+.claude/skills/handoff/SKILL.md             template/.claude/skills/handoff/SKILL.md
+.claude/skills/to-questionnaire/SKILL.md    template/.claude/skills/to-questionnaire/SKILL.md
+.claude/skills/wait-what/SKILL.md           template/.claude/skills/wait-what/SKILL.md
+.claude/skills/wayfinder/SKILL.md           template/.claude/skills/wayfinder/SKILL.md
+.claude/syntek-<template>-dataroot.py       template/.claude/syntek-media-dataroot.py
+.claude/syntek-<template>-permissions.py    template/.claude/syntek-media-permissions.py
+.codex/CLAUDE.md                            template/.codex/CLAUDE.md
+.codex/CONTEXT.md                           template/.codex/CONTEXT.md
+.codex/config.toml                          template/.codex/config.toml
+.gemini/CLAUDE.md                           template/.gemini/CLAUDE.md
+.gemini/CONTEXT.md                          template/.gemini/CONTEXT.md
+.gemini/settings.json                       template/.gemini/settings.json
+.mcp.json                                   template/.mcp.json
+AGENTS.md                                   template/AGENTS.md
+GEMINI.md                                   template/GEMINI.md
+handoffs/CLAUDE.md                          template/handoffs/CLAUDE.md
+handoffs/CONTEXT.md                         template/handoffs/CONTEXT.md
+migrations/agents-outside-link.py           migrations/agents-outside-link.py            repository
+opencode.json                               template/opencode.json
+EOF
+)
+SM_FAMILY_LINKS=".agents/skills"
+# The family skills, read from that one list: each .claude/skills/<name>/SKILL.md it holds. Every
+# exemption a family skill takes (D27's names, the forms skill-conformance.sh checks 8, 9 and 14
+# leave unread, shipped-brands.sh checks 3 and 5) reads this, never a list of its own.
+SM_FAMILY_SKILLS="$(awk '$1 ~ /^[.]claude[/]skills[/][^/]+[/]SKILL[.]md$/ { split($1, a, "/"); printf "%s%s", (n++ ? " " : ""), a[3] }' <<< "$SM_FAMILY_SHARED")"
+# name|source|destination (blank: copier.yml's own block)|BEGIN marker|END marker, in manifest
+# order. The marker lines are syntek-author's, byte for byte: their D48 is its decision.
+SM_FAMILY_BLOCKS=$(cat <<'EOF'
+questions|copier.yml||# BEGIN family-shared questions (D48)|# END family-shared questions (D48)
+migrations|copier.yml||# BEGIN family-shared migrations (D48)|# END family-shared migrations (D48)
+rules-web-tools|template/.claude/rules/syntek-media/06-global-rules.md|.claude/rules/syntek-<template>/06-global-rules.md|<!-- BEGIN family-shared rules: web and code tools -->|<!-- END family-shared rules: web and code tools -->
+EOF
+)
+# syntek-author's entries media takes later (D81, 0.6.0): a file path, then a block name.
+SM_FAMILY_DEFERRED="migrations/family-update.py block:update"
+# The family files that are template-owned in every family template (syntek-author D49, D50):
+# updated by every update, so they take no _skip_if_exists or update-gated line. Every other
+# project-scope family file is copy-only (SM_SHARED).
+SM_FAMILY_TEMPLATE_OWNED=".claude/syntek-media-dataroot.py .claude/syntek-media-permissions.py"
+# The three family files that carry the seven shared keys (AGENT_CLIENTS, the model answers):
+# Copier renders them, so a render's bytes differ from the source's by design. Every other
+# project-scope family file holds no delimiter and renders to its own bytes.
+SM_FAMILY_RENDERED=".codex/config.toml .gemini/settings.json opencode.json"
+# Media's own data-root map (D80): template-owned, not family-shared (each template writes its
+# own), and empty in 0.5.0: media files nothing on the data root yet (shipped-seeds.sh check 28).
+SM_DATAROOT_MAP=".claude/syntek-media-dataroot.json"
+
+# The project-scope family paths under media's name, one per line: what a render holds.
+SM_FAMILY_PATHS="$(awk 'NF && $3 != "repository" { p = $1; sub(/<template>/, "media", p); print p }' <<< "$SM_FAMILY_SHARED" | paste -sd' ' -)"
+is_family_path() { [[ " $SM_FAMILY_PATHS " == *" $1 "* ]]; }
+# A top-level entry, or a .claude/ entry, that a family path passes through or ends in: both
+# templates write there by design, so no D27 name check reports it (shipped-brands.sh check 11,
+# coexist-test.sh check 13).
+is_family_entry() { # $1 = a top-level entry, or .claude/<entry>
+  local p
+  for p in $SM_FAMILY_PATHS; do
+    [[ "$p" == "$1" || "$p" == "$1"/* ]] && return 0
+  done
+  return 1
+}
 
 # Seeds (DESIGN.md Section 3.1): twenty-six, then the sixteen author-filled index-pair files.
 SM_REGISTER_SEEDS="brand/src/design-register.md scripts/src/piece-register.md production/src/rights-register.md production/src/credits-log.md publishing/src/schedule.md publishing/src/publish-log.md"
@@ -662,7 +838,7 @@ SM_EXAMPLES="scripts/src/pieces/000-example-piece production/src/edits/000-examp
 SM_EXAMPLE_GATE="_copier_operation == 'update' or not SEED_EXAMPLES"
 SM_EXAMPLE_NAME="000-example-piece"
 
-# The root spine (DESIGN.md Section 2, Token discipline). The nineteen shared paths, the seeds and
+# The root spine (DESIGN.md Section 2, Token discipline). The copy-only shared paths, the seeds and
 # the examples are spine through their own sets; index files are computed.
 SM_ROOT_SPINE="$SM_ANSWERS_FILE"
 SM_ROOT_SPINE_GLOBS=".claude/rules/syntek-media/*.md"
@@ -672,7 +848,9 @@ SM_IDENTITY_TOKENS="BRAND_NAME BRAND_SLUG OWNER_NAME OWNER_FIRST_NAME DATE TIMEZ
 SM_COPIER_VARS="_copier_operation _copier_answers _copier_conf"
 
 # syntek-author's skills media names in prose and never ships (DESIGN.md D10, Section 5.2).
-SM_COMPANIONS="spelling grammar comprehension flow fact-check improve-section adapt-section research grilling grill-with-docs handoff wayfinder social-media-documents run-workflow pronounce character-voice"
+# grilling, grill-with-docs, handoff and wayfinder left the list with D80: they ship in media
+# as family skills (SM_FAMILY_SKILLS), so a media file names them as skills of its own.
+SM_COMPANIONS="spelling grammar comprehension flow fact-check improve-section adapt-section research social-media-documents run-workflow pronounce character-voice"
 
 # The standalone settings seed (DESIGN.md D13). Arrays: the entries carry spaces.
 SM_SETTINGS_DENY=("AskUserQuestion" "Edit(**/generated/**)" "Edit(**/renders/**)")
@@ -690,15 +868,48 @@ SM_SETTINGS_ASK=(
   "Bash(python3 toolkit/media.py voice remix run *)"
   "Bash(uv run toolkit/media.py voice remix run *)"
 )
-SM_SETTINGS_BANNED_KEYS="hooks effortLevel ultracode enabledPlugins"   # and every disable* key
+SM_SETTINGS_BANNED_KEYS="effortLevel ultracode enabledPlugins"   # and every disable* key
+# The family's rules in the same seed (DESIGN.md D13 as D80 amends it; syntek-author D54), after
+# media's own: the eight MCP asks in the family's order (Scrapling's six browser tools, then
+# code-review-graph's two that write), and the deny on embed_graph_tool, which --tools already
+# withholds. Kept apart from media's lists: skill-conformance.sh check 21 reads SM_SETTINGS_ASK's
+# mcp__ entries as ElevenLabs calls, and these spend no credits.
+SM_SETTINGS_FAMILY_ASK=(
+  "mcp__scrapling__stealthy_fetch"
+  "mcp__scrapling__bulk_stealthy_fetch"
+  "mcp__scrapling__open_session"
+  "mcp__scrapling__session_fetch"
+  "mcp__scrapling__fetch"
+  "mcp__scrapling__bulk_fetch"
+  "mcp__code-review-graph__apply_refactor_tool"
+  "mcp__code-review-graph__generate_wiki_tool"
+)
+SM_SETTINGS_FAMILY_DENY=("mcp__code-review-graph__embed_graph_tool")
+# The seed's hooks key (D80: all three family registrations, byte for byte from syntek-author's
+# seed at SM_FAMILY_RELEASE): the context-threshold handoff on UserPromptSubmit, the pre-compact
+# handoff on PreCompact (auto and manual), and the data-root guard on PreToolUse. Each finds its
+# script from the repository root at run time and does nothing where the script is absent.
+# Compared as parsed JSON by shipped-seeds.sh check 12, and with the --author tree's seed by
+# coexist-test.sh check 22.
+SM_SETTINGS_HOOKS=$(cat <<'EOF'
+{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && [ -f \"$ROOT/.claude/hooks/context-threshold-handoff.sh\" ] && exec bash \"$ROOT/.claude/hooks/context-threshold-handoff.sh\"'","timeout":10}]}],"PreCompact":[{"matcher":"auto","hooks":[{"type":"command","command":"bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && [ -f \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" ] && exec bash \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" auto'","timeout":10}]},{"matcher":"manual","hooks":[{"type":"command","command":"bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && [ -f \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" ] && exec bash \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" manual'","timeout":10}]}],"PreToolUse":[{"matcher":"Edit|Write|MultiEdit|NotebookEdit|Grep|Glob","hooks":[{"type":"command","command":"bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; for f in \"$ROOT\"/.claude/syntek-*-dataroot.py; do [ -f \"$f\" ] && exec python3 \"$f\" guard; done; exit 0'","timeout":10}]}]}
+EOF
+)
 
-# What _message_after_copy must say, in DESIGN.md D13's order: (1) the eighteen shipped shared paths and the
-# skip rule, that Copier's 'conflict' then 'skip' pair is expected, and Section 8's hand edits 2
-# and 3 (the optional line in .claude/CLAUDE.md; nothing to add to .gitignore or .mcp.json);
-# (2) the four Bash allows, the nine ElevenLabs asks, the two voice remix asks (D82) and the two Edit denies to add by hand (DESIGN.md
-# Section 8); (3) the user-scope `claude mcp add` line with ELEVENLABS_MCP_BASE_PATH; (4) the
-# repository-local filter.lfs.required and `git lfs install`; (5) the setup check; (6) the
-# update command with -a, with Git's housekeeping off (DESIGN.md Section 10).
+# What _message_after_copy must say, in DESIGN.md D13's order: (1) every shipped shared path
+# (the eighteen of D11 and the seventeen of D80) and the skip rule, that Copier's 'conflict'
+# then 'skip' pair is expected, and Section 8's hand edits 2 and 3 (the optional line in
+# .claude/CLAUDE.md; nothing to add to .gitignore or .mcp.json); (2) the four Bash allows, the
+# nine ElevenLabs asks, the two voice remix asks (D82) and the two Edit denies to add by hand
+# (DESIGN.md Section 8), then the permissions script's --write, which carries the seed's ask
+# and deny rules to the other clients' files (D80; syntek-author D49); (3) the user-scope
+# `claude mcp add` line with ELEVENLABS_MCP_BASE_PATH; (4) the repository-local
+# filter.lfs.required and `git lfs install`; (5) the setup check; (6) the update command with
+# -a, with Git's housekeeping off (DESIGN.md Section 10). Since 0.5.0 (D13, D80) item 2 also
+# gives the family's eight asks and its deny, from the same lists shipped-seeds.sh check 12
+# holds the seed to, and the seed's "hooks" object with its PreToolUse data-root guard, for a
+# settings.json that syntek-author v0.5.0 or later did not seed; and item 1 says, over
+# syntek-author, that media takes no coding-agent answer from its answers file.
 # Each entry is a fragment the copy output must carry, matched with whitespace collapsed and
 # Copier's own file-operation lines removed. generate-all.sh check 4 and coexist-test.sh
 # check 19 read this list; shipped-seeds.sh check 12 reads the settings lists above.
@@ -708,6 +919,9 @@ SM_AFTER_COPY_LINES+=("skip")
 for _sm_x in "${SM_SETTINGS_ALLOW[@]}"; do [[ "$_sm_x" == Bash\(* ]] && SM_AFTER_COPY_LINES+=("$_sm_x"); done
 SM_AFTER_COPY_LINES+=("${SM_SETTINGS_ASK[@]}")
 for _sm_x in "${SM_SETTINGS_DENY[@]}"; do [[ "$_sm_x" == Edit\(* ]] && SM_AFTER_COPY_LINES+=("$_sm_x"); done
+SM_AFTER_COPY_LINES+=("${SM_SETTINGS_FAMILY_ASK[@]}" "${SM_SETTINGS_FAMILY_DENY[@]}" '"hooks" object' "PreToolUse")
+SM_AFTER_COPY_LINES+=("media reads no coding-agent answer from syntek-author's answers file")
+SM_AFTER_COPY_LINES+=("python3 .claude/syntek-media-permissions.py --write")
 SM_AFTER_COPY_LINES+=("claude mcp add" "ELEVENLABS_MCP_BASE_PATH=" "filter.lfs.required" "git lfs install"
                       "python3 toolkit/media.py check --setup" "copier update" "-a $SM_ANSWERS_FILE"
                       "GIT_CONFIG_KEY_1=maintenance.auto")
@@ -726,8 +940,9 @@ SM_PAIR_ONLY_GLOBS="*/docs/project */workflows/local brand/src/design-system/fon
 # The folder pair's exceptions (DESIGN.md D42): syntek-author's, verbatim — build/, .git/,
 # audio/, __pycache__/, node_modules/, .claude/rules/, the inside of each skill folder, each
 # drafts/ and each .base/ — then media's: each generated/, renders/ and raw/ (README only), and
-# a handoffs/ folder media's rules create standalone (no pair, ever); and the .agents folder,
-# which holds only the skills link and Antigravity's MCP file (D76).
+# the .agents folder, which holds only the skills link and Antigravity's MCP file (D76). Since
+# D80 handoffs/ is no exception: media ships the family's handoffs/ pair, so the folder carries
+# it like any other (and .claude/hooks/ and .gemini/ theirs).
 exempt_dir() { # tree-relative dir; true when it needs no pair
   case "/$1/" in
     */.git/*|*/build/*|*/audio/*|*/__pycache__/*|*/node_modules/*) return 0 ;;
@@ -736,7 +951,6 @@ exempt_dir() { # tree-relative dir; true when it needs no pair
     */drafts/*) return 0 ;;
     */.base/*) return 0 ;;
     */generated/*|*/renders/*|*/raw/*) return 0 ;;
-    /handoffs/*) return 0 ;;
     /.agents/*) return 0 ;;   # D76: the agent folder holds a link and a client file, no pair
   esac
   return 1
@@ -849,7 +1063,7 @@ is_allowed_gate() {
 
 # ── A rendered tree's answers, and the gate evaluator ────────────────────────
 
-A_KIND=""; A_PLATFORMS=""; A_KINDS=""; A_SEED=true
+A_KIND=""; A_PLATFORMS=""; A_KINDS=""; A_SEED=true; A_CLIENTS=""
 
 answer_value() { # $1 = key, $2 = answers file → raw value, unquoted
   awk -v key="$1" '
@@ -882,8 +1096,12 @@ load_answers() { # $1 = answers file. Returns 1 if absent or carries no BRAND_KI
   A_KINDS="$(answer_list MEDIA_KINDS "$f" | tr '\n' ' ')"; A_KINDS="${A_KINDS% }"
   v="$(answer_value SEED_EXAMPLES "$f")"
   case "$v" in false|False|no) A_SEED=false ;; *) A_SEED=true ;; esac
+  # No AGENT_CLIENTS key (a project from before 0.5.0) or an empty list: Claude Code only.
+  A_CLIENTS="$(answer_list AGENT_CLIENTS "$f" | tr '\n' ' ')"; A_CLIENTS="${A_CLIENTS% }"
   return 0
 }
+
+has_client() { [[ " $A_CLIENTS " == *" $1 "* ]]; }
 
 gate_true() { # $1 = gate in the catalogue vocabulary
   local atom IFS='&'
@@ -897,6 +1115,11 @@ gate_true() { # $1 = gate in the catalogue vocabulary
       p:*)        [[ " $A_PLATFORMS " == *" ${atom#p:} "* ]] || return 1 ;;
       k:*)        [[ " $A_KINDS " == *" ${atom#k:} "* ]] || return 1 ;;
       seed)       [[ "$A_SEED" == true ]] || return 1 ;;
+      # The client gates (DESIGN.md D80, Section 3.5; syntek-author D47).
+      agents)     [[ -n "${A_CLIENTS// /}" ]] || return 1 ;;
+      agents-md)  has_client codex || has_client opencode || return 1 ;;
+      gemini-md)  has_client gemini-cli || has_client antigravity || return 1 ;;
+      cl-*)       has_client "${atom#cl-}" || return 1 ;;
       *) return 1 ;;
     esac
   done
@@ -1223,15 +1446,14 @@ sm_render_over_author() { # $1 = syntek-author snapshot, $2 = media snapshot, $3
 }
 
 # The family-shared migrations block (syntek-author D48), markers included, byte for byte as
-# syntek-author's SM_OUTSIDE_RELEASE copier.yml carries it; the lines strictly between the two
-# markers hash to SM_FAMILY_MIGRATIONS_SHA256, the value that tag's family-shared.json records
-# (shipped-seeds.sh check 22). The markers' D48 is syntek-author's number, never media's.
+# syntek-author's SM_FAMILY_RELEASE copier.yml carries it, for the FIXTURES only: the real
+# copier.yml's block is held to the 'migrations' entry of family-shared.json (shipped-seeds.sh
+# check 22), never to this copy. The markers' D48 is syntek-author's number, never media's.
 # Media's copier.yml takes the block first in _migrations (D85). sm_fixture_template below and
 # shipped-seeds.sh's self-test fixture print it, so the fixture's updates run the vendored
 # script as the real ones do: with the interpreter running Copier, _copier_python.
 SM_FAMILY_MIGRATIONS_BEGIN="# BEGIN family-shared migrations (D48)"
 SM_FAMILY_MIGRATIONS_END="# END family-shared migrations (D48)"
-SM_FAMILY_MIGRATIONS_SHA256="4e22f625dbc6ad6ef0cb0159c962e25b17ec81f1cb5eb20428b73978d9a1a4c1"
 sm_family_migrations_block() {
   cat <<'EOF'
 # BEGIN family-shared migrations (D48)
@@ -1255,10 +1477,388 @@ sm_sha256() {
   else die "neither sha256sum nor shasum is installed"; fi
 }
 
+# ── family-shared.json: the reader and the writer (DESIGN.md D80) ─────────────
+#
+# One program reads the manifest for every audit that needs it, so no two scripts disagree
+# about its format, which is the family's (syntek-author's family-shared.sh, entry, block_lines
+# and block_entry): files sorted by destination path; a block's bytes are the lines strictly
+# between its two marker lines, each ended with \n, hashed as UTF-8. A file's mode is "755"
+# where Git's index holds it at 100755, or, for a file the index does not hold (or outside a
+# work tree), where it is executable; no key at all otherwise. Modes:
+#   check ROOT            shipped-seeds.sh checks 23–26 on the source: one "N<TAB>text" line per
+#                         finding, then "E<TAB>outside<TAB>sha256<TAB>mode" and
+#                         "E<TAB>migrations<TAB>sha256" wherever the manifest holds a usable
+#                         entry for checks 21 and 22. Exit 3: a .git stands that Git will not read.
+#   write ROOT            rewrite ROOT/family-shared.json from the files and blocks (exit 2: a
+#                         source is not what SM_FAMILY_SHARED says, or a block's markers are wrong).
+#   tree ROOT TREE [OWN]  shipped-seeds.sh checks 10 and 27 on a render: each token-free
+#                         project-scope family file the tree holds (and OWN lists, over
+#                         syntek-author) has the bytes and executable bit ROOT's manifest
+#                         records (the .agents/skills link is shipped-brands.sh check 13's).
+#   compare ROOT AUTHOR   coexist-test.sh check 22: ROOT's manifest against the AUTHOR tree's,
+#                         entry by entry, and _common.sh's family asks, deny and hooks against
+#                         the AUTHOR tree's own settings seed.
+sm_family_py() {
+  SMF_FILES="$SM_FAMILY_SHARED" SMF_LINKS="$SM_FAMILY_LINKS" SMF_BLOCKS="$SM_FAMILY_BLOCKS" \
+  SMF_MANIFEST="$SM_FAMILY_MANIFEST" SMF_OWNER="$SM_FAMILY_OWNER" SMF_RELEASE="$SM_FAMILY_RELEASE" \
+  SMF_DEFERRED="$SM_FAMILY_DEFERRED" SMF_RENDERED="$SM_FAMILY_RENDERED" SMF_OUTSIDE="$SM_OUTSIDE_MIGRATION" \
+  SMF_AGENTS_LINK="$SM_AGENTS_SKILLS_LINK" \
+  SMF_ASK="$(printf '%s\n' "${SM_SETTINGS_FAMILY_ASK[@]}")" \
+  SMF_DENY="$(printf '%s\n' "${SM_SETTINGS_FAMILY_DENY[@]}")" SMF_HOOKS="$SM_SETTINGS_HOOKS" \
+  python3 -I - "$@" <<'PYFAMILY'
+import hashlib, json, os, re, subprocess, sys
+from pathlib import Path
+
+E = os.environ
+mode, root = sys.argv[1], Path(sys.argv[2])
+FILES = []
+for line in E["SMF_FILES"].splitlines():
+    f = line.split()
+    if f:
+        FILES.append((f[0], f[1], f[2] if len(f) > 2 else "project"))
+LINKS = set(E["SMF_LINKS"].split())
+BLOCKS = []
+for line in E["SMF_BLOCKS"].splitlines():
+    if line.strip():
+        n, src, dest, b, e = line.split("|")
+        BLOCKS.append((n, src, dest or None, b, e))
+MANIFEST, OWNER, RELEASE = E["SMF_MANIFEST"], E["SMF_OWNER"], E["SMF_RELEASE"]
+OWN_NAME = OWNER[len("syntek-"):]
+DEFERRED = set(E["SMF_DEFERRED"].split())
+RENDERED = set(E["SMF_RENDERED"].split())
+OUTSIDE = E["SMF_OUTSIDE"]
+WANT = [(p, s, "symlink" if p in LINKS else "file", sc) for p, s, sc in sorted(FILES)]
+WANT_B = list(BLOCKS)
+out = []
+
+def finding(n, text):
+    out.append(f"{n}\t{text}")
+
+def git(*args):
+    r = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+    return r.returncode, r.stdout
+
+def index_modes():
+    """{path: Git mode} for what the index holds under ROOT; None outside a work tree."""
+    code, top = git("rev-parse", "--is-inside-work-tree")
+    if code or top.strip() != "true":
+        if (root / ".git").exists() or (root / ".git").is_symlink():
+            print(f"{root / '.git'} stands, but Git will not read it (an ownership mismatch? see git config safe.directory)", file=sys.stderr)
+            sys.exit(3)
+        return None
+    code, listing = git("ls-files", "-s", "-z")
+    modes = {}
+    for rec in listing.split("\0"):
+        if rec and "\t" in rec:
+            meta, path = rec.split("\t", 1)
+            modes[path] = meta.split()[0]
+    return modes
+
+def file_mode(rel, modes):
+    if modes is not None and rel in modes:
+        return "755" if modes[rel] == "100755" else None
+    return "755" if os.stat(root / rel).st_mode & 0o111 else None
+
+def entry(path, source, scope, modes):
+    """(the manifest entry the file on disk would have, whether it is the kind listed)."""
+    p = root / source
+    kind = "symlink" if path in LINKS else "file"
+    e = {"path": path, "source": source, "kind": kind}
+    if scope != "project":
+        e["scope"] = scope
+    if kind == "symlink":
+        if not p.is_symlink():
+            return e, False
+        e["target"] = os.readlink(p)
+        return e, True
+    if p.is_symlink() or not p.is_file():
+        return e, False
+    b = p.read_bytes()
+    e["bytes"], e["sha256"] = len(b), hashlib.sha256(b).hexdigest()
+    m = file_mode(source, modes)
+    if m:
+        e["mode"] = m
+    return e, True
+
+def block_lines(path, begin, end):
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None, "cannot be read"
+    b = [i for i, l in enumerate(lines) if l == begin]
+    e = [i for i, l in enumerate(lines) if l == end]
+    if len(b) != 1 or len(e) != 1 or b[0] > e[0]:
+        return None, f"holds '{begin}' {len(b)} time(s) and '{end}' {len(e)} time(s); each must appear once, BEGIN first"
+    return lines[b[0] + 1:e[0]], ""
+
+def block_entry(name, source, dest, begin, end, lines):
+    data = "".join(l + "\n" for l in lines).encode()
+    e = {"name": name, "source": source}
+    if dest is not None:
+        e["destination"] = dest
+    e.update({"begin": begin, "end": end, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+    return e
+
+def release_wanted():
+    """The release values the manifest may hold, and why: 'v' + VERSION on the commit that tag
+    names and on an untagged commit whose VERSION no tag has yet (the release commit);
+    'unreleased' once that tag is an ancestor of HEAD; either where Git cannot tell."""
+    try:
+        version = (root / "VERSION").read_text(encoding="utf-8").strip()
+    except OSError:
+        version = ""
+    either = {"unreleased"} | ({f"v{version}"} if version else set())
+    if not version:
+        return either, ""
+    code, top = git("rev-parse", "--show-toplevel")
+    if code or Path(top.strip()).resolve() != root.resolve():
+        return either, ""
+    tag = "v" + version
+    code, tagged = git("rev-parse", "-q", "--verify", f"refs/tags/{tag}^{{commit}}")
+    if code:
+        code, tags = git("tag", "-l", "v[0-9]*")
+        if not code and tags.strip():
+            return {tag}, f"VERSION is {version} and no tag {tag} exists yet, so this is its release commit"
+        return either, ""
+    code, head = git("rev-parse", "-q", "--verify", "HEAD^{commit}")
+    if code:
+        return either, ""
+    if tagged.strip() == head.strip():
+        return {tag}, f"HEAD is tagged {tag}"
+    code, _ = git("merge-base", "--is-ancestor", tagged.strip(), head.strip())
+    if code == 0:
+        return {"unreleased"}, f"{tag} is already released, so later work is unreleased until the next release"
+    return either, ""
+
+def load(path):
+    try:
+        return json.loads(path.read_text(encoding="utf-8")), ""
+    except FileNotFoundError:
+        return None, "missing"
+    except (OSError, ValueError) as err:
+        return None, f"not JSON ({err})"
+
+def usable(man):
+    return isinstance(man, dict) and man.get("format") == 1 and man.get("owner") == OWNER
+
+def listed(man):
+    """The manifest's file and block entries that belong to the set, by path and by name."""
+    files = man.get("files") if isinstance(man.get("files"), list) else []
+    blocks = man.get("blocks") if isinstance(man.get("blocks"), list) else []
+    fs = {e["path"]: e for e in files if isinstance(e, dict)
+          and (e.get("path"), e.get("source"), e.get("kind"), e.get("scope", "project")) in WANT}
+    bs = {x["name"]: x for x in blocks if isinstance(x, dict)
+          and (x.get("name"), x.get("source"), x.get("destination"), x.get("begin"), x.get("end")) in WANT_B}
+    return files, blocks, fs, bs
+
+def short(h):
+    return (str(h)[:12] + "…") if h else "none"
+
+if mode == "write":
+    modes = index_modes()
+    wanted, _ = release_wanted()
+    old, _ = load(root / MANIFEST)
+    release = old["release"] if isinstance(old, dict) and old.get("release") in wanted else "unreleased"
+    if len(wanted) == 1:
+        release = next(iter(wanted))
+    entries = []
+    for path, source, scope in sorted(FILES):
+        e, ok = entry(path, source, scope, modes)
+        if not ok:
+            print(f"{source} is not {'a link' if path in LINKS else 'a file'}; vendor it from syntek-author {RELEASE} first", file=sys.stderr)
+            sys.exit(2)
+        entries.append(e)
+    blocks = []
+    for n, src, dest, b, e in BLOCKS:
+        lines, err = block_lines(root / src, b, e)
+        if lines is None:
+            print(f"{src} {err}", file=sys.stderr)
+            sys.exit(2)
+        blocks.append(block_entry(n, src, dest, b, e, lines))
+    text = ('{\n  "format": 1,\n  "owner": "' + OWNER + '",\n  "release": ' + json.dumps(release) + ',\n  "files": [\n'
+            + ",\n".join("    " + json.dumps(e, ensure_ascii=False) for e in entries)
+            + '\n  ],\n  "blocks": [\n'
+            + ",\n".join("    " + json.dumps(x, ensure_ascii=False) for x in blocks)
+            + "\n  ]\n}\n")
+    (root / MANIFEST).write_text(text, encoding="utf-8")
+    sys.exit(0)
+
+if mode == "check":
+    modes = index_modes()
+    man, err = load(root / MANIFEST)
+    if man is None:
+        finding(23, f"{MANIFEST} is {'missing from the repository root' if err == 'missing' else err}: the family-shared set has no record to be held to (write it with shipped-seeds.sh --write-manifest; DESIGN.md D80)")
+    else:
+        wanted, why = release_wanted()
+        if not usable(man) or man.get("release") not in wanted:
+            finding(23, f"{MANIFEST} must hold format 1, owner {OWNER} and release one of {sorted(wanted)}"
+                        + (f" ({why}; shipped-seeds.sh --write-manifest sets it)" if why else "")
+                        + " (DESIGN.md D80; the family's format, syntek-author D48)")
+            man = None
+    if man is not None:
+        files, blocks, fs, bs = listed(man)
+        have = [(e.get("path"), e.get("source"), e.get("kind"), e.get("scope", "project")) if isinstance(e, dict) else None for e in files]
+        if have != WANT:
+            missing = [w[0] for w in WANT if w not in have]
+            extra = [str(h[0]) if h else repr(h) for h in have if h not in WANT]
+            finding(24, f"{MANIFEST} files are not the vendored set of _common.sh's SM_FAMILY_SHARED (missing, or a wrong source, kind or scope: "
+                        f"{', '.join(missing) or 'none'}; extra or wrong: {', '.join(extra) or 'none'}; order: "
+                        f"{'wrong' if not missing and not extra else 'n/a'}) (DESIGN.md D80)")
+        have_b = [(x.get("name"), x.get("source"), x.get("destination"), x.get("begin"), x.get("end")) if isinstance(x, dict) else None for x in blocks]
+        if have_b != WANT_B:
+            finding(24, f"{MANIFEST} blocks are not exactly the questions and migrations blocks of copier.yml, then the rules-web-tools block of "
+                        f"{BLOCKS[-1][1]} with its destination {BLOCKS[-1][2]}, in that order, between the family's markers "
+                        "(syntek-author's update block waits for D81; DESIGN.md D80)")
+        for path, e in fs.items():
+            if path == OUTSIDE:
+                if e.get("sha256"):
+                    out.append(f"E\toutside\t{e.get('sha256')}\t{'100755' if e.get('mode') == '755' else '100644'}")
+                continue
+            cur, ok = entry(path, e["source"], e.get("scope", "project"), modes)
+            if path in LINKS:
+                # The link itself is shipped-seeds.sh check 18's (the D76 link); this check
+                # holds only the record to it, so one fault is one finding.
+                if ok and cur.get("target") == E["SMF_AGENTS_LINK"] and cur.get("target") != e.get("target"):
+                    finding(25, f"{e['source']} is the link {cur.get('target')!r}, but {MANIFEST} records {e.get('target')!r} (DESIGN.md D76, D80)")
+            elif not ok:
+                finding(25, f"{e['source']} is not a file, as {MANIFEST} records it: vendor it from syntek-author {RELEASE} (DESIGN.md D80)")
+            else:
+                if (cur["bytes"], cur["sha256"]) != (e.get("bytes"), e.get("sha256")):
+                    finding(25, f"{e['source']} has SHA-256 {short(cur['sha256'])} ({cur['bytes']} bytes), not {short(e.get('sha256'))} "
+                                f"({e.get('bytes')} bytes) as {MANIFEST} records: a family-shared file is vendored byte for byte from "
+                                f"syntek-author {RELEASE} and never edited here (DESIGN.md D80; syntek-author D48)")
+                if cur.get("mode") != e.get("mode"):
+                    finding(25, f"{e['source']} is at mode {cur.get('mode') or '644'}, not {e.get('mode') or '644'} as {MANIFEST} records "
+                                "(Git's index where it holds the file, else the executable bit: git update-index --chmod=+x or -x; DESIGN.md D80)")
+        for name, x in bs.items():
+            src = x["source"]
+            lines, err = block_lines(root / src, x["begin"], x["end"])
+            if name == "migrations":
+                if x.get("sha256"):
+                    out.append(f"E\tmigrations\t{x.get('sha256')}")
+                continue
+            if lines is None:
+                finding(26, f"{src} {err}: the family-shared {name} block is taken whole (DESIGN.md D80; syntek-author D48)")
+                continue
+            data = "".join(l + "\n" for l in lines).encode()
+            sha = hashlib.sha256(data).hexdigest()
+            if (len(data), sha) != (x.get("bytes"), x.get("sha256")):
+                finding(26, f"the lines between {src}'s family-shared {name} markers have SHA-256 {short(sha)} ({len(data)} bytes), not "
+                            f"{short(x.get('sha256'))} as {MANIFEST} records: the block is taken byte for byte and never edited here "
+                            "(DESIGN.md D80; syntek-author D48)")
+    print("\n".join(out))
+    sys.exit(0)
+
+if mode == "tree":
+    tree = Path(sys.argv[3])
+    own = None
+    if len(sys.argv) > 4 and sys.argv[4]:
+        own = set(Path(sys.argv[4]).read_text(encoding="utf-8").splitlines())
+    man, _ = load(root / MANIFEST)
+    if man is None or not usable(man):
+        sys.exit(0)  # check 23's, on the source
+    _, _, fs, _ = listed(man)
+    for path, e in sorted(fs.items()):
+        if e.get("scope", "project") != "project":
+            continue
+        dest = path.replace("<template>", OWN_NAME)
+        if dest in RENDERED or (own is not None and dest not in own):
+            continue
+        p = tree / dest
+        if not (p.exists() or p.is_symlink()):
+            continue  # shipped-brands.sh check 6's
+        if path in LINKS:
+            continue  # a render's .agents/skills link is shipped-brands.sh check 13's
+        n = 10 if dest == ".mcp.json" else 27
+        why = ("it declares the family's two servers, code-review-graph and scrapling, pinned, and never ElevenLabs, which stays "
+               "user-scoped (DESIGN.md D21, D80)") if n == 10 else "a token-free family file renders to its own bytes (DESIGN.md D80)"
+        if p.is_symlink() or not p.is_file():
+            finding(n, f"{dest} is not a file")
+            continue
+        b = p.read_bytes()
+        sha = hashlib.sha256(b).hexdigest()
+        if sha != e.get("sha256"):
+            finding(n, f"{dest} has SHA-256 {short(sha)}, not {short(e.get('sha256'))} as {MANIFEST} records for it: {why}")
+        elif e.get("mode") == "755" and not os.access(p, os.X_OK):
+            finding(n, f"{dest} is not executable in the render, though {MANIFEST} records mode 755 (copier.yml's copy-only chmod task; DESIGN.md D80)")
+    print("\n".join(out))
+    sys.exit(0)
+
+if mode == "compare":
+    author = Path(sys.argv[3])
+    def say(text):
+        out.append(text)
+    mine, err = load(root / MANIFEST)
+    theirs, terr = load(author / MANIFEST)
+    if mine is None or not usable(mine):
+        say(f"media's {MANIFEST} cannot be read as the family's format (shipped-seeds.sh check 23 says why), so nothing can be compared")
+    elif theirs is None:
+        say(f"the --author tree's {MANIFEST} is {'missing' if terr == 'missing' else terr}: it predates the family-shared set media vendors from syntek-author {RELEASE}")
+    else:
+        if theirs.get("owner") != "syntek-author" or theirs.get("format") != 1:
+            say(f"the --author tree's {MANIFEST} is not syntek-author's format-1 manifest (owner {theirs.get('owner')!r}, format {theirs.get('format')!r})")
+        if theirs.get("release") != RELEASE:
+            say(f"the --author tree's {MANIFEST} records release {theirs.get('release')!r}, not {RELEASE}, the tag media vendors from: run against "
+                f"that tag (CI's SYNTEK_AUTHOR_TAG), or re-vendor every family file and block from the new tag and move SM_FAMILY_RELEASE "
+                "with it (DESIGN.md D85: one tag for every family file)")
+        tfiles = {e.get("path"): e for e in theirs.get("files", []) if isinstance(e, dict)}
+        tblocks = {x.get("name"): x for x in theirs.get("blocks", []) if isinstance(x, dict)}
+        _, _, fs, bs = listed(mine)
+        for path, e in sorted(fs.items()):
+            t = tfiles.get(path)
+            if t is None:
+                say(f"media vendors {path}, which the --author tree's {MANIFEST} does not list")
+                continue
+            keys = ("kind", "scope", "bytes", "sha256", "mode", "target")
+            diff = [k for k in keys if e.get(k) != t.get(k)]
+            if diff:
+                def show(d):
+                    return ", ".join(k + " " + (short(d.get(k)) if k == "sha256" else repr(d.get(k))) for k in diff)
+                say(f"{path}: media's {MANIFEST} records {show(e)}, the --author tree's {show(t)}: "
+                    "re-vendor it from that tag, never edit it here (DESIGN.md D80, D85)")
+        for path in sorted(p for p in tfiles if p not in fs and p not in DEFERRED):
+            say(f"the --author tree's {MANIFEST} lists {path}, which media neither vendors nor defers to D81: adopt it, with its "
+                "copier.yml lines and its place in SM_FAMILY_SHARED (DESIGN.md D80)")
+        for name, x in bs.items():
+            t = tblocks.get(name)
+            if t is None:
+                say(f"media takes the {name} block, which the --author tree's {MANIFEST} does not list")
+                continue
+            diff = [k for k in ("destination", "begin", "end", "bytes", "sha256") if x.get(k) != t.get(k)]
+            if diff:
+                say(f"the {name} block: media's {MANIFEST} and the --author tree's differ in {', '.join(diff)}: re-vendor it from that tag "
+                    "(DESIGN.md D80, D85)")
+        for name in sorted(n for n in tblocks if n not in bs and f"block:{n}" not in DEFERRED):
+            say(f"the --author tree's {MANIFEST} lists the {name} block, which media neither takes nor defers to D81 (DESIGN.md D80)")
+    seed = author / "template" / ".claude" / "settings.json"
+    try:
+        sd = json.loads(re.sub(r"<:.*?:>", "", seed.read_text(encoding="utf-8"), flags=re.S))
+    except (OSError, ValueError) as error:
+        say(f"the --author tree's template/.claude/settings.json cannot be read with its gates removed ({error.__class__.__name__}), so the "
+            "family's asks, deny and hooks cannot be compared")
+    else:
+        perms = sd.get("permissions") or {}
+        ask = [a for a in perms.get("ask") or [] if a.startswith("mcp__")]
+        deny = [d for d in perms.get("deny") or [] if d.startswith("mcp__")]
+        if ask != [a for a in E["SMF_ASK"].splitlines() if a]:
+            say("_common.sh's SM_SETTINGS_FAMILY_ASK is not the --author tree's seed's MCP asks, in order: transcribe them again (DESIGN.md D13, D80)")
+        if deny != [d for d in E["SMF_DENY"].splitlines() if d]:
+            say("_common.sh's SM_SETTINGS_FAMILY_DENY is not the --author tree's seed's MCP denies (DESIGN.md D13, D80)")
+        if sd.get("hooks") != json.loads(E["SMF_HOOKS"]):
+            say("_common.sh's SM_SETTINGS_HOOKS is not the --author tree's seed's hooks key, byte for byte as JSON: media's seed registers "
+                "the family's hooks as syntek-author's does (DESIGN.md D13, D35, D80)")
+    print("\n".join(out))
+    sys.exit(0)
+
+print(f"sm_family_py: unknown mode {mode}", file=sys.stderr)
+sys.exit(2)
+PYFAMILY
+}
+
 # ── The fixture templates ────────────────────────────────────────────────────
 #
 # sm_fixture_template: a minimal syntek-media with the real repository's shape — the house
-# delimiters, the named answers file, the nineteen copy-only shared paths (the retired one excluded
+# delimiters, the named answers file, the copy-only shared paths (the retired one excluded
 # on copy as well), the D76 .agents folder and its v0.4.2 migration after the family-shared
 # migrations block (D85: the vendored outside-link pair), a register seed and a
 # brand seed, a gated profile and platform guide per platform, the podcast platform's gate on
@@ -1319,6 +1919,12 @@ EOF
     for p in "${SM_SETTINGS_ALLOW[@]}"; do [[ "$p" == Bash\(* ]] && printf '    allow: %s\n' "$p"; done
     for p in "${SM_SETTINGS_ASK[@]}"; do printf '    ask: %s\n' "$p"; done
     for p in "${SM_SETTINGS_DENY[@]}"; do [[ "$p" == Edit\(* ]] && printf '    deny: %s\n' "$p"; done
+    printf '  Where syntek-author v0.5.0 or later did not seed it, the family entries too:\n'
+    for p in "${SM_SETTINGS_FAMILY_ASK[@]}"; do printf '    ask: %s\n' "$p"; done
+    for p in "${SM_SETTINGS_FAMILY_DENY[@]}"; do printf '    deny: %s\n' "$p"; done
+    printf '    and the seed%ss "hooks" object, its PreToolUse data-root guard included.\n' "$q"
+    printf '  Over syntek-author, media reads no coding-agent answer from syntek-author%ss answers file.\n' "$q"
+    printf '  Then carry them to the other clients: python3 .claude/syntek-media-permissions.py --write\n'
     printf '  claude mcp add --scope user elevenlabs -- uvx elevenlabs-mcp\n'
     printf '    with --env ELEVENLABS_MCP_BASE_PATH="$HOME": the base path must contain the project.\n'
     printf '  This copy may have set filter.lfs.required in .git/config; git lfs install makes it harmless.\n'

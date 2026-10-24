@@ -13,8 +13,8 @@ voiceover uses the same narrator, settings and pronunciations.
 
 ## How to work here
 
-- **Routing:** no media skill runs this procedure; it opens with the grill-with-docs skill
-  (syntek-author), where present, or the same questions in rounds. Guide
+- **Routing:** no media skill runs this procedure; it opens with the `grill-with-docs` skill,
+  where present, or the same questions in rounds. Guide
   `brand/docs/reference/the-spoken-voice.md`; free tools `mcp__elevenlabs__list_models`,
   `mcp__elevenlabs__search_voices` and `mcp__elevenlabs__search_voice_library` from the
   user-scope server `elevenlabs`; any trial through `production/workflows/02-make-a-voiceover/`

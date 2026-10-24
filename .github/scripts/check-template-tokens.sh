@@ -49,8 +49,10 @@
 #                                 never gates a row on the examples (D43).
 #
 #                            The spine set (DESIGN.md Section 2): the root spine
-#                            (.claude/rules/syntek-media/*.md and the answers file); the nineteen
-#                            copy-only shared paths; every seed (_skip_if_exists, plus DESIGN.md
+#                            (.claude/rules/syntek-media/*.md and the answers file); the
+#                            copy-only shared paths (D11's nineteen and D80's seventeen, among
+#                            them the three family client files that carry the family-shared
+#                            question keys); every seed (_skip_if_exists, plus DESIGN.md
 #                            Section 3.1); every seed-once example; and every index file — a
 #                            CONTEXT.md or CLAUDE.md whose folder holds a gated descendant. The
 #                            set is computed in _common.sh from DESIGN.md's catalogue and

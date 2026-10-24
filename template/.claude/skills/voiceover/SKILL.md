@@ -75,8 +75,8 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
    author's recorded word.
 
 3. **Check the narrator, or choose one with the author.** The ElevenLabs tools come from a server
-   the author configures once at user scope under the name `elevenlabs`; the project adds nothing
-   to `.mcp.json`. They may be deferred: load them with ToolSearch, searching for 'elevenlabs'.
+   the author configures once at user scope under the name `elevenlabs`; the project's `.mcp.json`
+   names no ElevenLabs server. They may be deferred: load them with ToolSearch, searching for 'elevenlabs'.
    Before any batch, run `python3 toolkit/media.py check --setup` and stop on any ElevenLabs
    finding (`.claude/rules/syntek-media/03-production-ethics.md` Section 4). If the tools are
    absent, run `command -v espeak-ng`: if it finds the program, tell the author and offer the

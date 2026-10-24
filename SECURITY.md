@@ -59,15 +59,21 @@ Code and configuration from this template that runs on the owner's machine or in
 repository:
 
 - **`copier.yml`'s `_tasks` and `_migrations`**, which run under `--trust`: the copy-only
-  `git init` and Git LFS tripwire, and the migrations on update. Anything that runs other than as
-  documented, or that an answer can turn into a command.
+  `git init`, `chmod +x` of the session hooks and Git LFS tripwire, and the migrations on
+  update. Anything that runs other than as documented, or that an answer can turn into a command.
 - **The migration scripts in `migrations/`**, which run in the owner's project on update: the
   `.agents` handling of D76 (the 0.4.2 replacement of an `.agents -> .claude` link, and the hold
   and restore of an `.agents` link that leaves the project) touching anything but the link it
   names, or that link's target.
 - **The standalone `.claude/settings.json` seed** (D13): an allow, ask or deny rule that lets a
-  credit-spending ElevenLabs tool, or `media.py voice remix run`, go ahead without the promised
-  prompt, or that allows more than the documentation says.
+  credit-spending ElevenLabs tool, `media.py voice remix run` or a Scrapling or code-review-graph
+  tool it asks before go ahead without the promised prompt, or that allows more than the
+  documentation says; and the three hooks it registers (D80).
+- **The session hooks and the two family scripts** (D80): `.claude/hooks/*.sh`, which Claude Code
+  runs in the owner's sessions, the data-root guard, and `.claude/syntek-media-dataroot.py` and
+  `.claude/syntek-media-permissions.py`, whose `--write` edits the coding agents' files. Their
+  bytes are syntek-author's, vendored unchanged: a fix lands in syntek-author first and reaches
+  this template with syntek-author's next release, so a report may go to either project.
 - **The skills and rules that govern paid calls**: rules 03 Section 4 ('Credits: never spend
   unasked'), the ElevenLabs guard each credit-spending skill carries, and the two requests the
   toolkit sends itself, `voice remix run --approve-call` (D82) and Jev's
@@ -80,8 +86,10 @@ repository:
 - **The toolkit, `template/toolkit/*.py`**: how it builds ffmpeg commands, resolves paths, renders
   local HTML in Chromium and makes its two paid requests. A read, write or command outside the
   project, or input that becomes a command.
-- **The shipped agent-client configuration**: `.mcp.json`, `.agents/mcp_config.json` and
-  `.codex/config.toml`, which ship with no server, and the `.agents/skills` link.
+- **The shipped agent-client configuration**: `.mcp.json`, `.agents/mcp_config.json`,
+  `.codex/config.toml`, `.gemini/settings.json` and `opencode.json`, which declare two pinned MCP
+  servers, Scrapling and code-review-graph, and never ElevenLabs (D80), and the `.agents/skills`
+  link.
 - **An audit** in `.github/scripts/` that would pass a render carrying any of the above.
 
 ## Out of scope

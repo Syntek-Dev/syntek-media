@@ -24,7 +24,9 @@ project (DESIGN.md D11).
   its real run and reporting failures as `::error::` lines that accumulate:
   - **[1/3] Template source** — tokens, the mode-file block, pairs and shapes, the line cap,
     personal data, development isolation, the community files at the root (D83), seeds, skills;
-    then, in the same step, the vendored `migrations/agents-outside-link.py --self-test` (D85).
+    then, in the same step, the vendored `migrations/agents-outside-link.py --self-test` (D85)
+    and, with `SYNTEK_DATA_ROOT` unset, the vendored data-root resolver's and permissions
+    script's, `template/.claude/syntek-media-dataroot.py` and `syntek-media-permissions.py` (D80).
   - **[2/3] Renders** — installs uv and ffmpeg, renders every brand kind and profile once (and
     each kind over syntek-author where it could be fetched), and runs the per-render audits over
     all of them, the toolkit smoke test under `--require-ffmpeg`. Playwright's Chromium is not

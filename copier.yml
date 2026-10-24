@@ -21,7 +21,10 @@
 # before D76's hold can move it aside. 9.12.0 is the lowest release measured to pass every
 # update-test.sh check (22/10/2026: a real run on 9.12.0 and 9.19.1, the self-test on every
 # release from 9.12.0 to 9.19.1). `multiselect`, which PLATFORMS and MEDIA_KINDS need,
-# predates it (proven on 9.18.2).
+# predates it (proven on 9.18.2). Since 0.5.0 the family-shared questions block (D80;
+# syntek-author D48, D50) renders Copier's `UNSET` in DATA_SLUG's default, which first exists
+# in 9.11.0 (absent from 9.6.0 through 9.10.3): the 9.12.0 floor already admits it, so the
+# floor does not move.
 _min_copier_version: "9.12.0"
 
 # Everything that ships lives at its real path under template/ (DESIGN.md D1). The repository
@@ -61,17 +64,30 @@ _answers_file: .copier-answers.syntek-media.yml
 # `default(BRAND_KIND, true)` reads as "no previous answer". Copier prints the warning on every
 # update too, because its temporary renders of the old and new template read the path as well.
 # That warning is the accepted cost. Never test `_copier_operation` in a validator instead: it
-# is undefined there.
+# is undefined there. Since 0.5.0 the family-shared questions block reads the same record for
+# its defaults (DESIGN.md D80): a recorded answer is kept, and a record without one (a project
+# from before 0.5.0) keeps the project as it is.
 #
-# THIS IS THE ONLY READ OF EXTERNAL DATA, AND IT STAYS IN THE VALIDATOR. Media never reads
-# syntek-author's answers file at all, and never reads _external_data in a file body, a
-# computed value, an _exclude gate or a message: an update's temporary renders find no answers
-# file, so data rendered into a body differs between the old and the new render and leaves
-# conflict markers on the first update (probe c2c), and a read in _message_before_update
-# aborts the update (probe c3). A skill that needs to know whether syntek-author is present
-# checks for its file at run time.
+# `peer` is syntek-author's record (D14 as D80 widens it; syntek-author D50), read for its
+# data-root answers (DATA_*) alone, and for whether it exists at all: a first data-root answer
+# here defaults to syntek-author's and must equal it, and a syntek-author record without
+# DATA_STORE (from before its data root) makes media's first store `repo`. It sits here,
+# outside the block, because each template names the OTHER one's file. Where syntek-author has
+# never been applied, Copier prints a second MissingFileWarning, for this file, and
+# `_external_data.peer` is empty: the same accepted cost, doubled.
+#
+# THE READS OF EXTERNAL DATA ARE THESE THREE, AND NO OTHER (D14, widened by D80): BRAND_KIND's
+# validator (prev); the defaults and validators inside the family-shared questions block (prev
+# and peer); and _message_after_update, which reads peer alone to report a data-root
+# disagreement. Never in a file body, a computed value, an _exclude gate, _message_after_copy
+# or _message_before_update: an update's temporary renders find no answers file, so data
+# rendered into a body differs between the old and the new render and leaves conflict markers
+# on the first update (probe c2c), and a read in _message_before_update aborts the update
+# (probe c3). A skill that needs to know whether syntek-author is present checks for its file
+# at run time.
 _external_data:
   prev: .copier-answers.syntek-media.yml
+  peer: .copier-answers.syntek-author.yml
 
 # Every file is a template — tokens are not confined to a suffixed subset. template/ ships no
 # binary at all (DESIGN.md Section 10): no audio, video, image or font.
@@ -165,8 +181,9 @@ _exclude:
   #
   # ── Shared root files: copy only, never on update (DESIGN.md D11, Section 3.6) ──
   #
-  # The nineteen shared paths (D73, D76), including the ten syntek-author also ships.
-  # Each has TWO lines in this file and needs both:
+  # The thirty-six shared paths (D73, D76, D80): the nineteen below, then D80's seventeen
+  # after the D76 note. syntek-author ships every one of them but the retired
+  # .claude/mcp_config.json. Each has TWO lines in this file and needs both:
   # this update gate, so an update never renders it and a copy the author deleted is never
   # recreated; and its anchored line in _skip_if_exists below, so a copy over a project that
   # already has it skips it (exit 0) instead of stopping with 'Interactive session required'.
@@ -222,6 +239,43 @@ _exclude:
   # project's copy is the author's; the v0.4.2 migration below moves it only where the new path
   # is free. This is the one shared-path line that is not an update gate.
   - /.claude/mcp_config.json
+  #
+  # D80: seventeen more shared paths, syntek-author's family-shared files (syntek-author D48,
+  # D51), vendored byte for byte from its v0.5.0 tag and listed in family-shared.json: the
+  # Gemini CLI settings and their pair, OpenCode's settings, the SKILL.md of the seven
+  # working-practice skills, the two session hooks with the .claude/hooks/ pair, and the
+  # handoffs/ pair. Each takes the same two lines as the nineteen, FILE by file, never the
+  # folder: five of the skill folders also hold media's own MEDIA-<KIND>.md mode files, which
+  # are template-owned and update (the generated block below). syntek-author writes the same
+  # paths copy-only, so neither template's update renders, merges or deletes the copy the
+  # other one wrote, and a combined project holds one copy whichever template came first.
+  # A copy-only file reaches an existing project only through an update script, which media
+  # takes with D81 (0.6.0): until then an update delivers none of these, and
+  # _message_after_update says so. A line here is never removed once released (D11).
+  - "<: if _copier_operation == 'update' :>/.gemini/settings.json<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.gemini/CONTEXT.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.gemini/CLAUDE.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/opencode.json<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/skills/grill-me/SKILL.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/skills/grill-with-docs/SKILL.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/skills/grilling/SKILL.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/skills/handoff/SKILL.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/skills/to-questionnaire/SKILL.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/skills/wait-what/SKILL.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/skills/wayfinder/SKILL.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/hooks/pre-compact-handoff.sh<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/hooks/context-threshold-handoff.sh<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/hooks/CONTEXT.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.claude/hooks/CLAUDE.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/handoffs/CONTEXT.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/handoffs/CLAUDE.md<: endif :>"
+  #
+  # The two client folders as well, syntek-author's own lines (its copier.yml, D47), so an
+  # update never creates an empty .codex/ or .gemini/ in a project that never had one or whose
+  # author removed it (/.agents has its line among the nineteen). They are folder guards, not
+  # shared paths: no _skip_if_exists line, because every file under them has its own.
+  - "<: if _copier_operation == 'update' :>/.codex<: endif :>"
+  - "<: if _copier_operation == 'update' :>/.gemini<: endif :>"
   #
   # ── Gated paths ──────────────────────────────────────────────────────────────
   #
@@ -327,6 +381,25 @@ _exclude:
   # sit in the generated block below.
   - "<: if not ('audiobook' in MEDIA_KINDS) :>/.claude/skills/narrate-audiobook<: endif :>"
   #
+  # ── Coding agents other than Claude Code (DESIGN.md D80, Section 3.5; syntek-author D47) ──
+  #
+  # Each client's files ship only when AGENT_CLIENTS names it; Claude Code's .claude/ tree is
+  # the canonical one and always ships. These are syntek-author's seven gate lines, verbatim,
+  # so a combined project receives the same client files whichever template is copied first.
+  # Every path here is also copy-only (the shared block above), so these gates act on a copy
+  # alone: an update renders none of them, whatever the answer. The bridge,
+  # .claude/syntek-media-agents.md, is template-owned and always ships, so an entrypoint left
+  # by an earlier answer never points at a missing file, and a Claude-only project still has
+  # the steps for enabling a client. AGENT_CLIENTS is always asked, so it needs no BRAND_KIND
+  # test (D15); an empty list, a Claude-only project, shuts every gate here.
+  - "<: if not ('codex' in AGENT_CLIENTS or 'opencode' in AGENT_CLIENTS) :>/AGENTS.md<: endif :>"
+  - "<: if not ('gemini-cli' in AGENT_CLIENTS or 'antigravity' in AGENT_CLIENTS) :>/GEMINI.md<: endif :>"
+  - "<: if not (AGENT_CLIENTS | length > 0) :>/.agents<: endif :>"
+  - "<: if not ('codex' in AGENT_CLIENTS) :>/.codex<: endif :>"
+  - "<: if not ('gemini-cli' in AGENT_CLIENTS) :>/.gemini<: endif :>"
+  - "<: if not ('antigravity' in AGENT_CLIENTS) :>/.agents/mcp_config.json<: endif :>"
+  - "<: if not ('opencode' in AGENT_CLIENTS) :>/opencode.json<: endif :>"
+  #
   # ── Seed-once examples (DESIGN.md Section 3.2): copy only, and they stay deleted ──
   #
   # Rendered on `copy` when SEED_EXAMPLES is true, and never again. The difference from
@@ -355,12 +428,23 @@ _exclude:
   # ── Mode files (DESIGN.md D7, Section 3.5): GENERATED, never edited by hand ──
   #
   # Every moded skill carries exactly one of BUSINESS.md, FICTION.md or NONFICTION.md in a
-  # generated project; the other two are excluded here, one line per file that exists on disk,
-  # three lines per moded skill. `.github/scripts/gen-mode-excludes.sh` writes everything
-  # between the two markers from the files under template/, and `--check` fails CI when the
-  # block and the disk disagree. Add or remove a mode file, then regenerate — never type a
-  # line here.
+  # generated project, and each of the five family skill folders media writes mode files for
+  # exactly one of MEDIA-BUSINESS.md, MEDIA-FICTION.md or MEDIA-NONFICTION.md (D80: the prefix
+  # keeps them apart from syntek-author's own mode files in the same folder); the other two are
+  # excluded here, one line per file that exists on disk, three lines per moded folder.
+  # `.github/scripts/gen-mode-excludes.sh` writes everything between the two markers from the
+  # files under template/, and `--check` fails CI when the block and the disk disagree. Add or
+  # remove a mode file, then regenerate — never type a line here.
   # BEGIN generated mode excludes
+  - "<: if BRAND_KIND != 'business' :>/.claude/skills/grill-with-docs/MEDIA-BUSINESS.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/grill-with-docs/MEDIA-FICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/grill-with-docs/MEDIA-NONFICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'business' :>/.claude/skills/grilling/MEDIA-BUSINESS.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/grilling/MEDIA-FICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/grilling/MEDIA-NONFICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'business' :>/.claude/skills/handoff/MEDIA-BUSINESS.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/handoff/MEDIA-FICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/handoff/MEDIA-NONFICTION.md<: endif :>"
   - "<: if BRAND_KIND != 'business' :>/.claude/skills/narrate-audiobook/BUSINESS.md<: endif :>"
   - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/narrate-audiobook/FICTION.md<: endif :>"
   - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/narrate-audiobook/NONFICTION.md<: endif :>"
@@ -376,9 +460,15 @@ _exclude:
   - "<: if BRAND_KIND != 'business' :>/.claude/skills/thumbnail-brief/BUSINESS.md<: endif :>"
   - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/thumbnail-brief/FICTION.md<: endif :>"
   - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/thumbnail-brief/NONFICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'business' :>/.claude/skills/to-questionnaire/MEDIA-BUSINESS.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/to-questionnaire/MEDIA-FICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/to-questionnaire/MEDIA-NONFICTION.md<: endif :>"
   - "<: if BRAND_KIND != 'business' :>/.claude/skills/voiceover/BUSINESS.md<: endif :>"
   - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/voiceover/FICTION.md<: endif :>"
   - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/voiceover/NONFICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'business' :>/.claude/skills/wayfinder/MEDIA-BUSINESS.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/wayfinder/MEDIA-FICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/wayfinder/MEDIA-NONFICTION.md<: endif :>"
   - "<: if BRAND_KIND != 'business' :>/.claude/skills/write-script/BUSINESS.md<: endif :>"
   - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/write-script/FICTION.md<: endif :>"
   - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/write-script/NONFICTION.md<: endif :>"
@@ -395,9 +485,10 @@ _exclude:
 # preview cards) and why that emptiness is audited by `.github/scripts/shipped-seeds.sh`, not
 # trusted.
 #
-# The nineteen shared root paths are here for a second reason (D11, D76): a copy over a project that
-# already has one must skip it rather than abort. Their update-gated lines in _exclude above
-# make them copy-only as well, so unlike every other line here they are never recreated.
+# The thirty-six shared paths are here for a second reason (D11, D76, D80): a copy over a
+# project that already has one must skip it rather than abort. Their update-gated lines in
+# _exclude above make them copy-only as well, so unlike every other line here they are never
+# recreated.
 #
 # EVERY PATTERN IS ANCHORED. These are gitignore-style patterns like _exclude: an unanchored
 # `CONTEXT.md` would match every governance pair in the tree and freeze all of them against
@@ -419,7 +510,7 @@ _exclude:
 # not. Add each line in the change that adds its file, and keep the list explicit (no globs):
 # the audits read it path by path.
 _skip_if_exists:
-  # ── Shared root files (DESIGN.md D11, Section 3.6; also update-gated in _exclude) ──
+  # ── Shared paths (DESIGN.md D11, Section 3.6; also update-gated in _exclude) ──
   - /README.md
   - /CONTEXT.md
   - /.gitignore
@@ -439,6 +530,24 @@ _skip_if_exists:
   - /.claude/mcp_config.json
   - /.agents/skills
   - /.agents/mcp_config.json
+  # ── D80: syntek-author's family-shared files (also update-gated in _exclude) ──
+  - /.gemini/settings.json
+  - /.gemini/CONTEXT.md
+  - /.gemini/CLAUDE.md
+  - /opencode.json
+  - /.claude/skills/grill-me/SKILL.md
+  - /.claude/skills/grill-with-docs/SKILL.md
+  - /.claude/skills/grilling/SKILL.md
+  - /.claude/skills/handoff/SKILL.md
+  - /.claude/skills/to-questionnaire/SKILL.md
+  - /.claude/skills/wait-what/SKILL.md
+  - /.claude/skills/wayfinder/SKILL.md
+  - /.claude/hooks/pre-compact-handoff.sh
+  - /.claude/hooks/context-threshold-handoff.sh
+  - /.claude/hooks/CONTEXT.md
+  - /.claude/hooks/CLAUDE.md
+  - /handoffs/CONTEXT.md
+  - /handoffs/CLAUDE.md
   # ── brand/: the design register, the design system and the spoken voice ──
   # tokens.css and the two layout components (previews/thumbnail.html and previews/card.html)
   # are the brand's source of truth, synced with its Claude Design project by the author (D18).
@@ -541,7 +650,8 @@ BRAND_SLUG:
 # NO DEFAULT, ON PURPOSE. `copier copy --defaults` without it stops with 'Question "BRAND_KIND"
 # is required' rather than quietly generating a business brand, so CI, the audits and every
 # application over a syntek-author project must say which kind they mean. It is never derived
-# from syntek-author's DOC_TYPE: media does not read that answers file (D14).
+# from syntek-author's DOC_TYPE: media reads that answers file for the data-root answers
+# alone (D14, as D80 widens it).
 #
 # Changing it later is REFUSED (DESIGN.md D14; syntek-author D35). The mode files, the worked
 # example, the brand seeds and the brand section of the rules are written for one kind of
@@ -791,6 +901,310 @@ DATE:
     Use DD/MM/YYYY — day first, then month (01–12).
     <: endif :>
 
+# ── Coding agents and the data root (family-shared; DESIGN.md D80, Section 2) ──────────
+#
+# Fifteen questions shared with syntek-author: which coding agents besides Claude Code the
+# project uses, and their models (syntek-author D47); where its binary files are kept, and
+# with what layout (syntek-author D50); and which service keeps a copy of that data root
+# (syntek-author D53). Since 0.5.0 (D80) the lines strictly between the two marker lines below
+# are syntek-author's family-shared 'questions' block, byte for byte at its v0.5.0 tag, as
+# family-shared.json records it. Never edit them here: they come again only from a later
+# syntek-author tag (one tag for all, D85). The marker lines are syntek-author's too, byte for
+# byte, so that its family-shared.sh finds the block: their D48 is syntek-author's decision,
+# never media's D48. So the block names no template and no media path: where its comments and
+# help say 'the other template' or 'the sibling', read syntek-author.
+#
+# Inside the block a delimiter reads only its own fifteen keys, `_external_data` (prev and
+# peer, named above, outside the block), `_folder_name` (the slug's default) and Copier's
+# `UNSET` (the same default, where no slug can be derived; the floor above admits it). The one
+# name besides them is syntek-author's retired INCLUDE_DRIVE_SYNC, inside two string literals
+# in DATA_PROVIDER's default: media never asked it, so media's own record never holds it, and
+# the default goes on to syntek-author's answer, then none. The block sits LAST, after DATE,
+# so no media question reads these answers: one placed before the block reads '' under
+# --defaults (syntek-author's probe, Copier 9.17.1 and 9.18.2).
+#
+# What the answers do here. AGENT_CLIENTS gates each client's files (the coding-agent block of
+# _exclude, which acts on a copy only) and the rows of the model table in
+# .claude/rules/syntek-media/05-model-allocation.md; a model answer is written into its
+# client's own file on a copy only. The data-root answers place nothing in 0.5.0: media's map,
+# .claude/syntek-media-dataroot.json, names no folder (D80), so footage stays where
+# production/src/footage/manifest.toml lists it. They keep the family's records in agreement,
+# which the data-root resolver requires of every answers file in the project, and
+# _message_after_update reports a difference from syntek-author's. Every gate, `when:` and
+# content block that reads one of these answers repeats its question's `when:` test, and tests
+# DATA_STORE by equality with a value, never `!=` (syntek-author D50).
+#
+# Existing projects need no migration (D80): the update that first asks these records
+# AGENT_CLIENTS [] (so it writes no client's files) and DATA_STORE repo, or the store
+# syntek-author already records; _message_before_update says so.
+# BEGIN family-shared questions (D48)
+# The client values are the gate strings and never change; the labels may. Gemini CLI and
+# Antigravity are two choices, not one: they share GEMINI.md and the .agents/skills link, but
+# only Gemini CLI reads .gemini/settings.json and only Antigravity reads
+# .agents/mcp_config.json.
+#
+# The default reads the previous answers record. A record that already holds this answer
+# keeps it (only its values that are still choices), so a copy over an existing project
+# (re-adoption) never resets the clients, unless a Copier settings file sets them. A
+# record without it belongs to a project being updated, and the update that first asks this
+# question must record no client whose files the project never received, so the default
+# there is none. A fresh copy, with no record, gets all four. `_copier_operation` cannot make
+# this test: it is undefined in question defaults.
+AGENT_CLIENTS:
+  type: str
+  multiselect: true
+  help: >-
+    Which coding agents besides Claude Code will you use here? Each adds its entrypoint and
+    settings; all of them read the same rules, skills and memory in .claude/. These files
+    are written once: an update never adds, changes or recreates them. On an update that
+    first asks this, the default is none: tick a client to add its row to the model table,
+    then follow the agents bridge in .claude/ (the .claude/syntek-*-agents.md file) to add
+    its files. Tick none to keep the project Claude-only.
+  choices:
+    "Codex — OpenAI's coding agent (AGENTS.md, .codex/)": codex
+    "Gemini CLI — Google's terminal agent (GEMINI.md, .gemini/)": gemini-cli
+    "Antigravity — Google's agent IDE (GEMINI.md, .agents/mcp_config.json)": antigravity
+    "OpenCode 2 or later — any model, including a local server (AGENTS.md, opencode.json)": opencode
+  default: "<% (_external_data.prev.AGENT_CLIENTS | select('in', ['codex', 'gemini-cli', 'antigravity', 'opencode']) | list | tojson) if (_external_data.prev.get('AGENT_CLIENTS') is sequence and _external_data.prev.get('AGENT_CLIENTS') is not string) else ('[]' if _external_data.prev.get('_commit') else '[codex, gemini-cli, antigravity, opencode]') %>"
+
+# Blank leaves the client's own default. Codex ignores `model_provider`, `model_providers` and
+# `profile(s)` in a project file, with a warning (0.160.1), so running Codex on a local model
+# is the owner's user-level setting, not this answer. Model names are checked as character
+# sets (no Jinja regular expressions), so an answer can never break the TOML or JSON it is
+# written into.
+CODEX_MODEL:
+  type: str
+  help: >-
+    Which model should Codex use for substantive work? Leave blank to use Codex's own
+    default. Written to .codex/config.toml once; change it there later.
+  default: ""
+  when: "<% 'codex' in AGENT_CLIENTS %>"
+  validator: >-
+    <: if 'codex' in AGENT_CLIENTS and CODEX_MODEL | reject('in', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:/@+-') | list | length > 0 :>
+    Use a model name: letters, digits and . _ : / @ + - only, no spaces or quotation marks.
+    <: endif :>
+
+GEMINI_MODEL:
+  type: str
+  help: >-
+    Which model should Gemini CLI use for substantive work? Leave blank to use its own
+    default. Written to .gemini/settings.json once; change it there later.
+  default: ""
+  when: "<% 'gemini-cli' in AGENT_CLIENTS %>"
+  validator: >-
+    <: if 'gemini-cli' in AGENT_CLIENTS and GEMINI_MODEL | reject('in', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:/@+-') | list | length > 0 :>
+    Use a model name: letters, digits and . _ : / @ + - only, no spaces or quotation marks.
+    <: endif :>
+
+# OpenCode is the client for local models. `user` writes no model and no provider, so each
+# person's own OpenCode settings apply; `named` writes a `provider/model` only. Every local
+# server is written as one OpenAI-compatible provider in opencode.json, under the server's own
+# id, so the model reads `<provider>/<model>` in OpenCode. No key is written: a server that
+# needs one gets it from OpenCode's own credential store or an environment variable the owner
+# sets. A committed provider replaces, for every collaborator, the address of any provider of
+# theirs with the same id, which is why the default writes none.
+OPENCODE_PROVIDER:
+  type: str
+  help: >-
+    Where does OpenCode get its model? A local server keeps the writing on this machine. A
+    local provider written here overrides, for every collaborator, any provider of theirs
+    with the same id.
+  choices:
+    "Use my OpenCode settings (no model or provider written)": user
+    "A model I name (provider/model)": named
+    "llama.cpp — llama-server or llama-swap": llama-cpp
+    "Ollama": ollama
+    "vLLM": vllm
+    "LM Studio": lmstudio
+    "Another OpenAI-compatible server": openai-compatible
+  default: user
+  when: "<% 'opencode' in AGENT_CLIENTS %>"
+
+# The defaults are each server's documented local port. The validator matches
+# ^https?://[^\s"]+/v1/?$ exactly, without a regular expression (fuzzed against re.fullmatch
+# over 200,023 strings, Unicode whitespace included): the answer is written inside a JSON
+# string, so whitespace or a quotation mark would break opencode.json. A trailing slash is
+# accepted and dropped when the address is written.
+OPENCODE_BASE_URL:
+  type: str
+  help: >-
+    The server's OpenAI-compatible address, ending /v1. The default is the server's usual
+    local port.
+  default: >-
+    <% {'llama-cpp': 'http://127.0.0.1:8080/v1', 'ollama': 'http://127.0.0.1:11434/v1',
+    'vllm': 'http://127.0.0.1:8000/v1', 'lmstudio': 'http://127.0.0.1:1234/v1'}.get(OPENCODE_PROVIDER, '') %>
+  when: "<% 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER not in ['user', 'named'] %>"
+  validator: >-
+    <: if 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER not in ['user', 'named'] :><: set u = OPENCODE_BASE_URL :><: set body = u[8:] if u.startswith('https://') else (u[7:] if u.startswith('http://') else '') :><: set body = body[:-1] if body.endswith('/v1/') else body :><: if not body.endswith('/v1') or (body[:-3] | length) < 1 or (u.split() | join) != u or '"' in u :>Use the server's address with http:// or https:// and ending /v1 or /v1/, for example http://127.0.0.1:8080/v1.<: endif :><: endif :>
+
+# No default model: one machine's catalogue is no project's honest default, so a local server
+# needs the owner to name its model, and the validator says so.
+OPENCODE_MODEL:
+  type: str
+  help: >-
+    The model's ID. For a local server, the name it lists at /v1/models (Ollama, for example,
+    qwen3:30b). For a model you name, provider/model as OpenCode lists it.
+  default: ""
+  when: "<% 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER != 'user' %>"
+  validator: >-
+    <: if 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER != 'user' :><: if not OPENCODE_MODEL :>Name the model: a local server's ID as it lists it at /v1/models, or provider/model.<: elif OPENCODE_MODEL | reject('in', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:/@+-') | list | length > 0 :>Use a model ID: letters, digits and . _ : / @ + - only, no spaces or quotation marks.<: elif OPENCODE_PROVIDER == 'named' and '/' not in OPENCODE_MODEL :>Write a model you name as provider/model, as OpenCode lists it.<: endif :><: endif :>
+
+# Never larger than the server loads: OpenCode plans its context from this number, and a
+# figure above the server's makes long sessions fail rather than shrink. The defaults are a
+# safe floor per server, not a recommendation: 4096 is small for agent work.
+OPENCODE_CONTEXT:
+  type: int
+  help: >-
+    The context length the server actually loads for this model, in tokens. Never more than
+    the server's setting: raise the server's own setting and this number together. Ollama's
+    default depends on the GPU's memory (4k, 32k or 256k) unless OLLAMA_CONTEXT_LENGTH or a
+    model's num_ctx sets it.
+  default: "<% {'llama-cpp': 262144, 'ollama': 4096, 'lmstudio': 4096, 'vllm': 32768}.get(OPENCODE_PROVIDER, 32768) %>"
+  when: "<% 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER not in ['user', 'named'] %>"
+  validator: >-
+    <: if 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER not in ['user', 'named'] and (OPENCODE_CONTEXT | int < 1024 or OPENCODE_CONTEXT | int > 10000000) :>Use the server's context length in tokens, from 1024 to 10000000.<: endif :>
+
+# The data-root questions. Portable and path-free: each machine names its root in the
+# SYNTEK_DATA_ROOT environment variable, never in a file here, and the project's resolver
+# (.claude/syntek-*-dataroot.py) reads these answers at run time. The defaults read this
+# template's previous answers, then the sibling template's (data-root keys only), then
+# whether the project already exists (a previous record, or a sibling's record from before
+# the data root). Only a value offered here is ever taken from a record, and every gate on
+# the store tests it by equality, so a value a newer template adds opens nothing.
+#
+# So a fresh copy defaults to external, and the update that first asks this to repo, as does
+# a copy beside a sibling record that predates the data root; a store the sibling already
+# records comes first. The validator binds a first answer only (no store recorded here yet):
+# it must equal the sibling's, so one project keeps one store. A later difference is allowed,
+# reported after the update and refused by the resolver's data commands until both agree, so
+# neither template can deadlock the other. A sibling value this version does not offer is
+# refused with a message, never fed to `choices`. The `!=` there compares two answers, not an
+# answer with a value, and opens no path.
+DATA_STORE:
+  type: str
+  help: >-
+    Where are this project's binary files kept: documents, images, audio and video (scans,
+    signed copies, footage, renders, issued copies)? Outside keeps Git to text: each file is
+    filed under this machine's data root, which the SYNTEK_DATA_ROOT environment variable
+    names (never the repository), and is listed with its checksum. Inside keeps them in the
+    repository, as before. Every template in this project uses the same answer.
+  choices:
+    "Outside the repository, under this machine's data root (recommended)": external
+    "Inside the repository, as before": repo
+  default: "<% (_external_data.prev or {}).get('DATA_STORE') if (_external_data.prev or {}).get('DATA_STORE') in ['external', 'repo'] else ((_external_data.peer or {}).get('DATA_STORE') if (_external_data.peer or {}).get('DATA_STORE') in ['external', 'repo'] else ('repo' if ((_external_data.prev or {}).get('_commit') or (_external_data.peer or {})) else 'external')) %>"
+  validator: >-
+    <: set p = (_external_data.peer or {}).get('DATA_STORE') :><: set q = (_external_data.prev or {}).get('DATA_STORE') :><: if p and q not in ['external', 'repo'] and DATA_STORE != p :>One project, one store: the other template recorded '<% p %>'.<: endif :>
+
+# The layout under the root: <root>/<area>/<kind folder>/<slug>/<the file's path in the
+# repository>. Asked only under the external store. Each default reads this template's
+# previous answer, then the sibling's, then a literal; `business` is the area in every
+# variant, because nothing in this block may read the variant. A first answer (none recorded
+# here yet) must equal the sibling's exactly, case included. A later change is allowed (the
+# files already filed stay under their old folder, which the resolver names), except a
+# change of case alone, which one disk treats as the same folder and another as a second one.
+# Leaving external forgets these answers (Copier drops a hidden answer), so a return
+# re-derives them. The rules are character-set tests, without a regular expression: no
+# character Windows or a network disk refuses, no control character, no trailing dot or
+# space and no leading space (so neither . nor ..), no device name before the first dot in
+# any case, at most 64 characters.
+DATA_AREA:
+  type: str
+  help: >-
+    The first folder under this machine's data root that holds this project's files, named
+    as you want it on disk, case kept: for example business, personal or Client Work. Every
+    machine and every template in this project uses the same name.
+  default: "<% (_external_data.prev or {}).get('DATA_AREA') or (_external_data.peer or {}).get('DATA_AREA') or 'business' %>"
+  when: "<% DATA_STORE == 'external' %>"
+  validator: >-
+    <: if DATA_STORE == 'external' :><: set a = DATA_AREA :><: set p = (_external_data.peer or {}).get('DATA_AREA') :><: set q = (_external_data.prev or {}).get('DATA_AREA') :><: set stem = a.split('.')[0].rstrip(' ').upper() :><: if not a :>Name the area, the first folder under the data root: for example business.<: elif a | select('in', '<>:"/\\|?*') | list | length > 0 :>Leave out < > : " / \ | ? and *: Windows and network disks refuse them in a folder name.<: elif a | select('lt', ' ') | list | length > 0 or '\x7f' in a :>Leave out tabs and other control characters: no disk keeps them safely in a folder name.<: elif a[-1] in '. ' or a[0] == ' ' :>Do not end the name with a dot or a space, or begin it with a space: Windows drops them, which is also why . and .. are refused.<: elif stem in ['CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'] or (stem | length == 4 and stem[:3] in ['COM', 'LPT'] and stem[3] in '123456789¹²³') :>Windows reserves that name in any case, before any dot (CON, PRN, AUX, NUL, COM1 to COM9, LPT1 to LPT9 and the like): choose another.<: elif a | length > 64 :>Keep the name to 64 characters or fewer.<: elif q and a != q and a | lower == q | lower :>This project's files are filed under '<% q %>'. A change of case alone makes a second folder on some disks and the same folder on others: keep '<% q %>', or choose another name.<: elif not q and p and a != p and a | lower == p | lower :>The other template files this project under '<% p %>'. A difference of case alone makes a second folder on some disks and the same folder on others: answer '<% p %>' exactly.<: elif not q and p and a != p :>One project, one layout: the other template files this project under '<% p %>'. Answer '<% p %>' here too, or change that template's answer first.<: endif :><: endif :>
+
+# The slug's default is the project folder's name in kebab case (lower case; `_`, `.`, `-`
+# and spaces separate words; other characters dropped), cut to 64 characters with no
+# trailing hyphen. Where nothing is left, or a device name, it renders UNSET, so the question
+# has no default and must be answered: Copier validates a shown question's default before any
+# prompt, so a default that failed this validator would abort the copy. A literal fallback
+# would put every such project in one shared folder. Never renamed once files are filed.
+DATA_SLUG:
+  type: str
+  help: >-
+    This project's own folder inside each kind folder, in kebab case (a to z, 0 to 9 and
+    hyphens). Every template in this project uses the same name. Never change it once files
+    are filed under it: they stay in the old folder.
+  default: "<: set k = ((_folder_name | lower | replace('_', ' ') | replace('.', ' ') | replace('-', ' ') | select('in', 'abcdefghijklmnopqrstuvwxyz0123456789 ') | join).split() | join('-'))[:64].rstrip('-') :><% (_external_data.prev or {}).get('DATA_SLUG') or (_external_data.peer or {}).get('DATA_SLUG') or (k if k and k not in ['con', 'prn', 'aux', 'nul', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9', 'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9'] else UNSET) %>"
+  when: "<% DATA_STORE == 'external' %>"
+  validator: >-
+    <: if DATA_STORE == 'external' :><: set s = DATA_SLUG :><: set p = (_external_data.peer or {}).get('DATA_SLUG') :><: set q = (_external_data.prev or {}).get('DATA_SLUG') :><: if not s :>Name this project's folder under each kind folder, in kebab case: for example client-documents.<: elif s | reject('in', 'abcdefghijklmnopqrstuvwxyz0123456789-') | list | length > 0 :>Use lower-case letters a to z, digits and hyphens only: for example client-documents.<: elif s[0] == '-' or s[-1] == '-' or '--' in s :>Do not begin or end the name with a hyphen, or put two hyphens together.<: elif s in ['con', 'prn', 'aux', 'nul', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9', 'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9'] :>Windows reserves that name (con, prn, aux, nul, com1 to com9, lpt1 to lpt9): choose another.<: elif s | length > 64 :>Keep the name to 64 characters or fewer.<: elif not q and p and s != p :>One project, one layout: the other template files this project under '<% p %>'. Answer '<% p %>' here too, or change that template's answer first.<: endif :><: endif :>
+
+# The four kind folders under the area. Each takes the area's rules, and each must differ
+# from the kinds asked before it, ignoring case, or two kinds would share one folder on a
+# case-insensitive disk.
+DATA_KIND_DOCS:
+  type: str
+  help: >-
+    The folder under the area for documents: PDFs, Office files, archives and scans.
+  default: "<% (_external_data.prev or {}).get('DATA_KIND_DOCS') or (_external_data.peer or {}).get('DATA_KIND_DOCS') or 'docs' %>"
+  when: "<% DATA_STORE == 'external' %>"
+  validator: >-
+    <: if DATA_STORE == 'external' :><: set k = DATA_KIND_DOCS :><: set p = (_external_data.peer or {}).get('DATA_KIND_DOCS') :><: set q = (_external_data.prev or {}).get('DATA_KIND_DOCS') :><: set stem = k.split('.')[0].rstrip(' ').upper() :><: if not k :>Name the folder for documents: for example docs.<: elif k | select('in', '<>:"/\\|?*') | list | length > 0 :>Leave out < > : " / \ | ? and *: Windows and network disks refuse them in a folder name.<: elif k | select('lt', ' ') | list | length > 0 or '\x7f' in k :>Leave out tabs and other control characters: no disk keeps them safely in a folder name.<: elif k[-1] in '. ' or k[0] == ' ' :>Do not end the name with a dot or a space, or begin it with a space: Windows drops them, which is also why . and .. are refused.<: elif stem in ['CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'] or (stem | length == 4 and stem[:3] in ['COM', 'LPT'] and stem[3] in '123456789¹²³') :>Windows reserves that name in any case, before any dot (CON, PRN, AUX, NUL, COM1 to COM9, LPT1 to LPT9 and the like): choose another.<: elif k | length > 64 :>Keep the name to 64 characters or fewer.<: elif q and k != q and k | lower == q | lower :>This project's documents are filed under '<% q %>'. A change of case alone makes a second folder on some disks and the same folder on others: keep '<% q %>', or choose another name.<: elif not q and p and k != p and k | lower == p | lower :>The other template files documents under '<% p %>'. A difference of case alone makes a second folder on some disks and the same folder on others: answer '<% p %>' exactly.<: elif not q and p and k != p :>One project, one layout: the other template files documents under '<% p %>'. Answer '<% p %>' here too, or change that template's answer first.<: endif :><: endif :>
+
+DATA_KIND_PHOTOS:
+  type: str
+  help: >-
+    The folder under the area for images: photographs, artwork and image exports.
+  default: "<% (_external_data.prev or {}).get('DATA_KIND_PHOTOS') or (_external_data.peer or {}).get('DATA_KIND_PHOTOS') or 'photos' %>"
+  when: "<% DATA_STORE == 'external' %>"
+  validator: >-
+    <: if DATA_STORE == 'external' :><: set k = DATA_KIND_PHOTOS :><: set p = (_external_data.peer or {}).get('DATA_KIND_PHOTOS') :><: set q = (_external_data.prev or {}).get('DATA_KIND_PHOTOS') :><: set stem = k.split('.')[0].rstrip(' ').upper() :><: if not k :>Name the folder for images: for example photos.<: elif k | select('in', '<>:"/\\|?*') | list | length > 0 :>Leave out < > : " / \ | ? and *: Windows and network disks refuse them in a folder name.<: elif k | select('lt', ' ') | list | length > 0 or '\x7f' in k :>Leave out tabs and other control characters: no disk keeps them safely in a folder name.<: elif k[-1] in '. ' or k[0] == ' ' :>Do not end the name with a dot or a space, or begin it with a space: Windows drops them, which is also why . and .. are refused.<: elif stem in ['CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'] or (stem | length == 4 and stem[:3] in ['COM', 'LPT'] and stem[3] in '123456789¹²³') :>Windows reserves that name in any case, before any dot (CON, PRN, AUX, NUL, COM1 to COM9, LPT1 to LPT9 and the like): choose another.<: elif k | length > 64 :>Keep the name to 64 characters or fewer.<: elif k | lower == DATA_KIND_DOCS | lower :>Give images a folder of their own: documents already use '<% DATA_KIND_DOCS %>', and a difference of case alone is the same folder on some disks.<: elif q and k != q and k | lower == q | lower :>This project's images are filed under '<% q %>'. A change of case alone makes a second folder on some disks and the same folder on others: keep '<% q %>', or choose another name.<: elif not q and p and k != p and k | lower == p | lower :>The other template files images under '<% p %>'. A difference of case alone makes a second folder on some disks and the same folder on others: answer '<% p %>' exactly.<: elif not q and p and k != p :>One project, one layout: the other template files images under '<% p %>'. Answer '<% p %>' here too, or change that template's answer first.<: endif :><: endif :>
+
+DATA_KIND_AUDIO:
+  type: str
+  help: >-
+    The folder under the area for audio, such as pronunciation recordings and voiceover.
+  default: "<% (_external_data.prev or {}).get('DATA_KIND_AUDIO') or (_external_data.peer or {}).get('DATA_KIND_AUDIO') or 'audio' %>"
+  when: "<% DATA_STORE == 'external' %>"
+  validator: >-
+    <: if DATA_STORE == 'external' :><: set k = DATA_KIND_AUDIO :><: set p = (_external_data.peer or {}).get('DATA_KIND_AUDIO') :><: set q = (_external_data.prev or {}).get('DATA_KIND_AUDIO') :><: set stem = k.split('.')[0].rstrip(' ').upper() :><: if not k :>Name the folder for audio: for example audio.<: elif k | select('in', '<>:"/\\|?*') | list | length > 0 :>Leave out < > : " / \ | ? and *: Windows and network disks refuse them in a folder name.<: elif k | select('lt', ' ') | list | length > 0 or '\x7f' in k :>Leave out tabs and other control characters: no disk keeps them safely in a folder name.<: elif k[-1] in '. ' or k[0] == ' ' :>Do not end the name with a dot or a space, or begin it with a space: Windows drops them, which is also why . and .. are refused.<: elif stem in ['CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'] or (stem | length == 4 and stem[:3] in ['COM', 'LPT'] and stem[3] in '123456789¹²³') :>Windows reserves that name in any case, before any dot (CON, PRN, AUX, NUL, COM1 to COM9, LPT1 to LPT9 and the like): choose another.<: elif k | length > 64 :>Keep the name to 64 characters or fewer.<: elif k | lower in [DATA_KIND_DOCS | lower, DATA_KIND_PHOTOS | lower] :>Give audio a folder of its own: documents use '<% DATA_KIND_DOCS %>' and images '<% DATA_KIND_PHOTOS %>', and a difference of case alone is the same folder on some disks.<: elif q and k != q and k | lower == q | lower :>This project's audio is filed under '<% q %>'. A change of case alone makes a second folder on some disks and the same folder on others: keep '<% q %>', or choose another name.<: elif not q and p and k != p and k | lower == p | lower :>The other template files audio under '<% p %>'. A difference of case alone makes a second folder on some disks and the same folder on others: answer '<% p %>' exactly.<: elif not q and p and k != p :>One project, one layout: the other template files audio under '<% p %>'. Answer '<% p %>' here too, or change that template's answer first.<: endif :><: endif :>
+
+DATA_KIND_VIDEOS:
+  type: str
+  help: >-
+    The folder under the area for video, such as footage and renders.
+  default: "<% (_external_data.prev or {}).get('DATA_KIND_VIDEOS') or (_external_data.peer or {}).get('DATA_KIND_VIDEOS') or 'videos' %>"
+  when: "<% DATA_STORE == 'external' %>"
+  validator: >-
+    <: if DATA_STORE == 'external' :><: set k = DATA_KIND_VIDEOS :><: set p = (_external_data.peer or {}).get('DATA_KIND_VIDEOS') :><: set q = (_external_data.prev or {}).get('DATA_KIND_VIDEOS') :><: set stem = k.split('.')[0].rstrip(' ').upper() :><: if not k :>Name the folder for video: for example videos.<: elif k | select('in', '<>:"/\\|?*') | list | length > 0 :>Leave out < > : " / \ | ? and *: Windows and network disks refuse them in a folder name.<: elif k | select('lt', ' ') | list | length > 0 or '\x7f' in k :>Leave out tabs and other control characters: no disk keeps them safely in a folder name.<: elif k[-1] in '. ' or k[0] == ' ' :>Do not end the name with a dot or a space, or begin it with a space: Windows drops them, which is also why . and .. are refused.<: elif stem in ['CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'] or (stem | length == 4 and stem[:3] in ['COM', 'LPT'] and stem[3] in '123456789¹²³') :>Windows reserves that name in any case, before any dot (CON, PRN, AUX, NUL, COM1 to COM9, LPT1 to LPT9 and the like): choose another.<: elif k | length > 64 :>Keep the name to 64 characters or fewer.<: elif k | lower in [DATA_KIND_DOCS | lower, DATA_KIND_PHOTOS | lower, DATA_KIND_AUDIO | lower] :>Give video a folder of its own: documents use '<% DATA_KIND_DOCS %>', images '<% DATA_KIND_PHOTOS %>' and audio '<% DATA_KIND_AUDIO %>', and a difference of case alone is the same folder on some disks.<: elif q and k != q and k | lower == q | lower :>This project's video is filed under '<% q %>'. A change of case alone makes a second folder on some disks and the same folder on others: keep '<% q %>', or choose another name.<: elif not q and p and k != p and k | lower == p | lower :>The other template files video under '<% p %>'. A difference of case alone makes a second folder on some disks and the same folder on others: answer '<% p %>' exactly.<: elif not q and p and k != p :>One project, one layout: the other template files video under '<% p %>'. Answer '<% p %>' here too, or change that template's answer first.<: endif :><: endif :>
+
+# Which service keeps a copy of the data root. The values are stable; the labels may change.
+# The answer runs nothing: the owner sets up and runs the service, and the data-root tool
+# tailors its advice and checks to the answer. It is asked always and never refused: a
+# difference from the other template's answer moves no file, so the tool reports it instead.
+#
+# The default keeps a recorded answer. Failing that, it maps a retired yes-or-no answer about
+# Google Drive workflows that an older record may hold (true becomes google-drive, false
+# none), so the update that first asks this keeps what the project had; then it takes the
+# other template's recorded answer; and otherwise none. This project's own record, current or
+# retired, outranks the other template's.
+DATA_PROVIDER:
+  type: str
+  help: >-
+    Which service keeps a copy of this project's data root, the folder outside the repository
+    that holds its documents, images, audio and video? You set that service up and run it
+    yourself: the template never syncs, uploads or deletes anything there, and only tailors
+    the checks and advice of its data-root tool. Point the service at the data root, never at
+    this repository: a sync service corrupts a Git repository. While the files are kept in the
+    repository, the answer applies once you move them out. Where this template ships GitHub
+    workflows for your provider, they need the files kept in the repository; choosing another
+    provider, or keeping the files outside, later deletes them, including your edits.
+  choices:
+    "None — the data root stays on this machine only (back it up yourself)": none
+    "Google Drive — Drive for desktop, or rclone on Linux": google-drive
+    "OneDrive or SharePoint — the OneDrive sync app": onedrive
+    "Dropbox — the Dropbox app": dropbox
+    "Another cloud service — synced by a tool you run, such as rclone": other-cloud
+    "A NAS or server on your network — SMB or NFS, on the LAN or over WireGuard": nas
+  default: "<% (_external_data.prev or {}).get('DATA_PROVIDER') if (_external_data.prev or {}).get('DATA_PROVIDER') in ['none', 'google-drive', 'onedrive', 'dropbox', 'other-cloud', 'nas'] else ('google-drive' if (_external_data.prev or {}).get('INCLUDE_DRIVE_SYNC') is sameas true else ('none' if (_external_data.prev or {}).get('INCLUDE_DRIVE_SYNC') is sameas false else ((_external_data.peer or {}).get('DATA_PROVIDER') if (_external_data.peer or {}).get('DATA_PROVIDER') in ['none', 'google-drive', 'onedrive', 'dropbox', 'other-cloud', 'nas'] else 'none'))) %>"
+# END family-shared questions (D48)
+
 # There are no computed values at 0.1.0 (DESIGN.md Section 2). A later one is `when: false`,
 # derived only from answers and never from _external_data (D14), and like every variant token
 # it may appear only in the spine set.
@@ -818,9 +1232,11 @@ DATE:
 # they exist, so a release that changes what a seed must contain ships that change as a
 # migration too. And a release that stops shipping a seed ships a migration that preserves it
 # first: a seed dropped from template/ is deleted from the project by the next update, filled
-# in or not (probe h2; Section 10). The nineteen shared paths are not seeds of media's to migrate:
-# media never mutates a shared file (D11), so a change to what one should hold reaches a
-# project only as a hand edit that the release's notes and README.md name. THERE ARE TWO STATED
+# in or not (probe h2; Section 10). The thirty-six shared paths are not seeds of media's to
+# migrate: media never mutates a shared file (D11), so a change to what one should hold reaches
+# a project only as a hand edit that the release's notes and README.md name (0.5.0's
+# family-shared files included: the update script that adds and refreshes them is D81's, in
+# 0.6.0, and no 0.5.0 migration stands in for it). THERE ARE TWO STATED
 # EXCEPTIONS (D11, D76). D76's v0.4.2 migration below replaces the shipped .agents -> .claude
 # link with the real folder, because the link breaks every sandboxed Codex command in the
 # project. And the unversioned agents-outside-link.py pair, the second and transient one,
@@ -901,7 +1317,11 @@ _migrations:
 # text is DESIGN.md Section 3.5's, verbatim; since 0.2.0 it names the three own-channel
 # platforms (D53) and what taking podcast away also deletes — the feed's folder pair,
 # workflow and guide, never the show registers and saved feeds the author's project wrote
-# there (D59), which update-test.sh check 13 proves.
+# there (D59), which update-test.sh check 13 proves. Since 0.5.0 one sentence names the
+# fifteen family-shared questions an update asks for the first time and says their defaults
+# keep the project as it is (D80), without reading any answer: no agent, so no client's file
+# is written, and syntek-author's recorded store, or else repo (the questions' own help says
+# the rest).
 _message_before_update: |
 
   Before you answer: removing a platform or a media kind deletes EVERY file it generated,
@@ -954,6 +1374,10 @@ _message_before_update: |
   (a voice remixed from a clone cites the source clone's consent ID) and the rules of
   production/src/credits-log.md (Tool voice remix, the row voice remix run writes itself).
 
+  Updating to 0.5.0: fifteen questions shared with syntek-author are asked once (the coding
+  agents you use besides Claude Code, their models, and where binary files are kept); their
+  defaults keep the project as it is.
+
   BRAND_KIND never changes: the update refuses it, because a different brand kind is a new
   project. After a platform or media-kind change, edit by hand the files that describe your
   options: README.md, CONTEXT.md and .claude/CLAUDE.md Section 1 in a standalone project (over
@@ -967,10 +1391,17 @@ _message_before_update: |
 # ── After a copy ─────────────────────────────────────────────────────────────
 #
 # DESIGN.md D13 and Section 8: what coexistence leaves to the author, in D13's order — (1) the
-# nineteen shared paths and the skip rule (Copier prints an existing one as `conflict` then `skip`,
-# or `identical`), with Section 8's hand edits 2 and 3: the optional index lines, and nothing
-# to add to .gitignore or .mcp.json; (2) the allow, ask and Edit deny entries for an existing
-# settings.json, exactly as the standalone seed holds them; (3) the ElevenLabs line, with the
+# thirty-six shared paths and the skip rule (Copier prints an existing one as `conflict` then
+# `skip`, or `identical`), the client files only for the clients ticked in AGENT_CLIENTS, with
+# Section 8's hand edits 2 and 3: the optional index lines, and nothing to add to .gitignore or
+# .mcp.json, and, over syntek-author, that media takes no coding-agent answer from its answers
+# file (D80); (2) the allow, ask and Edit deny entries for an existing settings.json that are
+# media's own, exactly as the standalone seed holds them, then the family's eight asks, its
+# embed_graph_tool deny and its hooks object, syntek-author's bytes, for a settings file that
+# syntek-author v0.5.0 or later did not seed (syntek-author's update never adds the data-root
+# guard to an older one, its family-refresh.json at v0.5.0), then the permissions script's
+# --write, which carries the asks and denies to the other clients' files (D80; syntek-author
+# D49); (3) the ElevenLabs line, with the
 # rule that its base path must contain the project; (4) the LFS tripwire's write to this
 # repository's .git/config; (5) the setup check (D49); (6) the update command with `-a`,
 # with Git's housekeeping off (DESIGN.md Section 10).
@@ -989,20 +1420,33 @@ _message_after_copy: |
 
   1. Shared files. README.md, CONTEXT.md, .gitignore, .mcp.json, .claude/CLAUDE.md,
      .claude/CONTEXT.md, .claude/MEMORY.md, .claude/settings.json, .claude/skills/CONTEXT.md,
-     .claude/skills/CLAUDE.md, AGENTS.md, GEMINI.md, the .agents folder with .agents/skills
-     (a link to ../.claude/skills) and .agents/mcp_config.json, .codex/config.toml,
-     .codex/CONTEXT.md and .codex/CLAUDE.md are written only where they did not exist; a
-     missing one is added inside an existing .agents folder. Any that Copier
-     reported as 'conflict' then 'skip', or as 'identical', was left exactly as it was, and no
-     syntek-media update will touch it: that pair is expected and is not a collision.
+     .claude/skills/CLAUDE.md, the working-practice skills .claude/skills/grill-me/SKILL.md,
+     .claude/skills/grill-with-docs/SKILL.md, .claude/skills/grilling/SKILL.md,
+     .claude/skills/handoff/SKILL.md, .claude/skills/to-questionnaire/SKILL.md,
+     .claude/skills/wait-what/SKILL.md and .claude/skills/wayfinder/SKILL.md, the hooks
+     .claude/hooks/pre-compact-handoff.sh and .claude/hooks/context-threshold-handoff.sh with
+     .claude/hooks/CONTEXT.md and .claude/hooks/CLAUDE.md, handoffs/CONTEXT.md and
+     handoffs/CLAUDE.md, and, for the coding agents you chose, AGENTS.md, GEMINI.md, the
+     .agents folder with .agents/skills (a link to ../.claude/skills) and
+     .agents/mcp_config.json, .codex/config.toml, .codex/CONTEXT.md, .codex/CLAUDE.md,
+     .gemini/settings.json, .gemini/CONTEXT.md, .gemini/CLAUDE.md and opencode.json are
+     written only where they did not exist; a missing one is added inside an existing
+     .agents folder. Any that Copier reported as 'conflict' then 'skip', or as 'identical',
+     was left exactly as it was, and no syntek-media update will touch it: that pair is
+     expected and is not a collision.
      The media rules in .claude/rules/syntek-media/ load at launch whatever those files say,
      so naming the media layers in README.md and CONTEXT.md, and .claude/rules/syntek-media/
      in .claude/CLAUDE.md, is optional. Nothing needs adding to .gitignore or .mcp.json:
      media's ignore rules are nested, and the ElevenLabs server is user-scoped.
-     Codex and Antigravity read .claude/syntek-media-agents.md. Preserve any existing
-     entrypoint, agent settings or .agents; where .agents is a link to .claude, Codex's
-     sandbox fails on it. Follow the bridge's setup steps for missing files, a real folder
-     or manual integration of an existing .agents.
+     Codex, Gemini CLI, Antigravity and OpenCode read .claude/syntek-media-agents.md.
+     Preserve any existing entrypoint, agent settings or .agents; where .agents is a link to
+     .claude, Codex's sandbox fails on it. Follow the bridge's setup steps for missing files,
+     a real folder or manual integration of an existing .agents.
+     Over syntek-author, media reads no coding-agent answer from syntek-author's answers file,
+     and a first copy ticks all four clients by default. Compare AGENT_CLIENTS and the model
+     answers in the two answers files; where they differ, remove each client file this copy
+     created for a client syntek-author's answers leave out, then record the same clients on
+     media's next update with --data "AGENT_CLIENTS=[...]".
 
   2. Permissions. If .claude/settings.json was skipped, add these entries to it by hand.
      Under "permissions", in "allow" (syntek-author's settings already allow the last two):
@@ -1030,6 +1474,26 @@ _message_after_copy: |
      and in "deny" (so nothing in a generated or renders folder is edited by hand):
        "Edit(**/generated/**)",
        "Edit(**/renders/**)"
+     The seed's other entries are syntek-author's, byte for byte, and a settings.json that
+     syntek-author v0.5.0 or later seeded holds them already. Add them to any other, since
+     .mcp.json and each client's file declare the Scrapling and code-review-graph servers.
+     In "ask":
+       "mcp__scrapling__stealthy_fetch",
+       "mcp__scrapling__bulk_stealthy_fetch",
+       "mcp__scrapling__open_session",
+       "mcp__scrapling__session_fetch",
+       "mcp__scrapling__fetch",
+       "mcp__scrapling__bulk_fetch",
+       "mcp__code-review-graph__apply_refactor_tool",
+       "mcp__code-review-graph__generate_wiki_tool"
+     in "deny":
+       "mcp__code-review-graph__embed_graph_tool"
+     and the whole "hooks" object of template/.claude/settings.json at the template's source:
+     the two handoff hooks and the data-root guard. syntek-author's update offers a file it
+     seeded before v0.5.0 all of these but the guard, its PreToolUse entry: add that by hand.
+     Then, skipped or not, carry the asks and denies to the other coding agents' files here
+     (it never creates one, and prints what a client cannot express):
+       python3 .claude/syntek-media-permissions.py --write
 
   3. ElevenLabs. Add the server once, at user scope, with a base path that CONTAINS this
      project: speech-to-text refuses any file outside it. Use $HOME when every project lives
@@ -1055,18 +1519,90 @@ _message_after_copy: |
        GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false \
          uvx copier update --trust -a .copier-answers.syntek-media.yml
 
+# ── After an update (DESIGN.md D80; D14 as D80 widens it) ────────────────────
+#
+# Printed after every update. First the known limitation of 0.5.0 (D80): an update never
+# renders a copy-only file, and the update script that adds and refreshes the files media
+# shares with syntek-author arrives with D81 (0.6.0), so an update delivers none of them, nor
+# any new entry of the settings seed; syntek-author's own update offers them in a combined
+# project, all but the data-root guard (its family-refresh.json at v0.5.0 lists the two
+# handoff hooks only). Then the data-root lines, syntek-author's own
+# (syntek-author D50, D53) with media's names: each difference from syntek-author's recorded
+# answers, read through `_external_data.peer`: its store, its layout while both are external,
+# and its provider. A later difference is allowed, and refused only by the data-root
+# resolver's data commands, so this is where the author first hears of it. syntek-author's
+# own message reports the same difference only after ITS updates, which is why media's says it
+# too. Media files nothing under a data root in 0.5.0 (its map names no folder), so there are
+# no store or area lines of its own (D80), and the commands are shown as
+# `python3 .claude/syntek-media-dataroot.py …`, because media has no Makefile (D20).
+#
+# Copier renders this message after the update has written the new answers, in the real
+# project, so the peer read is safe here (syntek-author's probe on 9.17.1 and 9.18.2; media's
+# on 9.12.0 and 9.19.1, 23/10/2026). Never compare with `_external_data.prev` here: Copier
+# re-reads it after writing the new answers, so it holds them, not the old ones (9.17.1
+# `_main.py:1449`). Every test of DATA_STORE is an equality, one positive block per value
+# (DESIGN.md Section 2). The dash that opens each block tag trims the line break before it, so
+# a closed block prints no blank line. Messages go to stderr, and --quiet suppresses them.
+_message_after_update: |
+
+  Until syntek-media 0.6.0, an update never adds or refreshes the skills, hooks and handoffs/
+  pair it shares with syntek-author, or a new .claude/settings.json entry. Over syntek-author,
+  syntek-author's own update keeps them current, except the data-root guard's PreToolUse hook,
+  which it never adds to a settings file it seeded before v0.5.0. Standalone, and for that
+  hook, README.md 'Updating a project', at the template's source, says how to add them.
+  <:- set pe = _external_data.peer or {} :>
+  <:- set ps = pe.get('DATA_STORE') :>
+  <:- set pp = pe.get('DATA_PROVIDER') :>
+  <:- if DATA_STORE == 'external' and ps == 'repo' :>
+
+  syntek-author's answers file (.copier-answers.syntek-author.yml) records DATA_STORE repo,
+  and this one now external. One project keeps one store: until both agree, the data-root
+  commands refuse to act (python3 .claude/syntek-media-dataroot.py store shows each record),
+  though text work goes on. Update syntek-author with --data DATA_STORE=external, which takes
+  this one's folder answers, or this one back with --data DATA_STORE=repo.
+  <:- endif :>
+  <:- if DATA_STORE == 'repo' and ps == 'external' :>
+
+  syntek-author's answers file (.copier-answers.syntek-author.yml) records DATA_STORE
+  external, and this one repo. One project keeps one store: until both agree, the data-root
+  commands refuse to act (python3 .claude/syntek-media-dataroot.py store shows each record),
+  though text work goes on. Update this template with --data DATA_STORE=external, which takes
+  syntek-author's folder answers, or syntek-author with --data DATA_STORE=repo.
+  <:- endif :>
+  <:- if ps and ps not in ['external', 'repo'] :>
+
+  syntek-author's answers file (.copier-answers.syntek-author.yml) records DATA_STORE
+  '<% ps %>', which this version of syntek-media does not offer: the data-root commands
+  refuse to act until both templates record one store.
+  <:- endif :>
+  <:- if DATA_STORE == 'external' and ps == 'external' and [DATA_AREA, DATA_SLUG, DATA_KIND_DOCS, DATA_KIND_PHOTOS, DATA_KIND_AUDIO, DATA_KIND_VIDEOS] != [pe.get('DATA_AREA'), pe.get('DATA_SLUG'), pe.get('DATA_KIND_DOCS'), pe.get('DATA_KIND_PHOTOS'), pe.get('DATA_KIND_AUDIO'), pe.get('DATA_KIND_VIDEOS')] :>
+
+  syntek-author's answers file (.copier-answers.syntek-author.yml) files this project under a
+  different layout: DATA_AREA, DATA_SLUG or a kind folder differs. One project keeps one
+  layout: until both agree, the data-root commands refuse to act
+  (python3 .claude/syntek-media-dataroot.py root names the difference). Update one template
+  with --data for each key that differs.
+  <:- endif :>
+  <:- if pp and pp != DATA_PROVIDER :>
+
+  syntek-author's answers file (.copier-answers.syntek-author.yml) records DATA_PROVIDER
+  '<% pp %>', and this one '<% DATA_PROVIDER %>'. One data root has one provider, and
+  python3 .claude/syntek-media-dataroot.py root prints the checklist for this template's
+  answer. Nothing is refused: answer the same in both templates.
+  <:- endif :>
+
 # ── Post-generation ──────────────────────────────────────────────────────────
 
 _tasks:
   # ORDER MATTERS IN THIS LIST: Copier runs _tasks top to bottom, on `copy` AND on `update`.
   # A task that must not touch a live project carries an explicit
   # `when: "<% _copier_operation == 'copy' %>"`; the absence of one means it runs on every
-  # update. Both tasks below are copy-only: media has no hook to make executable and no
-  # database to build, and an update never touches a repository's set-up. Every task is
-  # non-fatal wherever git is installed (DESIGN.md Section 3.5), because a failing task aborts
-  # the whole generation — or the whole update — after the files are already written. Task 1
-  # is syntek-author's exact command, so without git it fails as syntek-author's does; the
-  # toolkit and the skills need git in any case.
+  # update. Every task below is copy-only: media has no database to build, its hooks are
+  # copy-only shared files (D80), and an update never touches a repository's set-up. Every
+  # task is non-fatal wherever git is installed (DESIGN.md Section 3.5), because a failing task
+  # aborts the whole generation — or the whole update — after the files are already written.
+  # Tasks 1 and 2 are syntek-author's exact commands, so without git task 1 fails as
+  # syntek-author's does; the toolkit and the skills need git in any case.
   #
   # There are no `mv` seed tasks. Seeds are _skip_if_exists, which is safe over an existing
   # project; an `mv` onto an existing file clobbers it (probe e1).
@@ -1078,7 +1614,15 @@ _tasks:
   - command: "[ -d .git ] || git init --initial-branch=main"
     when: "<% _copier_operation == 'copy' %>"
 
-  # 2. The LFS tripwire (DESIGN.md D19). Git LFS is used only for brand/src/exports/large/,
+  # 2. The hooks must be executable, and a git checkout of the template does not always carry
+  #    the bit (DESIGN.md D80; syntek-author D51, whose task this is, verbatim). Copy only: the
+  #    hooks are copy-only shared files, so an update never renders them and must not change
+  #    their mode either. Over syntek-author it finds syntek-author's identical copies, already
+  #    755, and changes nothing. It never fails, so a copy completes even where no hook is.
+  - command: "chmod +x .claude/hooks/*.sh 2>/dev/null || true"
+    when: "<% _copier_operation == 'copy' %>"
+
+  # 3. The LFS tripwire (DESIGN.md D19). Git LFS is used only for brand/src/exports/large/,
   #    whose nested .gitattributes marks every file `filter=lfs`. Where no LFS filter is
   #    configured at any scope — git-lfs absent, or installed without `git lfs install` — git
   #    treats that filter as a pass-through and commits the whole file as a plain blob,

@@ -15,17 +15,22 @@
 #
 #                    Three layers in the ROOT .claude/settings.json close that (DESIGN.md
 #                    Section 7): permissions.deny lists Skill(<name>) for every template skill —
-#                    the ten of Section 5.1 — and an unqualified deny also blocks the nested
-#                    template:<name> form; skillOverrides sets each of them "off", which hides it
-#                    from the session's skill list as well; claudeMdExcludes keeps the generated
-#                    project's manuals out.
+#                    the ten of Section 5.1 and the seven family skills of D80 (grill-me,
+#                    grill-with-docs, grilling, handoff, to-questionnaire, wait-what,
+#                    wayfinder), which ship under template/ like any other — and an unqualified
+#                    deny also blocks the nested template:<name> form; skillOverrides sets each
+#                    of them "off", which hides it from the session's skill list as well;
+#                    claudeMdExcludes keeps the generated project's manuals out. A deny names a
+#                    skill, not a folder: it also refuses a user-level skill of the same name in
+#                    a session started here.
 #
 #                    Seven checks:
 #                      1. The root .claude/settings.json exists and is valid JSON.
 #                      2. Every skill folder under template/.claude/skills/ is denied as
 #                         Skill(<name>).
-#                      3. Every skill DESIGN.md Section 5.1 names is denied too, so a skill is
-#                         isolated before its folder is written.
+#                      3. Every skill DESIGN.md Section 5 names (Section 5.1's and the family
+#                         skills of its own table, D80) is denied too, so a skill is isolated
+#                         before its folder is written.
 #                      4. claudeMdExcludes carries "**/template/**/CLAUDE.md" and
 #                         "**/template/.claude/**".
 #
@@ -157,7 +162,7 @@ run_checks() {
     [[ -z "$s" || -n "${on_disk[$s]:-}" ]] && continue
     [[ -n "${denied["Skill($s)"]:-}" ]] || finding "check 3 — DESIGN.md names the skill $s, and it is not denied — it would fire the day its folder lands"
     [[ -n "${hidden[$s]:-}" ]] || finding "check 7 — DESIGN.md names the skill $s, and it is not set off in skillOverrides"
-  done <<< "$SM_SKILLS"
+  done < <(printf '%s\n%s\n' "$SM_SKILLS" "$SM_FAMILY_SKILLS_CAT")
   for x in "${EXCLUDES[@]}"; do
     [[ -n "${excluded[$x]:-}" ]] || finding "check 4 — claudeMdExcludes does not carry \"$x\""
   done
@@ -238,14 +243,14 @@ self_test() {
         [[ -z "$s" || " $1 " == *" $s "* ]] && continue
         $first || printf ', '; first=false
         printf '"Skill(%s)"' "$s"
-      done <<< "$SM_SKILLS"
+      done < <(printf '%s\n%s\n' "$SM_SKILLS" "$SM_FAMILY_SKILLS_CAT")
       printf ']},\n  "skillOverrides": {'
       first=true
       while read -r s _; do
         [[ -z "$s" ]] && continue
         $first || printf ', '; first=false
         if [[ " ${3:-} " == *" $s "* ]]; then printf '"%s": "on"' "$s"; else printf '"%s": "off"' "$s"; fi
-      done <<< "$SM_SKILLS"
+      done < <(printf '%s\n%s\n' "$SM_SKILLS" "$SM_FAMILY_SKILLS_CAT")
       printf '}\n}\n'
     } > "$SETTINGS"
   }
@@ -275,6 +280,8 @@ PYCLIENT
   printf '{ "permissions": ' > "$SETTINGS";                         probe "check 1 fires on settings that are not JSON" "check 1"
   write_settings "captions" "$ok";                                    probe "check 2 fires when a skill on disk is not denied" "check 2 — template skill captions"
   write_settings "narrate-audiobook" "$ok";                           probe "check 3 fires when a catalogued skill is not denied" "check 3 — DESIGN.md names the skill narrate-audiobook"
+  write_settings "wait-what" "$ok";                                   probe "check 3 fires when a family skill (D80) is not denied" "check 3 — DESIGN.md names the skill wait-what"
+  write_settings "" "$ok" "handoff";                                  probe "check 7 fires when a family skill (D80) is left on" "check 7 — DESIGN.md names the skill handoff"
   write_settings "" '["**/template/**/CLAUDE.md"]';                   probe "check 4 fires when an exclusion is lost" "check 4"
   write_settings "" "$ok" "captions";                                 probe "check 7 fires when a skill on disk is left on" "check 7 — template skill captions"
   write_settings "" "$ok" "narrate-audiobook";                        probe "check 7 fires when a catalogued skill is left on" "check 7 — DESIGN.md names the skill narrate-audiobook"

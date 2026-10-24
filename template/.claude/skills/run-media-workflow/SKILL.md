@@ -209,7 +209,7 @@ This skill runs procedures; it never replaces one, and it never paraphrases one 
 - `scripts/docs/reference/the-piece-ladder.md` — the gates M1 to M7, which 'next' follows.
 - `scripts/src/piece-register.md` — every piece by number; each brief holds its status.
 - `.claude/MEMORY.md` — the `Status` heading, which 'what's next?' reads first.
-- The grill-with-docs skill (syntek-author), where present — the interview that opens
+- The `grill-with-docs` skill, where present — the interview that opens
   `scripts/workflows/01-brief-a-piece/` and the brand procedures.
-- The handoff skill (syntek-author), where present — when a procedure has to stop mid-way at a
+- The `handoff` skill, where present — when a procedure has to stop mid-way at a
   session boundary (`.claude/rules/syntek-media/07-session-boundaries.md`).

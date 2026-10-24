@@ -32,7 +32,11 @@ Run, read and maintain the audits that prove the template keeps every promise `D
      its markers by hand.
   4. When syntek-author has moved: `bash .github/scripts/coexist-test.sh --refresh-names --author
      DIR`, re-check every new name against media's paths, and record the new baseline in
-     `CHANGELOG.md`.
+     `CHANGELOG.md`. When media adopts a new syntek-author tag (DESIGN.md D85: one tag for every
+     family file): re-vendor every file and block of `_common.sh`'s `SM_FAMILY_SHARED` from a
+     clean clone at that tag, move `SM_FAMILY_RELEASE` and CI's `SYNTEK_AUTHOR_TAG` together,
+     run `bash .github/scripts/shipped-seeds.sh --write-manifest`, then
+     `bash .github/scripts/coexist-test.sh --author <the clone>`: its check 22 must report nothing.
   5. The integration tests on one brand kind while iterating:
      `bash .github/scripts/update-test.sh --brand-kind author-fiction` and
      `bash .github/scripts/coexist-test.sh --brand-kind author-fiction --author DIR`. The toolkit
@@ -69,6 +73,10 @@ Run, read and maintain the audits that prove the template keeps every promise `D
   is not a SKIP and not a pass of anything.
 - **Never write into syntek-author.** It is read through a snapshot (`sm_snapshot`) and
   `git check-ignore`; run no `git status` there, which rewrites its index.
+- **Never edit a vendored family file, or `family-shared.json`, by hand** (DESIGN.md D80, D85).
+  The files change only by re-vendoring from a syntek-author tag; the record only through
+  `shipped-seeds.sh --write-manifest`. A finding from checks 21–27 or coexist check 22 is fixed
+  by re-vendoring, never by rewriting the record to match an edit.
 - **Append, never renumber.** Check numbers are cited in reports, findings and other files.
 - **One finding per mutation.** A probe that trips two checks proves neither; narrow the mutation
   or let one check claim the fault (a companion is check 5's, never also check 3's).

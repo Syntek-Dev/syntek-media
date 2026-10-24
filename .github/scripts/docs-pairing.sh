@@ -11,8 +11,9 @@
 #                   node_modules/, .claude/rules/ (a CONTEXT.md there would LOAD AS A RULE), the
 #                   inside of each skill folder, each drafts/ and each .base/ (README only) —
 #                   then media's: each generated/, renders/ and raw/ folder carries only a
-#                   README.md (everything else in it is git-ignored), and a handoffs/ folder
-#                   media's rules create standalone carries none (its pair is syntek-author's).
+#                   README.md (everything else in it is git-ignored), and the .agents/ folder
+#                   carries none (D76). Since D80 media ships the family's handoffs/ pair, and
+#                   the .claude/hooks/ and .gemini/ pairs, so those folders carry theirs.
 #                   The project root carries CONTEXT.md; its CLAUDE.md is .claude/CLAUDE.md.
 #                   Every piece folder carries its own pair, as syntek-author's unit folders do.
 #
@@ -365,8 +366,11 @@ self_test() {
   write_fixture "$t"
   st_baseline "a conformant tree"
 
-  mkdir -p "$t/handoffs"; printf '# A handoff\n' > "$t/handoffs/HANDOFF-PROBE-01-01-2027.md"
-  probe_clean "a handoffs/ folder created standalone carries no pair, by design"; rm -rf "$t/handoffs"
+  write_pair "$t" handoffs; printf '# A handoff\n' > "$t/handoffs/HANDOFF-PROBE-01-01-2027.md"
+  probe_clean "a handoffs/ folder carries the family's pair, and a handoff beside it (D80)"
+  rm -f "$t/handoffs/CLAUDE.md"
+  probe "check 2 fires on a handoffs/ folder without its CLAUDE.md (D80: no longer exempt)" "check 2 — handoffs/ has no CLAUDE.md"
+  rm -rf "$t/handoffs"
   mkdir -p "$t/.agents" "$t/.claude/skills"; ln -s ../.claude/skills "$t/.agents/skills"; printf '{"mcpServers": {}}\n' > "$t/.agents/mcp_config.json"
   probe_clean "the .agents folder holds a link and a client file and no pair, by design (D76)"; rm -rf "$t/.agents"
   mkdir -p "$t/.agents/workflows"; printf '# x\n' > "$t/.agents/workflows/x.md"

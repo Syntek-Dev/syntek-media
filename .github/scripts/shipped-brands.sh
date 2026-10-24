@@ -22,18 +22,27 @@
 #
 #                     Fifteen checks:
 #                       1. The answers file records BRAND_KIND, PLATFORMS and MEDIA_KINDS.
-#                       2. Every skill the gates open is present, with its SKILL.md.
-#                       3. No shut-gate media skill, and no skill DESIGN.md Section 5.1 does not
-#                          name. In an over-author tree syntek-author's skills are skipped and
-#                          counted; in a standalone one a syntek-author skill is check 5's.
+#                       2. Every skill the gates open is present, with its SKILL.md: Section
+#                          5.1's and the seven family skills (DESIGN.md D80).
+#                       3. No shut-gate media skill, and no skill DESIGN.md Section 5 does not
+#                          name (Section 5.1's, or a family skill). In an over-author tree
+#                          syntek-author's skills are skipped and counted; in a standalone one a
+#                          syntek-author skill is check 5's.
 #                       4. Every moded skill carries exactly one mode file, its brand kind's
-#                          own; an unmoded skill carries none.
+#                          own (a moded family skill its MEDIA- one); an unmoded skill carries
+#                          none.
 #                       5. No syntek-author-owned path in a standalone render: Makefile,
-#                          .claude/hooks/, .claude/rules/syntek-author/, handoffs/, learning/,
-#                          assets/, build/, its layers and supporting folder, or a folder named
-#                          as one of its skills (DESIGN.md Section 9, "Media never ships").
+#                          .claude/rules/syntek-author/, learning/, assets/, build/, its layers
+#                          and supporting folder, or a folder named as one of its skills other
+#                          than the seven family skills (DESIGN.md Section 9, "Media never
+#                          ships", as D80 amends it: .claude/hooks/ and handoffs/ are family
+#                          paths now, and media ships them).
 #                       6. Every catalogued path is present exactly when its gate is open —
-#                          guides, workflows, gated folders, seeds, seed-once examples.
+#                          guides, workflows, gated folders, seeds, seed-once examples, and each
+#                          client's files exactly where AGENT_CLIENTS ticks it (D80: AGENTS.md
+#                          for Codex or OpenCode, GEMINI.md for Gemini CLI or Antigravity,
+#                          .agents/ for any client, .codex/, .gemini/, .agents/mcp_config.json
+#                          and opencode.json for their own client).
 #                       7. No numbered workflow folder in a media layer that DESIGN.md Section
 #                          4.3 does not number.
 #                       8. No template-only or never-ship path (copier.yml, DESIGN.md, examples/,
@@ -44,11 +53,14 @@
 #                          record (only when generate-all.sh left a <tree>.expect beside it); a
 #                          list answer is compared as its sorted values.
 #                      11. No media top-level path, .claude/ path or skill folder is named in
-#                          syntek-author-names.txt (DESIGN.md D27). The shared paths, and
-#                          the folders that hold them or the per-template rules folders
-#                          (.claude, .claude/rules, .claude/skills, .codex, .agents), are shared
-#                          by design. A path check 5 already reported is not reported again. The
-#                          file is read on every run: a missing one is exit 2, never a SKIP.
+#                          syntek-author-names.txt (DESIGN.md D27). The shared paths, the
+#                          family-shared set's paths and the entries they pass through (.gemini,
+#                          handoffs, opencode.json, .claude/hooks, the seven family skill folders;
+#                          D27 as D80 amends it), and the folders that hold them or the
+#                          per-template rules folders (.claude, .claude/rules, .claude/skills,
+#                          .codex, .agents), are shared by design. A path check 5 already reported is not reported
+#                          again. The file is read on every run: a missing one is exit 2, never
+#                          a SKIP.
 #                      12. No file but its README.md in any generated/, renders/ or raw/ folder,
 #                          at any depth: no stray render, no per-piece output folder and nothing
 #                          in one (DESIGN.md D19, D42, D64). Copier's _exclude takes everything
@@ -61,10 +73,12 @@
 #
 #                      13. Media-supplied .agents is a real folder whose skills entry is the
 #                          relative link ../.claude/skills (D76, amending D73's whole-folder
-#                          link), and client configurations (.codex/config.toml,
-#                          .agents/mcp_config.json) are valid, empty of servers and
-#                          owner-specific settings (D73). Existing shared paths are outside
-#                          media's scope.
+#                          link), and the client configurations media supplies
+#                          (.codex/config.toml, .agents/mcp_config.json, .gemini/settings.json,
+#                          opencode.json) parse as TOML or JSON. Their content is the family's
+#                          since D80 (the two MCP servers, the model answers): its bytes are
+#                          shipped-seeds.sh checks 25 and 27's, never this check's. Existing
+#                          shared paths are outside media's scope.
 #                      14. Media-supplied AGENTS.md and GEMINI.md route to every template's
 #                          bridge, `.claude/syntek-*-agents.md` (D73, D76), and the
 #                          template-owned bridge .claude/syntek-media-agents.md reads every other
@@ -142,13 +156,15 @@ TREE=""
 EXPECT=""
 AUTHOR_SKILLS_SKIPPED=0
 
-# Shared by design: the nineteen copy-only paths, the folders that hold them, and the per-template
-# rules folder's parent (DESIGN.md Section 9, rules 2 and 3).
+# Shared by design: the copy-only paths, the folders that hold them, the per-template rules
+# folder's parent (DESIGN.md Section 9, rules 2 and 3), and every entry a family-shared path
+# passes through or ends in (D80: .gemini, handoffs, opencode.json, .claude/hooks, the family
+# scripts under media's name).
 shared_entry() { # $1 = a top-level entry or a .claude/ path
   case "$1" in
     .claude|.claude/rules|.claude/skills|.codex|.agents) return 0 ;;
   esac
-  is_shared "$1"
+  is_shared "$1" || is_family_entry "$1"
 }
 
 run_checks() {
@@ -168,10 +184,12 @@ run_checks() {
     return 0
   fi
 
-  # ── 2–4. Skills and their mode files ────────────────────────────────────────
+  # ── 2–4. Skills and their mode files (media's, then the family's: D80) ───────
+  local prefix
   while read -r s g m; do
     [[ -z "$s" ]] && continue
     catalogued["$s"]=1
+    prefix="$(mode_prefix "$s")"
     if gate_true "$g"; then
       if [[ ! -d "$TREE/.claude/skills/$s" ]]; then
         finding "check 2 — skill $s is missing — this $A_KIND brand needs it (gate: $g)"; continue
@@ -182,13 +200,16 @@ run_checks() {
       continue
     fi
     want=""
-    [[ "$m" != - ]] && want="$(mode_for_kind "$A_KIND")"
-    for mf in $SM_MODE_FILES; do
+    [[ "$m" != - ]] && want="$(mode_for_kind "$A_KIND" "$prefix")"
+    for mf in $SM_MODE_FILES $SM_FAMILY_MODE_FILES; do
+      # Over syntek-author, a family skill's folder also holds syntek-author's own mode files
+      # (BUSINESS.md …): they are its, and only media-owned ones are judged.
+      [[ -f "$TREE/.claude/skills/$s/$mf" ]] && ! is_owned_file ".claude/skills/$s/$mf" && continue
       have=false; [[ -f "$TREE/.claude/skills/$s/$mf" ]] && have=true
       if [[ "$mf" == "$want" ]] && ! $have; then finding "check 4 — skill $s is moded but its $mf is missing"; fi
       if [[ "$mf" != "$want" ]] && $have; then finding "check 4 — skill $s carries $mf, which belongs to another brand kind (or to no skill)"; fi
     done
-  done <<< "$SM_SKILLS"
+  done < <(printf '%s\n%s\n' "$SM_SKILLS" "$SM_FAMILY_SKILLS_CAT")
   if [[ -d "$TREE/.claude/skills" ]]; then
     while IFS= read -r d; do
       [[ -n "${catalogued[$d]:-}" ]] && continue
@@ -197,7 +218,7 @@ run_checks() {
       elif [[ -n "${SM_AUTHOR_SKILL[$d]:-}" ]]; then
         continue   # check 5's
       fi
-      finding "check 3 — skill $d is not one DESIGN.md Section 5.1 names"
+      finding "check 3 — skill $d is not one DESIGN.md Section 5 names (Section 5.1's, or a family skill of D80)"
     done < <(find "$TREE/.claude/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
   fi
 
@@ -210,6 +231,7 @@ run_checks() {
       fi
     done
     for s in "${!SM_AUTHOR_SKILL[@]}"; do
+      is_family_skill "$s" && continue   # a family skill ships in both templates (D80)
       if [[ -e "$TREE/.claude/skills/$s" ]]; then
         finding "check 5 — .claude/skills/$s/ is a syntek-author skill; media never ships it (DESIGN.md D10)"
         reported5[".claude/skills/$s"]=1
@@ -263,7 +285,7 @@ run_checks() {
     while IFS='=' read -r k v; do
       [[ -z "$k" ]] && continue
       case "$k" in
-        PLATFORMS|MEDIA_KINDS) got="$(answer_list "$k" "$TREE/$SM_ANSWERS_FILE" | LC_ALL=C sort | paste -sd, -)" ;;
+        PLATFORMS|MEDIA_KINDS|AGENT_CLIENTS) got="$(answer_list "$k" "$TREE/$SM_ANSWERS_FILE" | LC_ALL=C sort | paste -sd, -)" ;;
         *) got="$(answer_value "$k" "$TREE/$SM_ANSWERS_FILE")" ;;
       esac
       [[ "$k" == SEED_EXAMPLES && -z "$got" ]] && got=true
@@ -303,6 +325,7 @@ run_checks() {
   done
   for e in "${!skills[@]}"; do
     [[ -n "${SM_AUTHOR_SKILL[$e]:-}" ]] || continue
+    is_family_skill "$e" && continue
     [[ -n "${reported5[.claude/skills/$e]:-}" ]] && continue
     finding "check 11 — the skill folder $e is a syntek-author skill (syntek-author-names.txt)"
   done
@@ -345,7 +368,7 @@ run_checks() {
     fi
   fi
   local problem
-  for p in .codex/config.toml .agents/mcp_config.json; do
+  for p in .codex/config.toml .agents/mcp_config.json .gemini/settings.json opencode.json; do
     is_owned_file "$p" || continue
     [[ -f "$TREE/$p" ]] || continue # A missing catalogued path belongs to check 6.
     problem="$(python3 - "$TREE/$p" "$p" <<'PYCLIENT'
@@ -354,9 +377,7 @@ import json, sys, tomllib
 try:
     text = Path(sys.argv[1]).read_text()
     data = tomllib.loads(text) if sys.argv[2].endswith('.toml') else json.loads(text)
-    expected = ({'project_doc_fallback_filenames': ['CLAUDE.md']}
-                if sys.argv[2].endswith('.toml') else {'mcpServers': {}})
-    if data != expected: print('must contain only the documented empty client configuration')
+    if not isinstance(data, dict): print('is not a TOML table or JSON object')
 except (OSError, ValueError, TypeError) as error:
     print('invalid client configuration: ' + str(error).splitlines()[0])
 PYCLIENT
@@ -394,16 +415,18 @@ build_tree() { # $1 = dir — every path the catalogue says the current answers 
     [[ -z "$s" ]] && continue
     gate_true "$g" || continue
     mkdir -p "$t/.claude/skills/$s"; printf -- '---\nname: %s\n---\n' "$s" > "$t/.claude/skills/$s/SKILL.md"
-    [[ "$m" != - ]] && printf 'x\n' > "$t/.claude/skills/$s/$(mode_for_kind "$A_KIND")"
-  done <<< "$SM_SKILLS"
+    [[ "$m" != - ]] && printf 'x\n' > "$t/.claude/skills/$s/$(mode_for_kind "$A_KIND" "$(mode_prefix "$s")")"
+  done < <(printf '%s\n%s\n' "$SM_SKILLS" "$SM_FAMILY_SKILLS_CAT")
   {
     printf 'BRAND_KIND: %s\nPLATFORMS:\n' "$A_KIND"; printf -- '- %s\n' $A_PLATFORMS
     printf 'MEDIA_KINDS:\n'; printf -- '- %s\n' $A_KINDS
-    printf 'SEED_EXAMPLES: %s\nMODEL_MECHANICAL: opus\n' "$A_SEED"
+    printf 'SEED_EXAMPLES: %s\nMODEL_MECHANICAL: opus\nAGENT_CLIENTS:\n' "$A_SEED"; printf -- '- %s\n' $A_CLIENTS
   } > "$t/$SM_ANSWERS_FILE"
   rmdir "$t/.agents/skills"; ln -s "$SM_AGENTS_SKILLS_LINK" "$t/.agents/skills"
-  printf "project_doc_fallback_filenames = ['CLAUDE.md']\n" > "$t/.codex/config.toml"
-  printf '{"mcpServers": {}}\n' > "$t/.agents/mcp_config.json"
+  printf "project_doc_fallback_filenames = ['CLAUDE.md']\n[mcp_servers.scrapling]\ncommand = 'uvx'\n" > "$t/.codex/config.toml"
+  printf '{"mcpServers": {"scrapling": {"command": "uvx"}}}\n' > "$t/.agents/mcp_config.json"
+  printf '{"mcpServers": {"scrapling": {"command": "uvx"}}}\n' > "$t/.gemini/settings.json"
+  printf '{"mcp": {"servers": {}}}\n' > "$t/opencode.json"
   for path in AGENTS.md GEMINI.md; do
     printf 'Read every .claude/syntek-*-agents.md present before production work.\n' > "$t/$path"
   done
@@ -424,18 +447,40 @@ top README.md
 top build
 top manuscript
 top scenes
+top .gemini
+top AGENTS.md
+top handoffs
+top opencode.json
 claude CLAUDE.md
 claude hooks
 claude rules
 claude skills
+skill grilling
+skill handoff
 skill run-workflow
 skill spelling
 rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   require_author_names
   A_KIND=business; A_PLATFORMS="youtube linkedin instagram"; A_KINDS="short-video long-video voiceover"; A_SEED=true
+  A_CLIENTS="$SM_CLIENTS"
   TREE="$tmp/gen"; EXPECT=""; load_owned "$TREE"
   build_tree "$TREE"
-  st_baseline "a business tree built from the catalogue"
+  st_baseline "a business tree built from the catalogue, with every client and the family's skills, hooks and handoffs pair (syntek-author names by design, D80)"
+
+  # The client gates (D80): a file ships only for a ticked client.
+  cp "$TREE/$SM_ANSWERS_FILE" "$tmp/answers-held"
+  sed -i '/^- opencode$/d' "$TREE/$SM_ANSWERS_FILE"
+  probe "check 6 fires when a client's file ships though AGENT_CLIENTS does not tick it" "check 6 — opencode.json leaked into this project (gate: cl-opencode is shut)"
+  cp "$tmp/answers-held" "$TREE/$SM_ANSWERS_FILE"
+  mv "$TREE/.gemini/settings.json" "$tmp/gemini-held"
+  probe "check 6 fires when a ticked client's settings are missing" "check 6 — .gemini/settings.json is missing (gate: cl-gemini-cli is open)"
+  mv "$tmp/gemini-held" "$TREE/.gemini/settings.json"
+  printf 'x\n' > "$TREE/.claude/skills/grilling/MEDIA-FICTION.md"
+  probe "check 4 fires when a family skill carries another kind's MEDIA- mode file" "check 4 — skill grilling carries MEDIA-FICTION.md"
+  rm -f "$TREE/.claude/skills/grilling/MEDIA-FICTION.md"
+  cp "$TREE/.gemini/settings.json" "$tmp/client-held"; printf '{"tools": ' > "$TREE/.gemini/settings.json"
+  probe "check 13 fires on invalid Gemini CLI settings" "check 13 — .gemini/settings.json invalid client configuration"
+  cp "$tmp/client-held" "$TREE/.gemini/settings.json"
 
   mv "$TREE/.agents" "$tmp/agents-held"; ln -s .claude "$TREE/.agents"
   probe "check 13 fires when .agents is the 0.4.1 link to .claude" "check 13 — .agents must be a real folder"
@@ -450,9 +495,9 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   cp "$TREE/.codex/config.toml" "$tmp/client-held"; printf 'bad = [' > "$TREE/.codex/config.toml"
   probe "check 13 fires on invalid Codex configuration" "check 13 — .codex/config.toml"
   cp "$tmp/client-held" "$TREE/.codex/config.toml"
-  printf '{"mcpServers": {"example": {}}}\n' > "$TREE/.agents/mcp_config.json"
-  probe "check 13 fires when an installed server ships in the Antigravity seed" "check 13 — .agents/mcp_config.json"
-  printf '{"mcpServers": {}}\n' > "$TREE/.agents/mcp_config.json"
+  cp "$TREE/.agents/mcp_config.json" "$tmp/client-held"; printf '["mcpServers"]\n' > "$TREE/.agents/mcp_config.json"
+  probe "check 13 fires when Antigravity's MCP file is not a JSON object" "check 13 — .agents/mcp_config.json is not a TOML table or JSON object"
+  cp "$tmp/client-held" "$TREE/.agents/mcp_config.json"
   printf '{"mcpServers": {}}\n' > "$TREE/.claude/mcp_config.json"
   probe "check 15 fires when a fresh copy still ships .claude/mcp_config.json" "check 15 — .claude/mcp_config.json shipped"
   rm -f "$TREE/.claude/mcp_config.json"

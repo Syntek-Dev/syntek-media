@@ -15,25 +15,25 @@ Nothing here is rendered, and nothing here writes under `template/`.
 .github/scripts/
 ├── CONTEXT.md                ← this file
 ├── CLAUDE.md                 ← how to run, read, add to and change the audits
-├── _common.sh                ← sourced library: copier.yml readers, DESIGN.md catalogue, harness, scope, names, fixtures
+├── _common.sh                ← sourced library: copier.yml readers, DESIGN.md catalogue, the family-shared set and its manifest reader, harness, scope, names, fixtures
 ├── syntek-author-names.txt   ← syntek-author's names at the baseline, which media never takes (D27); written only by coexist-test.sh --refresh-names
-├── run-all.sh                ← renders once, runs every self-test (the vendored outside-link migration's too) and audit, keeps PASS, FINDINGS, ERROR and SKIP apart
+├── run-all.sh                ← renders once, runs every self-test (the three vendored family scripts' too) and audit, keeps PASS, FINDINGS, ERROR and SKIP apart
 ├── check-template-tokens.sh  ← token syntax, registration, the spine-set discipline, list-membership index gates
-├── gen-mode-excludes.sh      ← writes, or --check's, copier.yml's generated BRAND_KIND mode-file block
+├── gen-mode-excludes.sh      ← writes, or --check's, copier.yml's generated BRAND_KIND mode-file block (MEDIA-*.md beside the family skills included)
 ├── docs-pairing.sh           ← folder pairs; CONTEXT, CLAUDE, workflow, guide and header shapes; piece briefs; README-only folders
 ├── line-cap.sh               ← 300 lines for every instructional .md
 ├── scrub.sh                  ← personal data, secrets, voice IDs, Claude Design links, absolute paths
-├── dev-isolation.sh          ← template skills denied in the root settings; CLAUDE.md excludes; Codex product-skill exclusions, development entrypoints and the real .agents/ folder
+├── dev-isolation.sh          ← template skills (media's and the seven family skills) denied and off in the root settings; CLAUDE.md excludes; Codex product-skill exclusions, development entrypoints and the real .agents/ folder
 ├── community-files.sh        ← the root's community files (D83): all present as files, not links, LICENSE byte-exact, no Markdown in ISSUE_TEMPLATE/, issue forms and config.yml, one address, private reporting
-├── shipped-seeds.sh          ← seeds wired and empty; copy-only files; D13 settings; output README negations above gates; the vendored family-shared bytes
-├── skill-conformance.sh      ← DESIGN.md Section 5's contract for every skill and mode file; the ElevenLabs guard
+├── shipped-seeds.sh          ← seeds wired and empty; copy-only files; D13 settings; output README negations above gates; family-shared.json and every vendored file and block it records (--write-manifest writes it); the empty data-root map; in a render, only media's own seed rules wait for the permissions script's --write
+├── skill-conformance.sh      ← DESIGN.md Section 5's contract for every skill and mode file (the family skills' vendored H1, locale and Mode paragraph excepted); the ElevenLabs guard
 ├── generate-all.sh           ← renders every BRAND_KIND × profile from a snapshot, and each over syntek-author
-├── shipped-brands.sh         ← skills, modes, gates, no syntek-author name; output folders ship only their README
+├── shipped-brands.sh         ← skills, modes, gates (AGENT_CLIENTS's included), no syntek-author name but the family's; output folders ship only their README
 ├── byte-identity.sh          ← shared files identical in every standalone render that ships them
-├── doc-references.sh         ← every cited path and skill exists in that render; companions and syntek-author paths in prose
+├── doc-references.sh         ← every cited path and skill exists in that render; companions and syntek-author paths in prose (family-shared text excepted)
 ├── toolkit-smoke.sh          ← the toolkit's self-tests and commands on synthetic clips; ignore and LFS rules; no ElevenLabs call
 ├── update-test.sh            ← a real copier update keeps author work, delivers template work, refuses a BRAND_KIND change
-└── coexist-test.sh           ← real syntek-author first, then media, per brand kind: both apply, both update, neither touches the other
+└── coexist-test.sh           ← real syntek-author first, then media, per brand kind: both apply, both update, neither touches the other; media's family-shared.json against the --author tree's
 ```
 
 ## What's here
@@ -41,11 +41,25 @@ Nothing here is rendered, and nothing here writes under `template/`.
 Grouped by what each script reads:
 
 - **The template source** (`copier.yml`, `template/`, `examples/`, the root settings and
-  community files): `check-template-tokens.sh`, `gen-mode-excludes.sh`, `docs-pairing.sh`,
-  `line-cap.sh`, `scrub.sh`, `dev-isolation.sh`, `community-files.sh`, `shipped-seeds.sh`,
-  `skill-conformance.sh`. `community-files.sh` is the one audit of the root's GitHub files
+  community files, and the root `family-shared.json`): `check-template-tokens.sh`,
+  `gen-mode-excludes.sh`, `docs-pairing.sh`, `line-cap.sh`, `scrub.sh`, `dev-isolation.sh`,
+  `community-files.sh`, `shipped-seeds.sh`, `skill-conformance.sh`. `community-files.sh` is the one audit of the root's GitHub files
   (D83); it holds the approved `LICENSE` text itself, pinned by its sha256, and reads the issue
   forms with a top-level-key reader in awk, since the source job installs no YAML library.
+- **The family-shared set** (DESIGN.md D80, D85; syntek-author D48): the files and blocks media
+  vendors byte for byte from one syntek-author tag. The root `family-shared.json` records them
+  in the family's own format (owner `syntek-media`, each file's source, bytes, sha256 and mode,
+  the link's target, each block's markers, bytes and sha256, and `rules-web-tools`'s
+  `destination`), so that syntek-author's `family-shared.sh --sibling` can read it too.
+  `shipped-seeds.sh --write-manifest` alone writes it, after a re-vendor; `shipped-seeds.sh`
+  checks 21–27 hold the vendored files, the three blocks and the renders to it, and
+  `coexist-test.sh` check 22 holds it, entry by entry, to the `--author` tree's own manifest (in
+  CI the pinned tag, `SYNTEK_AUTHOR_TAG`). No hash is copied into a script. One list,
+  `SM_FAMILY_SHARED` in `_common.sh`, drives every audit's family exemption: the D27 name checks
+  (`shipped-brands.sh` 3, 5, 11 and 13, `skill-conformance.sh` 8, 9, 14 and 20,
+  `coexist-test.sh` 13), and `doc-references.sh` 5 and 6, which never read a family file's
+  text. `run-all.sh` runs the vendored outside-link script's, data-root resolver's and
+  permissions script's own `--self-test`, with `SYNTEK_DATA_ROOT` unset.
 - **The renders** that `generate-all.sh` produces (twelve, named `<kind>--<profile>` because the
   kinds carry a hyphen: business, author-fiction and author-nonfiction × defaults, all, minimal,
   and over-author; `business--minimal` ships `blog` without `website`, so a file that backticks a
@@ -53,7 +67,7 @@ Grouped by what each script reads:
   trees only), `doc-references.sh`, `toolkit-smoke.sh`, and `docs-pairing.sh`, `shipped-seeds.sh`,
   `skill-conformance.sh`, `line-cap.sh` again. On an over-author tree each reads `<render>.owned`,
   the files media's copy added, and checks only those.
-- **Their own scratch projects**: `update-test.sh` (twenty-three checks per brand kind: author
+- **Their own scratch projects**: `update-test.sh` (twenty-four checks per brand kind: author
   work kept, template work delivered, a `BRAND_KIND` change refused, agent copy/update
   preservation, the v0.4.2 `.agents` migration (converted, idempotent, other shapes left alone)
   and D76's outside-link hold and restore, the hand fix the hold stage itself prints and no bare
@@ -62,14 +76,18 @@ Grouped by what each script reads:
   (the bare `mv`'s hazard shown in a control, and a held link committed beside `.agents`
   reported, not moved), a removed platform taking exactly the files it generated — the one with
   the most catalogue paths, so `podcast` where a project has it, with a fixture show register
-  and saved feed that must survive in its folder) and
-  `coexist-test.sh` (twenty-one checks: the real syntek-author first, then media, both updated
+  and saved feed that must survive in its folder, and, since 0.5.0, a project copied at the
+  newest earlier release tag and updated to the working tree, standalone and over
+  syntek-author: no coding agent recorded, the right store, no copy-only family file created,
+  media's own files delivered, the after-update message printed) and
+  `coexist-test.sh` (twenty-two checks: the real syntek-author first, then media, both updated
   twice, the other order, a removed platform and media kind, syntek-author's own
-  `doc-references.sh` on the composite). Their self-tests run the whole flow against the two
+  `doc-references.sh` on the composite, and the vendored set against its manifest). Their self-tests run the whole flow against the two
   fixture templates in `_common.sh` (a minimal syntek-media and a minimal syntek-author), so they
-  prove the harness even while the real template is incomplete. `coexist-test.sh` and the
-  over-author renders need a syntek-author checkout (`--author DIR`, `SYNTEK_AUTHOR_DIR`, or
-  `../syntek-author`) and SKIP, named, without one.
+  prove the harness even while the real template is incomplete. `coexist-test.sh`, the
+  over-author renders and the over-author half of `update-test.sh` check 24 need a syntek-author
+  checkout (`--author DIR`, `SYNTEK_AUTHOR_DIR`, or `../syntek-author`) and SKIP, named, without
+  one; check 24 also SKIPs, named, where the repository has no release tag older than `VERSION`.
 - **`toolkit-smoke.sh`** copies each render into a scratch Git repository and runs its toolkit for
   real on clips, tones and stills made with `ffmpeg -f lavfi` — never an ElevenLabs call; since
   0.2.0 that includes `image` in every format, the newsletter GIF read from its own loop
@@ -90,10 +108,11 @@ Grouped by what each script reads:
   not need (no audiobook folder) is n/a.
 - **`_common.sh`** is the single reader of `copier.yml` (list items, registered keys, question
   choices, gated paths, gate negation with list membership) and the single transcription of
-  `DESIGN.md` (the skill catalogue, every gated path, the seeds, the examples, the nineteen shared
-  paths, the spine set, the companions, the D13 settings lists, the `_message_after_copy`
-  lines, and the D83 community files with the private-reporting URL). **It changes in the same
-  commit as `DESIGN.md`.**
+  `DESIGN.md` (the skill catalogue and the family skills, every gated path, the seeds, the
+  examples, the copy-only shared paths and the two client folders' update gates, the spine set,
+  the companions, the D13 settings lists with the family's asks, deny and hooks, the
+  `_message_after_copy` lines, the family-shared set, and the D83 community files with the
+  private-reporting URL). **It changes in the same commit as `DESIGN.md`.**
 - **`syntek-author-names.txt`** is never transcribed by hand: `coexist-test.sh --refresh-names
   --author DIR` writes it (a dated header naming syntek-author's commit "plus working tree", then
   one sorted `top`, `claude`, `skill` or `rules` line per name). `shipped-brands.sh` check 11 and
@@ -108,16 +127,21 @@ Grouped by what each script reads:
 
 `DESIGN.md` Section 2 allows variant tokens and conditional blocks only in the spine set. The
 audits compute it from `DESIGN.md` and `copier.yml` together: the root spine (the eight rules
-files and the answers file); the nineteen copy-only shared paths; every `_skip_if_exists` seed; every
-seed-once example; and every index file — a `CONTEXT.md` or `CLAUDE.md` whose folder holds a
-gated descendant. An index file's gates must be shipping gates: a `BRAND_KIND` mode gate, list
-membership exactly as `DESIGN.md` Section 3.5 writes it (`'youtube' in PLATFORMS`), or the
-negation of a templated `_exclude` line — never a copy-only or seed-once gate.
+files and the answers file); the copy-only shared paths (D11's nineteen and D80's seventeen:
+the family client files that carry the shared question keys among them); every
+`_skip_if_exists` seed; every seed-once example; and every index file — a `CONTEXT.md` or
+`CLAUDE.md` whose folder holds a gated descendant. An index file's gates must be shipping gates:
+a `BRAND_KIND` mode gate, list membership exactly as `DESIGN.md` Section 3.5 writes it
+(`'youtube' in PLATFORMS`, `'codex' in AGENT_CLIENTS`), or the negation of a templated
+`_exclude` line — never a copy-only or seed-once gate.
 
 ## Cross-references
 
 - `DESIGN.md` Section 7 — the audit list and the over-author scope; Sections 2–6 — the contract
-  the audits check; D27 — the frozen names and the SKIP rule.
+  the audits check; D27 — the frozen names and the SKIP rule; D80 and D85 — the family-shared
+  set and its one tag.
+- `family-shared.json` (the repository root) — the record of the vendored set; written by
+  `shipped-seeds.sh --write-manifest`, never by hand.
 - `copier.yml` — read by most scripts; written only by `gen-mode-excludes.sh`, between its markers.
 - `examples/` — the three invented answers files `generate-all.sh` check 3 holds to the questions.
 - `.github/workflows/audit-template.yml` — runs these scripts in CI.

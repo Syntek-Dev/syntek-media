@@ -15,14 +15,14 @@ guide it uses. **Run in order** (the written brand before any token, the tokens 
 layouts, the checks before the proofs) and tick `CHECKLIST.md` as you go.
 
 > Read the read-order files first (this folder's `CONTEXT.md` and `CLAUDE.md`). No media skill
-> runs this procedure: the grill-with-docs skill (syntek-author), where present, settles each
+> runs this procedure: the `grill-with-docs` skill, where present, settles each
 > decision with the author, and the toolkit checks the result.
 
 ## 1. Grill the kit with the author
 
-> **Skill:** grill-with-docs (syntek-author), where present · **Guide:** `brand/docs/reference/the-brand-kit.md`
+> **Skill:** `grill-with-docs`, where present · **Guide:** `brand/docs/reference/the-brand-kit.md`
 
-Check that the companion's `.claude/skills/<skill>/SKILL.md` exists for grill-with-docs; where it
+Check that `grill-with-docs` has its `SKILL.md` in `.claude/skills/`; where it
 does not, say so, and ask the same questions in rounds yourself, each with a recommended answer
 (`.claude/rules/syntek-media/06-global-rules.md` Section 8). Settle what the kit must do before
 any value is chosen: where the brand is seen and at what sizes, what must read at a glance, what

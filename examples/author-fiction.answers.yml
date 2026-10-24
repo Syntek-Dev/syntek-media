@@ -30,3 +30,35 @@ SEED_EXAMPLES: false
 MODEL_MECHANICAL: sonnet
 TIMEZONE: Europe/London
 DATE: 03/10/2026
+# The coding agents besides Claude Code, and where binary files are kept: syntek-author's
+# family-shared questions (DESIGN.md D80), answered here as the matching syntek-author example
+# answers them, so a combined render tells one story. A key a `when:` hides (GEMINI_MODEL
+# without gemini-cli, say) is never recorded: its line is here because every example answers
+# every question. Over a syntek-author project, set AGENT_CLIENTS and the model lines to what
+# .copier-answers.syntek-author.yml records: media never reads them from it, and the copy writes
+# the files of every client listed here that the project lacks.
+AGENT_CLIENTS:
+  - codex
+  - opencode
+CODEX_MODEL: ""
+GEMINI_MODEL: ""
+# named: a model OpenCode already knows, written provider/model; no address or context.
+OPENCODE_PROVIDER: named
+OPENCODE_BASE_URL: ""
+OPENCODE_MODEL: example-provider/example-model
+OPENCODE_CONTEXT: 32768
+# Where binary files are kept: repo keeps them in the repository, as a project already in use
+# does. Media files nothing under a data root yet, so these answers only keep the two
+# templates' records in agreement. Over a syntek-author project that records DATA_STORE (every
+# one from its v0.5.0 on), delete DATA_STORE, the six folder lines and DATA_PROVIDER: the copy
+# then takes syntek-author's answers, and refuses a first store or folder that differs. The
+# folders are asked only with external.
+DATA_STORE: repo
+DATA_AREA: business
+DATA_SLUG: morgan-example
+DATA_KIND_DOCS: docs
+DATA_KIND_PHOTOS: photos
+DATA_KIND_AUDIO: audio
+DATA_KIND_VIDEOS: videos
+# The service that keeps a copy of the data root once files move there; none until then.
+DATA_PROVIDER: none

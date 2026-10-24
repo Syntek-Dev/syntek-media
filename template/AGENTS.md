@@ -1,9 +1,10 @@
-# AGENTS.md — media production
+# AGENTS.md
 
-If this file is inside the template source of a Copier development repository (the folder
-above template/ holds DESIGN.md and copier.yml), read that repository's root AGENTS.md and development
-manual. Everything here is product text, including the skills and rules.
+If this file sits in the `template` folder of a Copier development repository (its parent
+folder holds `copier.yml`), stop: read that repository's root `AGENTS.md` and its
+development manual instead. Everything here is product text, skills and rules included.
 
-In a generated project, read every `.claude/syntek-*-agents.md` present before working.
-They route to this project's rules, memory, folder instructions and skills. Follow existing
-project instructions alongside them; project-specific rules take precedence over template rules.
+In a generated project, read every `.claude/syntek-*-agents.md` present before working. Each
+is a template's bridge: it routes to the project's rules, settings, memory, folder
+instructions and skills, all of which live in `.claude/`, and says which of them decides.
+Instructions the author adds to this file stay authoritative beside them.
