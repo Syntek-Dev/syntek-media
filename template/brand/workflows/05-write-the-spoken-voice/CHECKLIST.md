@@ -22,7 +22,7 @@ model: opus
 
 **The spoken style**
 
-- [ ] Grilling pass run with the grill-with-docs skill (syntek-author), where present, or the same questions in rounds, each with a recommended answer. · _opus_
+- [ ] Grilling pass run with the `grill-with-docs` skill, where present, or the same questions in rounds, each with a recommended answer. · _opus_
 - [ ] The written voice read first, where syntek-author's voice files are present; any contradiction reported, not resolved silently. · _opus_
 - [ ] Pace, register, the brand's name said aloud and words never said aloud written under `## Spoken style`. · _sonnet_
 

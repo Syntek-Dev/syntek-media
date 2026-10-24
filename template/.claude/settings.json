@@ -21,12 +21,68 @@
       "mcp__elevenlabs__text_to_voice",
       "mcp__elevenlabs__create_voice_from_preview",
       "Bash(python3 toolkit/media.py voice remix run *)",
-      "Bash(uv run toolkit/media.py voice remix run *)"
+      "Bash(uv run toolkit/media.py voice remix run *)",
+      "mcp__scrapling__stealthy_fetch",
+      "mcp__scrapling__bulk_stealthy_fetch",
+      "mcp__scrapling__open_session",
+      "mcp__scrapling__session_fetch",
+      "mcp__scrapling__fetch",
+      "mcp__scrapling__bulk_fetch",
+      "mcp__code-review-graph__apply_refactor_tool",
+      "mcp__code-review-graph__generate_wiki_tool"
     ],
     "deny": [
       "AskUserQuestion",
       "Edit(**/generated/**)",
-      "Edit(**/renders/**)"
+      "Edit(**/renders/**)",
+      "mcp__code-review-graph__embed_graph_tool"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && [ -f \"$ROOT/.claude/hooks/context-threshold-handoff.sh\" ] && exec bash \"$ROOT/.claude/hooks/context-threshold-handoff.sh\"'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && [ -f \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" ] && exec bash \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" auto'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && [ -f \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" ] && exec bash \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" manual'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; for f in \"$ROOT\"/.claude/syntek-*-dataroot.py; do [ -f \"$f\" ] && exec python3 \"$f\" guard; done; exit 0'",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

@@ -13,8 +13,8 @@ approve them in proof, so that no piece improvises the brand.
 
 ## How to work here
 
-- **Routing:** no media skill runs this procedure; it opens with the grill-with-docs skill
-  (syntek-author), where present, or the same questions in rounds. Guide
+- **Routing:** no media skill runs this procedure; it opens with the `grill-with-docs` skill,
+  where present, or the same questions in rounds. Guide
   `brand/docs/reference/the-brand-kit.md`; checks `python3 toolkit/media.py tokens` and
   `uv run toolkit/card.py check`; proofs `uv run toolkit/card.py render`.
 - **Model:** **Opus** for every question, recommendation and judgement of a proof; the mechanical

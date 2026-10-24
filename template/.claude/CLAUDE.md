@@ -46,11 +46,11 @@ task turns on its subject.
 | File | Owns |
 |---|---|
 | `.claude/rules/syntek-media/01-layout-and-routing.md` | the brand brief, the layers, the piece, the folder pair, routing frontmatter, ownership, read order, precedence |
-| `.claude/rules/syntek-media/02-skills.md` | the media skill roster, the companions from syntek-author, and the mode-file contract |
+| `.claude/rules/syntek-media/02-skills.md` | the media skill roster, the family-shared skills and their media paths, the companions from syntek-author, and the mode-file contract |
 | `.claude/rules/syntek-media/03-production-ethics.md` | who decides what, the production loop, the piece ladder, credits, AI disclosure, rights and consent, never fabricate, the two flags |
 | `.claude/rules/syntek-media/04-toolkit-pipeline.md` | the toolkit, its commands and what it needs |
 | `.claude/rules/syntek-media/05-model-allocation.md` | which model does which work |
-| `.claude/rules/syntek-media/06-global-rules.md` | locale, route not restate, never self-edit, never overwrite, proofreading, confidentiality, answers, what Git ignores |
+| `.claude/rules/syntek-media/06-global-rules.md` | locale, route not restate, never self-edit, never overwrite, proofreading, confidentiality, answers, what Git ignores and the data root, web and code tools |
 | `.claude/rules/syntek-media/07-session-boundaries.md` | hand off, never compact |
 | `.claude/rules/syntek-media/08-naming-and-memory.md` | naming patterns, and what goes in `.claude/MEMORY.md` |
 

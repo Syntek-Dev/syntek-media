@@ -13,8 +13,8 @@ script, cut and post from.
 
 ## How to work here
 
-- **Routing:** no media skill runs this procedure. The questioning is the grill-with-docs skill
-  (syntek-author), where present; where it is not, ask the same questions in rounds, each with a
+- **Routing:** no media skill runs this procedure. The questioning is the `grill-with-docs` skill,
+  where present; where it is not, ask the same questions in rounds, each with a
   recommended answer (`.claude/rules/syntek-media/06-global-rules.md` Section 8). Guide
   `scripts/docs/reference/the-piece-ladder.md`; deliverable keys from
   `toolkit/data/platforms.toml` through `python3 toolkit/media.py presets`.

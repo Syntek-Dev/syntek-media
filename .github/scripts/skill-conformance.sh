@@ -30,24 +30,36 @@
 #                             and `background:`.
 #                          8. The H1 reads `# Skill: <Name> (<brand name token>)`.
 #                          9. The locale line: Locale: en_GB · <timezone token> · dates DD/MM/YYYY.
+#                             A family skill (DESIGN.md D80) keeps the family's H1, with no brand
+#                             name, and its locale line, with no time zone: its SKILL.md is
+#                             syntek-author's bytes, shared by every family template, so checks 8
+#                             and 9 do not read it (shipped-seeds.sh check 25 holds its bytes).
 #                         10. `## Governing procedures (route here — do not restate at length)`.
 #                         11. Every step ends with a "Complete when:" (and there is a step).
 #                         12. `## Anti-patterns`.
 #                         13. `## Cross-references` is the last H2.
 #                         14. A moded skill carries the mode paragraph verbatim, before step 1.
+#                             A family skill carries the family's neutral Mode paragraph instead,
+#                             in its vendored bytes, so this check does not read it.
 #                         15. A mode file's H2s are exactly: Paths and unit · Additions to the
-#                             steps · Domain rules · Examples.
+#                             steps · Domain rules · Examples (a family skill's MEDIA-*.md
+#                             included).
 #                         16. The mode files match DESIGN.md: in template/, every mode a moded
 #                             skill names and no other; in a render, exactly one; an unmoded skill
-#                             carries none.
+#                             carries none. A moded family skill's modes are MEDIA-BUSINESS.md,
+#                             MEDIA-FICTION.md and MEDIA-NONFICTION.md, and a media skill never
+#                             carries one of those, nor a family skill a prefix-free one.
 #                         17. SKILL.md plus its longest mode file stays within 300 lines.
 #                         18. No .claude/agents/ or .claude/commands/ folder exists.
-#                         19. The skill is one DESIGN.md Section 5.1 names.
+#                         19. The skill is one DESIGN.md Section 5 names: Section 5.1's ten, or
+#                             the seven family skills of its own table (D80).
 #                         20. No media skill shares a name with a `skill` line of
 #                             syntek-author-names.txt (DESIGN.md D27): a skill folder in the tree,
-#                             and, in template/, every name the catalogue gives. The file is read
-#                             on every run: a missing one is exit 2, never a SKIP. A folder this
-#                             check claims is not also reported by check 19.
+#                             and, in template/, every name the catalogue gives. The seven family
+#                             skills are syntek-author's by design and are not read (D27 as D80
+#                             amends it). The file is read on every run: a missing one is exit 2,
+#                             never a SKIP. A folder this check claims is not also reported by
+#                             check 19.
 #                         21. A skill naming a credit-spending ElevenLabs call (an `ask` entry
 #                             of DESIGN.md D13: the nine mcp__ tools, or the two voice remix run
 #                             asks of D82, matched by the words `voice remix run`) carries the
@@ -136,6 +148,7 @@ ALLOWED_KEYS=" $SM_SKILL_KEYS "
 FORK_AGENTS=" Explore Plan general-purpose "
 declare -A CAT_GATE=() CAT_MODES=()
 while read -r s g m; do [[ -n "$s" ]] && { CAT_GATE["$s"]="$g"; CAT_MODES["$s"]="$m"; }; done <<< "$SM_SKILLS"
+while read -r s g m; do [[ -n "$s" ]] && { CAT_GATE["$s"]="$g"; CAT_MODES["$s"]="$m"; }; done <<< "$SM_FAMILY_SKILLS_CAT"
 
 frontmatter() { awk 'NR == 1 && $0 != "---" { exit } NR == 1 { next } /^---[[:space:]]*$/ { exit } { print }' "$1"; }
 fm_closed()   { awk 'NR == 1 && $0 != "---" { exit 1 } NR > 1 && /^---[[:space:]]*$/ { found = 1; exit } END { exit !found }' "$1"; }
@@ -202,14 +215,16 @@ spending_tools_named() { # $1 = skill dir → one tool per line
 }
 
 check_skill() { # $1 = folder name
-  local s="$1" dir="$TREE/.claude/skills/$1" f fm desc k v n h2 last mode modes have want first_step para total longest text tools mcp
+  local s="$1" dir="$TREE/.claude/skills/$1" f fm desc k v n h2 last mode modes have want first_step para total longest text tools mcp family=false prefix
   f="$dir/SKILL.md"
   SKILLS_SEEN=$((SKILLS_SEEN + 1))
+  is_family_skill "$s" && family=true
+  prefix="$(mode_prefix "$s")"
   # ── 20, then 19. The name ───────────────────────────────────────────────────
-  if [[ -n "${SM_AUTHOR_SKILL[$s]:-}" ]]; then
+  if [[ -n "${SM_AUTHOR_SKILL[$s]:-}" ]] && ! $family; then
     finding "check 20 — .claude/skills/$s takes the name of a syntek-author skill (syntek-author-names.txt) — an update would overwrite one template's skill with the other's"
   elif [[ -z "${CAT_GATE[$s]:-}" ]]; then
-    finding "check 19 — .claude/skills/$s is not a skill DESIGN.md Section 5.1 names"
+    finding "check 19 — .claude/skills/$s is not a skill DESIGN.md Section 5 names (Section 5.1's, or a family skill of D80)"
   fi
   if [[ ! -f "$f" ]]; then finding "check 1 — .claude/skills/$s/ has no SKILL.md"; return 0; fi
 
@@ -237,7 +252,10 @@ check_skill() { # $1 = folder name
   fi
 
   # ── 8–13. Body ──────────────────────────────────────────────────────────────
-  if $SOURCE; then
+  # A family skill's H1 and locale line are the family's (D80): checks 8 and 9 skip it.
+  if $family; then
+    :
+  elif $SOURCE; then
     grep -qE "^# Skill: .+ \\($SM_SKILL_H1_TOKEN\\)\$" "$f" || finding "check 8 — $s/SKILL.md has no H1 '# Skill: <Name> ($SM_SKILL_H1_TOKEN)'"
     grep -qE 'Locale:.*en_GB.*<%TIMEZONE%>.*DD/MM/YYYY' "$f" || finding "check 9 — $s/SKILL.md has no locale line (en_GB · <%TIMEZONE%> · dates DD/MM/YYYY)"
   else
@@ -260,8 +278,9 @@ check_skill() { # $1 = folder name
   # ── 14–17. Modes ────────────────────────────────────────────────────────────
   modes="${CAT_MODES[$s]:--}"
   have=()
-  for mode in $SM_MODE_FILES; do [[ -f "$dir/$mode" ]] && have+=("$mode"); done
-  if [[ "$modes" != - || ${#have[@]} -gt 0 ]]; then
+  for mode in $SM_MODE_FILES $SM_FAMILY_MODE_FILES; do [[ -f "$dir/$mode" ]] && have+=("$mode"); done
+  # A family skill carries the family's neutral Mode paragraph, in its vendored bytes (D80).
+  if ! $family && [[ "$modes" != - || ${#have[@]} -gt 0 ]]; then
     para="$(mode_para_line "$f")"
     if [[ -z "$para" ]]; then finding "check 14 — $s/SKILL.md is moded but does not carry the mode paragraph verbatim (DESIGN.md Section 5)"
     elif [[ -n "$first_step" && "$para" -gt "$first_step" ]]; then finding "check 14 — $s/SKILL.md carries the mode paragraph after step 1"; fi
@@ -275,11 +294,15 @@ check_skill() { # $1 = folder name
   if [[ "$modes" == - ]]; then
     [[ ${#have[@]} -eq 0 ]] || finding "check 16 — $s is unmoded (DESIGN.md Section 5.1) but carries ${have[*]}"
   elif $SOURCE; then
-    want="$(modes_list "$modes")"
+    want="$(modes_list "$modes" "$prefix")"
     for mode in $want; do [[ -f "$dir/$mode" ]] || finding "check 16 — $s is moded but $mode is missing"; done
     for mode in "${have[@]}"; do [[ " $want " == *" $mode "* ]] || finding "check 16 — $s carries $mode, a mode DESIGN.md does not give it"; done
   else
-    [[ ${#have[@]} -eq 1 ]] || finding "check 16 — $s carries ${#have[@]} mode file(s) in a render; exactly one ships"
+    if [[ ${#have[@]} -ne 1 ]]; then
+      finding "check 16 — $s carries ${#have[@]} mode file(s) in a render; exactly one ships"
+    elif [[ "${have[0]}" != "$prefix"* || ( -z "$prefix" && "${have[0]}" == MEDIA-* ) ]]; then
+      finding "check 16 — $s carries ${have[0]}, a mode DESIGN.md does not give it"
+    fi
   fi
   total=$(( $(wc -l < "$f") + longest ))
   [[ "$total" -le 300 ]] || finding "check 17 — $s/SKILL.md plus its longest mode file is $total lines; the cap is 300"
@@ -318,6 +341,7 @@ run_checks() {
       [[ -n "${SM_AUTHOR_SKILL[$s]:-}" ]] && finding "check 20 — DESIGN.md Section 5.1 names the skill $s, which is a syntek-author skill (syntek-author-names.txt)"
     done <<< "$SM_SKILLS"
   fi
+  # The family skills (D80) are syntek-author's names by design: never read by check 20.
   [[ -d "$TREE/.claude/skills" ]] || return 0
   while IFS= read -r d; do
     if $SM_OWNED_MODE && ! is_owned_dir ".claude/skills/$d"; then
@@ -361,21 +385,41 @@ write_skill() { # $1 = dir, $2 = name, $3 = moded (true|false), $4 = names a spe
   fi
 }
 
+# A family skill as the family writes it (D80): no brand name in the H1, no time zone in the
+# locale line, the neutral Mode paragraph; then media's routing-only MEDIA- mode files.
+write_family_skill() { # $1 = dir, $2 = name
+  local d="$1" s="$2" m
+  mkdir -p "$d"
+  {
+    printf -- '---\nname: %s\ndescription: >-\n  Interview the owner one round at a time. Not for recording what is settled\n  (`handoff`).\n---\n\n' "$s"
+    printf '# Skill: %s\n\nLocale: en_GB · dates DD/MM/YYYY.\n\n%s\n\n- the project'"'"'s rules\n\n' "${s^}" "$GOVERNING"
+    printf '> **Mode.** Before step 1, read the mode files beside this one (the upper-case `.md` files in\n'
+    printf '> this folder) that the project'"'"'s rules route the work at hand to; where they name none, read\n'
+    printf '> every one.\n\n'
+    printf '## Steps\n\n1. **Ask.** Ask one round. *Complete when:* it is answered.\n\n'
+    printf '## Anti-patterns\n\n- Asking two things at once.\n\n## Cross-references\n\n- the project'"'"'s rules\n'
+  } > "$d/SKILL.md"
+  for m in $SM_FAMILY_MODE_FILES; do
+    printf '# %s — %s\n\n## Paths and unit\n\nx\n\n## Additions to the steps\n\nx\n\n## Domain rules\n\nx\n\n## Examples\n\nx\n' "$m" "$s" > "$d/$m"
+  done
+}
+
 self_test() {
-  local tmp sk ws ca vo real_names="$SM_AUTHOR_NAMES_FILE"
+  local tmp sk ws ca vo gr real_names="$SM_AUTHOR_NAMES_FILE"
   bold "▸ $SCRIPT_NAME --self-test"; log ""
   tmp="$(sm_mktemp)"
   # shellcheck disable=SC2064
   trap "rm -rf '$tmp'" RETURN
   SM_AUTHOR_NAMES_FILE="$tmp/names.txt"
-  printf '# fixture names\ntop .claude\ntop manuscript\nclaude skills\nskill run-workflow\nskill spelling\nrules 01-layout-and-routing.md\n' > "$SM_AUTHOR_NAMES_FILE"
+  printf '# fixture names\ntop .claude\ntop manuscript\nclaude skills\nskill grilling\nskill run-workflow\nskill spelling\nrules 01-layout-and-routing.md\n' > "$SM_AUTHOR_NAMES_FILE"
   require_author_names
   TREE="$tmp/template"; SOURCE=true; load_owned "$TREE"
-  sk="$TREE/.claude/skills"; ws="$sk/write-script"; ca="$sk/captions"; vo="$sk/voiceover"
+  sk="$TREE/.claude/skills"; ws="$sk/write-script"; ca="$sk/captions"; vo="$sk/voiceover"; gr="$sk/grilling"
   write_skill "$ws" write-script true false
   write_skill "$ca" captions false false
   write_skill "$vo" voiceover true true
-  st_baseline "a moded skill, an unmoded one and an ElevenLabs one, all conformant"
+  write_family_skill "$gr" grilling
+  st_baseline "a moded skill, an unmoded one, an ElevenLabs one and a family skill (the family's H1, locale line and Mode paragraph, a syntek-author name by design, D80), all conformant"
 
   # Shapes the checks must not flag: a block description read once (not twice, which doubled
   # its length), a fenced block above the mode paragraph (line numbers must still agree), and a
@@ -412,6 +456,11 @@ self_test() {
   cp "$ws/FICTION.md" "$tmp/h"
   sed -i 's/^## Domain rules/## Rules/' "$ws/FICTION.md";      probe "check 15 fires on a renamed mode H2" "check 15"; cp "$tmp/h" "$ws/FICTION.md"
   mv "$ws/NONFICTION.md" "$tmp/h";                              probe "check 16 fires on a missing mode file" "check 16"; mv "$tmp/h" "$ws/NONFICTION.md"
+  cp "$gr/MEDIA-FICTION.md" "$tmp/h"
+  sed -i 's/^## Examples/## Samples/' "$gr/MEDIA-FICTION.md";   probe "check 15 fires on a renamed H2 in a family skill's MEDIA- mode file" "check 15 — grilling/MEDIA-FICTION.md"; cp "$tmp/h" "$gr/MEDIA-FICTION.md"
+  mv "$gr/MEDIA-NONFICTION.md" "$tmp/h";                        probe "check 16 fires when a moded family skill loses a MEDIA- mode file" "check 16 — grilling is moded but MEDIA-NONFICTION.md is missing"; mv "$tmp/h" "$gr/MEDIA-NONFICTION.md"
+  cp "$gr/MEDIA-BUSINESS.md" "$gr/BUSINESS.md";                 probe "check 16 fires on a prefix-free mode file beside a family skill (syntek-author's name)" "check 16 — grilling carries BUSINESS.md"; rm -f "$gr/BUSINESS.md"
+  cp "$ws/BUSINESS.md" "$ws/MEDIA-BUSINESS.md";                 probe "check 16 fires on a MEDIA- mode file beside a media skill" "check 16 — write-script carries MEDIA-BUSINESS.md"; rm -f "$ws/MEDIA-BUSINESS.md"
   cp "$ws/SKILL.md" "$tmp/h"
   seq 1 290 | sed 's/^/- cross-reference /' >> "$ws/SKILL.md"; probe "check 17 fires when a skill and its mode pass 300 lines" "check 17"; cp "$tmp/h" "$ws/SKILL.md"
   mkdir -p "$TREE/.claude/commands";                            probe "check 18 fires on a commands folder" "check 18"; rmdir "$TREE/.claude/commands"
@@ -437,7 +486,7 @@ self_test() {
   # The over-author scope: syntek-author's skills beside media's, and .owned listing media's.
   SOURCE=false
   sed -i 's/(<%BRAND_NAME%>)$/(Probe Studio)/; s/<%TIMEZONE%>/Europe\/London/' "$ws/SKILL.md" "$ca/SKILL.md" "$vo/SKILL.md"
-  rm -f "$ws/FICTION.md" "$ws/NONFICTION.md" "$vo/FICTION.md" "$vo/NONFICTION.md"
+  rm -f "$ws/FICTION.md" "$ws/NONFICTION.md" "$vo/FICTION.md" "$vo/NONFICTION.md" "$gr/MEDIA-FICTION.md" "$gr/MEDIA-NONFICTION.md"
   mkdir -p "$sk/spelling" "$sk/run-workflow"; printf '# not a media skill\n' > "$sk/spelling/SKILL.md"; printf -- '---\nname: x\n---\n' > "$sk/run-workflow/SKILL.md"
   (cd "$TREE" && find .claude/skills -type f | grep -vE '^\.claude/skills/(spelling|run-workflow)/' | LC_ALL=C sort) > "$TREE.owned"
   load_owned "$TREE"

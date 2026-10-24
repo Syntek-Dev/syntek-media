@@ -90,8 +90,8 @@ Each piece's output has its own ignored folder in `production/src/renders/`,
 lists its tracked files and names its output folders without listing their contents.
 
 **Audio** comes from ElevenLabs, through an MCP server named `elevenlabs` that you add once at
-user scope; the template adds nothing to `.mcp.json`, and your API key never enters the
-repository. The server's base path must contain this project, or speech-to-text refuses every
+user scope; the project's `.mcp.json` names no ElevenLabs server, and your API key never enters
+the repository. The server's base path must contain this project, or speech-to-text refuses every
 file in it. The exact command is in `production/docs/reference/elevenlabs.md`. One call is made
 directly: `python3 toolkit/media.py voice remix run`, which designs a character's voice from your
 own cloned voice (`production/workflows/11-design-character-voices/`), reads the same key from
@@ -123,8 +123,12 @@ fetch models. Author-edited data stays TOML; tool-written timing is finite JSON.
 - Claude never posts. It prepares each post and its schedule row; you post.
 - Anything Claude cannot settle on its own is left in the text as an `AUTHOR TO CONFIRM` or
   `VERIFY` flag. `python3 toolkit/media.py flags` lists them.
-- When a session grows long, Claude writes a handoff and stops, rather than compacting. Run
-  `/clear` and continue from the handoff.
+- When a session grows long, Claude writes a handoff and stops, rather than compacting: the
+  session hooks in `.claude/hooks/` warn as the window fills and block automatic compaction.
+  Run `/clear` and continue from the handoff in `handoffs/`.
+- Two MCP servers ship with the project, keyless: `scrapling` fetches web pages, and asks
+  before each of its browser tools; `code-review-graph` maps the repository's code. The rules
+  say how each is used (`.claude/rules/syntek-media/06-global-rules.md` Section 13).
 
 ---
 
@@ -157,6 +161,9 @@ recovery.
 
 Copier may print a `MissingFileWarning` about `.copier-answers.syntek-media.yml`. It is expected
 and harmless: the template reads your previous answers so it can refuse a changed `BRAND_KIND`.
+Where syntek-author has not been applied, it may print a second one, about syntek-author's answers
+file: harmless too, because the template reads that file only to keep the two templates'
+data-root answers in step.
 
 - **What updates:** the template's own files: the rules in `.claude/rules/syntek-media/`, the
   skills, the reference guides, the template workflows, the toolkit and its platform data.
@@ -165,8 +172,13 @@ and harmless: the template reads your previous answers so it can refuse a change
   profiles. If you delete one of those seeds, the update brings back an empty one.
 - **The shared files are written once and never again:** this README, `CONTEXT.md`, `.gitignore`,
   `.mcp.json`, `.claude/CLAUDE.md`, `.claude/CONTEXT.md`, `.claude/MEMORY.md`,
-  `.claude/settings.json` and the `.claude/skills/` pair. An update never touches them, and one
-  you delete stays deleted. If you delete the worked example, it stays deleted too.
+  `.claude/settings.json`, the `.claude/skills/` pair, each coding client's files, the seven
+  family-shared skills, the session hooks in `.claude/hooks/` and the `handoffs/` pair. An
+  update never touches them, and one you delete stays deleted. If you delete the worked
+  example, it stays deleted too.
+- **A shared file new in a later release does not reach this project on its own**, nor does a
+  new entry of the seeded `.claude/settings.json`: take it by hand from a fresh copy, as
+  `.claude/syntek-media-agents.md` ('Enabling an existing project') says.
 - **Never edit the rules in `.claude/rules/syntek-media/`**, or any other file the template owns:
   the next update overwrites the edit or turns it into a conflict. Put your own rules under
   'Project-specific rules' in `.claude/CLAUDE.md`, your own guides in a layer's `docs/project/`,
@@ -234,16 +246,23 @@ captures. `--memory-max SIZE` or user-scope `MEDIA_MEMORY_MAX` optionally caps a
 scene renders under systemd with swap disabled; other runs report that they are uncapped.
 No scene command calls a generation API.
 
-## Codex and Antigravity
+## Other coding agents
 
-Read `.claude/syntek-media-agents.md` for the shared read order and client setup. Root
-`AGENTS.md` and `GEMINI.md` route there, and `.agents/` is a real folder whose `skills` link
-exposes the one skill tree in `.claude/skills/`. Codex uses the folder manuals through its
-fallback setting; Antigravity has an empty workspace MCP configuration in
-`.agents/mcp_config.json`. Configure and authenticate capabilities locally.
-The same production rules, work tiers and spending approval apply in every client.
+Codex, Gemini CLI, Antigravity and OpenCode read the same rules, skills and memory as Claude
+Code, through `.claude/syntek-media-agents.md`, the shared read order and client setup. Each
+client's files ship only for the clients chosen when the project was generated, and the model
+each uses is in `.claude/rules/syntek-media/05-model-allocation.md`.
+<: if 'codex' in AGENT_CLIENTS or 'opencode' in AGENT_CLIENTS :>`AGENTS.md` routes Codex and OpenCode to the bridge.
+<: endif :><: if 'gemini-cli' in AGENT_CLIENTS or 'antigravity' in AGENT_CLIENTS :>`GEMINI.md` routes Gemini CLI and Antigravity to the bridge.
+<: endif :><: if AGENT_CLIENTS | length > 0 :>`.agents/` is a real folder whose `skills` link exposes the one skill tree in `.claude/skills/`.
+<: endif :>
+After the first copy, run `python3 .claude/syntek-media-permissions.py --write` once: it passes
+the asks and denies of `.claude/settings.json` to the other clients' settings files, which
+cannot read Claude Code's, and it is the only way the ElevenLabs asks reach Gemini CLI and
+OpenCode. The same production rules, work tiers and spending approval apply in every client,
+and a client's permission is never your approval.
 
-These entrypoints, the `.agents` folder and client configuration are copy-only shared paths. Updates
-preserve edits and deletions and never add new copy-only files. For an existing project, follow
-the bridge's temporary-generation setup and copy only missing files. Preserve existing settings,
+The entrypoints and client settings are copy-only shared paths. Updates preserve edits and
+deletions and never add new copy-only files. For an existing project, follow the bridge's
+temporary-generation setup and copy only missing files. Preserve existing settings,
 entrypoints, real directories and differently targeted links; agree integration with the owner.

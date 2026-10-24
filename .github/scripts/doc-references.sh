@@ -24,13 +24,22 @@
 #                          tree lacks — a shared file naming a gated skill.
 #                       5. A companion skill of syntek-author (DESIGN.md Section 5.2) named
 #                          backticked, in `skills:`, or on a Skill line without
-#                          "(syntek-author), where present" (D10).
+#                          "(syntek-author), where present" (D10). Since D80 grilling,
+#                          grill-with-docs, handoff and wayfinder are family skills that ship
+#                          here, not companions.
 #                       6. A backticked syntek-author path: standards/, manuscript/, library/,
 #                          planning/, research/, proposal/, typeset/, world/, tooling/,
-#                          handoffs/, learning/, assets/, Makefile, .claude/rules/syntek-author/,
+#                          learning/, assets/, Makefile, .claude/rules/syntek-author/,
 #                          00-project.md — named in prose instead, "where present". A folder
 #                          name counts only as the FIRST segment of the path: `assets/…` is
-#                          syntek-author's, `production/src/assets/` is media's.
+#                          syntek-author's, `production/src/assets/` is media's. handoffs/ is
+#                          a family path since D80, and media ships its pair.
+#
+#                     Checks 5 and 6 do not read a family-shared file (_common.sh's
+#                     SM_FAMILY_SHARED; DESIGN.md D80): its text is syntek-author's, byte for
+#                     byte, written for every family template, and media never edits it. A
+#                     companion or syntek-author path it names is neither finding, nor check 1's,
+#                     2's, 3's or 4's; every other citation in it is read as in any file.
 #                       7. 000-example-piece backticked in a file outside the spine set: no
 #                          template-owned file names an example path (D43); the rules, the seeds
 #                          and the examples may.
@@ -287,20 +296,24 @@ run_checks() {
   if [[ -d "$TREE/.claude/skills" ]]; then
     while IFS= read -r s; do skills["$s"]=1; done < <(find "$TREE/.claude/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
   fi
+  local fam
   while IFS= read -r -d '' f; do
     f="${f#./}"
     is_owned_file "$f" || continue
+    fam=false; is_family_path "$f" && fam=true
     spine=false; spine_kind "$f" >/dev/null && spine=true
     FILE_GATE="$(gate_of "$f")"
     while IFS=$'\t' read -r rec ln kind tok; do
       case "$rec" in
         F)
           if [[ -n "${COMPANION[$tok]:-}" ]]; then
+            $fam && continue
             finding "check 5 — $f:$ln routes to '$tok' in skills: — a companion of syntek-author is named in prose, never in frontmatter (DESIGN.md D10)"
           else
             [[ -n "${skills[$tok]:-}" ]] || finding "check 2 — $f:$ln routes to skill '$tok', which this project does not have"
           fi ;;
         K)
+          $fam && continue
           for c in $SM_COMPANIONS; do
             if [[ " $tok " =~ [^A-Za-z0-9-]${c}[^A-Za-z0-9-] && "$tok" != *'(syntek-author), where present'* ]]; then
               finding "check 5 — $f:$ln names $c on its Skill line without '(syntek-author), where present'"
@@ -316,11 +329,13 @@ run_checks() {
             continue
           fi
           if author_path "$tok"; then
+            $fam && continue
             finding "check 6 — $f:$ln backticks the syntek-author path \`$tok\` — name it in prose, where present (DESIGN.md D4)"
             continue
           fi
           if [[ "$tok" =~ ^[a-z0-9-]+$ ]]; then
             if [[ -n "${COMPANION[$tok]:-}" ]]; then
+              $fam && continue
               finding "check 5 — $f:$ln backticks the companion '$tok' — name it 'the $tok skill (syntek-author), where present' (DESIGN.md D10)"
             elif [[ -n "${skills[$tok]:-}" ]] || same_gate ".claude/skills/$tok"; then
               :
@@ -397,7 +412,7 @@ skills: [voiceover]
 
 ## 2. Grill the brief
 
-> **Skill:** grill-with-docs (syntek-author), where present · **Guide:** none
+> **Skill:** comprehension (syntek-author), where present · **Guide:** none
 EOF
   printf '# 01-layout-and-routing.md\n\nThe worked example is `scripts/src/pieces/000-example-piece/brief.md`, where it was kept.\n' > "$r"
   printf '# CONTEXT.md — production/src/\n\nSmall stills live in `production/src/assets/`.\n' > "$t/production/src/CONTEXT.md"
@@ -433,9 +448,9 @@ EOF
   sed -i 's/^skills: \[voiceover\]/skills: [voiceover, grammar]/' "$wf/STEPS.md"
   probe "check 5 fires on a companion in skills:, never check 2" "check 5 — production/workflows/02-make-a-voiceover/STEPS.md:3 routes to 'grammar'"
   sed -i 's/^skills: \[voiceover, grammar\]/skills: [voiceover]/' "$wf/STEPS.md"
-  sed -i 's/^> \*\*Skill:\*\* grill-with-docs (syntek-author), where present/> **Skill:** grill-with-docs/' "$wf/STEPS.md"
-  probe "check 5 fires on a companion on a Skill line without the where-present form" "check 5 — production/workflows/02-make-a-voiceover/STEPS.md:12 names grill-with-docs"
-  sed -i 's/^> \*\*Skill:\*\* grill-with-docs · /> **Skill:** grill-with-docs (syntek-author), where present · /' "$wf/STEPS.md"
+  sed -i 's/^> \*\*Skill:\*\* comprehension (syntek-author), where present/> **Skill:** comprehension/' "$wf/STEPS.md"
+  probe "check 5 fires on a companion on a Skill line without the where-present form" "check 5 — production/workflows/02-make-a-voiceover/STEPS.md:12 names comprehension"
+  sed -i 's/^> \*\*Skill:\*\* comprehension · /> **Skill:** comprehension (syntek-author), where present · /' "$wf/STEPS.md"
   printf '\n## 3. Check\n\n> **Skill:** `fact-check` · **Guide:** none\n' >> "$wf/STEPS.md"
   probe "check 5 fires on a backticked companion on a Skill line, never check 3" "check 5"
   head -n -4 "$wf/STEPS.md" > "$tmp/s" && cat "$tmp/s" > "$wf/STEPS.md"
@@ -464,6 +479,17 @@ EOF
   printf 'Read `production/src/missing.md` too.\n' >> "$t/production/workflows/05-narrate-an-audiobook/STEPS.md"
   probe "check 1 still fires in a gated file on a path its gate does not cover" "check 1 — production/workflows/05-narrate-an-audiobook/STEPS.md:8"
   rm -rf "$t/production/workflows/05-narrate-an-audiobook"
+
+  # A family-shared file (D80) is syntek-author's text: checks 5 and 6 never read it, and a
+  # former companion that now ships (grill-with-docs) is a skill like any other.
+  mkdir -p "$t/.claude/skills/grilling"
+  printf -- '---\nname: grilling\nskills: [research]\n---\n\nAsk, then check with the `research` skill; never `library/src/`.\nThen `grill-with-docs` records it.\n' \
+    > "$t/.claude/skills/grilling/SKILL.md"
+  mkdir -p "$t/.claude/skills/grill-with-docs"; printf 'x\n' > "$t/.claude/skills/grill-with-docs/SKILL.md"
+  probe_clean "a family-shared file naming a companion and a syntek-author path is not checks 5 and 6's, and a family skill is no companion"
+  printf 'See `production/src/missing.md`.\n' >> "$t/.claude/skills/grilling/SKILL.md"
+  probe "check 1 still fires in a family-shared file on a dead media path" "check 1 — .claude/skills/grilling/SKILL.md"
+  rm -rf "$t/.claude/skills/grilling" "$t/.claude/skills/grill-with-docs"
 
   printf 'The worked example is `scripts/src/pieces/000-example-piece/`.\n' >> "$g"
   probe "check 7 fires on an example path in a template-owned file" "check 7"

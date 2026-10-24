@@ -38,7 +38,7 @@ The written voice and brand guide stay syntek-author's, where present, cited and
 
 | Layer | Kind | Purpose |
 |---|---|---|
-| `.claude/` | config | The manual, these rules in `.claude/rules/syntek-media/`, `MEMORY.md`, settings, and media's skills beside any other template's |
+| `.claude/` | config | The manual, these rules in `.claude/rules/syntek-media/`, `MEMORY.md`, settings and the session hooks, media's skills and the family-shared skills beside any other template's, the bridge for other coding agents, and the data-root and permissions scripts |
 | `brand/` | production | Design tokens and preview cards (the thumbnail and card layouts among them), design exports and their register, the spoken voice, one profile per platform |
 | `scripts/` | production | One folder per piece: brief, script or transcript, storyboard, shot list; the piece register |
 | `production/` | production | Source media and its manifest, voiceover segments, edit decision lists, cards, a piece's timing (`production/src/timing/`) and a scene piece's files (`production/src/scenes/`), rights and credits<: if 'audiobook' in MEDIA_KINDS :>, audiobook chapter registers<: endif :> |
@@ -59,8 +59,9 @@ The writing router of syntek-author, where present, reads only the layers its ow
 - **Generated output** (each renders and generated folder in `production/src/` and
   `publishing/src/`) is git-ignored by the nested `.gitignore` files, never hand-edited, and can
   be made again, except an approved take or audiobook master, which is archived as source media.
-- **Media has no working folders of its own.** The handoffs, learning and assets folders at the
-  root are syntek-author's, where it is applied; media's binaries live in its own layers.
+- **Media has no working folders of its own.** The `handoffs/` folder is family-shared: media
+  ships only its pair, as syntek-author does. The learning and assets folders at the root are
+  syntek-author's, where it is applied; media's binaries live in its own layers.
 
 ---
 
@@ -125,8 +126,10 @@ The exceptions are syntek-author's, unchanged, then media's:
   all**: a piece's output folder and its `takes`, `cards`, `timing`, `scene` or `stills` folder,
   and a proofs or voice-trials folder, because Git ignores it whole and nothing ignored is read
   in a session (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
-- A handoffs folder these rules create without syntek-author carries no pair, and Claude never
-  writes one there: its pair is syntek-author's, and one written here would collide with it.
+- The `handoffs/` folder carries the family-shared pair a copy writes, and Claude never writes
+  that pair by hand: where it is missing (a project updated from a release before 0.5.0), the
+  folder carries none until a template's copy or update brings it, because a pair written here
+  would differ from the one every template ships.
 - **Every piece folder carries its own pair**, written when the piece is opened
   (`scripts/workflows/01-brief-a-piece/`) from the skeleton in `scripts/src/pieces/CLAUDE.md`.
 
@@ -147,8 +150,10 @@ H1. **Read it first and obey it.**
 
 The phase is one of plan, research, produce, review, publish, convert or author. The template's
 files carry no `agent:` key: the template uses skills only. A `skills:` list names media skills
-only; a companion from syntek-author is named in prose on a step, never there. Piece files and
-registers carry no `model:` key (`.claude/rules/syntek-media/05-model-allocation.md`).
+only. A family-shared skill is named on a step, backticked, as '`grill-with-docs`, where
+present', and a companion from syntek-author in prose
+(`.claude/rules/syntek-media/02-skills.md` Section 4); neither ever appears in that list. Piece
+files and registers carry no `model:` key (`.claude/rules/syntek-media/05-model-allocation.md`).
 
 ---
 
@@ -156,7 +161,7 @@ registers carry no `model:` key (`.claude/rules/syntek-media/05-model-allocation
 
 | Class | What `copier update` does | Files |
 |---|---|---|
-| **Template-owned** | merges the template's changes in | `.claude/rules/syntek-media/**`, the media skills' folders, every `docs/reference/` and `workflows/NN-name/`, the governance pairs (except the seeded ones), `toolkit/**`, every nested `.gitignore` and `.gitattributes`, the READMEs of the generated, renders and raw folders, and Copier's `.copier-answers.syntek-media.yml` |
+| **Template-owned** | merges the template's changes in | `.claude/rules/syntek-media/**`, the media skills' folders, the `MEDIA-` mode files beside the family-shared skills, the bridge and the data-root and permissions scripts and map in `.claude/` (each named `syntek-media-…`), every `docs/reference/` and `workflows/NN-name/`, the governance pairs (except the seeded ones), `toolkit/**`, every nested `.gitignore` and `.gitattributes`, the READMEs of the generated, renders and raw folders, and Copier's `.copier-answers.syntek-media.yml` |
 | **Seed-if-missing** | creates the file only if it is absent, then never touches it | the seeds below |
 | **Copy-only shared** | written by a copy only where absent; never touched by an update, even to recreate it | the shared files below |
 | **Seed-once example** | ships at generation only; once deleted, stays deleted | the worked example piece, when one was generated |
@@ -170,12 +175,14 @@ platform): the design register, `tokens.css` and the preview cards of `brand/src
 `publishing/src/schedule.md`, `publishing/src/publish-log.md`, and every layer's `docs/project/`
 and `workflows/local/` pair.
 
-**The shared files** (`README.md`, `CONTEXT.md`, `.gitignore`, `.mcp.json`, `AGENTS.md`,
-`GEMINI.md`, the `.agents/` folder with its skills link and MCP file, the `.codex/` settings and
-pair, and in `.claude/` `CLAUDE.md`, `CONTEXT.md`, `MEMORY.md`, `settings.json` and the
-`skills/` pair) are written by whichever template is applied first; nothing media needs lives
-only in them, and media never edits one, except once: updating across 0.4.2 replaces a
-`.agents` link to `.claude` with the real folder.
+**The shared files** (`README.md`, `CONTEXT.md`, `.gitignore`, `.mcp.json`, in `.claude/`
+`CLAUDE.md`, `CONTEXT.md`, `MEMORY.md`, `settings.json` and the `skills/` pair, each coding
+client's entrypoint, settings and pair, written only for the clients chosen when the project was
+generated, and the family-shared files: the seven family-shared skills, the `.claude/hooks/`
+scripts and pair, and the `handoffs/` pair) are written by whichever template is applied first;
+nothing media needs lives only in them, and media never edits one, except once: updating across
+0.4.2 replaces an .agents link to `.claude` with the real folder. An update never adds one a
+project lacks: `.claude/syntek-media-agents.md` says how to take a missing one by hand.
 
 **Never edit a template-owned file.** Override instead: a same-named guide in `docs/project/`, a
 same-slug workflow in `workflows/local/`, an entry in the Workflow aliases or Overrides of

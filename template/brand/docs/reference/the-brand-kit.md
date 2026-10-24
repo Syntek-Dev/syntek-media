@@ -71,7 +71,7 @@ reported to the author with both values, never resolved silently.
 
 - **Workflow:** `brand/workflows/01-set-up-the-brand-kit/`.
 - **Skills:** `thumbnail-brief` copies and renders the thumbnail layout; `cut-for-platform`
-  copies the card layout; the grill-with-docs skill (syntek-author), where present, settles the
+  copies the card layout; the `grill-with-docs` skill, where present, settles the
   kit with the author.
 
 ## Governing standard

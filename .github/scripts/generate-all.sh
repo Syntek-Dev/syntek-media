@@ -18,7 +18,16 @@
 #                                  [tiktok]/[trailer], author-nonfiction [podcast]/[audiobook]).
 #                                  business ships blog WITHOUT website (DESIGN.md Section 7,
 #                                  D53), so doc-references.sh check 1 catches a file of that
-#                                  render backticking a path only website opens.
+#                                  render backticking a path only website opens. Each also
+#                                  shuts a different client gate (D80): business ticks no
+#                                  client (Claude-only: no AGENTS.md, GEMINI.md or .agents/),
+#                                  author-fiction only OpenCode (AGENTS.md and opencode.json,
+#                                  no .codex/), author-nonfiction only Antigravity (GEMINI.md and
+#                                  .agents/mcp_config.json, no .gemini/), so a file backticking
+#                                  a client path with a slash (.codex/config.toml) fails where
+#                                  that client is off. doc-references.sh tests no bare name
+#                                  (AGENTS.md, opencode.json, .codex), so a template-owned file
+#                                  names those in prose (DESIGN.md Section 3.5).
 #                     over-author  syntek-author's matching variant (business → business,
 #                                  author-fiction → fiction, author-nonfiction → theology)
 #                                  rendered and committed, then media copied in WITHOUT
@@ -55,9 +64,11 @@
 #                        names its own kind (BRAND_KIND equals the file's name).
 #                     4. The copy output (stderr, without --quiet) of each <kind>--defaults
 #                        render carries every _message_after_copy line of _common.sh's lists
-#                        (DESIGN.md D13, D73, D76): the eighteen shared paths a copy writes and the skip rule, the four allows,
-#                        nine ElevenLabs asks, the two voice remix run asks (D82) and two Edit
-#                        denies, the ELEVENLABS_MCP_BASE_PATH line,
+#                        (DESIGN.md D13, D73, D76, D80): every shared path a copy writes (the
+#                        eighteen of D11 and the seventeen of D80) and the skip rule, the four
+#                        allows, nine ElevenLabs asks, the two voice remix run asks (D82) and two
+#                        Edit denies, the permissions script's --write line (D80), the
+#                        ELEVENLABS_MCP_BASE_PATH line,
 #                        filter.lfs.required, the setup check, and the update command with -a;
 #                        and, from Section 8, that 'conflict' then 'skip' is expected, the
 #                        optional line in .claude/CLAUDE.md, and nothing to add to .gitignore
@@ -143,13 +154,13 @@ ALL_KINDS="[${SM_MEDIA_KINDS// /,}]"
 RENDERS=$(cat <<EOF
 business--defaults
 business--all                   PLATFORMS=$ALL_PLATFORMS MEDIA_KINDS=$ALL_KINDS
-business--minimal               PLATFORMS=[blog] MEDIA_KINDS=[long-video] SEED_EXAMPLES=false
+business--minimal               PLATFORMS=[blog] MEDIA_KINDS=[long-video] SEED_EXAMPLES=false AGENT_CLIENTS=[]
 author-fiction--defaults
 author-fiction--all             PLATFORMS=$ALL_PLATFORMS MEDIA_KINDS=$ALL_KINDS
-author-fiction--minimal         PLATFORMS=[tiktok] MEDIA_KINDS=[trailer] SEED_EXAMPLES=false
+author-fiction--minimal         PLATFORMS=[tiktok] MEDIA_KINDS=[trailer] SEED_EXAMPLES=false AGENT_CLIENTS=[opencode]
 author-nonfiction--defaults
 author-nonfiction--all          PLATFORMS=$ALL_PLATFORMS MEDIA_KINDS=$ALL_KINDS
-author-nonfiction--minimal      PLATFORMS=[podcast] MEDIA_KINDS=[audiobook] SEED_EXAMPLES=false
+author-nonfiction--minimal      PLATFORMS=[podcast] MEDIA_KINDS=[audiobook] SEED_EXAMPLES=false AGENT_CLIENTS=[antigravity]
 business--over-author
 author-fiction--over-author
 author-nonfiction--over-author
@@ -160,26 +171,32 @@ render_names() { awk '{ print $1 }' <<< "$RENDERS"; }
 render_data()  { awk -v n="$1" '$1 == n { for (i = 2; i <= NF; i++) print $i }' <<< "$RENDERS"; }
 is_over_author() { [[ "$(profile_of "$1")" == over-author ]]; }
 
-sorted_csv() { tr ' ,' '\n\n' <<< "$1" | grep -v '^$' | LC_ALL=C sort | paste -sd, -; }
+sorted_csv() { tr ' ,' '\n\n' <<< "$1" | { grep -v '^$' || true; } | LC_ALL=C sort | paste -sd, -; }   # an empty list is ''
 
 # What DESIGN.md Section 2 says the render should record: the kind's defaults, then the
 # profile's answers on top. Lists are expected as their values sorted and joined by commas,
-# as shipped-brands.sh reads them (the order Copier keeps is not a promise).
+# as shipped-brands.sh reads them (the order Copier keeps is not a promise). The family-shared
+# questions (D80): a fresh copy, with no record, ticks all four clients, and stores binaries
+# on the data root (external) unless syntek-author's record says otherwise, which over a fresh
+# syntek-author render it never does. AGENT_CLIENTS is written even when empty, so a profile
+# that ticks none is held to that too.
 expect_for() { # $1 = name → KEY=value lines
   local name="$1" kind kv k v
   kind="$(kind_of "$1")"
   local -A e=([BRAND_KIND]="$kind" [PLATFORMS]="$(sorted_csv "${SM_DEFAULT_PLATFORMS[$kind]}")"
               [MEDIA_KINDS]="$(sorted_csv "${SM_DEFAULT_MEDIA_KINDS[$kind]}")" [SEED_EXAMPLES]=true
-              [MODEL_MECHANICAL]="${SM_DEFAULT_MODEL[$kind]}")
+              [MODEL_MECHANICAL]="${SM_DEFAULT_MODEL[$kind]}" [AGENT_CLIENTS]="$(sorted_csv "$SM_CLIENTS")"
+              [DATA_STORE]=external)
   while IFS= read -r kv; do
     [[ -z "$kv" ]] && continue
     k="${kv%%=*}"; v="${kv#*=}"
     if [[ "$v" == '['*']' ]]; then v="${v#[}"; v="$(sorted_csv "${v%]}")"; fi
     e["$k"]="$v"
   done < <(render_data "$name")
-  for k in BRAND_KIND PLATFORMS MEDIA_KINDS SEED_EXAMPLES MODEL_MECHANICAL; do
+  for k in BRAND_KIND PLATFORMS MEDIA_KINDS SEED_EXAMPLES MODEL_MECHANICAL DATA_STORE; do
     [[ -n "${e[$k]:-}" ]] && printf '%s=%s\n' "$k" "${e[$k]}"
   done
+  printf 'AGENT_CLIENTS=%s\n' "${e[AGENT_CLIENTS]}"
   return 0
 }
 

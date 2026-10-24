@@ -55,5 +55,5 @@ post the piece without re-deciding what it promised.
 - `scripts/src/pieces/CLAUDE.md` — the skeletons of a piece folder's pair and of its brief.
 - `publishing/docs/reference/ai-disclosure.md` — what the disclosure plan must cover.
 - `production/docs/reference/rights-and-consent.md` — what counts as a rights need.
-- The grill-with-docs skill (syntek-author), where present — the questioning, the lookup order
+- The `grill-with-docs` skill, where present — the questioning, the lookup order
   and the memory gate.

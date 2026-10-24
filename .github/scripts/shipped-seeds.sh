@@ -9,17 +9,22 @@
 #                    manifest lands in every project and no update can retract it — so emptiness
 #                    is AUDITED, not trusted (DESIGN.md Section 3.1). Seed-once examples are the
 #                    opposite contract: copied on `copy`, excluded on `update`, so an example the
-#                    author deleted stays deleted (Section 3.2). The nineteen shared paths are a third:
-#                    copy only, never on update, never recreated (D11, Section 3.6), and they need
-#                    BOTH their copier.yml lines — without the update gate a file the author
+#                    author deleted stays deleted (Section 3.2). The shared paths are a third:
+#                    copy only, never on update, never recreated (D11, D80, Section 3.6), and they
+#                    need BOTH their copier.yml lines — without the update gate a file the author
 #                    deleted comes back from media's copy inside syntek-author's project
 #                    (Section 10). And the author-owned folders ship their pair and nothing else
 #                    (Section 3.3), because anything else in them is the template writing into
 #                    the author's space — and the output folders ship their README.md alone,
 #                    which only a `!` negation listed above every gated _exclude line can
 #                    promise, because Copier obeys the last pattern that matches (D19, Section 3.5).
+#                    Most of the shared paths are now the family's bytes too (D80): vendored from
+#                    one syntek-author tag and never edited here, so a project that takes both
+#                    templates holds one set of bytes whichever comes first. The root
+#                    family-shared.json records them in the family's format, and checks 21–27
+#                    hold the files, the three blocks and the renders to that record.
 #
-#                    Twenty-two checks:
+#                    Twenty-nine checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
 #                         _skip_if_exists.
 #                      2. Every _skip_if_exists entry names a file under template/.
@@ -34,11 +39,18 @@
 #                         table header with no rows is empty: the website and blog profiles'
 #                         `## Sites` and the newsletter profile's `## Lists` ship that way
 #                         (DESIGN.md D61, Section 6.15).
-#                      8. Each of the nineteen shared paths has its update-gated _exclude line
-#                         ("_copier_operation == 'update'"), and nothing else carries that gate.
+#                      8. Each shared path has its update-gated _exclude line
+#                         ("_copier_operation == 'update'"), and so does each of the two client
+#                         folders syntek-author gates whole (.codex and .gemini, which take no
+#                         _skip_if_exists line: D80); nothing else carries that gate, a family
+#                         skill's folder included (its MEDIA-*.md mode files are template-owned).
 #                      9. A Markdown register or brand seed lacks the seeded-stub banner. Index
 #                         pairs carry none: a pair is navigation.
-#                     10. .mcp.json is exactly {"mcpServers": {}} (DESIGN.md D19, D21).
+#                     10. In a render, .mcp.json is not the family's file: its SHA-256 is not
+#                         the one family-shared.json records for it, which declares
+#                         code-review-graph and scrapling, pinned, and never ElevenLabs, which
+#                         stays user-scoped (DESIGN.md D21, D80). template/'s own copy is
+#                         check 25's, so the source tree is not read here.
 #                     11. A pair-only folder holds something other than its pair, a nested
 #                         .gitignore or .gitattributes, a declared seed or a seed-once example;
 #                         or a sub-folder that is not itself pair-only, an example, or a
@@ -49,10 +61,14 @@
 #                         production/src/scenes/ (D64): a piece's words, mouth cues, cue index or
 #                         scene code left there would ship.
 #                     12. .claude/settings.json breaks DESIGN.md D13: model opus,
-#                         autoCompactEnabled false, no hooks key, exactly the three denies, the
-#                         six allows, the nine ElevenLabs asks and the two voice remix run asks
-#                         (D82) of _common.sh's lists, and no
-#                         owner-specific key (effortLevel, ultracode, enabledPlugins, disable*).
+#                         autoCompactEnabled false; exactly the three denies and the family's
+#                         embed_graph_tool deny, the six allows, the nine ElevenLabs asks, the two
+#                         voice remix run asks (D82) and the family's eight MCP asks, those eight
+#                         in the family's order (D80); a hooks key equal, as parsed JSON, to the
+#                         family's three registrations (the context-threshold and pre-compact
+#                         handoff hooks and the data-root guard, byte for byte from syntek-author's
+#                         seed: D80); and no owner-specific key (effortLevel, ultracode,
+#                         enabledPlugins, disable*).
 #                     13. .claude/settings.json does not parse as JSON. Read only where the file
 #                         is plain JSON (every render; the source while it holds no block).
 #                     14. An index seed (a docs/project/ or workflows/local/ pair) lists an entry
@@ -90,66 +106,130 @@
 #                         any later entry carries no version:. Where _migrations is missing
 #                         altogether, check 19 claims it and this check stays quiet.
 #                     21. migrations/agents-outside-link.py is not syntek-author's family-shared
-#                         script as media vendored it (DESIGN.md D85; syntek-author D48): its
-#                         SHA-256 is not _common.sh's SM_OUTSIDE_SHA256, the value the release
-#                         tag it was vendored from (SM_OUTSIDE_RELEASE) records for it in
-#                         family-shared.json; or Git's index does not hold it at mode 100755
+#                         script as media vendored it (DESIGN.md D85, D80; syntek-author D48): its
+#                         SHA-256 is not the one this repository's family-shared.json records for
+#                         it (since D80, read from that entry, never a constant here); or Git's
+#                         index does not hold it at the entry's mode, 100755 for "mode": "755"
 #                         (read with git ls-files -s). Only where this repository is not a Git
 #                         work tree is the file's executable bit read instead; a .git that Git
 #                         will not read (an ownership mismatch before safe.directory is set,
 #                         say) stops the run with exit 2, never a fallback. The script is
 #                         never edited here: one changed byte and media's updates print a hand
 #                         fix that its README, its bridge and syntek-author's script do not. A
-#                         missing script is check 19's.
+#                         missing script is check 19's; a manifest without a usable entry for it
+#                         is check 23's or 24's, and this check stays quiet.
 #                     22. copier.yml's family-shared migrations block (D85; syntek-author D48)
 #                         is not the family's byte for byte: the marker lines
 #                         '# BEGIN family-shared migrations (D48)' and
 #                         '# END family-shared migrations (D48)' do not each occur exactly once,
-#                         or the lines strictly between them do not have _common.sh's
-#                         SM_FAMILY_MIGRATIONS_SHA256, the value the same tag's
-#                         family-shared.json records for the block. The block is how the
+#                         or the lines strictly between them do not have the SHA-256 this
+#                         repository's family-shared.json records for its 'migrations' block
+#                         (since D80; quiet where the manifest holds no usable entry, checks 23
+#                         and 24). The block is how the
 #                         vendored script runs: with Copier's own interpreter, hold first,
 #                         restore before every other after-stage entry. Where _migrations is
 #                         missing (check 19) or does not open with the outside-link pair
 #                         (check 20), those claim it and this check stays quiet. An extra
 #                         unversioned entry inside the block is two faults, so two findings:
 #                         check 20's for the entry, this check's for the bytes.
+#                     23. family-shared.json, at this repository's root, is missing, is not JSON,
+#                         or does not hold format 1, owner syntek-media and the release Git
+#                         allows: 'v' + VERSION on the commit that tag names and on a commit
+#                         whose VERSION no tag has yet (the release commit), 'unreleased' once
+#                         that tag is an ancestor of HEAD, either where Git cannot tell (the
+#                         family's rule, syntek-author D48). Checks 21, 22 and 24–27 then stay
+#                         quiet: there is no record to hold anything to.
+#                     24. Its files are not exactly _common.sh's SM_FAMILY_SHARED — each
+#                         destination path (the family's, <template> kept), source, kind and
+#                         scope, in byte order of the path — or its blocks are not exactly the
+#                         questions and migrations blocks of copier.yml, then rules-web-tools of
+#                         rules 06 with its destination, in that order, with the family's
+#                         marker lines. syntek-author's family-update.py and its update block are
+#                         not listed until D81.
+#                     25. A listed file (the outside-link script apart: check 21's) is not a
+#                         file, or its size and SHA-256 differ from its entry, or its mode does
+#                         ("mode": "755" for an executable; read from Git's index where the
+#                         index holds the file, from the executable bit otherwise); or the
+#                         listed link, .agents/skills, is the D76 link that check 18 holds it to
+#                         but the record names another target (a link that is not the D76 link
+#                         is check 18's alone).
+#                     26. A listed block (the migrations block apart: check 22's) does not hold
+#                         each of its marker lines exactly once, BEGIN first, in its file, or the
+#                         lines strictly between them differ in size or SHA-256 from its entry.
+#                     27. In a render, a token-free family file other than .mcp.json (check
+#                         10's) is not byte for byte what family-shared.json records, or a file
+#                         recorded at mode 755 (the two session hooks) is not executable. Copier
+#                         renders every file: a delimiter that reached one of them would change
+#                         it here. .codex/config.toml, .gemini/settings.json and opencode.json
+#                         carry the seven shared keys and are rendered by design, so they are
+#                         not read; nor is template/ (check 25's), nor the .agents/skills link
+#                         (shipped-brands.sh check 13's).
+#                     28. The data-root map, .claude/syntek-media-dataroot.json, is not exactly
+#                         {"format": 1, "folders": []}: media files nothing on the data root in
+#                         0.5.0 (D80), and a folder it claimed could equal or overlap one of
+#                         syntek-author's, which refuses every data command touching it.
+#                     29. In a standalone render, `python3 .claude/syntek-media-permissions.py
+#                         --check` exits other than 0 or 1, or finds missing a rule that is not
+#                         one of media's own seed rules (the ElevenLabs and voice remix run
+#                         asks, the two Edit denies, the six allows: DESIGN.md D13): the vendored
+#                         client files carry the family's eight asks and its deny already (D80),
+#                         so only media's own reach them by hand, through the --write line of
+#                         _message_after_copy; or, in a scratch copy of the render, --write
+#                         fails or leaves --check exiting other than 0. A render that ticks no
+#                         client has nothing to check (exit 0).
 #
-#                    Checks 1–4, 8 and 16–22 read copier.yml, template/ and migrations/ (static,
-#                    once; check 21 also reads Git's index). Checks 5–7 and 9–15 read every tree
-#                    given — template/ by default, or renders — and skip a seed the tree does
-#                    not ship.
+#                    Checks 1–4, 8 and 16–26 read copier.yml, template/, migrations/, rules 06
+#                    and family-shared.json (static, once; checks 21 and 25 also read Git's
+#                    index). Checks 5–7, 9, 11–15 and 28 read every tree given — template/ by
+#                    default, or renders — and skip a seed the tree does not ship; checks 10,
+#                    27 and 29 read the renders only.
+#
+#                    --write-manifest rewrites family-shared.json from the vendored files and
+#                    blocks, in the family's format (the step after vendoring a new tag), then
+#                    runs the checks. It is the only writer of that file.
 #
 #                    Over-author scope (DESIGN.md Section 7): on a <kind>--over-author tree,
-#                    whose <tree>.owned lists the files media's copy added, checks 5, 6, 10, 12
-#                    and 13 are skipped (the shared files are syntek-author's; coexist-test.sh
-#                    check 12 proves them unchanged), and the rest read media-owned paths only.
+#                    whose <tree>.owned lists the files media's copy added, checks 5, 6, 10, 12,
+#                    13 and 29 are skipped (the shared files are syntek-author's; coexist-test.sh
+#                    check 12 proves them unchanged), and the rest read media-owned paths only:
+#                    the family files syntek-author wrote first are its own there.
 #
 #                    Numbers are stable identifiers. Append, never renumber.
 #
 #                    What it CANNOT check: that a writing rule in a seed is generic rather than
 #                    one brand's preference. "No entries" is decidable; "no personal
 #                    preferences" is not — scrub.sh catches the names, a reviewer the rest.
-#                    Nor that SM_OUTSIDE_SHA256 and SM_FAMILY_MIGRATIONS_SHA256 are still the
-#                    family's: checks 21 and 22 hold media to the tag it last vendored from, and
-#                    a later tag is re-read by hand against its family-shared.json (D85). Check
-#                    21 reads the mode the index holds, which a plain `git commit` records;
-#                    `git commit -a` records the working tree's bit instead, which only CI's
-#                    run on the pushed commit then reads.
+#                    Nor that family-shared.json is still the family's: checks 21–27 hold media
+#                    to its own record, and coexist-test.sh check 22 holds that record, entry by
+#                    entry, to the syntek-author tree it runs against (in CI, the tag
+#                    SYNTEK_AUTHOR_TAG pins). Nor that a vendored file says something true of
+#                    media: its text is syntek-author's, reviewed at adoption. Checks 21 and 25
+#                    read the mode the index holds, which a plain `git commit` records; `git
+#                    commit -a` records the working tree's bit instead, and a file the index does
+#                    not hold yet is read by its bit, which `git add` on a file system without
+#                    executable bits (core.fileMode false) does not keep: only CI's run on the
+#                    pushed commit then reads it.
 #
-# SELF-TEST. --self-test writes a fixture repository at runtime with every seed in shape,
+# SELF-TEST. --self-test writes a fixture repository at runtime with every seed in shape and a
+#            stand-in for every family file and block, writes its manifest with the writer,
 #            proves it clean, then applies one mutation per check and asserts exactly one
-#            finding each; then proves the over-author scope on a tree with a .owned list.
+#            finding each; then proves the render checks on a render-shaped copy, and the
+#            over-author scope on a tree with a .owned list.
 #
-# Requirements: bash 4+, grep, awk, python3 (checks 10, 12 and 13), sha256sum or shasum
-#               (checks 21 and 22), git (check 21, and the self-test). No network.
+# Requirements: bash 4+, grep, awk, python3 (checks 10, 12, 13 and 21–29; 3.11 or later for
+#               check 29, which runs the vendored permissions script), sha256sum or
+#               shasum (checks 21 and 22), git (checks 21 and 25, and the self-test). No
+#               network.
 #
-# Usage: shipped-seeds.sh [--root DIR] [--quiet] [--self-test] [--help] [<tree>...]
+# Usage: shipped-seeds.sh [--root DIR] [--write-manifest] [--quiet] [--self-test] [--help]
+#                         [<tree>...]
 #
-# Exit codes:  0 = every seed is wired and empty, every pair-only folder clean
+# Exit codes:  0 = every seed is wired and empty, every pair-only folder clean, every family
+#                  file and block as family-shared.json records it
 #              1 = finding(s), or the self-test no longer separates
 #              2 = script error (bad arguments, no copier.yml, no python3, no sha256 tool, no git,
-#                  or a .git that Git will not read)
+#                  a .git that Git will not read, or --write-manifest with a family file
+#                  missing or a block's markers wrong)
 
 set -euo pipefail
 SCRIPT_NAME="shipped-seeds.sh"
@@ -157,19 +237,22 @@ SCRIPT_NAME="shipped-seeds.sh"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 
 SELF_TEST=false
+WRITE_MANIFEST=false
 TARGETS=()
 
 usage() {
   cat <<'EOF'
 shipped-seeds.sh — Verify the seeds ship empty, wired, and only where they belong
 
-Usage: shipped-seeds.sh [--root DIR] [--quiet] [--self-test] [--help] [<tree>...]
+Usage: shipped-seeds.sh [--root DIR] [--write-manifest] [--quiet] [--self-test] [--help] [<tree>...]
 
-  <tree>       A render to check as well (checks 5–7, 9–15); template/ is always checked
-  --root DIR   The template repository (default: this repository)
-  --quiet      Print findings only
-  --self-test  Prove the checks still fire against a fixture written at runtime
-  --help       Show this message
+  <tree>            A render to check as well (checks 5–7, 9–15 and 27–29); template/ is
+                    always checked
+  --root DIR        The template repository (default: this repository)
+  --write-manifest  Rewrite family-shared.json from the vendored files and blocks, then check
+  --quiet           Print findings only
+  --self-test       Prove the checks still fire against a fixture written at runtime
+  --help            Show this message
 
 A <tree>.owned file beside a tree (written by generate-all.sh) marks an over-author tree and
 narrows the checks to media's paths.
@@ -181,6 +264,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --root)      [[ $# -gt 1 ]] || die "--root needs a value"; SM_ROOT="$(cd "$2" && pwd)" || die "no such directory: $2"; shift 2 ;;
+    --write-manifest) WRITE_MANIFEST=true; shift ;;
     --quiet|-q)  QUIET=true; shift ;;
     --self-test) SELF_TEST=true; shift ;;
     --help|-h)   usage; exit 0 ;;
@@ -285,8 +369,13 @@ static_checks() {
   for s in $SM_SHARED; do
     [[ -n "${update_gated[$s]:-}" ]] || finding "check 8 — the shared file $s has no update-gated _exclude line ($SM_SHARED_GATE) — an update would recreate it after the author deleted it (DESIGN.md Section 10)"
   done
+  for s in $SM_SHARED_DIRS; do
+    [[ -n "${update_gated[$s]:-}" ]] || finding "check 8 — the client folder $s/ has no update-gated _exclude line ($SM_SHARED_GATE) — an update that crosses 0.5.0 would leave an empty $s/ in a project that never had one (DESIGN.md D80)"
+  done
   for s in "${!update_gated[@]}"; do
-    is_shared "$s" || finding "check 8 — /$s carries the shared files' update gate ($SM_SHARED_GATE) but is not one of the nineteen (DESIGN.md D11): it would never reach a project by update"
+    is_shared "$s" && continue
+    [[ " $SM_SHARED_DIRS " == *" $s "* ]] && continue
+    finding "check 8 — /$s carries the shared files' update gate ($SM_SHARED_GATE) but is not a shared path (DESIGN.md D11, D80): it would never reach a project by update"
   done
 
   # ── 16. Negations: an output folder's own README.md, above every gated line ──
@@ -375,24 +464,44 @@ static_checks() {
     done
   fi
 
-  # ── 21. The vendored outside-link script is the family's, byte for byte (D85) ──
+  # ── 23–26 first: the manifest, read once; it also gives checks 21 and 22 their values ──
+  # family-shared.json is the record (D80): checks 21 and 22 read its entries for the
+  # outside-link script and the migrations block, never a constant here. A .git that Git will
+  # not read stops the run before anything is read (exit 2, never a fallback).
+  local fam rc=0 line n text out_sha="" out_mode="" mig_sha="" errf why
+  local -a fam_findings=()
+  errf="$(mktemp)"
+  fam="$(sm_family_py check "$SM_ROOT" 2>"$errf")" || rc=$?
+  why="$(cat "$errf" 2>/dev/null)"; rm -f "$errf"
+  [[ "$rc" -eq 3 ]] && die "check 21 cannot read Git's index: $why"
+  [[ "$rc" -eq 0 ]] || die "the family-shared.json reader failed (exit $rc): $why"
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    case "$line" in
+      E$'\t'outside$'\t'*)    out_sha="$(cut -f3 <<< "$line")"; out_mode="$(cut -f4 <<< "$line")" ;;
+      E$'\t'migrations$'\t'*) mig_sha="$(cut -f3 <<< "$line")" ;;
+      *) n="${line%%$'\t'*}"; text="${line#*$'\t'}"; fam_findings+=("check $n — $text") ;;
+    esac
+  done <<< "$fam"
+
+  # ── 21. The vendored outside-link script is the family's, byte for byte (D85, D80) ──
   # The bytes are read from disk; the mode from Git's index, which a plain `git commit` records,
-  # and from the executable bit only where SM_ROOT is in no Git work tree and holds no .git. A
-  # .git that Git will not read (an ownership mismatch, say) is a script error, never a fallback.
+  # and from the executable bit only where SM_ROOT is in no Git work tree and holds no .git.
+  # Quiet where the manifest holds no usable entry for it (checks 23 and 24 say why).
   local ol="$SM_ROOT/$SM_OUTSIDE_MIGRATION" got mode
-  if [[ -f "$ol" ]]; then
+  if [[ -f "$ol" && -n "$out_sha" ]]; then
     got="$(sm_sha256 < "$ol")"
-    [[ "$got" == "$SM_OUTSIDE_SHA256" ]] \
-      || finding "check 21 — $SM_OUTSIDE_MIGRATION has SHA-256 ${got:0:12}…, not ${SM_OUTSIDE_SHA256:0:12}…, the value syntek-author's $SM_OUTSIDE_RELEASE records for it in family-shared.json: it is vendored byte for byte and never edited here (DESIGN.md D85; syntek-author D48)"
+    [[ "$got" == "$out_sha" ]] \
+      || finding "check 21 — $SM_OUTSIDE_MIGRATION has SHA-256 ${got:0:12}…, not ${out_sha:0:12}…, the value family-shared.json records for it (vendored from syntek-author $SM_FAMILY_RELEASE): it is vendored byte for byte and never edited here (DESIGN.md D85, D80; syntek-author D48)"
     if [[ "$(git -C "$SM_ROOT" rev-parse --is-inside-work-tree 2>/dev/null)" == true ]]; then
       mode="$(git -C "$SM_ROOT" ls-files -s -- "$SM_OUTSIDE_MIGRATION" 2>/dev/null | awk 'NR == 1 { print $1 }')"
-      [[ "$mode" == "$SM_OUTSIDE_MODE" ]] \
-        || finding "check 21 — Git's index holds $SM_OUTSIDE_MIGRATION at mode ${mode:-none (it is not in the index)}, not $SM_OUTSIDE_MODE, the mode syntek-author's $SM_OUTSIDE_RELEASE records for it (git update-index --chmod=+x; DESIGN.md D85)"
+      [[ "$mode" == "$out_mode" ]] \
+        || finding "check 21 — Git's index holds $SM_OUTSIDE_MIGRATION at mode ${mode:-none (it is not in the index)}, not $out_mode, the mode family-shared.json records for it (git update-index --chmod=+x; DESIGN.md D85)"
     elif [[ -e "$SM_ROOT/.git" || -L "$SM_ROOT/.git" ]]; then
       die "check 21 cannot read Git's index: $SM_ROOT/.git stands, but Git will not read it (an ownership mismatch? see git config safe.directory)"
-    else
+    elif [[ "$out_mode" == 100755 ]]; then
       [[ -x "$ol" ]] \
-        || finding "check 21 — $SM_OUTSIDE_MIGRATION is not executable (outside a Git work tree, the executable bit stands for Git's $SM_OUTSIDE_MODE, the mode syntek-author's $SM_OUTSIDE_RELEASE records for it; DESIGN.md D85)"
+        || finding "check 21 — $SM_OUTSIDE_MIGRATION is not executable (outside a Git work tree, the executable bit stands for Git's 100755, the mode family-shared.json records for it; DESIGN.md D85)"
     fi
   fi
 
@@ -403,21 +512,26 @@ static_checks() {
   local nb ne blk
   nb="$(grep -cxF "$SM_FAMILY_MIGRATIONS_BEGIN" "$COPIER" || true)"
   ne="$(grep -cxF "$SM_FAMILY_MIGRATIONS_END" "$COPIER" || true)"
-  if ! $pair_ok; then
+  if ! $pair_ok || [[ -z "$mig_sha" ]]; then
     :
   elif [[ "$nb" -ne 1 || "$ne" -ne 1 ]]; then
     finding "check 22 — copier.yml carries $nb '$SM_FAMILY_MIGRATIONS_BEGIN' and $ne '$SM_FAMILY_MIGRATIONS_END' line(s), not one of each: the family-shared migrations block is taken whole (DESIGN.md D85; syntek-author D48)"
   else
     blk="$(awk -v b="$SM_FAMILY_MIGRATIONS_BEGIN" -v e="$SM_FAMILY_MIGRATIONS_END" '$0 == e { on = 0 } on { print } $0 == b { on = 1 }' "$COPIER" | sm_sha256)"
-    [[ "$blk" == "$SM_FAMILY_MIGRATIONS_SHA256" ]] \
-      || finding "check 22 — the lines between copier.yml's family-shared migrations markers have SHA-256 ${blk:0:12}…, not ${SM_FAMILY_MIGRATIONS_SHA256:0:12}…, the value syntek-author's $SM_OUTSIDE_RELEASE records for the block in family-shared.json: it is taken byte for byte and never edited here (DESIGN.md D85; syntek-author D48)"
+    [[ "$blk" == "$mig_sha" ]] \
+      || finding "check 22 — the lines between copier.yml's family-shared migrations markers have SHA-256 ${blk:0:12}…, not ${mig_sha:0:12}…, the value family-shared.json records for the block (vendored from syntek-author $SM_FAMILY_RELEASE): it is taken byte for byte and never edited here (DESIGN.md D85, D80; syntek-author D48)"
   fi
+
+  # ── 23–26. The manifest and what it records (D80): reported here, in number order ──
+  for line in "${fam_findings[@]}"; do finding "$line"; done
 }
 
-json_check() { # $1 = mode (mcp|settings|parse), $2 = file → prints one problem per line
-  SM_DENY="$(printf '%s\n' "${SM_SETTINGS_DENY[@]}")" \
+json_check() { # $1 = mode (settings|parse), $2 = file → prints one problem per line
+  SM_DENY="$(printf '%s\n' "${SM_SETTINGS_DENY[@]}" "${SM_SETTINGS_FAMILY_DENY[@]}")" \
   SM_ALLOW="$(printf '%s\n' "${SM_SETTINGS_ALLOW[@]}")" \
-  SM_ASK="$(printf '%s\n' "${SM_SETTINGS_ASK[@]}")" \
+  SM_ASK="$(printf '%s\n' "${SM_SETTINGS_ASK[@]}" "${SM_SETTINGS_FAMILY_ASK[@]}")" \
+  SM_FAMILY_ASK="$(printf '%s\n' "${SM_SETTINGS_FAMILY_ASK[@]}")" \
+  SM_HOOKS="$SM_SETTINGS_HOOKS" SM_BANNED="$SM_SETTINGS_BANNED_KEYS" \
   python3 - "$1" "$2" <<'PY'
 import json, os, sys
 mode, path = sys.argv[1], sys.argv[2]
@@ -429,20 +543,17 @@ except Exception as exc:
     sys.exit(0)
 if mode == "parse":
     sys.exit(0)
-if mode == "mcp":
-    if data != {"mcpServers": {}}:
-        print('is not exactly {"mcpServers": {}} — the template adds no server; ElevenLabs is user-scoped (DESIGN.md D21)')
-    sys.exit(0)
 if not isinstance(data, dict):
     print("is not a JSON object"); sys.exit(0)
 if data.get("model") != "opus":
     print(f"model is {data.get('model')!r}, not 'opus'")
 if data.get("autoCompactEnabled") is not False:
     print("autoCompactEnabled is not false — hand off, never compact (DESIGN.md D35)")
-if "hooks" in data:
-    print("carries a hooks key — media ships no hook (DESIGN.md D13, D35)")
+if data.get("hooks") != json.loads(os.environ["SM_HOOKS"]):
+    print("hooks are not exactly the family's three registrations — the context-threshold and pre-compact handoff hooks "
+          "and the data-root guard — byte for byte as syntek-author's seed holds them (DESIGN.md D13, D35, D80)")
 for k in data:
-    if k in ("effortLevel", "ultracode", "enabledPlugins") or k.startswith("disable"):
+    if k in os.environ["SM_BANNED"].split() or k.startswith("disable"):
         print(f"carries the owner-specific key {k}")
 perms = data.get("permissions") or {}
 for kind, env in (("deny", "SM_DENY"), ("allow", "SM_ALLOW"), ("ask", "SM_ASK")):
@@ -454,11 +565,48 @@ for kind, env in (("deny", "SM_DENY"), ("allow", "SM_ALLOW"), ("ask", "SM_ASK"))
     for h in have:
         if h not in want:
             print(f"{kind}s {h}, which DESIGN.md D13 does not list")
+family = [w for w in os.environ["SM_FAMILY_ASK"].split("\n") if w]
+order = [h for h in perms.get("ask") or [] if h in family]
+if sorted(order) == sorted(family) and order != family:
+    print("asks the family's eight MCP tools out of the family's order (Scrapling's six, then code-review-graph's two; DESIGN.md D13, D80)")
 PY
 }
 
+# 29. The vendored client files hold the family's rules, so in a fresh render the permissions
+# script finds missing only media's own seed rules, which the after-copy --write line carries;
+# and --write, run in a scratch copy, leaves nothing missing.
+SM_PERMISSIONS_PY=".claude/syntek-media-permissions.py"
+permissions_checks() { # on TREE
+  local out rc line rule scratch r
+  local -A mine=()
+  python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' \
+    || die "check 29 needs python3 3.11 or later, which the vendored permissions script needs"
+  for r in "${SM_SETTINGS_ASK[@]}" "${SM_SETTINGS_DENY[@]}" "${SM_SETTINGS_ALLOW[@]}"; do mine["$r"]=1; done
+  rc=0; out="$(cd "$TREE" && env -u SYNTEK_DATA_ROOT python3 "$SM_PERMISSIONS_PY" --check 2>&1)" || rc=$?
+  if [[ "$rc" -ne 0 && "$rc" -ne 1 ]]; then
+    finding "check 29 — $SM_PERMISSIONS_PY --check exits $rc in a fresh render: $(grep -v '^[[:space:]]*$' <<< "$out" | tail -1 | cut -c1-160)"
+    return 0
+  fi
+  while IFS= read -r line; do
+    rule="${line#*✗ }"; rule="${rule%% -> *}"
+    [[ -n "${mine[$rule]:-}" ]] && continue
+    finding "check 29 — $SM_PERMISSIONS_PY --check finds $rule missing in a fresh render: the vendored client files should already hold every family rule, and --write carries media's own seed rules only (DESIGN.md D13, D80)"
+  done < <(grep -F '✗ ' <<< "$out" | grep -F ' -> ' || true)
+  [[ "$rc" -eq 0 ]] && return 0
+  scratch="$(sm_mktemp)"
+  cp -a "$TREE/." "$scratch/"
+  if ! (cd "$scratch" && env -u SYNTEK_DATA_ROOT python3 "$SM_PERMISSIONS_PY" --write >/dev/null 2>&1); then
+    finding "check 29 — $SM_PERMISSIONS_PY --write fails in a copy of a fresh render, so the after-copy line cannot carry media's own rules (DESIGN.md D13, D80)"
+  else
+    rc=0; out="$(cd "$scratch" && env -u SYNTEK_DATA_ROOT python3 "$SM_PERMISSIONS_PY" --check 2>&1)" || rc=$?
+    [[ "$rc" -eq 0 ]] || finding "check 29 — after $SM_PERMISSIONS_PY --write, --check still exits $rc in a copy of a fresh render: $(grep -v '^[[:space:]]*$' <<< "$out" | tail -1 | cut -c1-160)"
+  fi
+  rm -rf "$scratch"
+  return 0
+}
+
 tree_checks() { # on TREE
-  local f s h line rel d ok base g sub
+  local f s h line rel d ok base g sub n
   # ── 5 and 6. MEMORY ─────────────────────────────────────────────────────────
   f="$TREE/.claude/MEMORY.md"
   if ! $SM_OWNED_MODE && [[ -f "$f" ]]; then
@@ -491,9 +639,37 @@ tree_checks() { # on TREE
     grep -qiE '^>.*seeded stub' "$TREE/$s" || finding "check 9 — $s has no seeded-stub banner"
   done
 
-  # ── 10. .mcp.json ───────────────────────────────────────────────────────────
-  if ! $SM_OWNED_MODE && [[ -f "$TREE/.mcp.json" ]]; then
-    while IFS= read -r line; do finding "check 10 — .mcp.json $line"; done < <(json_check mcp "$TREE/.mcp.json")
+  # ── 10 and 27. A render's family files are the manifest's bytes (D21, D80) ──
+  # Renders only: template/'s own copies are check 25's. Over syntek-author, check 10 is skipped
+  # and check 27 reads media-owned paths: the family files syntek-author wrote first are its own.
+  if [[ "$TREE" != "$TPL" ]]; then
+    local own=""
+    $SM_OWNED_MODE && own="$TREE.owned"
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      n="${line%%$'\t'*}"
+      [[ "$n" == 10 ]] && $SM_OWNED_MODE && continue
+      finding "check $n — ${line#*$'\t'}"
+    done < <(sm_family_py tree "$SM_ROOT" "$TREE" "$own")
+  fi
+
+  # ── 28. The data-root map is empty (D80) ────────────────────────────────────
+  f="$TREE/$SM_DATAROOT_MAP"
+  if [[ -f "$f" ]] && is_owned_file "$SM_DATAROOT_MAP"; then
+    python3 - "$f" <<'PYMAP' || finding "check 28 — $SM_DATAROOT_MAP is not exactly {\"format\": 1, \"folders\": []}: media files nothing on the data root in 0.5.0, and a folder it claimed could overlap one of syntek-author's, which refuses every data command there (DESIGN.md D80)"
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(1)
+sys.exit(0 if data == {"format": 1, "folders": []} and type(data["format"]) is int else 1)
+PYMAP
+  fi
+
+  # ── 29. Only media's own seed rules wait for --write (D13, D80) ──────────────
+  # Renders only, standalone only: over syntek-author the settings and client files are its.
+  if [[ "$TREE" != "$TPL" ]] && ! $SM_OWNED_MODE && [[ -f "$TREE/$SM_PERMISSIONS_PY" ]]; then
+    permissions_checks
   fi
 
   # ── 11. Pair-only folders ───────────────────────────────────────────────────
@@ -579,13 +755,15 @@ write_fixture() { # $1 = repo root
   mkdir -p "$t"
   {
     printf '_exclude:\n  - .git\n  - /production/src/renders/**\n  - "!/production/src/renders/README.md"\n'
-    for s in $SM_SHARED; do printf '  - "<: if _copier_operation == %supdate%s :>/%s<: endif :>"\n' "$q" "$q" "$s"; done
+    for s in $SM_SHARED $SM_SHARED_DIRS; do printf '  - "<: if _copier_operation == %supdate%s :>/%s<: endif :>"\n' "$q" "$q" "$s"; done
     for s in $SM_SHARED_RETIRED; do printf '  - /%s\n' "$s"; done
     printf '  - "<: if not (%syoutube%s in PLATFORMS) :>/brand/src/platforms/youtube.md<: endif :>"\n' "$q" "$q"
     for s in $SM_EXAMPLES; do printf '  - "<: if %s :>/%s<: endif :>"\n' "$SM_EXAMPLE_GATE" "$s"; done
     printf '_skip_if_exists:\n'
     for s in $SM_SHARED $SM_SEEDS; do printf '  - /%s\n' "$s"; done
     printf 'BRAND_NAME:\n  type: str\n'
+    # A stand-in for the family-shared questions block (D80): its own markers, its own bytes.
+    printf '# BEGIN family-shared questions (D48)\nAGENT_CLIENTS:\n  type: str\n  multiselect: true\n# END family-shared questions (D48)\n'
     printf '_migrations:\n'
     sm_family_migrations_block
     printf '  - version: %s\n    command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_VERSION" "$SM_D76_MIGRATION" "$q" "$q"
@@ -598,6 +776,36 @@ write_fixture() { # $1 = repo root
   mkdir -p "$r/migrations"; printf 'print("fixture migration")\n' > "$r/$SM_D76_MIGRATION"
   printf 'print("fixture outside-link migration")\n' > "$r/$SM_OUTSIDE_MIGRATION"
   chmod 755 "$r/$SM_OUTSIDE_MIGRATION"
+  # The permissions script's stand-in is a stub check 29 can drive (STUB_PERM_* below): by
+  # default it finds two of media's own seed rules missing until --write has run.
+  mkdir -p "$t/.claude"
+  cat > "$t/$SM_PERMISSIONS_PY" <<'PYSTUB'
+import os, sys
+from pathlib import Path
+mark = Path(__file__).resolve().parent / "stub-permissions-written"
+if "--write" in sys.argv:
+    mark.write_text("written\n")
+    sys.exit(int(os.environ.get("STUB_PERM_WRITE_EXIT", "0")))
+if mark.exists() and not os.environ.get("STUB_PERM_STILL"):
+    print("every expressible rule is in place")
+    sys.exit(0)
+missing = [m for m in os.environ.get("STUB_PERM_MISSING", "mcp__elevenlabs__text_to_speech|Edit(**/renders/**)").split("|") if m]
+for m in missing:
+    print("  \u2717 %s -> a rule is missing" % m)
+sys.exit(int(os.environ.get("STUB_PERM_EXIT", "1" if missing else "0")))
+PYSTUB
+  # A stand-in for every family-shared file the shared paths above did not write (D80), the two
+  # session hooks executable as the family's are, and rules 06 with its family block.
+  local fpath fsrc _scope
+  while read -r fpath fsrc _scope; do
+    [[ -z "$fpath" || -e "$r/$fsrc" || -L "$r/$fsrc" ]] && continue
+    mkdir -p "$(dirname "$r/$fsrc")"; printf '# %s — a family stand-in\n' "$fpath" > "$r/$fsrc"
+  done <<< "$SM_FAMILY_SHARED"
+  chmod 755 "$t/.claude/hooks/context-threshold-handoff.sh" "$t/.claude/hooks/pre-compact-handoff.sh"
+  mkdir -p "$t/.claude/rules/syntek-media"
+  printf '# 06-global-rules.md\n\n## 13. Web and code tools\n\n<!-- BEGIN family-shared rules: web and code tools -->\n- Use the plainest tool.\n<!-- END family-shared rules: web and code tools -->\n' \
+    > "$t/.claude/rules/syntek-media/06-global-rules.md"
+  printf '{"format": 1, "folders": []}\n' > "$t/$SM_DATAROOT_MAP"
   for s in $SM_REGISTER_SEEDS; do
     printf '# %s\n\n%s\n\n## Register\n\n| ID | Notes |\n|---|---|\n' "${s##*/}" "$banner" > "$t/$s"
   done
@@ -626,10 +834,10 @@ write_fixture() { # $1 = repo root
   printf '{"mcpServers": {}}\n' > "$t/.mcp.json"
   {
     printf '{\n  "model": "opus",\n  "autoCompactEnabled": false,\n  "permissions": {\n'
-    printf '    "deny": [%s],\n' "$(for s in "${SM_SETTINGS_DENY[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
+    printf '    "deny": [%s],\n' "$(for s in "${SM_SETTINGS_DENY[@]}" "${SM_SETTINGS_FAMILY_DENY[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
     printf '    "allow": [%s],\n' "$(for s in "${SM_SETTINGS_ALLOW[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
-    printf '    "ask": [%s]\n' "$(for s in "${SM_SETTINGS_ASK[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
-    printf '  }\n}\n'
+    printf '    "ask": [%s]\n' "$(for s in "${SM_SETTINGS_ASK[@]}" "${SM_SETTINGS_FAMILY_ASK[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
+    printf '  },\n  "hooks": %s\n}\n' "$SM_SETTINGS_HOOKS"
   } > "$t/.claude/settings.json"
   for s in $SM_EXAMPLES; do
     case "$s" in
@@ -650,20 +858,21 @@ write_fixture() { # $1 = repo root
 }
 
 self_test() {
-  local tmp real_root="$SM_ROOT" real_tpl="$TPL" real_copier="$COPIER" real_ol_sha="$SM_OUTSIDE_SHA256" t f
+  local tmp real_root="$SM_ROOT" real_tpl="$TPL" real_copier="$COPIER" t f m
   bold "▸ $SCRIPT_NAME --self-test"; log ""
   command -v python3 >/dev/null 2>&1 || die "python3 is not installed"
   tmp="$(sm_mktemp)"
   # shellcheck disable=SC2064
   trap "rm -rf '$tmp'" RETURN
-  write_fixture "$tmp"
-  SM_ROOT="$tmp"; TPL="$tmp/template"; COPIER="$tmp/copier.yml"; TREE="$TPL"; SM_SETS_FOR=""
-  # Check 21 holds the fixture's stand-in script to its own bytes; the real run, to the family's.
-  SM_OUTSIDE_SHA256="$(sm_sha256 < "$tmp/$SM_OUTSIDE_MIGRATION")"
   # The fixture is in no Git work tree until check 21's probes make it one: the ceiling stops
   # Git from finding a repository above the temporary folder.
   local -x GIT_CEILING_DIRECTORIES
   GIT_CEILING_DIRECTORIES="$(dirname "$tmp")"
+  write_fixture "$tmp"
+  SM_ROOT="$tmp"; TPL="$tmp/template"; COPIER="$tmp/copier.yml"; TREE="$TPL"; SM_SETS_FOR=""
+  # The manifest is the writer's record of the fixture's own stand-ins, as --write-manifest
+  # writes the real one from the vendored bytes: checks 21–27 hold the fixture to it.
+  sm_family_py write "$tmp" || die "the family-shared.json writer failed on the fixture"
   load_owned "$TREE"
   t="$TPL"
   st_baseline "a fixture with every seed and shared file in shape"
@@ -705,13 +914,16 @@ self_test() {
   probe "check 8 fires when a shared file loses its update gate" "check 8 — the shared file .claude/MEMORY.md"
   awk -v q="'" '/^_skip_if_exists:/ { print "  - \"<: if _copier_operation == " q "update" q " :>/toolkit/media.py<: endif :>\"" } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
   probe "check 8 fires when a template-owned file takes the shared gate" "check 8 — /toolkit/media.py carries the shared files' update gate"
+  grep -vF "/.gemini<: endif" "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 8 fires when a client folder loses its update gate (D80)" "check 8 — the client folder .gemini/ has no update-gated _exclude line"
+  awk -v q="'" '/^_skip_if_exists:/ { print "  - \"<: if _copier_operation == " q "update" q " :>/.claude/skills/grilling<: endif :>\"" } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 8 fires when a family skill's folder, not its SKILL.md, takes the shared gate (D80)" "check 8 — /.claude/skills/grilling carries the shared files' update gate"
   cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
 
   f=publishing/src/schedule.md; cp "$t/$f" "$tmp/h"
   sed -i '/seeded stub/d' "$t/$f";                             probe "check 9 fires when a register loses its banner" "check 9 — $f"; cp "$tmp/h" "$t/$f"
   f=brand/src/platforms/tiktok.md; cp "$t/$f" "$tmp/h"
   sed -i '/seeded stub/d' "$t/$f";                             probe "check 9 fires when a platform profile loses its banner" "check 9 — $f"; cp "$tmp/h" "$t/$f"
-  printf '{"mcpServers": {"elevenlabs": {}}}\n' > "$t/.mcp.json";  probe "check 10 fires on a server in .mcp.json" "check 10"; printf '{"mcpServers": {}}\n' > "$t/.mcp.json"
   printf 'take\n' > "$t/production/src/voiceover/003-ferry.s01.t1.mp3"
   probe "check 11 fires on a file in a pair-only folder" "check 11 — production/src/voiceover/003-ferry.s01.t1.mp3"; rm -f "$t/production/src/voiceover/003-ferry.s01.t1.mp3"
   printf '[show]\nshow = "harbour-lane-talks"\n' > "$t/publishing/src/podcast/harbour-lane-talks.toml"
@@ -725,7 +937,10 @@ self_test() {
   sed -i 's/"autoCompactEnabled": false/"autoCompactEnabled": true/' "$t/.claude/settings.json"; probe "check 12 fires when compaction is switched on" "check 12 — .claude/settings.json autoCompactEnabled"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/, "mcp__elevenlabs__voice_clone"//' "$t/.claude/settings.json"; probe "check 12 fires when a credit-spending tool is not asked" "check 12 — .claude/settings.json does not ask mcp__elevenlabs__voice_clone"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"ask": \[/"ask": ["mcp__elevenlabs__list_models", /' "$t/.claude/settings.json"; probe "check 12 fires on an ask D13 does not list" "check 12 — .claude/settings.json asks mcp__elevenlabs__list_models"; cp "$tmp/h" "$t/.claude/settings.json"
-  sed -i 's/"model": "opus",/"model": "opus",\n  "hooks": {"PreCompact": []},/' "$t/.claude/settings.json"; probe "check 12 fires on a hooks key" "check 12 — .claude/settings.json carries a hooks key"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/"timeout":10}]}],"PreToolUse"/"timeout":30}]}],"PreToolUse"/' "$t/.claude/settings.json"; probe "check 12 fires when a family hook registration drifts (D80)" "check 12 — .claude/settings.json hooks are not exactly the family's three"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/"mcp__scrapling__stealthy_fetch", "mcp__scrapling__bulk_stealthy_fetch"/"mcp__scrapling__bulk_stealthy_fetch", "mcp__scrapling__stealthy_fetch"/' "$t/.claude/settings.json"
+  probe "check 12 fires when the family's asks leave the family's order (D80)" "check 12 — .claude/settings.json asks the family's eight MCP tools out of the family's order"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/, "mcp__code-review-graph__embed_graph_tool"//' "$t/.claude/settings.json"; probe "check 12 fires when the embed_graph_tool deny is lost (D80)" "check 12 — .claude/settings.json does not deny mcp__code-review-graph__embed_graph_tool"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"autoCompactEnabled": false,/"autoCompactEnabled": false/' "$t/.claude/settings.json"; probe "check 13 fires when settings.json does not parse" "check 13 — .claude/settings.json is not valid JSON"; cp "$tmp/h" "$t/.claude/settings.json"
   f=scripts/workflows/local/CONTEXT.md; cp "$t/$f" "$tmp/h"
   sed -i 's/^└── <question>.md .*$/├── <question>.md\n└── 01-record-a-guest\/   ← a local procedure/' "$t/$f"
@@ -788,7 +1003,7 @@ self_test() {
     && sm_git "$tmp" update-index --chmod=+x -- "$SM_OUTSIDE_MIGRATION"; }; then
     die "could not make the fixture a Git work tree"
   fi
-  probe_clean "in a Git work tree, check 21 reads the index's $SM_OUTSIDE_MODE, not the working tree's 644"
+  probe_clean "in a Git work tree, check 21 reads the index's 100755, not the working tree's 644"
   chmod 755 "$tmp/$SM_OUTSIDE_MIGRATION"
   sm_git "$tmp" update-index --chmod=-x -- "$SM_OUTSIDE_MIGRATION"
   probe "check 21 fires when Git's index holds the vendored script at 100644, though the file is executable" "check 21 — Git's index holds $SM_OUTSIDE_MIGRATION at mode 100644"
@@ -820,20 +1035,72 @@ self_test() {
   cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
   probe_clean "the retired path, the agent folder and the migrations in shape"
 
-  # The over-author scope: the shared files are syntek-author's, so checks 5, 6, 10, 12 and 13
-  # do not read them; media's own seeds are still held to their contract.
-  while IFS= read -r f; do is_shared "$f" || printf '%s\n' "$f"; done < <(tree_files "$t") > "$t.owned"
-  load_owned "$t"
-  printf '{"mcpServers": {"drive": {}}}\n' > "$t/.mcp.json"
-  printf -- '- **01/01/2027** — **syntek-author owns this file.** Kept.\n' >> "$t/.claude/MEMORY.md"
-  printf '{ not json\n' > "$t/.claude/settings.json"
-  probe_clean "over syntek-author, its .mcp.json, MEMORY.md and settings.json are not media's to audit"
-  f=publishing/src/publish-log.md; cp "$t/$f" "$tmp/h"
-  printf '| 01/01/2027 | youtube | youtube.short | 003 | x | on | burned | — |\n' >> "$t/$f"
-  probe "check 7 still fires on a media seed, over syntek-author" "check 7 — $f"; cp "$tmp/h" "$t/$f"
-  rm -f "$t.owned"; SM_OWNED_MODE=false; SM_OWNED=()
+  # 23–26: the manifest (D80). Each probe edits the record or one vendored byte, then restores.
+  m="$tmp/$SM_FAMILY_MANIFEST"; cp "$m" "$tmp/manifest.held"
+  rm -f "$m";                                                 probe "check 23 fires when family-shared.json is missing" "check 23 — family-shared.json is missing"; cp "$tmp/manifest.held" "$m"
+  sed -i 's/"owner": "syntek-media"/"owner": "syntek-author"/' "$m"; probe "check 23 fires on another template's owner" "check 23 — family-shared.json must hold format 1, owner syntek-media"; cp "$tmp/manifest.held" "$m"
+  sed -i 's/"release": "[^"]*"/"release": "v9.9.9"/' "$m";  probe "check 23 fires on a release Git does not allow" "check 23 — family-shared.json must hold"; cp "$tmp/manifest.held" "$m"
+  sed -i '\#"path": ".gemini/CLAUDE.md"#d' "$m";              probe "check 24 fires when the record drops a vendored file" "check 24 — family-shared.json files are not the vendored set"; cp "$tmp/manifest.held" "$m"
+  python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); m["blocks"].reverse(); json.dump(m,open(sys.argv[1],"w"))' "$m"
+  probe "check 24 fires when the blocks leave the family's order" "check 24 — family-shared.json blocks are not exactly"; cp "$tmp/manifest.held" "$m"
+  f="$t/.claude/skills/wayfinder/SKILL.md"; cp "$f" "$tmp/h"
+  printf 'x\n' >> "$f";                                       probe "check 25 fires when one vendored byte changes" "check 25 — template/.claude/skills/wayfinder/SKILL.md has SHA-256"; cp "$tmp/h" "$f"
+  chmod 644 "$t/.claude/hooks/pre-compact-handoff.sh";         probe "check 25 fires when a session hook loses its executable bit" "check 25 — template/.claude/hooks/pre-compact-handoff.sh is at mode 644, not 755"
+  chmod 755 "$t/.claude/hooks/pre-compact-handoff.sh"
+  sed -i 's#"target": "../.claude/skills"#"target": "../.claude/skillz"#' "$m"; probe "check 25 fires when the record names another target for the D76 link" "check 25 — template/.agents/skills is the link"; cp "$tmp/manifest.held" "$m"
+  cp "$COPIER" "$tmp/c"
+  sed -i 's/^  multiselect: true$/  multiselect: false/' "$COPIER"; SM_SETS_FOR=""
+  probe "check 26 fires when one byte of the questions block changes" "check 26 — the lines between copier.yml's family-shared questions markers"
+  cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
+  f="$t/.claude/rules/syntek-media/06-global-rules.md"; cp "$f" "$tmp/h"
+  sed -i '/^<!-- END family-shared rules/d' "$f";             probe "check 26 fires when rules 06 loses the block's END marker" "check 26 — template/.claude/rules/syntek-media/06-global-rules.md holds"; cp "$tmp/h" "$f"
+  rm -f "$m"; sm_family_py write "$tmp" || die "the writer failed"
+  probe_clean "--write-manifest writes the record the checks hold the fixture to"
+  cp "$tmp/manifest.held" "$m"
+  printf '{"format": 1, "folders": [{"path": "production/src/footage/raw"}]}\n' > "$t/$SM_DATAROOT_MAP"
+  probe "check 28 fires when the data-root map claims a folder" "check 28 — $SM_DATAROOT_MAP is not exactly"; printf '{"format": 1, "folders": []}\n' > "$t/$SM_DATAROOT_MAP"
 
-  SM_ROOT="$real_root"; TPL="$real_tpl"; COPIER="$real_copier"; SM_OUTSIDE_SHA256="$real_ol_sha"; SM_SETS_FOR=""
+  # 10 and 27: a render of the fixture, whose family files must keep the recorded bytes.
+  local rt="$tmp/render"; cp -a "$t" "$rt"; TREE="$rt"; load_owned "$TREE"
+  probe_clean "a render whose family files are the recorded bytes"
+  printf '{"mcpServers": {"elevenlabs": {}}}\n' > "$rt/.mcp.json"
+  probe "check 10 fires when a render's .mcp.json is not the family's (an ElevenLabs server in it)" "check 10 — .mcp.json has SHA-256"
+  cp "$t/.mcp.json" "$rt/.mcp.json"
+  printf 'x\n' >> "$rt/.claude/skills/grilling/SKILL.md"
+  probe "check 27 fires when a render changes a token-free family file" "check 27 — .claude/skills/grilling/SKILL.md has SHA-256"
+  cp "$t/.claude/skills/grilling/SKILL.md" "$rt/.claude/skills/grilling/SKILL.md"
+  chmod 644 "$rt/.claude/hooks/context-threshold-handoff.sh"
+  probe "check 27 fires when a render's session hook is not executable" "check 27 — .claude/hooks/context-threshold-handoff.sh is not executable in the render"
+  chmod 755 "$rt/.claude/hooks/context-threshold-handoff.sh"
+  printf 'x\n' >> "$rt/.codex/config.toml"
+  probe_clean "a render of a family file that carries the shared keys is not compared byte for byte"
+  STUB_PERM_MISSING='mcp__elevenlabs__voice_clone|mcp__scrapling__fetch' \
+    probe "check 29 fires when the permissions script finds a family rule missing in a render" "check 29 — $SM_PERMISSIONS_PY --check finds mcp__scrapling__fetch missing"
+  STUB_PERM_STILL=1 \
+    probe "check 29 fires when --write leaves a rule missing" "check 29 — after $SM_PERMISSIONS_PY --write, --check still exits 1"
+  STUB_PERM_EXIT=2 \
+    probe "check 29 fires when the permissions script cannot run in a render" "check 29 — $SM_PERMISSIONS_PY --check exits 2"
+  STUB_PERM_WRITE_EXIT=1 \
+    probe "check 29 fires when --write fails in a copy of the render" "check 29 — $SM_PERMISSIONS_PY --write fails"
+  rm -rf "$rt"; TREE="$TPL"; load_owned "$TREE"
+
+  # The over-author scope, on a render-shaped copy (the source's family files are check 25's):
+  # the shared files are syntek-author's, so checks 5, 6, 10, 12 and 13 do not read them, nor
+  # check 27 the family files it wrote first; media's own seeds are still held to their contract.
+  local oa="$tmp/oa"; cp -a "$t" "$oa"; TREE="$oa"
+  while IFS= read -r f; do is_shared "$f" || printf '%s\n' "$f"; done < <(tree_files "$oa") > "$oa.owned"
+  load_owned "$oa"
+  printf '{"mcpServers": {"drive": {}}}\n' > "$oa/.mcp.json"
+  printf 'x\n' >> "$oa/.claude/skills/handoff/SKILL.md"
+  printf -- '- **01/01/2027** — **syntek-author owns this file.** Kept.\n' >> "$oa/.claude/MEMORY.md"
+  printf '{ not json\n' > "$oa/.claude/settings.json"
+  probe_clean "over syntek-author, its .mcp.json, MEMORY.md, settings.json and family files are not media's to audit"
+  f=publishing/src/publish-log.md
+  printf '| 01/01/2027 | youtube | youtube.short | 003 | x | on | burned | — |\n' >> "$oa/$f"
+  probe "check 7 still fires on a media seed, over syntek-author" "check 7 — $f"
+  rm -rf "$oa" "$oa.owned"; TREE="$TPL"; SM_OWNED_MODE=false; SM_OWNED=()
+
+  SM_ROOT="$real_root"; TPL="$real_tpl"; COPIER="$real_copier"; SM_SETS_FOR=""
   st_finish "wired, empty seeds from polluted or unwired ones"
 }
 
@@ -846,7 +1113,14 @@ fi
 [[ -d "$TPL" ]] || die "no template/ directory at $SM_ROOT"
 command -v python3 >/dev/null 2>&1 || die "python3 is not installed"
 command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1 || die "neither sha256sum nor shasum is installed"
-command -v git >/dev/null 2>&1 || die "git is not installed (check 21 reads the vendored script's mode from Git's index)"
+command -v git >/dev/null 2>&1 || die "git is not installed (checks 21 and 25 read the vendored files' modes from Git's index)"
+
+if $WRITE_MANIFEST; then
+  rc=0
+  sm_family_py write "$SM_ROOT" || rc=$?
+  [[ "$rc" -eq 0 ]] || die "family-shared.json was not written (exit $rc): vendor every file and block from syntek-author $SM_FAMILY_RELEASE first"
+  log "  wrote $SM_FAMILY_MANIFEST from the vendored files and blocks (syntek-author $SM_FAMILY_RELEASE); now checking"
+fi
 
 bold "▸ $SCRIPT_NAME"
 STATUS=0
@@ -855,7 +1129,7 @@ for target in "$TPL" "${TARGETS[@]}"; do
   TREE="$(cd "$target" && pwd)"
   load_owned "$TREE"
   run_checks
-  scope="standalone"; $SM_OWNED_MODE && scope="over syntek-author: media-owned paths; checks 5, 6, 10, 12, 13 skipped"
+  scope="standalone"; $SM_OWNED_MODE && scope="over syntek-author: media-owned paths; checks 5, 6, 10, 12, 13, 29 skipped"
   [[ "$TREE" == "$TPL" ]] && scope="the template source"
   if [[ ${#FINDINGS[@]} -eq 0 ]]; then
     log "  ✓ $TREE — seeds wired and empty, pair-only folders clean ($scope)"
@@ -867,7 +1141,7 @@ for target in "$TPL" "${TARGETS[@]}"; do
 done
 log ""
 if [[ "$STATUS" -eq 0 ]]; then
-  bold "✓ Every seed is wired and ships empty; every shared file is copy-only; every author-owned folder ships its pair only."
+  bold "✓ Every seed is wired and ships empty; every shared file is copy-only; every author-owned folder ships its pair only; every family file and block is as family-shared.json records it."
   exit 0
 fi
 log "  A polluted seed is a one-way door: no update can retract it (SB rule 21). The wiring lives in"

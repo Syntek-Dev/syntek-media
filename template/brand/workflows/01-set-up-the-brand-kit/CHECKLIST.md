@@ -22,7 +22,7 @@ model: opus
 
 **The written brand**
 
-- [ ] Grilling pass run with the grill-with-docs skill (syntek-author), where present, or the same questions in rounds, each with a recommended answer. · _opus_
+- [ ] Grilling pass run with the `grill-with-docs` skill, where present, or the same questions in rounds, each with a recommended answer. · _opus_
 - [ ] syntek-author's brand guide and voice notes read, where present; every difference reported with both values and decided by the author. · _opus_
 
 **The tokens**

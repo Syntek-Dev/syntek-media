@@ -3,9 +3,10 @@
 # gen-mode-excludes.sh — Generate, or check, the mode-file block of copier.yml's _exclude.
 #
 #                        Every moded skill ships exactly ONE of BUSINESS.md, FICTION.md or
-#                        NONFICTION.md (DESIGN.md D7). The other two are excluded per brand
-#                        kind, one templated _exclude line per file — twenty-one lines that
-#                        differ only in a folder name. Kept by hand, that block drifts the first
+#                        NONFICTION.md (DESIGN.md D7), and every moded family skill one of the
+#                        MEDIA- names (D80). The other two are excluded per brand kind, one
+#                        templated _exclude line per file — thirty-six lines that differ only in
+#                        a folder name. Kept by hand, that block drifts the first
 #                        time a mode file is added or renamed: a missing line ships a second
 #                        mode file and the skill reads two domains at once; a stale line
 #                        excludes nothing and hides the drift. So the block is GENERATED from
@@ -21,9 +22,15 @@
 #                          BUSINESS.md   → BRAND_KIND != 'business'
 #                          FICTION.md    → BRAND_KIND != 'author-fiction'
 #                          NONFICTION.md → BRAND_KIND != 'author-nonfiction'
-#                        Source: template/.claude/skills/*/{BUSINESS,FICTION,NONFICTION}.md (media
-#                        has no moded supporting folder). Order: folders in byte order, modes in
-#                        DESIGN.md's order. A mode file inside a gated skill folder
+#                        and the same gates for media's mode files beside the family skills
+#                        (DESIGN.md D80), MEDIA-BUSINESS.md, MEDIA-FICTION.md and
+#                        MEDIA-NONFICTION.md: the prefix keeps them apart from syntek-author's own
+#                        mode files in the same folders, and nothing else about them differs.
+#                        Source: template/.claude/skills/*/ (media has no moded supporting
+#                        folder), any of the six names in any skill folder, so that none ships
+#                        ungated (skill-conformance.sh judges which folder may hold which).
+#                        Order: folders in byte order, modes in DESIGN.md's order, media's
+#                        prefix-free names first. A mode file inside a gated skill folder
 #                        (narrate-audiobook) gets its line too: the folder's gate removes all
 #                        three when the media kind is off, and the line keeps two out when on.
 #
@@ -104,7 +111,7 @@ mode_files() {
   local area=.claude/skills d m
   [[ -d "$TPL/$area" ]] || return 0
   while IFS= read -r d; do
-    for m in $SM_MODE_FILES; do
+    for m in $SM_MODE_FILES $SM_FAMILY_MODE_FILES; do
       [[ -f "$TPL/$area/$d/$m" ]] && printf '%s/%s/%s\n' "$area" "$d" "$m"
     done
   done < <(find "$TPL/$area" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | LC_ALL=C sort)
@@ -222,9 +229,11 @@ self_test() {
   # shellcheck disable=SC2064
   trap "rm -rf '$tmp'" RETURN
   TPL="$tmp/template"; COPIER="$tmp/copier.yml"
-  mkdir -p "$TPL/.claude/skills/write-script" "$TPL/.claude/skills/narrate-audiobook" "$TPL/.claude/skills/captions"
+  mkdir -p "$TPL/.claude/skills/write-script" "$TPL/.claude/skills/narrate-audiobook" "$TPL/.claude/skills/captions" \
+    "$TPL/.claude/skills/grilling"
   for m in $SM_MODE_FILES; do : > "$TPL/.claude/skills/write-script/$m"; : > "$TPL/.claude/skills/narrate-audiobook/$m"; done
-  : > "$TPL/.claude/skills/captions/SKILL.md"
+  for m in $SM_FAMILY_MODE_FILES; do : > "$TPL/.claude/skills/grilling/$m"; done
+  : > "$TPL/.claude/skills/captions/SKILL.md"; : > "$TPL/.claude/skills/grilling/SKILL.md"
   cat > "$COPIER" <<EOF
 _exclude:
   - .git
@@ -248,12 +257,18 @@ EOF
   grep -vF '/narrate-audiobook/FICTION.md' <<< "$good" > "$COPIER"
   probe "check 3 fires when a mode file loses its line" "check 3"
 
+  grep -vF '/grilling/MEDIA-NONFICTION.md' <<< "$good" > "$COPIER"
+  probe "check 3 fires when a family skill's MEDIA- mode file loses its line (D80)" "check 3 — /.claude/skills/grilling/MEDIA-NONFICTION.md"
+
   awk -v e="$END_MARK" -v ghost="  - \"<: if BRAND_KIND != 'business' :>/.claude/skills/ghost/BUSINESS.md<: endif :>\"" \
     'index($0, e) { print ghost } { print }' <<< "$good" > "$COPIER"
   probe "check 4 fires on a line for a file that is not on disk" "check 4"
 
   sed "s#BRAND_KIND != 'author-nonfiction' :>/.claude/skills/write-script/NONFICTION.md#BRAND_KIND != 'author-fiction' :>/.claude/skills/write-script/NONFICTION.md#" <<< "$good" > "$COPIER"
   probe "check 5 fires on a line whose gate does not match its file" "check 5"
+
+  sed "s#BRAND_KIND != 'business' :>/.claude/skills/grilling/MEDIA-BUSINESS.md#BRAND_KIND != 'author-nonfiction' :>/.claude/skills/grilling/MEDIA-BUSINESS.md#" <<< "$good" > "$COPIER"
+  probe "check 5 fires when a MEDIA- mode file's gate does not match its kind (D80)" "check 5 — /.claude/skills/grilling/MEDIA-BUSINESS.md"
 
   awk '/write-script\/BUSINESS.md/ { held = $0; next } { print } /write-script\/FICTION.md/ { print held }' <<< "$good" > "$COPIER"
   probe "check 6 fires when the right lines sit in the wrong order" "check 6"

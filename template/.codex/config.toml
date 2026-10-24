@@ -1,6 +1,55 @@
-# Project instructions: use the canonical folder manual where AGENTS.md is absent.
-# Codex loads project configuration after the user trusts the project.
+# Codex's project settings (written once by a syntek template; yours from now on).
+# Codex loads this file only after you trust the project.
+# Started inside a folder, Codex reads that folder's and its parents' CLAUDE.md where there is
+# no AGENTS.md. It reads them once, at the start: every .claude/syntek-*-agents.md has every
+# other folder read by hand.
 project_doc_fallback_filenames = ['CLAUDE.md']
+<: if 'codex' in AGENT_CLIENTS and CODEX_MODEL :>
+# The substantive tier (the model-allocation rules in .claude/).
+model = '<%CODEX_MODEL%>'
+<: endif :>
+# MCP servers use Codex's own TOML format ([mcp_servers.<name>]); authenticate locally.
+# To carry .claude/settings.json's ask rules to a server declared here, run any one of the
+# .claude/syntek-*-permissions.py scripts with --write (they are the same script).
+# This file sets no trust level, no permission bypass and no credentials. A local model for
+# Codex is a user-level setting: Codex ignores model_provider in a project file (with a warning).
 
-# Configure local MCP servers using Codex's TOML format and authenticate locally.
-# This file sets no model, trust level, permission bypass or credentials.
+[mcp_servers.code-review-graph]
+command = 'uvx'
+args = ['code-review-graph==2.3.9', 'serve', '--tools', 'build_or_update_graph_tool,run_postprocess_tool,get_minimal_context_tool,get_impact_radius_tool,query_graph_tool,get_review_context_tool,semantic_search_nodes_tool,list_graph_stats_tool,get_docs_section_tool,find_large_functions_tool,list_flows_tool,get_flow_tool,get_affected_flows_tool,list_communities_tool,get_community_tool,get_architecture_overview_tool,detect_changes_tool,refactor_tool,apply_refactor_tool,generate_wiki_tool,get_wiki_page_tool,get_hub_nodes_tool,get_bridge_nodes_tool,get_knowledge_gaps_tool,get_surprising_connections_tool,get_suggested_questions_tool,traverse_graph_tool,list_repos_tool,cross_repo_search_tool']
+
+[mcp_servers.code-review-graph.env]
+GOOGLE_API_KEY = ''
+VOYAGE_API_KEY = ''
+MINIMAX_API_KEY = ''
+CRG_OPENAI_API_KEY = ''
+CRG_OPENAI_BASE_URL = ''
+CRG_ACCEPT_CLOUD_EMBEDDINGS = ''
+
+[mcp_servers.code-review-graph.tools.apply_refactor_tool]
+approval_mode = "prompt"
+
+[mcp_servers.code-review-graph.tools.generate_wiki_tool]
+approval_mode = "prompt"
+
+[mcp_servers.scrapling]
+command = 'uvx'
+args = ['--from', 'scrapling[ai]==0.4.15', '--with', 'playwright==1.63.0', '--with', 'patchright==1.63.0', 'scrapling', 'mcp']
+
+[mcp_servers.scrapling.tools.stealthy_fetch]
+approval_mode = "prompt"
+
+[mcp_servers.scrapling.tools.bulk_stealthy_fetch]
+approval_mode = "prompt"
+
+[mcp_servers.scrapling.tools.open_session]
+approval_mode = "prompt"
+
+[mcp_servers.scrapling.tools.session_fetch]
+approval_mode = "prompt"
+
+[mcp_servers.scrapling.tools.fetch]
+approval_mode = "prompt"
+
+[mcp_servers.scrapling.tools.bulk_fetch]
+approval_mode = "prompt"

@@ -45,7 +45,7 @@ log ◄─ the author posts ◄─ post package and schedule (M7) ◄─ thumbna
 
 | Step | Skill | Workflow | Status after |
 |---|---|---|---|
-| 1. Brief the piece | grill-with-docs (syntek-author), where present | `scripts/workflows/01-brief-a-piece/` | `briefed` |
+| 1. Brief the piece | `grill-with-docs`, where present | `scripts/workflows/01-brief-a-piece/` | `briefed` |
 | 2a. Write the script | `write-script` | `scripts/workflows/02-write-a-script/` | `scripted` |
 | 2b. Bring in a recording | `captions` | `production/workflows/08-bring-in-a-recording/` | `scripted` (M3 `n/a — recorded`) |
 | 3. Storyboard it | `storyboard` | `scripts/workflows/03-storyboard-a-piece/` | `storyboarded` |

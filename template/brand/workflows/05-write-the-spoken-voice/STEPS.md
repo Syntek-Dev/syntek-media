@@ -15,14 +15,14 @@ skill and guide it uses. **Run in order** (the written voice before the spoken o
 any clone, and nothing heard before its cost is agreed) and tick `CHECKLIST.md` as you go.
 
 > Read the read-order files first (this folder's `CONTEXT.md` and `CLAUDE.md`). No media skill
-> runs this procedure: the grill-with-docs skill (syntek-author), where present, settles each
+> runs this procedure: the `grill-with-docs` skill, where present, settles each
 > decision with the author, and any trial runs through the voiceover procedure.
 
 ## 1. Grill the spoken voice with the author
 
-> **Skill:** grill-with-docs (syntek-author), where present · **Guide:** `brand/docs/reference/the-spoken-voice.md`
+> **Skill:** `grill-with-docs`, where present · **Guide:** `brand/docs/reference/the-spoken-voice.md`
 
-Check that the companion's `.claude/skills/<skill>/SKILL.md` exists for grill-with-docs; where it
+Check that `grill-with-docs` has its `SKILL.md` in `.claude/skills/`; where it
 does not, say so, and ask the same questions in rounds yourself, each with a recommended answer
 (`.claude/rules/syntek-media/06-global-rules.md` Section 8). First read the written voice, where
 syntek-author's voice notes or brand voice are present. Then settle the pace in words a minute,

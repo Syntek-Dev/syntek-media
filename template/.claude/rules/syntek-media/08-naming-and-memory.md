@@ -99,9 +99,9 @@ Write to `MEMORY.md` only when all three hold:
 3. **Getting it wrong would cost real work**: a re-render, credits spent twice, a wrong claim in
    public, a missed date.
 
-A **decision** must also pass the decision gate kept by the grill-with-docs skill (syntek-author),
-where present, and kept here otherwise: it is hard to reverse, it would surprise someone without
-the context, and it settled a genuine trade-off. Record only what the author has confirmed.
+A **decision** must also pass the decision gate kept by the `grill-with-docs` skill, where
+present, and kept here otherwise: it is hard to reverse, it would surprise someone without the
+context, and it settled a genuine trade-off. Record only what the author has confirmed.
 
 ---
 

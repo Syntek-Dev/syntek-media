@@ -12,16 +12,20 @@ in `.claude/rules/syntek-media/01-layout-and-routing.md` Section 1, and the rule
 
 ```text
 <%BRAND_SLUG%>/
-├── AGENTS.md               ← Codex: reads the shared instruction bridge
-├── GEMINI.md               ← Antigravity: reads the shared instruction bridge
-├── .agents/                ← skills (a link to ../.claude/skills) and Antigravity's MCP servers (empty)
-├── .codex/                 ← Codex folder-manual fallback and local MCP settings
-├── .claude/                ← Claude Code: the manual, the template's rules, memory, settings, skills
+<: if 'codex' in AGENT_CLIENTS or 'opencode' in AGENT_CLIENTS :>├── AGENTS.md               ← Codex and OpenCode: reads the shared instruction bridge
+<: endif :><: if 'gemini-cli' in AGENT_CLIENTS or 'antigravity' in AGENT_CLIENTS :>├── GEMINI.md               ← Gemini CLI and Antigravity: reads the shared instruction bridge
+<: endif :><: if AGENT_CLIENTS | length > 0 :>├── .agents/                ← skills (a link to ../.claude/skills)<: if 'antigravity' in AGENT_CLIENTS :> and Antigravity's MCP servers<: endif :>
+<: endif :><: if 'codex' in AGENT_CLIENTS :>├── .codex/                 ← Codex: folder-manual fallback, model and MCP servers
+<: endif :><: if 'gemini-cli' in AGENT_CLIENTS :>├── .gemini/                ← Gemini CLI: model, MCP servers and excluded tools
+<: endif :><: if 'opencode' in AGENT_CLIENTS :>├── opencode.json           ← OpenCode: model, MCP servers and permissions
+<: endif :>├── .claude/                ← Claude Code: the manual, the template's rules, memory, settings, hooks, skills
 │   ├── syntek-media-agents.md ← shared read order and client setup (template-owned)
 │   ├── CLAUDE.md           ← the project brief and where the rules live (read first)
 │   ├── MEMORY.md           ← project memory (read second)
+│   ├── hooks/              ← the two session hooks: hand off, never compact (shared)
 │   ├── rules/syntek-media/ ← loaded at launch: the brand brief (01, Section 1) and the template's rules (never edit)
 │   └── skills/             ← one folder per skill
+├── handoffs/               ← session handoffs, one per handed-over session (the pair is shared)
 ├── brand/                  ← LAYER (production): design tokens and layouts, design exports, the spoken voice, platform profiles
 ├── scripts/                ← LAYER (production): one folder per piece (brief, script or transcript, storyboard, shot list)
 ├── production/             ← LAYER (production): source media, voiceover, edit decision lists, cards, timing, scenes, rights, credits<: if 'audiobook' in MEDIA_KINDS :>, audiobooks<: endif :>
@@ -30,7 +34,7 @@ in `.claude/rules/syntek-media/01-layout-and-routing.md` Section 1, and the rule
 ├── CONTEXT.md              ← this file
 ├── README.md               ← the human-facing overview
 ├── .gitignore              ← what Git never tracks (media's own ignore rules are nested in its folders)
-├── .mcp.json               ← project MCP servers (none: ElevenLabs is configured at user scope)
+├── .mcp.json               ← project MCP servers: scrapling and code-review-graph (ElevenLabs is configured at user scope)
 └── .copier-answers.syntek-media.yml ← Copier's record of the answers; never edit by hand
 ```
 
@@ -50,6 +54,8 @@ in `.claude/rules/syntek-media/01-layout-and-routing.md` Section 1, and the rule
   source media. A piece's tracked files stay flat in the layers, under the piece's name.
 - **Source footage** — kept in external storage and listed in
   `production/src/footage/manifest.toml`; the local mirror beside it is git-ignored.
+- **Coding agents** — Claude Code reads `.claude/` natively; every other client this project was
+  generated for reaches the same rules, skills and memory through `.claude/syntek-media-agents.md`.
 - **Every folder carries a `CONTEXT.md` and a `CLAUDE.md`**, with the exceptions listed in
   `.claude/rules/syntek-media/01-layout-and-routing.md` Section 6. Read both before working
   inside a folder.

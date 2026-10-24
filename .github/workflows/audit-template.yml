@@ -75,11 +75,15 @@ jobs:
       # Tokens, the generated mode-file block, pairs and routed shapes, the line cap, personal
       # data, development isolation, the community files (D83), seeds and skills — every one
       # reads template/ or the repository root, and none renders anything. skill-conformance.sh
-      # check 20 reads the frozen syntek-author names and never skips. Then the self-test of
-      # migrations/agents-outside-link.py, syntek-author's family-shared script vendored byte
-      # for byte (DESIGN.md D76, D85; syntek-author D48; shipped-seeds.sh check 21 pins it): both
-      # stages in temporary folders, after a normal update and after a stop that left a link, a
-      # folder or a file at .agents, with the printed hand fix run step by step under sh.
+      # check 20 reads the frozen syntek-author names and never skips. Then the self-tests of
+      # the family-shared scripts media vendors byte for byte from syntek-author (DESIGN.md D76,
+      # D80, D85; syntek-author D48; family-shared.json records them and shipped-seeds.sh checks
+      # 21 and 25 hold them to it): migrations/agents-outside-link.py, both stages in temporary
+      # folders, after a normal update and after a stop that left a link, a folder or a file at
+      # .agents, with the printed hand fix run step by step under sh; then the data-root resolver
+      # and the permissions script every project receives, template/.claude/syntek-media-
+      # dataroot.py and syntek-media-permissions.py, with SYNTEK_DATA_ROOT unset, so neither
+      # self-test can reach a real data root.
       - name: Prove each detector, then run it on the template source
         run: |
           status=0
@@ -98,6 +102,14 @@ jobs:
           echo "::group::agents-outside-link.py"
           python3 migrations/agents-outside-link.py --self-test \
             || { echo "::error::agents-outside-link.py — the vendored migration's self-test failed"; status=1; }
+          echo "::endgroup::"
+          echo "::group::syntek-media-dataroot.py"
+          env -u SYNTEK_DATA_ROOT python3 template/.claude/syntek-media-dataroot.py --self-test \
+            || { echo "::error::syntek-media-dataroot.py — the vendored data-root resolver's self-test failed"; status=1; }
+          echo "::endgroup::"
+          echo "::group::syntek-media-permissions.py"
+          env -u SYNTEK_DATA_ROOT python3 template/.claude/syntek-media-permissions.py --self-test \
+            || { echo "::error::syntek-media-permissions.py — the vendored permissions script's self-test failed"; status=1; }
           echo "::endgroup::"
           exit $status
 
@@ -209,7 +221,9 @@ jobs:
 
       # Each test renders its own scratch project from a snapshot of this checkout, acts as an
       # author (or as the second template), and asserts what an update or a second template left
-      # behind. coexist-test.sh needs SYNTEK_AUTHOR_DIR; without it, it prints a named SKIP.
+      # behind. coexist-test.sh needs SYNTEK_AUTHOR_DIR, and so does the over-author half of
+      # update-test.sh check 24, which also reads this checkout's release tags (fetch-depth: 0);
+      # without either, each prints a named SKIP.
       - name: Prove each test, then run it
         run: |
           uvx copier --version

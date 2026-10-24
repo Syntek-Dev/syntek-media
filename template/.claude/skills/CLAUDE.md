@@ -20,16 +20,20 @@ keep improving them.
   template's rules say (`.claude/rules/syntek-media/01-layout-and-routing.md` Section 10).
 - **Model:** **Opus** for any change in this folder; a skill's own steps name their tier
   (`.claude/rules/syntek-media/05-model-allocation.md`).
-- **Concrete steps:** read the whole `SKILL.md`, then its mode file if the `SKILL.md` carries the
-  Mode paragraph → take project values from where the template's rules say → follow the steps in
-  order, each to its completion test → cite, rather than restate, the procedures it routes to.
+- **Concrete steps:** read the whole `SKILL.md`, then its mode file if the `SKILL.md` carries a
+  Mode paragraph (beside a family-shared skill, the mode file the rules route the work to: for
+  media work, the `MEDIA-` one) → take project values from where the template's rules say →
+  follow the steps in order, each to its completion test → cite, rather than restate, the
+  procedures it routes to.
 - **Definition of done:** the skill's own completion tests pass, and nothing under
   `.claude/skills/` changed unless the author asked for that change.
 
 ## Guardrails
 
 - **Never edit a template skill.** The next `copier update` overwrites the edit or turns it into a
-  conflict, and a skill changed mid-task to fit the task is a skill nobody can trust.
+  conflict, and a skill changed mid-task to fit the task is a skill nobody can trust. A
+  family-shared `SKILL.md` is never edited either: every template ships the same bytes, and an
+  edited copy is frozen out of every later refresh.
 - **Never self-edit.** No skill rewrites a skill, a guide, a rules file or a `CLAUDE.md` without
   the author's explicit instruction (`.claude/rules/syntek-media/06-global-rules.md` Section 3).
 - **Never recreate a skill that does not ship here.** Its absence is deliberate for this kind of

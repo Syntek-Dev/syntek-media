@@ -98,8 +98,8 @@ are the procedure of record — do not restate them at length here.
    or the run has stopped for the author.
 
 4. **Run speech-to-text, only when asked.** The ElevenLabs tools come from a server the author
-   configures once at user scope under the name `elevenlabs`; the project adds nothing to
-   `.mcp.json`. They may be deferred: load them with ToolSearch, searching for 'elevenlabs'. Before
+   configures once at user scope under the name `elevenlabs`; the project's `.mcp.json`
+   names no ElevenLabs server. They may be deferred: load them with ToolSearch, searching for 'elevenlabs'. Before
    any batch, run `python3 toolkit/media.py check --setup` and stop on any ElevenLabs finding; if
    the tools are absent, say so, give the setup command from
    `production/docs/reference/elevenlabs.md`, and offer the transcript by hand. State the audio

@@ -17,7 +17,7 @@ production session starts from the same picture of the piece.
 
 | File | Written by | Procedure |
 |---|---|---|
-| `piece-register.md`, a piece's folder, its pair and `brief.md` | the author, with the grill-with-docs skill (syntek-author), where present | `scripts/workflows/01-brief-a-piece/` |
+| `piece-register.md`, a piece's folder, its pair and `brief.md` | the author, with the `grill-with-docs` skill, where present | `scripts/workflows/01-brief-a-piece/` |
 | a scripted piece's `script.md` | `write-script` | `scripts/workflows/02-write-a-script/` |
 | a recorded piece's `transcript.md` | `captions` | `production/workflows/08-bring-in-a-recording/` |
 | `storyboard.md`, `shot-list.md` | `storyboard` | `scripts/workflows/03-storyboard-a-piece/` |

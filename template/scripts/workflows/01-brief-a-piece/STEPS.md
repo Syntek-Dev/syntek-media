@@ -15,7 +15,7 @@ folder of its own. Each step names the skill and guide it uses. **Run in order**
 is load-bearing — and tick `CHECKLIST.md` as you go.
 
 > Read the read-order files first (this folder's `CONTEXT.md` and `CLAUDE.md`). No media skill
-> runs this procedure. The grill-with-docs skill (syntek-author), where present, runs the
+> runs this procedure. The `grill-with-docs` skill, where present, runs the
 > questioning in steps 3 to 7 and 10: check that its `SKILL.md` is in `.claude/skills/` before
 > step 3, and where it is not, say so and ask the same questions in rounds yourself, each with a
 > recommended answer (`.claude/rules/syntek-media/06-global-rules.md` Section 8).
@@ -42,7 +42,7 @@ author which before making it. _Mechanical._
 
 ## 3. Read what the repository already knows
 
-> **Skill:** grill-with-docs (syntek-author), where present · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
+> **Skill:** `grill-with-docs`, where present · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
 Read `.claude/MEMORY.md` (Decisions, Open questions and Sensitivities, under the headings
 syntek-author's project settings file, 00-project.md, maps them to, where present); the brand,
@@ -54,7 +54,7 @@ the repository can answer is never put to the author. _Substantive._
 
 ## 4. Settle the purpose, the audience and the hook
 
-> **Skill:** grill-with-docs (syntek-author), where present · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
+> **Skill:** `grill-with-docs`, where present · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
 Question the author until three slots can be written. **Purpose:** what the viewer or listener
 can do, believe or feel at the end that they could not at the start. **Audience:** who it is
@@ -63,7 +63,7 @@ image, in one sentence. _Substantive._
 
 ## 5. Settle the kind, the origin and the deliverables
 
-> **Skill:** grill-with-docs (syntek-author), where present · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
+> **Skill:** `grill-with-docs`, where present · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
 Fix `kind`, `origin` (`scripted`, or `recorded` for a talk, interview or conversation that
 exists as a recording) and `picture`, and read the guide for that kind, where the project makes
@@ -83,7 +83,7 @@ not. _Substantive._
 
 ## 6. Settle the key points and the call to action
 
-> **Skill:** grill-with-docs (syntek-author), where present · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
+> **Skill:** `grill-with-docs`, where present · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
 Under `## Key points`, the points the piece must make, in order, one line each; under
 `## Call to action`, the one thing the viewer or listener is asked to do. Under `## Draws on`,
@@ -94,7 +94,7 @@ and a point the author cannot yet decide keeps the piece at `idea`. _Substantive
 
 ## 7. Settle the disclosure plan and the rights needs
 
-> **Skill:** grill-with-docs (syntek-author), where present · **Guide:** `publishing/docs/reference/ai-disclosure.md`
+> **Skill:** `grill-with-docs`, where present · **Guide:** `publishing/docs/reference/ai-disclosure.md`
 
 Fix `synthetic_voice`, `ai_visuals` and `music` from the vocabularies in the brief skeleton
 (`scripts/src/pieces/CLAUDE.md`). Under `## Disclosure plan`, write for each deliverable what
@@ -129,7 +129,7 @@ _Mechanical (writing); the read-back is substantive._
 
 ## 10. Record what was decided
 
-> **Skill:** grill-with-docs (syntek-author), where present · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
+> **Skill:** `grill-with-docs`, where present · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
 Decisions that pass the memory gate (`.claude/rules/syntek-media/08-naming-and-memory.md`
 Section 3) go to `.claude/MEMORY.md` Decisions, dated; questions left open go to Open questions,

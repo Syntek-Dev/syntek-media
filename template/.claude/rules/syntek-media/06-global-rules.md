@@ -111,7 +111,8 @@ silently rewrites a script changes what the brand says aloud.
 ## 8. Design work opens with a grilling pass
 
 **Requirement.** A piece's brief, the brand kit and the spoken voice open with a grilling pass: the
-grill-with-docs skill (syntek-author), where present; otherwise the same questions in chat prose,
+`grill-with-docs` skill, where present, with its media mode file
+(`.claude/rules/syntek-media/02-skills.md` Section 2); otherwise the same questions in chat prose,
 in frontier rounds (every unblocked question in one message), each with a recommended answer,
 unless the Overrides of syntek-author's 00-project.md, where present, set another style. Look
 facts up rather than asking for them, and record the author's decision
@@ -165,6 +166,9 @@ GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_
 - **After such a change**, the shared files that describe the options (`README.md`, `CONTEXT.md`
   and `.claude/CLAUDE.md`, where media wrote them) and any rows for a removed platform in
   `brand/src/platforms/overrides.toml` are edited by hand.
+- **A coding client ticked on an update** adds its row to the model table
+  (`.claude/rules/syntek-media/05-model-allocation.md` Section 4) and nothing else: its files
+  arrive only through the steps in `.claude/syntek-media-agents.md`.
 
 **Why this rule exists.** A hand edit in a rendered file and a stale answer diverge silently, and
 a platform removed without warning takes the author's filled-in profile with it.
@@ -186,5 +190,87 @@ the command that wrote it printed what it found, so read that output instead. A 
 `scene.py stills` has just written may be opened by its printed path to review its picture and mouths;
 never list the folder to find it.
 
+**The data root is off-limits too, whatever the store.** A data root is a folder outside every
+repository that holds a `.syntek-data-root` marker; this machine's is the one `SYNTEK_DATA_ROOT`
+names. Never search, list, edit or write anything under one, by any tool or shell command. Media
+files nothing there: its map, `.claude/syntek-media-dataroot.json`, names no folder, so footage
+stays listed in `production/src/footage/manifest.toml` and the resolver's `add` refuses a media
+file. The resolver, `python3 .claude/syntek-media-dataroot.py` (Python 3.11 or later), ships for
+the family's shared records: `store` prints the store each template's answers record, and `root`
+the root and its layout; where syntek-author is applied, its own data-root rules say when its
+files are filed. The data-root answers are kept in step with every other template's: while two
+disagree, every data command refuses (exit 2) until they agree, and the update that leaves them
+apart says so. Change them through an update (Section 11), never by hand. The guard hook in
+`.claude/settings.json` stops edits and writes under a root, and searches only where the client
+offers `Grep` and `Glob`; elsewhere this rule alone keeps a search out of the root.
+
 **Why this rule exists.** Ignored files hold credentials, local settings and private recordings. A
 search that reads them prints them into the session, and from there into a handoff or a commit.
+The data root holds records themselves: a search there prints them too, and an edit in place
+breaks the checksum that proves a record unchanged.
+
+---
+
+## 13. Web and code tools
+
+<!-- BEGIN family-shared rules: web and code tools -->
+**Requirement.** Every project ships two MCP servers, pinned and keyless: `scrapling`, which
+fetches web pages, and `code-review-graph`, a local map of a repository's code. Use them only
+as this section says.
+
+- **Give every `scrapling` tool only an `http://` or `https://` address**: never `file://` or
+  any other scheme (ftp, gopher, dict, smb, telnet, tftp), which reads this machine's files or
+  reaches local services. In OpenCode and Codex the plain tools and `screenshot` run without
+  asking.
+- **Ask the author before each of `scrapling`'s six asked browser tools**: `stealthy_fetch`,
+  `bulk_stealthy_fetch`, `open_session`, `session_fetch`, `fetch` and `bulk_fetch`. Say which
+  site, why, and which tool. Claude Code asks before each of them by itself; in a client that
+  does not, ask in the conversation and wait. A configured server, or a tool the client lets you
+  run, is not the author's approval. `screenshot` loads a page in a browser session already
+  open: use it only on the site the author approved for that session, and ask before taking it
+  to any other site.
+- **Use the plainest tool that does the job**: the client's own web search or fetch first, then
+  `make_request` or `bulk_get`. Even these present a browser's fingerprint and headers to the
+  site, and no `scrapling` tool reads `robots.txt` or limits how fast it asks.
+- **`make_request`, `bulk_get` and `session_make_request` only read.** Send `make_request` and
+  `session_make_request` as a GET with no request body unless the author agrees to that request.
+  Never send any of the three to a loopback, private or link-local address (localhost,
+  127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, or a browser's
+  DevTools port), and never set `follow_redirects` to true, `verify` to false, or a `proxy`.
+  Codex runs these three without asking, because the server marks them read-only. OpenCode
+  runs, without a prompt, every tool it is not told to ask before: these three, `screenshot`,
+  `open_request_session` and every `code-review-graph` tool but the two that write, so there
+  these rules are the only gate.
+- **Never set `real_chrome`, `cdp_url` or `executable_path` without the author's word for that
+  call**, and never use a stealth tool to get past a sign-in, a paywall, a challenge page or a
+  site that refuses automated access: whether that is allowed is the author's decision, not the
+  session's.
+- **Respect each site's terms of use, its `robots.txt` and the law**, including data protection
+  and copyright. This rule is not legal advice: where the position is unclear, stop and ask the
+  author. Record what was fetched, from where and when, in the project's record of provenance
+  where its rules name one.
+- **`code-review-graph`** maps the code of the repository a call names: by default this project,
+  whose graph it keeps in a `.code-review-graph` folder at the project root, which Git ignores.
+  It indexes the files Git tracks; while Git tracks nothing (a new project before its first
+  `git add`) it scans every file on disk, ignored ones included, so never build its graph before
+  the project's first commit. Never pass `repo_root`, and never call `list_repos_tool` or
+  `cross_repo_search_tool`, without the author's word: they reach other repositories on this
+  machine and a registry in the home folder. `apply_refactor_tool` rewrites files and
+  `generate_wiki_tool` writes pages, so both ask first; its cloud-embedding tool is never
+  offered, and its cloud keys stay blank.
+- **Never run `code-review-graph install`, `init` or `uninstall`, or `scrapling install`.** The
+  first three rewrite the agent files every template shares, the project's settings, skills and
+  Git hooks, and configuration outside the project; `scrapling install` installs system packages
+  with administrator rights. The author runs the commands that fetch the servers and their
+  browser, in their own terminal.
+
+**Why this rule exists.** `scrapling`'s stealth tools are built to look like a person's browser
+and to get through anti-bot protection, so a site cannot tell them from a visitor. Its
+`real_chrome` option launches the Chrome installed on this machine, with a fresh profile;
+`cdp_url` hands the session control of any browser that exposes DevTools at that address, on
+this machine or another; `executable_path` launches whatever program it names. Every request
+comes from the machine and network address of the browser that sends it, the author's or the
+one `cdp_url` names: what a session fetches is the author's act, not the tool's.
+`code-review-graph`'s installer adds an unpinned entry that offers the cloud-embedding tool
+beside the pinned ones, and writes the agent files and the home folder's configuration.
+<!-- END family-shared rules: web and code tools -->

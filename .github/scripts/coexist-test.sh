@@ -22,7 +22,7 @@
 #                     6. updates media with one platform and one media kind taken away;
 #                     7. applies the two the other way round in a fresh project.
 #
-#                   Twenty-one checks per brand kind (13 and 20 once per run):
+#                   Twenty-two checks per brand kind (13, 20 and 22 once per run):
 #                     1. Media applies over the syntek-author project without --overwrite —
 #                        nothing it ships collides with what is there.
 #                     2. Both answers files exist, under different names.
@@ -44,7 +44,10 @@
 #                        whose entries carry the fingerprint).
 #                    13. No media skill or top-level path shares a name with anything in
 #                        syntek-author's template/ — every variant, read from the live tree —
-#                        the shared files and the .claude/ container excepted.
+#                        the shared files, the .claude/ and .codex/ containers, and the
+#                        family-shared set excepted (D80: the seven family skills and every
+#                        top-level entry a family path passes through, .gemini, handoffs,
+#                        opencode.json among them, are both templates' by design).
 #                    14. Both rules folders are present: .claude/rules/syntek-author/ and
 #                        .claude/rules/syntek-media/.
 #                    15. Media first, then syntek-author: both apply without --overwrite.
@@ -71,6 +74,21 @@
 #                        paths, and record the new baseline in CHANGELOG.md (DESIGN.md D27).
 #                    21. syntek-author's own doc-references.sh, run on the composite, reports
 #                        nothing it does not report on the syntek-author-only project.
+#                    22. Media's family-shared.json agrees with the --author tree's own
+#                        (DESIGN.md D80, D85): the --author manifest exists, is syntek-author's
+#                        format 1, and records release SM_FAMILY_RELEASE, the tag media vendors
+#                        from (CI pins the same tag as SYNTEK_AUTHOR_TAG); every file media
+#                        vendors is listed there with the same kind, scope, size, SHA-256, mode
+#                        and link target, and every block with the same markers, destination,
+#                        size and SHA-256; every file or block it lists is one media vendors or
+#                        one it defers to D81 (migrations/family-update.py, the update block),
+#                        so a family file added in a later tag fails until it is adopted; and
+#                        _common.sh's family asks, deny and hooks equal the --author tree's own
+#                        settings seed (its gates removed), which media's seed copies (D13 as D80
+#                        amends it). Together with shipped-seeds.sh checks 21–27, which hold
+#                        media's files to its manifest, it proves the vendored bytes are the
+#                        tag's. Against syntek-author's main (CI's advisory job) it reports the
+#                        drift the next adoption will take.
 #
 #                   Without syntek-author (no --author, no SYNTEK_AUTHOR_DIR, no
 #                   ../syntek-author) the test prints a named SKIP and exits 0. A SKIP is never
@@ -89,6 +107,10 @@
 #                   What it CANNOT check: a syntek-author release that does not exist yet, or a
 #                   collision only some answer combination this test does not render would
 #                   reveal (check 13 reads every variant's NAMES, not every variant's files).
+#                   Nor that the --author tree IS the tag its manifest names: check 22 reads the
+#                   manifest's release, which syntek-author's own family-shared.sh check 1 ties
+#                   to its tags; a working tree that edits a family file without --write leaves
+#                   its manifest behind, which that audit, not this one, reports.
 #
 # SELF-TEST. --self-test runs the whole flow with the fixture syntek-author and the fixture
 #            media of _common.sh (no real syntek-author needed), proves the result clean, then
@@ -160,7 +182,7 @@ A_COPY=0; B_COPY=0; A_UPDATE=0; B_UPDATE=0; A_AGAIN_STATUS=0; B_AGAIN_STATUS=0
 S17_STATUS=0; S17_BACK=false; R_STATUS=0; R_WHAT=""; REV_A=0; REV_B=0
 A_OWNED=(); A_ALL=(); B_TOWNED=(); B_ALL=()
 A_TOP_NAMES=(); A_SKILL_NAMES=(); B_TOP_NAMES=(); B_SKILL_NAMES=()
-NAMES_DRIFT=""; GLOBAL=false
+NAMES_DRIFT=""; FAMILY_DRIFT=""; GLOBAL=false
 
 # syntek-author's own doc-references.sh on a tree: its findings, sorted, in OUT; its exit
 # status in OUT.status ("missing" when syntek-author has no such audit).
@@ -191,6 +213,8 @@ global_state() { # $1 = syntek-author repo, $2 = syntek-media repo
   collect_names "$1" "$2"
   if [[ -f "$SM_AUTHOR_NAMES_FILE" ]]; then NAMES_DRIFT="$(names_drift "$1")"
   else NAMES_DRIFT="missing"; fi
+  # Check 22: read-only on both sides (sm_family_py compare writes nothing).
+  FAMILY_DRIFT="$(sm_family_py compare "$2" "$1")" || die "the family-shared.json reader failed"
 }
 
 run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks read
@@ -308,11 +332,13 @@ run_checks() {
     for n in "${B_TOP_NAMES[@]}"; do
       case "$n" in .claude|.codex|"$SM_ANSWERS_FILE") continue ;; esac
       is_shared "$n" && continue
+      is_family_entry "$n" && continue   # D80: .gemini, handoffs, opencode.json …
       for p in "${A_TOP_NAMES[@]}"; do
         [[ "$p" == "$n" ]] && finding "check 13 — media's top-level path $n is also in syntek-author's template/ — an update would overwrite one template's file with the other's"
       done
     done
     for n in "${B_SKILL_NAMES[@]}"; do
+      is_family_skill "$n" && continue   # D80: the seven family skills ship in both
       for p in "${A_SKILL_NAMES[@]}"; do
         [[ "$p" == "$n" ]] && finding "check 13 — media's skill $n is also a syntek-author skill — the two would fight over .claude/skills/$n/"
       done
@@ -324,6 +350,10 @@ run_checks() {
       n="$(printf '%s\n' "$NAMES_DRIFT" | grep -c . || true)"
       finding "check 20 — syntek-author-names.txt has drifted from the --author tree ($n name(s): $(printf '%s\n' "$NAMES_DRIFT" | head -3 | paste -sd';' -)…) — run --refresh-names, re-check every new name against media's paths, and record the baseline in CHANGELOG.md"
     fi
+    # ── 22. The vendored set is the --author tree's (D80, D85) ───────────────
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && finding "check 22 — $f"
+    done <<< "$FAMILY_DRIFT"
   fi
 
   if [[ "$A_COPY" -ne 0 ]]; then finding "check 1 — $label syntek-author itself did not render (exit $A_COPY) — see $W/flow.log"; return 0; fi
@@ -479,6 +509,59 @@ refresh_names() { # $1 = syntek-author repo
 
 # ── Self-test ────────────────────────────────────────────────────────────────
 
+write_family_fixtures() { # $1 = fixture media, $2 = fixture syntek-author
+  SMF_FILES="$SM_FAMILY_SHARED" SMF_LINKS="$SM_FAMILY_LINKS" SMF_BLOCKS="$SM_FAMILY_BLOCKS" \
+  SMF_RELEASE="$SM_FAMILY_RELEASE" SMF_HOOKS="$SM_SETTINGS_HOOKS" \
+  SMF_ASK="$(printf '%s\n' "${SM_SETTINGS_FAMILY_ASK[@]}")" SMF_DENY="$(printf '%s\n' "${SM_SETTINGS_FAMILY_DENY[@]}")" \
+  python3 - "$1" "$2" <<'PYFIX'
+import hashlib, json, os, sys
+from pathlib import Path
+E = os.environ
+media, author = Path(sys.argv[1]), Path(sys.argv[2])
+links = set(E["SMF_LINKS"].split())
+def manifest(owner, release, src_of, extra_files=(), extra_blocks=()):
+    files = []
+    for line in E["SMF_FILES"].splitlines():
+        f = line.split()
+        if not f:
+            continue
+        path, scope = f[0], (f[2] if len(f) > 2 else "project")
+        e = {"path": path, "source": src_of(path, f[1]), "kind": "symlink" if path in links else "file"}
+        if scope != "project":
+            e["scope"] = scope
+        if path in links:
+            e["target"] = "../.claude/skills"
+        else:
+            e["bytes"], e["sha256"] = len(path), hashlib.sha256(path.encode()).hexdigest()
+        files.append(e)
+    files += list(extra_files)
+    blocks = []
+    for line in E["SMF_BLOCKS"].splitlines():
+        if line.strip():
+            n, src, dest, b, e = line.split("|")
+            x = {"name": n, "source": src_of(n, src)}
+            if dest:
+                x["destination"] = dest
+            x.update({"begin": b, "end": e, "bytes": len(n), "sha256": hashlib.sha256(n.encode()).hexdigest()})
+            blocks.append(x)
+    blocks += list(extra_blocks)
+    return {"format": 1, "owner": owner, "release": release, "files": sorted(files, key=lambda e: e["path"]), "blocks": blocks}
+(media / "family-shared.json").write_text(json.dumps(manifest("syntek-media", "unreleased", lambda p, s: s), indent=2) + "\n")
+theirs = manifest("syntek-author", E["SMF_RELEASE"], lambda p, s: s.replace("syntek-media", "syntek-author"),
+                  [{"path": "migrations/family-update.py", "source": "migrations/family-update.py", "kind": "file",
+                    "scope": "repository", "bytes": 1, "sha256": "0" * 64, "mode": "755"}],
+                  [{"name": "update", "source": "copier.yml", "begin": "# BEGIN family-shared update (D48)",
+                    "end": "# END family-shared update (D48)", "bytes": 1, "sha256": "0" * 64}])
+(author / "family-shared.json").write_text(json.dumps(theirs, indent=2) + "\n")
+seed = author / "template" / ".claude" / "settings.json"
+data = json.loads(seed.read_text())
+data["permissions"] = {"ask": [a for a in E["SMF_ASK"].splitlines() if a], "deny": ["AskUserQuestion"] + [d for d in E["SMF_DENY"].splitlines() if d]}
+data["hooks"] = json.loads(E["SMF_HOOKS"])
+seed.write_text(json.dumps(data, indent=2) + "\n")
+PYFIX
+  sm_commit_all "$2" 'fixture: the family manifest and seed rules'
+}
+
 self_test() {
   local tmp real_names="$SM_AUTHOR_NAMES_FILE"
   bold "▸ $SCRIPT_NAME --self-test"; log ""
@@ -499,6 +582,10 @@ exit "$st"
 STUB
   sm_commit_all "$tmp/author" 'fixture: its doc-references audit'
   sm_fixture_template "$tmp/media" >/dev/null
+  # Check 22's inputs: the two manifests, as each template would write them for the same tag
+  # (fixture bytes: each entry's hash is its path's), and the fixture syntek-author's seed with
+  # the family's asks, deny and hooks.
+  write_family_fixtures "$tmp/media" "$tmp/author"
   SM_AUTHOR_NAMES_FILE="$tmp/names.txt"
   { printf '# fixture names\n'; author_names "$tmp/author"; } > "$SM_AUTHOR_NAMES_FILE"
   AUTHOR_SRC="$tmp/author"; MEDIA_SRC="$tmp/media"; GLOBAL=true
@@ -545,6 +632,24 @@ STUB
   printf '· check 1 — brand/CONTEXT.md cites a dead end\n' >> "$W/dr-composite.txt"
   probe "check 21 fires when syntek-author's audit reports something new on the composite" "check 21 — [author-fiction] syntek-author's doc-references.sh reports on the composite only"
   sed -i '$d' "$W/dr-composite.txt"
+  # 22: the comparison runs for real on the fixture manifests and seed, once per mutation.
+  local am="$tmp/author/family-shared.json" seed="$tmp/author/template/.claude/settings.json"
+  cp "$am" "$tmp/manifest.held"; cp "$seed" "$tmp/seed.held"
+  python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); [e.update(sha256="f"*64) for e in m["files"] if e["path"]==".mcp.json"]; json.dump(m,open(sys.argv[1],"w"))' "$am"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
+  probe "check 22 fires when a vendored file's bytes differ from the --author tree's manifest" "check 22 — .mcp.json: media's family-shared.json records sha256"
+  python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); m["release"]="unreleased"; json.dump(m,open(sys.argv[2],"w"))' "$tmp/manifest.held" "$am"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
+  probe "check 22 fires when the --author tree is not the tag media vendors from" "check 22 — the --author tree's family-shared.json records release 'unreleased', not $SM_FAMILY_RELEASE"
+  python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); m["files"].append({"path": ".claude/hooks/new-hook.sh", "source": "template/.claude/hooks/new-hook.sh", "kind": "file", "bytes": 1, "sha256": "0"*64}); json.dump(m,open(sys.argv[2],"w"))' "$tmp/manifest.held" "$am"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
+  probe "check 22 fires on a family file a later tag adds, which media has not adopted" "check 22 — the --author tree's family-shared.json lists .claude/hooks/new-hook.sh"
+  cp "$tmp/manifest.held" "$am"
+  sed -i 's/"timeout": 10/"timeout": 20/' "$seed"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
+  probe "check 22 fires when syntek-author's seed hooks differ from the ones media's seed copies" "check 22 — _common.sh's SM_SETTINGS_HOOKS is not the --author tree's seed's hooks key"
+  cp "$tmp/seed.held" "$seed"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
   probe_clean "the fixtures share the project cleanly again once every mutation is undone"
 
   SM_AUTHOR_NAMES_FILE="$real_names"
@@ -597,6 +702,7 @@ for kind in $KINDS; do
 done
 log ""
 [[ "$STATUS" -eq 0 ]] && { bold "✓ syntek-media and syntek-author share every project cleanly, in either order."; exit 0; }
-log "  DESIGN.md Section 9: own answers file, own rules folder, own skills, nineteen shared paths"
-log "  seeded in both and update-gated in media; Section 10 lists what goes wrong when one slips."
+log "  DESIGN.md Section 9: own answers file, own rules folder, own skills, the shared paths seeded"
+log "  in both and update-gated in media, the family-shared bytes one tag's (D80); Section 10 lists"
+log "  what goes wrong when one slips."
 exit 1

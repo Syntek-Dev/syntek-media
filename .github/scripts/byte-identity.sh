@@ -22,8 +22,9 @@
 #
 #                    Compared: every file present in at least two renders. Skipped: .git/, the
 #                    answers file, build/, audio/ and __pycache__/, and the spine set — the root
-#                    spine, the nineteen shared paths, every seed, every seed-once example and every
-#                    index file (computed in _common.sh from DESIGN.md and copier.yml). An
+#                    spine, the copy-only shared paths (D11's nineteen and D80's seventeen),
+#                    every seed, every seed-once example and every index file (computed in
+#                    _common.sh from DESIGN.md and copier.yml). An
 #                    over-author tree (one with a <tree>.owned beside it) is not compared: it
 #                    differs by syntek-author's variant by design (DESIGN.md Section 7), and is
 #                    named as skipped.
