@@ -15,6 +15,7 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ### Changed
 
+- **`DESIGN.md` D80 says the coding-agent defaults never read syntek-author's record** (wording approved by the maintainer on 25/10/2026), in place of 'read only media's own record': `AGENT_CLIENTS` reads only the project's previous answers and the model keys have fixed defaults, as Section 2 says since 0.5.0. Development only, nothing ships.
 - **`family-shared.json` records `unreleased` again** after the `v0.5.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9), as `shipped-seeds.sh --write-manifest` writes it on the first commit after a release tag, so check 23 holds. Development only, nothing ships.
 
 ## [0.5.0] - 24/10/2026
