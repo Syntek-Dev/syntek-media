@@ -178,10 +178,11 @@ sorted_csv() { tr ' ,' '\n\n' <<< "$1" | { grep -v '^$' || true; } | LC_ALL=C so
 # What DESIGN.md Section 2 says the render should record: the kind's defaults, then the
 # profile's answers on top. Lists are expected as their values sorted and joined by commas,
 # as shipped-brands.sh reads them (the order Copier keeps is not a promise). The family-shared
-# questions (D80): a fresh copy, with no record, ticks all four clients, and stores binaries
-# on the data root (external) unless syntek-author's record says otherwise, which over a fresh
-# syntek-author render it never does. AGENT_CLIENTS is written even when empty, so a profile
-# that ticks none is held to that too.
+# questions (D80, at syntek-author's v0.7.0 since 0.6.0, D81): a fresh copy, with no record,
+# ticks all four clients, and stores binaries on the data root (external) unless syntek-author's
+# record says otherwise; over a fresh syntek-author render its record ticks all four and
+# stores externally too, so the client and store defaults that take it agree. AGENT_CLIENTS is
+# written even when empty, so a profile that ticks none is held to that too.
 expect_for() { # $1 = name → KEY=value lines
   local name="$1" kind kv k v
   kind="$(kind_of "$1")"
@@ -378,6 +379,8 @@ self_test() {
   [[ -f "$OUT/business--defaults/UNCOMMITTED.md" ]] || {
     printf '\033[31m  ✗ an uncommitted file did not reach the render — the snapshot is not the working tree\033[0m\n' >&2; exit 2; }
   log "  ✓ an uncommitted file reached the render — the snapshot is the working tree"
+  # .owned lists the files media's copy ADDED: .claude/settings.json, which the copy's baseline
+  # task may give the entries its refresh data lists (D81), is syntek-author's and never in it.
   if ! grep -qx "$SM_ANSWERS_FILE" "$OUT/business--over-author.owned" \
      || grep -qxE 'README\.md|\.claude/settings\.json|Makefile' "$OUT/business--over-author.owned"; then
     printf '\033[31m  ✗ the over-author scope is wrong — .owned must name media'"'"'s files and no shared or syntek-author file\033[0m\n' >&2; exit 2

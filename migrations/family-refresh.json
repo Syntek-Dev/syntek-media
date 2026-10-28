@@ -1,0 +1,153 @@
+{
+  "format": 1,
+  "template": "syntek-media",
+  "refresh": [
+    ".claude/hooks/CLAUDE.md",
+    ".claude/hooks/CONTEXT.md",
+    ".claude/hooks/context-threshold-handoff.sh",
+    ".claude/hooks/how-to-read-only.sh",
+    ".claude/hooks/pre-compact-handoff.sh",
+    ".claude/skills/grill-me/SKILL.md",
+    ".claude/skills/grill-with-docs/SKILL.md",
+    ".claude/skills/grilling/SKILL.md",
+    ".claude/skills/handoff/SKILL.md",
+    ".claude/skills/to-questionnaire/SKILL.md",
+    ".claude/skills/wait-what/SKILL.md",
+    ".claude/skills/wayfinder/SKILL.md",
+    "handoffs/CLAUDE.md",
+    "handoffs/CONTEXT.md",
+    "how-to/CLAUDE.md",
+    "how-to/CONTEXT.md",
+    "how-to/docs/CLAUDE.md",
+    "how-to/docs/CONTEXT.md",
+    "how-to/src/CLAUDE.md",
+    "how-to/src/CONTEXT.md",
+    "how-to/src/TEMPLATE-GUIDE/CLAUDE.md",
+    "how-to/src/TEMPLATE-GUIDE/CONTEXT.md",
+    "how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md",
+    "how-to/src/TEMPLATE-GUIDE/the-data-root.md",
+    "how-to/src/TEMPLATE-GUIDE/updating-and-recovery.md",
+    "how-to/workflows/CLAUDE.md",
+    "how-to/workflows/CONTEXT.md"
+  ],
+  "restore": [
+    "how-to"
+  ],
+  "settings": {
+    "autoCompactEnabled": false,
+    "idleCompaction": false,
+    "hooks": {
+      "PreCompact": [
+        {
+          "matcher": "auto",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; [ -f \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" ] || exit 0; exec bash \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" auto'",
+              "timeout": 10
+            }
+          ]
+        },
+        {
+          "matcher": "manual",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; [ -f \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" ] || exit 0; exec bash \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" manual'",
+              "timeout": 10
+            }
+          ]
+        }
+      ],
+      "PreToolUse": [
+        {
+          "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; [ -f \"$ROOT/.claude/hooks/how-to-read-only.sh\" ] || exit 0; exec bash \"$ROOT/.claude/hooks/how-to-read-only.sh\"'",
+              "timeout": 10
+            }
+          ]
+        }
+      ],
+      "SessionStart": [
+        {
+          "matcher": "compact",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; [ -f \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" ] || exit 0; exec bash \"$ROOT/.claude/hooks/pre-compact-handoff.sh\" compacted'",
+              "timeout": 10
+            }
+          ]
+        }
+      ],
+      "UserPromptSubmit": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash -c 'ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; [ -f \"$ROOT/.claude/hooks/context-threshold-handoff.sh\" ] || exit 0; exec bash \"$ROOT/.claude/hooks/context-threshold-handoff.sh\"'",
+              "timeout": 10
+            }
+          ]
+        }
+      ]
+    },
+    "permissions": {
+      "deny": [
+        "AskUserQuestion",
+        "Edit(**/generated/**)",
+        "Edit(**/renders/**)",
+        "Edit(/how-to/**)",
+        "mcp__code-review-graph__embed_graph_tool"
+      ],
+      "ask": [
+        "mcp__elevenlabs__text_to_speech",
+        "mcp__elevenlabs__speech_to_text",
+        "mcp__elevenlabs__compose_music",
+        "mcp__elevenlabs__text_to_sound_effects",
+        "mcp__elevenlabs__speech_to_speech",
+        "mcp__elevenlabs__voice_clone",
+        "mcp__elevenlabs__isolate_audio",
+        "mcp__elevenlabs__text_to_voice",
+        "mcp__elevenlabs__create_voice_from_preview",
+        "Bash(python3 toolkit/media.py voice remix run *)",
+        "Bash(uv run toolkit/media.py voice remix run *)",
+        "mcp__scrapling__stealthy_fetch",
+        "mcp__scrapling__bulk_stealthy_fetch",
+        "mcp__scrapling__open_session",
+        "mcp__scrapling__session_fetch",
+        "mcp__scrapling__fetch",
+        "mcp__scrapling__bulk_fetch",
+        "mcp__code-review-graph__apply_refactor_tool",
+        "mcp__code-review-graph__generate_wiki_tool"
+      ]
+    }
+  },
+  "mcp": {
+    "servers": [
+      "code-review-graph",
+      "scrapling"
+    ],
+    "files": {
+      ".agents/mcp_config.json": [
+        "mcpServers"
+      ],
+      ".codex/config.toml": [
+        "mcp_servers"
+      ],
+      ".gemini/settings.json": [
+        "mcpServers"
+      ],
+      ".mcp.json": [
+        "mcpServers"
+      ],
+      "opencode.json": [
+        "mcp",
+        "servers"
+      ]
+    }
+  }
+}

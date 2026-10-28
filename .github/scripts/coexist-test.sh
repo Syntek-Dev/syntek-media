@@ -20,9 +20,12 @@
 #                     4. updates each again with nothing changed;
 #                     5. deletes a shared file and updates media;
 #                     6. updates media with one platform and one media kind taken away;
-#                     7. applies the two the other way round in a fresh project.
+#                     7. applies the two the other way round in a fresh project, then updates
+#                        syntek-author and media there;
+#                     8. once per run, copies media over a syntek-author project whose how-to/
+#                        was deleted, as one older than v0.6.0 has none.
 #
-#                   Twenty-two checks per brand kind (13, 20 and 22 once per run):
+#                   Twenty-five checks per brand kind (13, 20, 22 and 23 once per run):
 #                     1. Media applies over the syntek-author project without --overwrite —
 #                        nothing it ships collides with what is there.
 #                     2. Both answers files exist, under different names.
@@ -32,7 +35,11 @@
 #                     6. No file is owned by both: a path one template renders and does not seed
 #                        is never shipped by the other.
 #                     7. No conflict is left behind (no *.rej file, no conflict marker).
-#                     8. Media's copy changed no byte that was there.
+#                     8. Media's copy changed no byte that was there, but for the entries its
+#                        baseline task adds once to .claude/settings.json (D81): every other
+#                        difference there (a key removed or changed, an entry reordered, an
+#                        entry migrations/family-refresh.json does not list) is a finding
+#                        (_common.sh sm_settings_offered_only).
 #                     9. syntek-author's update touched only its own paths and answers file.
 #                    10. Media's update touched only its own paths (B_OWNED: what media's copy
 #                        added) and its answers file.
@@ -41,7 +48,9 @@
 #                    12. Existing author shared paths and newly filled media shared paths
 #                        retain their bytes and link targets through both updates (D73, D76:
 #                        .agents/skills and .agents/mcp_config.json, never the folder itself,
-#                        whose entries carry the fingerprint).
+#                        whose entries carry the fingerprint), D84's fourteen how-to paths
+#                        among them, which keep syntek-author's bytes; .claude/settings.json
+#                        apart from the entries media's baseline task added once (D81).
 #                    13. No media skill or top-level path shares a name with anything in
 #                        syntek-author's template/ — every variant, read from the live tree —
 #                        the shared files, the .claude/ and .codex/ containers, and the
@@ -68,9 +77,12 @@
 #                        since 0.6.0) and the skip rule, each D13 allow, ask and Edit deny, the
 #                        ELEVENLABS_MCP_BASE_PATH line, the filter.lfs.required line, the check
 #                        --setup line and the -a update command, run as uvx --python '>=3.14'
-#                        copier (D81); and Section 8's lines: Copier's 'conflict' then 'skip' is
-#                        expected, the optional line in .claude/CLAUDE.md, and nothing to add
-#                        to .gitignore or .mcp.json.
+#                        copier (D81); since 0.6.0 item (2)'s 'did NOT run' line, the guide
+#                        guard and the data-root guard that no lane offers (D81, D84); and
+#                        Section 8's lines: Copier's 'conflict' then 'skip' is expected, the
+#                        optional line in .claude/CLAUDE.md, and nothing to add to .gitignore
+#                        or .mcp.json. It also never carries D84's copy-time warning, which
+#                        check 23 proves prints where syntek-author's guide is missing.
 #                    20. syntek-author-names.txt equals the names of the --author tree. Drift
 #                        fails: run --refresh-names, re-check every new name against media's
 #                        paths, and record the new baseline in CHANGELOG.md (DESIGN.md D27).
@@ -88,11 +100,42 @@
 #                        _common.sh's family asks, denies (the guide's Edit(/how-to/**) among
 #                        them, D84), top-level values (autoCompactEnabled, idleCompaction) and
 #                        hooks equal the --author tree's own settings seed (its gates removed),
-#                        which media's seed copies (D13 as D80, D81 and D84 amend it).
+#                        which media's seed copies (D13 as D80, D81 and D84 amend it). Since
+#                        0.6.0 it also holds the family lists of media's
+#                        migrations/family-refresh.json (its refresh paths and restore, its
+#                        hooks, the AskUserQuestion deny, syntek-author D54's asks and deny,
+#                        the guide's deny, the two top-level values and the mcp lane) to the
+#                        --author tree's own, and _common.sh's SM_BASELINE_TASK to the
+#                        --author tree's last _tasks entry (D81).
 #                        Together with shipped-seeds.sh checks 21–27, which hold
 #                        media's files to its manifest, it proves the vendored bytes are the
 #                        tag's. Against syntek-author's main (CI's advisory job) it reports the
 #                        drift the next adoption will take.
+#                    23. Once per run, media's copy over a syntek-author project without its
+#                        guide (the first kind's syntek-author render with how-to/ deleted and
+#                        committed, as a syntek-author older than v0.6.0 has none) succeeds and
+#                        prints D84's copy-time warning, naming
+#                        how-to/src/TEMPLATE-GUIDE/syntek-author/01-overview.md beside
+#                        .copier-answers.syntek-author.yml; check 19's copy over the full render
+#                        never prints it (Copier's own 'Running task' lines, which echo the
+#                        command, are left out of both).
+#                    24. In each composite, syntek-author's `make lint SCOPE=how-to/src` and
+#                        `make flags SCOPE=how-to/src` print no line naming a file under
+#                        media's chapters, how-to/src/TEMPLATE-GUIDE/syntek-media/ (DESIGN.md
+#                        Section 6.18; syntek-author D56). The output is parsed, never STRICT=1's
+#                        exit, which also counts syntek-author's own files and the shared
+#                        chapters. A named SKIP where the --author tree's VERSION is older than
+#                        0.6.0 or make is absent; a SKIP is never a pass.
+#                    25. In both orders (check 2's project and step 7's), after the copies and
+#                        again after both templates' updates: each hook entry (its event,
+#                        matcher and command) stands exactly once in .claude/settings.json;
+#                        each MCP server media's refresh data lists stands exactly once in
+#                        .mcp.json and in the MCP file of each client either answers file
+#                        records (.agents/mcp_config.json, .gemini/settings.json and
+#                        opencode.json at their JSON keys, .codex/config.toml as TOML tables),
+#                        where that file exists; and both templates' records,
+#                        refs/syntek-author/template and refs/syntek-media/template, stand side
+#                        by side (D81; syntek-author D51, D52).
 #
 #                   Without syntek-author (no --author, no SYNTEK_AUTHOR_DIR, no
 #                   ../syntek-author) the test prints a named SKIP and exits 0. A SKIP is never
@@ -104,7 +147,11 @@
 #                   the only writer of that file.
 #
 #                   Copier prints a MissingFileWarning on a fresh copy (the previous answers are
-#                   read through _external_data, D14). It is expected and never a finding.
+#                   read through _external_data, D14). It is expected and never a finding. Since
+#                   0.6.0 every copy runs the baseline task and every update the family update
+#                   script, on the Python that runs Copier (3.14, which _common.sh pins); over
+#                   syntek-author its own baseline adds its own entries to a media-first
+#                   settings.json, which is expected and no finding of checks 15 or 25.
 #
 #                   Numbers are stable identifiers. Append, never renumber.
 #
@@ -114,14 +161,17 @@
 #                   Nor that the --author tree IS the tag its manifest names: check 22 reads the
 #                   manifest's release, which syntek-author's own family-shared.sh check 1 ties
 #                   to its tags; a working tree that edits a family file without --write leaves
-#                   its manifest behind, which that audit, not this one, reports.
+#                   its manifest behind, which that audit, not this one, reports. Nor a copy over
+#                   a real syntek-author older than v0.6.0 through the whole flow, for which
+#                   check 23's render with its guide deleted stands in (DESIGN.md Section 11).
 #
 # SELF-TEST. --self-test runs the whole flow with the fixture syntek-author and the fixture
 #            media of _common.sh (no real syntek-author needed), proves the result clean, then
 #            mutates the result once per check and asserts exactly one finding each.
 #
-# Requirements: bash 4.3+, git, rsync, uvx (or COPIER_CMD), python3. Network on the first uvx
-#               run only. A syntek-author working tree for the real run.
+# Requirements: bash 4.3+, git, rsync, uvx (or COPIER_CMD), python3 3.14 or later, make (check
+#               24; without it a named SKIP). Network on the first uvx run only. A syntek-author
+#               working tree for the real run.
 #
 # Usage: coexist-test.sh [--root DIR] [--author DIR] [--brand-kind K[,K…]] [--refresh-names]
 #                        [--quiet] [--self-test] [--help]
@@ -187,6 +237,97 @@ S17_STATUS=0; S17_BACK=false; R_STATUS=0; R_WHAT=""; REV_A=0; REV_B=0
 A_OWNED=(); A_ALL=(); B_TOWNED=(); B_ALL=()
 A_TOP_NAMES=(); A_SKILL_NAMES=(); B_TOP_NAMES=(); B_SKILL_NAMES=()
 NAMES_DRIFT=""; FAMILY_DRIFT=""; GLOBAL=false
+C23_STATUS=0; C23_RAN=false; C24_SKIP=""
+MEDIA_CHAPTERS="how-to/src/TEMPLATE-GUIDE/syntek-media/"
+
+# Check 24: syntek-author's lint and flags over how-to/src in a composite, their output kept.
+capture_lint() { # $1 = project, $2 = out file
+  local t
+  : > "$2"
+  for t in lint flags; do
+    (cd "$1" && make --no-print-directory "$t" SCOPE=how-to/src 2>&1) >> "$2" || true
+  done
+}
+
+# Check 25: every hook entry and family server once, and both records, in one project. Prints
+# one problem per line. Servers: what media's refresh data lists; clients: what either answers
+# file records.
+c25_state() { # $1 = project, $2 = media's refresh data
+  local clients
+  clients="$( { answer_list AGENT_CLIENTS "$1/$SM_ANSWERS_FILE" 2>/dev/null; answer_list AGENT_CLIENTS "$1/$SM_AUTHOR_ANSWERS" 2>/dev/null; } | LC_ALL=C sort -u | paste -sd' ' -)"
+  C25_CLIENTS="$clients" python3 -I - "$1" "$2" <<'PYC25'
+import json, os, re, sys, tomllib
+proj, refresh = sys.argv[1], sys.argv[2]
+out = []
+try:
+    servers = json.load(open(refresh, encoding="utf-8"))["mcp"]["servers"]
+except Exception:
+    servers = []
+class Obj(dict):
+    pass
+def pairs(items):
+    d = Obj(items)
+    d.names = [k for k, _ in items]
+    return d
+def jload(path):
+    return json.load(open(path, encoding="utf-8"), object_pairs_hook=pairs)
+sp = os.path.join(proj, ".claude/settings.json")
+if os.path.isfile(sp):
+    try:
+        data = jload(sp)
+        seen = {}
+        for event, entries in (data.get("hooks") or {}).items():
+            for e in entries if isinstance(entries, list) else []:
+                for h in (e.get("hooks") or []) if isinstance(e, dict) else []:
+                    key = (event, e.get("matcher", ""), h.get("command", "") if isinstance(h, dict) else "")
+                    seen[key] = seen.get(key, 0) + 1
+        for (event, matcher, cmd), n in sorted(seen.items()):
+            if n > 1:
+                script = (re.findall(r"[A-Za-z0-9._-]+\.(?:sh|py)", cmd) or ["?"])[-1]
+                out.append(f".claude/settings.json holds the hook entry {event} {matcher or '(no matcher)'} ({script}) {n} times, not once")
+    except (OSError, ValueError) as err:
+        out.append(f".claude/settings.json does not parse ({err.__class__.__name__})")
+files = {".mcp.json": ["mcpServers"]}
+for c, (f, k) in {"antigravity": (".agents/mcp_config.json", ["mcpServers"]), "gemini-cli": (".gemini/settings.json", ["mcpServers"]),
+                  "codex": (".codex/config.toml", None), "opencode": ("opencode.json", ["mcp", "servers"])}.items():
+    if c in os.environ.get("C25_CLIENTS", "").split():
+        files[f] = k
+for f, keys in files.items():
+    path = os.path.join(proj, f)
+    if not os.path.isfile(path):
+        if f == ".mcp.json":
+            out.append(".mcp.json is missing")
+        continue
+    counts = {}
+    if keys is None:
+        text = open(path, encoding="utf-8").read()
+        try:
+            tomllib.loads(text)
+        except ValueError as err:
+            out.append(f"{f} does not parse as TOML ({str(err)[:80]}), as a server declared twice does not")
+        for name in servers:
+            counts[name] = len(re.findall(r'^\s*\[\s*mcp_servers\.(?:"%s"|%s)\s*\]' % (re.escape(name), re.escape(name)), text, re.M))
+    else:
+        try:
+            node = jload(path)
+        except (OSError, ValueError) as err:
+            out.append(f"{f} does not parse ({err.__class__.__name__})")
+            continue
+        for k in keys:
+            node = node.get(k) if isinstance(node, dict) else None
+        names = getattr(node, "names", []) if isinstance(node, dict) else []
+        for name in servers:
+            counts[name] = names.count(name)
+    for name, n in counts.items():
+        if n != 1:
+            out.append(f"{f} declares the server {name} {n} times, not once")
+print("\n".join(out))
+PYC25
+  local r
+  for r in refs/syntek-author/template refs/syntek-media/template; do
+    git -C "$1" show-ref --verify -q "$r" 2>/dev/null || printf '%s is missing: both templates record their render side by side\n' "$r"
+  done
+}
 
 # syntek-author's own doc-references.sh on a tree: its findings, sorted, in OUT; its exit
 # status in OUT.status ("missing" when syntek-author has no such audit).
@@ -228,7 +369,10 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   S17_STATUS=0; S17_BACK=false; R_STATUS=0; R_WHAT=""; REV_A=0; REV_B=0
   A_OWNED=(); A_ALL=(); B_TOWNED=(); B_ALL=()
   for f in pre-media.sha post-media.sha shared-after.sha a-changed.txt b-changed.txt a-again.txt \
-           b-again.txt r-changed.txt pre-remove.sha post-remove.sha b-added.txt b-copy.log; do : > "$w/$f"; done
+           b-again.txt r-changed.txt pre-remove.sha post-remove.sha b-added.txt b-copy.log \
+           lint.txt c25-copy.txt c25-update.txt c25-rev-copy.txt c25-rev-update.txt; do : > "$w/$f"; done
+  rm -f "$w/pre-settings.json" "$w/post-settings.json" "$w/settings-after.json"
+  C24_SKIP=""
   sm_snapshot "$AUTHOR_SRC" "$a" >>"$log" 2>&1 || die "could not snapshot $AUTHOR_SRC"
   sm_snapshot "$MEDIA_SRC" "$b" >>"$log" 2>&1 || die "could not snapshot $MEDIA_SRC"
   [[ ${#SM_COPIER[@]} -gt 0 ]] || copier_init
@@ -242,6 +386,7 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
     if [[ "$k" == O ]]; then A_OWNED+=("$p"); else A_ALL+=("$p"); fi
   done < <(owned_and_all "$PROJ" "$a/copier.yml" "$SM_AUTHOR_ANSWERS")
   hash_tree "$PROJ" > "$w/pre-media.sha"
+  [[ -f "$PROJ/.claude/settings.json" ]] && cp "$PROJ/.claude/settings.json" "$w/pre-settings.json"
   author_doc_references "$a" "$PROJ" "$w/dr-author.txt"
 
   # Media alone, for what it owns.
@@ -260,9 +405,21 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   sm_render "$b" "$PROJ" "$kind" "${agents_args[@]}" >"$w/b-copy.log" 2>&1 || B_COPY=$?
   cat "$w/b-copy.log" >> "$log"
   hash_tree "$PROJ" > "$w/post-media.sha"
+  [[ -f "$PROJ/.claude/settings.json" ]] && cp "$PROJ/.claude/settings.json" "$w/post-settings.json"
   LC_ALL=C comm -13 <(cut -f1 "$w/pre-media.sha" | LC_ALL=C sort) <(cut -f1 "$w/post-media.sha" | LC_ALL=C sort) > "$w/b-added.txt"
   sm_commit_all "$PROJ" 'syntek-media'
   author_doc_references "$a" "$PROJ" "$w/dr-composite.txt"
+  c25_state "$PROJ" "$b/$SM_REFRESH_DATA" > "$w/c25-copy.txt"
+  # Check 24: syntek-author's own lint and flags over the guide, where its release has them.
+  local av
+  av="$(tr -d '[:space:]' < "$a/VERSION" 2>/dev/null || true)"
+  if ! command -v make >/dev/null 2>&1; then
+    C24_SKIP="make is not installed"
+  elif [[ ! "$av" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "$(printf '%s\n' "$av" 0.6.0 | sort -V | head -1)" != 0.6.0 ]]; then
+    C24_SKIP="the --author tree's VERSION is '${av:-none}', older than 0.6.0, whose make lint and flags first read how-to/"
+  else
+    capture_lint "$PROJ" "$w/lint.txt"
+  fi
 
   # 3. Both templates move on; each project takes its own template's update.
   A_RULE=".claude/skills/run-workflow/SKILL.md"
@@ -276,6 +433,7 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   changed_paths "$PROJ" > "$w/a-changed.txt"; sm_commit_all "$PROJ" 'update syntek-author'
   sm_update "$PROJ" >>"$log" 2>&1 || B_UPDATE=$?
   changed_paths "$PROJ" > "$w/b-changed.txt"; sm_commit_all "$PROJ" 'update syntek-media'
+  c25_state "$PROJ" "$b/$SM_REFRESH_DATA" > "$w/c25-update.txt"
 
   # 4. Each again, with nothing changed. The shared files are fingerprinted between the two.
   sm_update_author "$PROJ" >>"$log" 2>&1 || A_AGAIN_STATUS=$?
@@ -287,6 +445,7 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
     # An if, never `[[ ]] &&`: a last path that is absent must not fail the pipeline (pipefail).
     if [[ -f "$PROJ/$p" || -L "$PROJ/$p" ]]; then printf '%s\t%s\n' "$p" "$(path_fingerprint "$PROJ/$p")"; fi
   done | LC_ALL=C sort > "$w/shared-after.sha"
+  [[ -f "$PROJ/.claude/settings.json" ]] && cp "$PROJ/.claude/settings.json" "$w/settings-after.json"
   sm_update "$PROJ" >>"$log" 2>&1 || B_AGAIN_STATUS=$?
   changed_paths "$PROJ" > "$w/b-again.txt"; sm_commit_all "$PROJ" 'update syntek-media again'
 
@@ -320,8 +479,36 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
     agents_args=()
     [[ -d "$w/rev/.agents" && ! -L "$w/rev/.agents" ]] && agents_args=(--exclude /.agents)
     sm_render_author "$a" "$w/rev" "$doc" "${agents_args[@]}" >>"$log" 2>&1 || REV_A=$?
+    if [[ "$REV_A" -eq 0 ]]; then
+      sm_commit_all "$w/rev" 'syntek-author second'
+      c25_state "$w/rev" "$b/$SM_REFRESH_DATA" > "$w/c25-rev-copy.txt"
+      # Both templates' updates there too, syntek-author first (D84), each committed.
+      sm_update_author "$w/rev" >>"$log" 2>&1 || true; sm_commit_all "$w/rev" 'update syntek-author'
+      sm_update "$w/rev" >>"$log" 2>&1 || true; sm_commit_all "$w/rev" 'update syntek-media'
+      c25_state "$w/rev" "$b/$SM_REFRESH_DATA" > "$w/c25-rev-update.txt"
+    fi
+  fi
+
+  # 8. Once per run: a syntek-author project without its guide (D84's copy-time warning).
+  if $GLOBAL; then
+    C23_RAN=true; C23_STATUS=0
+    if sm_render_author "$a" "$w/c23" "$doc" >"$w/c23-author.log" 2>&1; then
+      rm -rf "${w:?}/c23/how-to"
+      [[ -d "$w/c23/.git" ]] || sm_git "$w/c23" init -q
+      sm_commit_all "$w/c23" 'syntek-author, without its guide'
+      mapfile -t agents_args < <(sm_agents_copy_args "$w/c23")
+      sm_render "$b" "$w/c23" "$kind" "${agents_args[@]}" >"$w/c23-copy.log" 2>&1 || C23_STATUS=$?
+    else
+      C23_STATUS=-1
+    fi
   fi
   return 0
+}
+
+# A Copier log without Copier's own 'Running task' lines, which echo each task's command (and so
+# the copy-time warning's text, whether or not it printed).
+task_output() { # $1 = log
+  grep -v 'Running task' "$1" 2>/dev/null | copier_message_text /dev/stdin
 }
 
 in_list() { # $1 = path, $2 = file of paths → true when listed
@@ -359,6 +546,16 @@ run_checks() {
     while IFS= read -r f; do
       [[ -n "$f" ]] && finding "check 22 — $f"
     done <<< "$FAMILY_DRIFT"
+    # ── 23. The copy-time warning over a syntek-author without its guide (D84) ──
+    if $C23_RAN; then
+      if [[ "$C23_STATUS" -lt 0 ]]; then
+        finding "check 23 — syntek-author did not render for the project without its guide — see $W/c23-author.log"
+      elif [[ "$C23_STATUS" -ne 0 ]]; then
+        finding "check 23 — media's copy over a syntek-author project without its guide failed (exit $C23_STATUS) — see $W/c23-copy.log"
+      elif [[ "$(task_output "$W/c23-copy.log")" != *"$SM_AUTHOR_GUIDE_WARNING"* ]]; then
+        finding "check 23 — media's copy over a syntek-author project without $SM_AUTHOR_GUIDE_START printed no copy-time warning ('$SM_AUTHOR_GUIDE_WARNING'; DESIGN.md D84)"
+      fi
+    fi
   fi
 
   if [[ "$A_COPY" -ne 0 ]]; then finding "check 1 — $label syntek-author itself did not render (exit $A_COPY) — see $W/flow.log"; return 0; fi
@@ -391,11 +588,20 @@ run_checks() {
     [[ -n "$f" ]] && finding "check 7 — $label conflict left behind: $f"
   done < <(conflicts_in "$PROJ")
 
-  # ── 8. Media's copy changed no byte that was there ──────────────────────────
+  # ── 8. Media's copy changed no byte that was there, but the offered entries ──
+  # .claude/settings.json may gain the entries media's refresh data lists, once each (D81);
+  # any other difference there is a finding.
+  local offered="$MEDIA_SRC/$SM_REFRESH_DATA"
   while IFS=$'\t' read -r p h; do [[ -n "$p" ]] && pre["$p"]="$h"; done < "$W/pre-media.sha"
   while IFS=$'\t' read -r p h; do [[ -n "$p" ]] && post["$p"]="$h"; done < "$W/post-media.sha"
   if [[ "$B_COPY" -eq 0 ]]; then
     for p in "${!pre[@]}"; do
+      if [[ "$p" == .claude/settings.json && -f "$W/pre-settings.json" ]]; then
+        while IFS= read -r f; do
+          [[ -n "$f" ]] && finding "check 8 — $label media's copy changed syntek-author's .claude/settings.json beyond the entries its baseline task offers: $f (DESIGN.md D81)"
+        done < <(sm_settings_offered_only "$W/pre-settings.json" "$W/post-settings.json" "$offered")
+        continue
+      fi
       [[ "${post[$p]:-gone}" == "${pre[$p]}" ]] || finding "check 8 — $label media's copy changed syntek-author's $p"
     done
   fi
@@ -419,6 +625,18 @@ run_checks() {
   while IFS=$'\t' read -r p h; do [[ -n "$p" ]] && shared["$p"]="$h"; done < "$W/shared-after.sha"
   for p in $SM_SHARED; do
     want="${pre[$p]:-${post[$p]:-absent}}"
+    if [[ "$p" == .claude/settings.json && -f "$W/pre-settings.json" ]]; then
+      # syntek-author's settings file keeps its bytes but for the entries media's baseline task
+      # added once (D81), checked against what syntek-author's copy wrote.
+      if [[ ! -f "$W/settings-after.json" ]]; then
+        finding "check 12 — $label the shared path $p is gone after both updates"
+      else
+        while IFS= read -r f; do
+          [[ -n "$f" ]] && finding "check 12 — $label the shared path $p changed after both updates beyond the entries media's baseline task offered once: $f (DESIGN.md D81)"
+        done < <(sm_settings_offered_only "$W/pre-settings.json" "$W/settings-after.json" "$offered")
+      fi
+      continue
+    fi
     [[ "${shared[$p]:-absent}" == "$want" ]] || finding "check 12 — $label the shared path $p changed after both updates (existing author paths and newly filled media paths must be preserved)"
   done
 
@@ -463,6 +681,8 @@ run_checks() {
   while IFS= read -r missing; do
     [[ -n "$missing" ]] && finding "check 19 — $label media's copy output does not carry '$missing' (_message_after_copy, DESIGN.md D13)"
   done < <(message_missing_lines "$W/b-copy.log")
+  [[ "$(task_output "$W/b-copy.log")" == *"$SM_AUTHOR_GUIDE_WARNING"* ]] \
+    && finding "check 19 — $label media's copy over a syntek-author project that has its guide printed D84's copy-time warning, which it must print only where $SM_AUTHOR_GUIDE_START is missing"
 
   # ── 21. syntek-author's own audit, before and after ─────────────────────────
   local sa sc
@@ -477,6 +697,24 @@ run_checks() {
       [[ -n "$f" ]] && finding "check 21 — $label syntek-author's doc-references.sh reports on the composite only: ${f#· }"
     done < <(LC_ALL=C comm -13 "$W/dr-author.txt" "$W/dr-composite.txt")
   fi
+
+  # ── 24. syntek-author's lint and flags find nothing in media's chapters (D84) ──
+  if [[ -n "$C24_SKIP" ]]; then
+    skip_named "coexist-test.sh check 24 $label (make lint and flags over media's chapters)" "$C24_SKIP"
+  else
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && finding "check 24 — $label syntek-author's make lint or flags reports a line in media's chapters: ${f:0:200} (DESIGN.md Section 6.18)"
+    done < <(grep -F "$MEDIA_CHAPTERS" "$W/lint.txt" 2>/dev/null || true)
+  fi
+
+  # ── 25. Each hook entry and server once, both records, in both orders (D81) ──
+  local when
+  for when in copy update rev-copy rev-update; do
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && finding "check 25 — $label ($when) $f (DESIGN.md D81; syntek-author D51, D52)"
+    done < "$W/c25-$when.txt"
+  done
+  return 0
 }
 
 # ── --refresh-names ──────────────────────────────────────────────────────────
@@ -567,6 +805,12 @@ data["permissions"] = {"ask": [a for a in E["SMF_ASK"].splitlines() if a],
                        "deny": ["AskUserQuestion", "Edit(**/*.pdf)", "Edit(build/**)", "Edit(/how-to/**)"] + [d for d in E["SMF_DENY"].splitlines() if d]}
 data["hooks"] = json.loads(E["SMF_HOOKS"])
 seed.write_text(json.dumps(data, indent=2) + "\n")
+# D81: syntek-author's refresh data lists the family's entries as media's does; media's own
+# asks and denies stay media's.
+mine = json.loads((media / "migrations" / "family-refresh.json").read_text())
+theirs = json.loads(json.dumps(mine))
+theirs["template"] = "syntek-author"
+(author / "migrations" / "family-refresh.json").write_text(json.dumps(theirs, indent=2) + "\n")
 PYFIX
   sm_commit_all "$2" 'fixture: the family manifest and seed rules'
 }
@@ -614,6 +858,8 @@ STUB
   printf 'x\n' > "$PROJ/CONTEXT.md.rej"; probe "check 7 fires on a rejected hunk" "check 7"; rm -f "$PROJ/CONTEXT.md.rej"
   cp "$W/post-media.sha" "$h"; sed -i -E '0,/^README\.md\t/s/^(README\.md\t).*/\1changed/' "$W/post-media.sha"
   probe "check 8 fires when media's copy changes a byte that was there" "check 8 — [author-fiction] media's copy changed syntek-author's README.md"; cp "$h" "$W/post-media.sha"
+  cp "$W/post-settings.json" "$h"; sed -i 's/"model": "opus"/"model": "sonnet"/' "$W/post-settings.json"
+  probe "check 8 fires when media's copy changes a settings value it does not offer (D81)" "check 8 — [author-fiction] media's copy changed syntek-author's .claude/settings.json beyond the entries its baseline task offers: model changed"; cp "$h" "$W/post-settings.json"
   printf 'brand/src/design-system/tokens.css\n' >> "$W/a-changed.txt"
   probe "check 9 fires when syntek-author's update touches a media path" "check 9"; sed -i '$d' "$W/a-changed.txt"
   printf '.claude/MEMORY.md\n' >> "$W/b-changed.txt"
@@ -641,6 +887,30 @@ STUB
   printf '· check 1 — brand/CONTEXT.md cites a dead end\n' >> "$W/dr-composite.txt"
   probe "check 21 fires when syntek-author's audit reports something new on the composite" "check 21 — [author-fiction] syntek-author's doc-references.sh reports on the composite only"
   sed -i '$d' "$W/dr-composite.txt"
+  # 23: the warning over the render without its guide.
+  cp "$W/c23-copy.log" "$h"; grep -v 'older than v0.6.0' "$h" > "$W/c23-copy.log" || true
+  probe "check 23 fires when the copy-time warning is missing (D84)" "check 23 — media's copy over a syntek-author project without"; cp "$h" "$W/c23-copy.log"
+  cp "$W/b-copy.log" "$h"; printf 'syntek-media: %s.\n' "$SM_AUTHOR_GUIDE_WARNING" >> "$W/b-copy.log"
+  probe "check 19 fires when the copy over a full render prints the copy-time warning (D84)" "check 19 — [author-fiction] media's copy over a syntek-author project that has its guide printed"; cp "$h" "$W/b-copy.log"
+  # 24: a two-sentence line in a media chapter, read by the fixture's own make lint.
+  mkdir -p "$PROJ/$MEDIA_CHAPTERS"; printf '# A chapter\n\nOne sentence. Another sentence.\n' > "$PROJ/${MEDIA_CHAPTERS}01-overview.md"
+  capture_lint "$PROJ" "$W/lint.txt"
+  probe "check 24 fires on a lint finding in a media chapter (D84)" "check 24 — [author-fiction] syntek-author's make lint or flags reports a line in media's chapters"
+  rm -rf "${PROJ:?}/how-to/src/TEMPLATE-GUIDE/syntek-media"; capture_lint "$PROJ" "$W/lint.txt"
+  # 25: a duplicated hook entry, a duplicated server, a record gone.
+  local rev="$W/rev"
+  cp "$rev/.claude/settings.json" "$h"
+  python3 -I -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p)); d["hooks"]["PreToolUse"].append(d["hooks"]["PreToolUse"][0]); json.dump(d, open(p, "w"), indent=2)' "$rev/.claude/settings.json"
+  c25_state "$rev" "$MEDIA_SRC/$SM_REFRESH_DATA" > "$W/c25-rev-update.txt"
+  probe "check 25 fires on a hook entry that stands twice (D81)" "check 25 — [author-fiction] (rev-update) .claude/settings.json holds the hook entry PreToolUse"; cp "$h" "$rev/.claude/settings.json"
+  c25_state "$rev" "$MEDIA_SRC/$SM_REFRESH_DATA" > "$W/c25-rev-update.txt"
+  cp "$PROJ/.mcp.json" "$h"; sed -i 's/{"mcpServers": {/{"mcpServers": {"scrapling": {}, /' "$PROJ/.mcp.json"
+  c25_state "$PROJ" "$MEDIA_SRC/$SM_REFRESH_DATA" > "$W/c25-update.txt"
+  probe "check 25 fires on a server declared twice (D81)" "check 25 — [author-fiction] (update) .mcp.json declares the server scrapling 2 times"; cp "$h" "$PROJ/.mcp.json"
+  git -C "$PROJ" update-ref -d refs/syntek-media/template
+  c25_state "$PROJ" "$MEDIA_SRC/$SM_REFRESH_DATA" > "$W/c25-update.txt"
+  probe "check 25 fires when media's record is missing (D81)" "check 25 — [author-fiction] (update) refs/syntek-media/template is missing"
+  c25_state "$rev" "$MEDIA_SRC/$SM_REFRESH_DATA" > "$W/c25-rev-update.txt"; : > "$W/c25-update.txt"
   # 22: the comparison runs for real on the fixture manifests and seed, once per mutation.
   local am="$tmp/author/family-shared.json" seed="$tmp/author/template/.claude/settings.json"
   cp "$am" "$tmp/manifest.held"; cp "$seed" "$tmp/seed.held"
@@ -670,6 +940,16 @@ STUB
   FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
   probe "check 22 fires on a family block a later tag adds, which nothing defers since D81" "check 22 — the --author tree's family-shared.json lists the later block"
   cp "$tmp/manifest.held" "$am"
+  local ar="$tmp/author/$SM_REFRESH_DATA" ac="$tmp/author/copier.yml"
+  cp "$ar" "$tmp/refresh.held"; cp "$ac" "$tmp/copier.held"
+  python3 -I -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p)); d["refresh"].append("how-to/new-shared.md"); json.dump(d, open(p, "w"), indent=2)' "$ar"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
+  probe "check 22 fires when the two templates' refresh lists drift (D81)" "check 22 — media's migrations/family-refresh.json lists refresh"
+  cp "$tmp/refresh.held" "$ar"
+  sed -i 's/ baseline --src / baseline --quiet --src /' "$ac"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
+  probe "check 22 fires when syntek-author's baseline task drifts from the one media transcribes (D81)" "check 22 — _common.sh's SM_BASELINE_TASK is not the --author tree's last _tasks entry"
+  cp "$tmp/copier.held" "$ac"
   FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
   probe_clean "the fixtures share the project cleanly again once every mutation is undone"
 

@@ -25,7 +25,7 @@
 #                    hold the files, the four blocks and the renders to that record (since
 #                    0.6.0 forty-three files from syntek-author's v0.7.0, D81, D84).
 #
-#                    Twenty-nine checks:
+#                    Thirty-one checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
 #                         _skip_if_exists.
 #                      2. Every _skip_if_exists entry names a file under template/.
@@ -189,9 +189,36 @@
 #                         client has nothing to check (exit 0). The script needs Python 3.14
 #                         since its v0.6.0 bytes (D81) and exits 2 below it, which _common.sh's
 #                         pin refuses before anything runs.
+#                     30. copier.yml's _tasks does not end with syntek-author's copy-only
+#                         baseline task, line for line as _common.sh's SM_BASELINE_TASK
+#                         transcribes it from the tag (family-update.py baseline through
+#                         _copier_python; D81, on the model of syntek-author's family-shared.sh
+#                         check 14), or the entry before it is not D84's copy-time warning (a
+#                         copy-only task testing .copier-answers.syntek-author.yml and
+#                         how-to/src/TEMPLATE-GUIDE/syntek-author/01-overview.md at run time), or
+#                         media's three tasks (the repository, the hooks' mode, the LFS
+#                         tripwire) do not come first. One finding per fault: a changed baseline
+#                         line still marks the baseline's place.
+#                     31. migrations/family-refresh.json, media's own refresh data (D81, D84),
+#                         is missing, is not JSON, or does not hold "format": 1 and "template":
+#                         "syntek-media", without which every lane of the update script is off;
+#                         or its refresh is not exactly the twenty-seven family-shared files
+#                         (SM_REFRESH_PATHS), or its restore not exactly ["how-to"]; or a hook
+#                         entry under settings names no shared hook in .claude/hooks/ that
+#                         SM_FAMILY_SHARED lists and family-shared.json records at mode 755, so
+#                         the data-root guard, which names none, is never listed (syntek-author's
+#                         family-shared.sh check 15); or a listed hook, rule or top-level value
+#                         is not one D81 lists (SM_REFRESH_HOOKS, _DENY, _ASK, _TOP: never the six
+#                         allows, never "model"), or one D81 lists is missing; or a listed entry
+#                         D81 does not list is not in the seed either (an entry is offered only
+#                         where the new render holds it); or its mcp lane is not the two servers
+#                         and the five files at their keys, never .claude/mcp_config.json (D76).
+#                         A listed entry D81 lists that the seed lacks is check 12's finding,
+#                         never this one's. A one-way door: an entry 0.6.0 lists reaches every
+#                         project and cannot be withdrawn.
 #
-#                    Checks 1–4, 8 and 16–26 read copier.yml, template/, migrations/, rules 06
-#                    and family-shared.json (static, once; checks 21 and 25 also read Git's
+#                    Checks 1–4, 8, 16–26, 30 and 31 read copier.yml, template/, migrations/,
+#                    rules 06 and family-shared.json (static, once; checks 21 and 25 also read Git's
 #                    index). Checks 5–7, 9, 11–15 and 28 read every tree given — template/ by
 #                    default, or renders — and skip a seed the tree does not ship; checks 10,
 #                    27 and 29 read the renders only.
@@ -547,6 +574,198 @@ static_checks() {
 
   # ── 23–26. The manifest and what it records (D80): reported here, in number order ──
   for line in "${fam_findings[@]}"; do finding "$line"; done
+
+  # ── 30 and 31. D81's offers: the baseline task last, and the refresh data ──
+  offers_checks
+}
+
+# 30. _tasks: media's three, then D84's copy-time warning, then syntek-author's baseline task,
+# line for line as _common.sh transcribes it from the tag (D81, D84). One finding per fault:
+# the baseline task changed or missing, or not last; the warning missing from its place; the
+# three media tasks not first.
+tasks_entries() { # $1 = copier.yml → one entry per record, its non-comment lines joined by \n, NUL-ended
+  awk '
+    /^_tasks:/ { on = 1; next }
+    on && /^[A-Za-z_]/ { exit }
+    !on { next }
+    /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    /^  - / { if (n++) printf "%s%c", buf, 0; buf = $0; next }
+    { buf = buf "\n" $0 }
+    END { if (n) printf "%s%c", buf, 0 }' "$1"
+}
+
+offers_checks() {
+  local -a ent=()
+  local e i n base=-1 warn
+  while IFS= read -r -d '' e; do ent+=("$e"); done < <(tasks_entries "$COPIER")
+  n=${#ent[@]}
+  for ((i = 0; i < n; i++)); do [[ "${ent[$i]}" == "$SM_BASELINE_TASK" ]] && base=$i; done
+  if [[ "$base" -lt 0 ]]; then
+    finding "check 30 — _tasks holds no entry equal, line for line, to syntek-author's baseline task as _common.sh transcribes it from $SM_FAMILY_RELEASE ($SM_UPDATE_MIGRATION baseline through _copier_python, copy only): it is taken byte for byte and never edited here (DESIGN.md D81; syntek-author D51, D52)"
+  elif [[ "$base" -ne $((n - 1)) ]]; then
+    finding "check 30 — syntek-author's baseline task is _tasks entry $((base + 1)) of $n, not the last: it must run after every other task, on the repository task 1 made and the files the copy kept (DESIGN.md D81)"
+  fi
+  # A changed baseline line is still the baseline's place: the warning is the entry before it.
+  local at=$base
+  if [[ "$at" -lt 0 ]]; then
+    at=$n
+    for ((i = 0; i < n; i++)); do [[ "${ent[$i]}" == *"/$SM_UPDATE_MIGRATION\" baseline"* ]] && at=$i; done
+  fi
+  warn=$((at - 1))
+  if [[ "$warn" -lt 0 || "${ent[$warn]}" != *"$SM_AUTHOR_ANSWERS"* || "${ent[$warn]}" != *"$SM_AUTHOR_GUIDE_START"* \
+      || "${ent[$warn]}" != *"_copier_operation == 'copy'"* ]]; then
+    finding "check 30 — the _tasks entry before the baseline task is not D84's copy-time warning, a copy-only task that tests $SM_AUTHOR_ANSWERS and $SM_AUTHOR_GUIDE_START at run time (DESIGN.md D84, D81)"
+  elif [[ "$warn" -ne 3 || "${ent[0]}" != *"git init"* || "${ent[1]}" != *"chmod +x .claude/hooks"* || "${ent[2]}" != *"filter.lfs"* ]]; then
+    finding "check 30 — _tasks does not open with media's three tasks (the repository, the hooks' mode, the LFS tripwire) before D84's warning and the baseline task (DESIGN.md Section 3.5, D81)"
+  fi
+
+  # 31. migrations/family-refresh.json, media's own refresh data (D81, D84).
+  local line
+  while IFS= read -r line; do
+    if [[ -n "$line" ]]; then finding "check 31 — $SM_REFRESH_DATA $line"; fi
+  done < <(SR_PATHS="$SM_REFRESH_PATHS" SR_RESTORE="$SM_REFRESH_RESTORE" SR_TEMPLATE="$SM_REFRESH_TEMPLATE" \
+    SR_TOP="$(printf '%s\n' "${SM_REFRESH_TOP[@]}")" SR_DENY="$(printf '%s\n' "${SM_REFRESH_DENY[@]}")" \
+    SR_ASK="$(printf '%s\n' "${SM_REFRESH_ASK[@]}")" SR_HOOKS="$SM_REFRESH_HOOKS" \
+    SR_SERVERS="$SM_REFRESH_MCP_SERVERS" SR_FILES="$SM_REFRESH_MCP_FILES" SR_FAMILY="$SM_FAMILY_SHARED" \
+    python3 -I - "$SM_ROOT/$SM_REFRESH_DATA" "$TPL/.claude/settings.json" "$SM_ROOT/$SM_FAMILY_MANIFEST" <<'PYREFRESH'
+import json, os, re, sys
+E = os.environ
+path, seed_path, man_path = sys.argv[1:4]
+out = []
+def say(text):
+    out.append(text)
+def done():
+    print("\n".join(out))
+    sys.exit(0)
+try:
+    data = json.load(open(path, encoding="utf-8"))
+except FileNotFoundError:
+    say("is missing: without it every lane of the update script is off, and nothing is refreshed, offered or restored (DESIGN.md D81)")
+    done()
+except (OSError, ValueError) as err:
+    say(f"is not JSON ({err.__class__.__name__}): every lane of the update script is then off (DESIGN.md D81)")
+    done()
+if not isinstance(data, dict) or data.get("format") != 1 or type(data.get("format")) is not int or data.get("template") != E["SR_TEMPLATE"]:
+    say(f"does not hold \"format\": 1 and \"template\": \"{E['SR_TEMPLATE']}\": the update script reads it as no refresh data, so every lane is off (DESIGN.md D81; syntek-author D48)")
+    done()
+want_paths = E["SR_PATHS"].split()
+if data.get("refresh") != want_paths:
+    have = data.get("refresh") if isinstance(data.get("refresh"), list) else []
+    miss = [p for p in want_paths if p not in have]
+    extra = [str(p) for p in have if p not in want_paths]
+    say(f"refresh is not exactly the twenty-seven family-shared files syntek-author lists, in its order (missing: {', '.join(miss) or 'none'}; "
+        f"extra: {', '.join(extra) or 'none'}): a listed file reaches every project and cannot be withdrawn (DESIGN.md D81, D84)")
+if data.get("restore") != [E["SR_RESTORE"]]:
+    say(f"restore is {json.dumps(data.get('restore'))}, not [\"{E['SR_RESTORE']}\"]: the update restores the read-only guide folder and nothing else (DESIGN.md D84)")
+# The seed's own lists are check 12's and its parse check 13's: an entry D81 lists that the seed
+# lacks is check 12's finding, so this check reports only a listed entry D81 does not list.
+try:
+    seed = json.load(open(seed_path, encoding="utf-8"))
+except (OSError, ValueError):
+    seed = None
+seed_ok = isinstance(seed, dict)
+seed = seed if seed_ok else {}
+shipped = set()
+for line in E["SR_FAMILY"].splitlines():
+    f = line.split()
+    if f and len(f) == 2 and f[0].startswith(".claude/hooks/") and f[0].endswith(".sh"):
+        shipped.add(f[0])
+try:
+    man = json.load(open(man_path, encoding="utf-8"))
+    modes = {e.get("path"): e.get("mode") for e in man.get("files", []) if isinstance(e, dict)}
+except (OSError, ValueError, AttributeError):
+    modes = None   # check 23's
+settings = data.get("settings") if isinstance(data.get("settings"), dict) else {}
+# Hooks: each listed entry names a shipped hook at mode 755, stands in the seed, and is one D81 lists.
+want_hooks = json.loads(E["SR_HOOKS"])
+seed_hooks = seed.get("hooks") if isinstance(seed.get("hooks"), dict) else {}
+hooks = settings.get("hooks") if isinstance(settings.get("hooks"), dict) else {}
+for event, entries in sorted(hooks.items()):
+    for entry in entries if isinstance(entries, list) else []:
+        cmds = [h.get("command", "") for h in entry.get("hooks", []) if isinstance(h, dict)] if isinstance(entry, dict) else []
+        scripts = sorted({m for c in cmds for m in re.findall(r"\.claude/hooks/[A-Za-z0-9._-]+\.sh", c)})
+        label = f"{event} {entry.get('matcher', '(no matcher)') if isinstance(entry, dict) else '?'}"
+        bad = [s for s in scripts if s not in shipped or (modes is not None and modes.get(s) != "755")]
+        if not scripts or bad:
+            say(f"lists the hook entry {label}, which names no shared hook in .claude/hooks/ that ships at mode 755 "
+                f"({', '.join(bad) or 'it names no script there'}): the data-root guard is never listed, so it reaches new copies only "
+                "(DESIGN.md D81; syntek-author's family-shared.sh check 15)")
+        elif entry in (want_hooks.get(event) or []):
+            pass   # wanted: where the seed lacks it, check 12 says so
+        elif seed_ok and entry not in (seed_hooks.get(event) or []):
+            say(f"lists the hook entry {label}, which the seed's hooks do not hold as written: an entry is offered only where the new render holds it (DESIGN.md D13, D81)")
+        else:
+            say(f"lists the hook entry {label}, which D81 does not list (DESIGN.md D81)")
+for event, entries in sorted(want_hooks.items()):
+    for entry in entries:
+        if entry not in (hooks.get(event) or []):
+            say(f"does not list the hook entry {event} {entry.get('matcher', '(no matcher)')}, which D81 offers (DESIGN.md D81, D84)")
+# Permission rules: deny and ask only, each in the seed, exactly D81's.
+perms = settings.get("permissions") if isinstance(settings.get("permissions"), dict) else {}
+seed_perms = seed.get("permissions") if isinstance(seed.get("permissions"), dict) else {}
+for kind in sorted(perms):
+    if kind not in ("deny", "ask"):
+        say(f"lists permissions.{kind}, which D81 never offers (the six allows are given by hand; DESIGN.md D13, D81)")
+for kind, env in (("deny", "SR_DENY"), ("ask", "SR_ASK")):
+    want = [w for w in E[env].splitlines() if w]
+    have = perms.get(kind) if isinstance(perms.get(kind), list) else []
+    for rule in have:
+        if rule in want:
+            continue   # wanted: where the seed lacks it, check 12 says so
+        if seed_ok and rule not in (seed_perms.get(kind) or []):
+            say(f"lists the {kind} rule {rule}, which the seed does not hold: an entry is offered only where the new render holds it (DESIGN.md D13, D81)")
+        else:
+            say(f"lists the {kind} rule {rule}, which D81 does not list (DESIGN.md D81)")
+    for rule in want:
+        if rule not in have:
+            say(f"does not list the {kind} rule {rule}, which D81 offers (DESIGN.md D13, D81)")
+    # D13's order, each rule once (VEND-14): the order of _common.sh's lists, which check 12
+    # holds the seed to, so a fault in the seed itself stays check 12's alone.
+    if set(have) == set(want) and have != want:
+        say(f"lists its {kind} rules out of D13's order, or one twice: they are listed once each, in the seed's order (DESIGN.md D13, D81)")
+# Top-level values: exactly the seed's two, never "model".
+want_top = {}
+for kv in [t for t in E["SR_TOP"].splitlines() if t]:
+    k, v = kv.split("=", 1)
+    want_top[k] = json.loads(v)
+for k in sorted(settings):
+    if k in ("hooks", "permissions"):
+        continue
+    if k not in want_top:
+        why = "the model is the owner's to choose" if k == "model" else "only the two compaction values are listed"
+        say(f"lists the top-level value {k}, which D81 never offers ({why}; DESIGN.md D81)")
+    elif settings[k] != want_top[k]:
+        say(f"lists {k} as {json.dumps(settings[k])}, not {json.dumps(want_top[k])}, the value the seed holds (DESIGN.md D13, D81)")
+for k in want_top:
+    if k not in settings:
+        say(f"does not list the top-level value {k}, which D81 offers (DESIGN.md D81)")
+# The MCP lane: the two servers, the five files at their keys, never .claude/mcp_config.json.
+mcp = data.get("mcp") if isinstance(data.get("mcp"), dict) else {}
+servers = E["SR_SERVERS"].split()
+if mcp.get("servers") != servers:
+    say(f"mcp.servers is {json.dumps(mcp.get('servers'))}, not {json.dumps(servers)} (DESIGN.md D81)")
+want_files = {}
+for line in E["SR_FILES"].splitlines():
+    if line.strip():
+        f, keys = line.split("\t")
+        want_files[f] = keys.split(".")
+files = mcp.get("files") if isinstance(mcp.get("files"), dict) else {}
+for f in sorted(files):
+    if f == ".claude/mcp_config.json":
+        say("mcp.files names .claude/mcp_config.json, the retired Antigravity path that ships no more: the servers go to .agents/mcp_config.json (DESIGN.md D76, D81)")
+    elif f not in want_files:
+        say(f"mcp.files names {f}, which D81 does not list (DESIGN.md D81)")
+    elif files[f] != want_files[f]:
+        say(f"mcp.files gives {f} the key {json.dumps(files[f])}, not {json.dumps(want_files[f])} (DESIGN.md D81)")
+for f in want_files:
+    if f not in files:
+        say(f"mcp.files does not name {f}, which D81 lists (DESIGN.md D81)")
+for k in sorted(data):
+    if k not in ("format", "template", "refresh", "restore", "settings", "mcp"):
+        say(f"holds the key {k}, which syntek-author D48's format does not (DESIGN.md D81)")
+done()
+PYREFRESH
+  )
 }
 
 json_check() { # $1 = mode (settings|parse), $2 = file → prints one problem per line
@@ -806,7 +1025,31 @@ write_fixture() { # $1 = repo root
     printf '  - version: %s\n    command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_VERSION" "$SM_D76_MIGRATION" "$q" "$q"
     # The family update block (D81), byte for byte the tag's, closing _migrations.
     sm_family_update_block
+    # _tasks (D81, D84): stand-ins for media's three, D84's copy-time warning, then the
+    # baseline task exactly as _common.sh transcribes it.
+    printf '_tasks:\n  - command: "[ -d .git ] || git init --initial-branch=main"\n    when: "<%% _copier_operation == %scopy%s %%>"\n' "$q" "$q"
+    printf '  - command: "chmod +x .claude/hooks/*.sh 2>/dev/null || true"\n    when: "<%% _copier_operation == %scopy%s %%>"\n' "$q" "$q"
+    printf '  - command: "git config --get filter.lfs.process || git config filter.lfs.required true"\n    when: "<%% _copier_operation == %scopy%s %%>"\n' "$q" "$q"
+    printf '  - command: >-\n      [ ! -f %s ] || [ -f %s ] || echo %sa fixture warning%s\n    when: "<%% _copier_operation == %scopy%s %%>"\n' \
+      "$SM_AUTHOR_ANSWERS" "$SM_AUTHOR_GUIDE_START" "$q" "$q" "$q" "$q"
+    printf '%s\n' "$SM_BASELINE_TASK"
   } > "$r/copier.yml"
+  # The refresh data (D81), from the lists check 31 holds the real one to.
+  SR_PATHS="$SM_REFRESH_PATHS" SR_TOP="$(printf '%s\n' "${SM_REFRESH_TOP[@]}")" SR_HOOKS="$SM_REFRESH_HOOKS" \
+  SR_DENY="$(printf '%s\n' "${SM_REFRESH_DENY[@]}")" SR_ASK="$(printf '%s\n' "${SM_REFRESH_ASK[@]}")" \
+  SR_SERVERS="$SM_REFRESH_MCP_SERVERS" SR_FILES="$SM_REFRESH_MCP_FILES" \
+  python3 -I - "$r/$SM_REFRESH_DATA" "$SM_REFRESH_TEMPLATE" "$SM_REFRESH_RESTORE" <<'PYFIX'
+import json, os, sys
+E = os.environ
+top = {kv.split("=", 1)[0]: json.loads(kv.split("=", 1)[1]) for kv in E["SR_TOP"].splitlines() if kv}
+files = {l.split("\t")[0]: l.split("\t")[1].split(".") for l in E["SR_FILES"].splitlines() if l.strip()}
+data = {"format": 1, "template": sys.argv[2], "refresh": E["SR_PATHS"].split(), "restore": [sys.argv[3]],
+        "settings": dict(top, hooks=json.loads(E["SR_HOOKS"]),
+                         permissions={"deny": E["SR_DENY"].splitlines(), "ask": E["SR_ASK"].splitlines()}),
+        "mcp": {"servers": E["SR_SERVERS"].split(), "files": files}}
+os.makedirs(os.path.dirname(sys.argv[1]), exist_ok=True)
+open(sys.argv[1], "w").write(json.dumps(data, indent=2) + "\n")
+PYFIX
   for s in $SM_SHARED $SM_SEEDS; do
     [[ "$s" == .agents || "$s" == .agents/skills ]] && continue
     mkdir -p "$(dirname "$t/$s")"; printf '# %s\n' "${s##*/}" > "$t/$s"
@@ -1044,7 +1287,7 @@ self_test() {
     '$0 == "# BEGIN family-shared update (D48)" { print e } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
   probe "check 20 fires on an unversioned entry between the pair and the update entry" "check 20 — an unversioned _migrations entry runs $SM_D76_MIGRATION"
   printf '  - version: v9.9.9\n    command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_MIGRATION" "'" "'" > "$tmp/extra"
-  cat "$tmp/c" "$tmp/extra" > "$COPIER"; SM_SETS_FOR=""
+  awk -v x="$tmp/extra" '/^_tasks:/ { while ((getline l < x) > 0) print l } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
   probe "check 20 fires when the family update entry is not last (D81)" "check 20 — _migrations does not close with the family 'update' block's one entry"
   cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
   # 21: one byte of the vendored script; then its mode, outside a Git work tree (the executable
@@ -1121,6 +1364,31 @@ self_test() {
   cp "$tmp/manifest.held" "$m"
   printf '{"format": 1, "folders": [{"path": "production/src/footage/raw"}]}\n' > "$t/$SM_DATAROOT_MAP"
   probe "check 28 fires when the data-root map claims a folder" "check 28 — $SM_DATAROOT_MAP is not exactly"; printf '{"format": 1, "folders": []}\n' > "$t/$SM_DATAROOT_MAP"
+
+  # 30: the baseline task last, line for line, after D84's warning (D81, D84).
+  cp "$COPIER" "$tmp/c"
+  printf '  - command: "true"\n    when: "<%% _copier_operation == %scopy%s %%>"\n' "'" "'" >> "$COPIER"; SM_SETS_FOR=""
+  probe "check 30 fires when the baseline task is not last (D81)" "check 30 — syntek-author's baseline task is _tasks entry 5 of 6, not the last"
+  sed 's/ baseline --src / baseline  --src /' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 30 fires when a byte of the baseline task changes (D81)" "check 30 — _tasks holds no entry equal, line for line, to syntek-author's baseline task"
+  awk '/^  - command: >-$/ { skip = 2; next } skip { skip--; next } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 30 fires when D84's copy-time warning is missing (D84)" "check 30 — the _tasks entry before the baseline task is not D84's copy-time warning"
+  cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
+  # 31: the refresh data (D81, D84), one fault each.
+  f="$tmp/$SM_REFRESH_DATA"; cp "$f" "$tmp/refresh.held"
+  rr() { python3 -I -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); $1; json.dump(d, open(p, 'w'), indent=2)" "$f"; }
+  rr 'd["format"] = 2';                                    probe "check 31 fires when the refresh data is not format 1" "check 31 — $SM_REFRESH_DATA does not hold \"format\": 1"; cp "$tmp/refresh.held" "$f"
+  rr 'd["refresh"].remove(".claude/skills/wayfinder/SKILL.md")'; probe "check 31 fires when a refresh path is dropped" "check 31 — $SM_REFRESH_DATA refresh is not exactly the twenty-seven"; cp "$tmp/refresh.held" "$f"
+  rr 'd["restore"] = ["how-to", "handoffs"]';              probe "check 31 fires when restore names more than how-to (D84)" "check 31 — $SM_REFRESH_DATA restore is"; cp "$tmp/refresh.held" "$f"
+  rr 'd["settings"]["hooks"]["PreToolUse"].insert(0, [e for e in json.load(open(sys.argv[1].replace("migrations/family-refresh.json", "template/.claude/settings.json")))["hooks"]["PreToolUse"] if "dataroot" in json.dumps(e)][0])'
+  probe "check 31 fires when the data-root guard is listed (D81)" "check 31 — $SM_REFRESH_DATA lists the hook entry PreToolUse Edit|Write|MultiEdit|NotebookEdit|Grep|Glob, which names no shared hook"; cp "$tmp/refresh.held" "$f"
+  rr 'd["settings"]["permissions"]["deny"].append("Edit(**/drafts/**)")'; probe "check 31 fires when a listed rule is not in the seed (D81)" "check 31 — $SM_REFRESH_DATA lists the deny rule Edit(**/drafts/**), which the seed does not hold"; cp "$tmp/refresh.held" "$f"
+  rr 'd["mcp"]["files"][".claude/mcp_config.json"] = ["mcpServers"]'; probe "check 31 fires when the mcp lane names .claude/mcp_config.json (D76)" "check 31 — $SM_REFRESH_DATA mcp.files names .claude/mcp_config.json"; cp "$tmp/refresh.held" "$f"
+  rr 'd["settings"]["permissions"]["ask"].append(d["settings"]["permissions"]["ask"].pop(0))'
+  probe "check 31 fires when the asks are out of the seed's order (VEND-14)" "check 31 — $SM_REFRESH_DATA lists its ask rules out of D13's order"; cp "$tmp/refresh.held" "$f"
+  rr 'd["settings"]["model"] = "opus"';                    probe "check 31 fires when the refresh data lists the model (D81)" "check 31 — $SM_REFRESH_DATA lists the top-level value model"; cp "$tmp/refresh.held" "$f"
+  unset -f rr
+  probe_clean "the baseline task last and the refresh data in shape"
 
   # 10 and 27: a render of the fixture, whose family files must keep the recorded bytes.
   local rt="$tmp/render"; cp -a "$t" "$rt"; TREE="$rt"; load_owned "$TREE"

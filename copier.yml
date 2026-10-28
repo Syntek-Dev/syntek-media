@@ -1518,13 +1518,14 @@ _message_before_update: |
 # the clients ticked in AGENT_CLIENTS, with Section 8's hand edits 2 and 3: the optional index
 # lines, and nothing to add to .gitignore or .mcp.json. Since 0.6.0 the family questions block
 # takes syntek-author's recorded clients over syntek-author (D81), so no static advice on
-# matching them stands here; (2) the allow, ask and Edit deny entries for an existing
-# settings.json that are media's own, exactly as the standalone seed holds them, then
-# syntek-author's entries, byte for byte as its v0.7.0 seed holds them: "idleCompaction":
-# false, the family's eight asks, the guide's Edit(/how-to/**) deny and the embed_graph_tool
-# deny, and its hooks object (the four handoff-hook entries, SessionStart compact among them,
-# the data-root guard and the guide guard), for a settings file that syntek-author v0.7.0 or
-# later did not seed (syntek-author's update never adds the data-root guard to an older one),
+# matching them stands here; (2) since 0.6.0 (D81) the six allows, which no lane offers, to
+# add by hand to an existing settings.json; the entries migrations/family-refresh.json lists
+# (the two compaction values, media's eleven asks and syntek-author D54's eight, the five denies,
+# the guide's Edit(/how-to/**) among them, and the handoff-hook and guide-guard entries of the
+# seed's hooks object) by hand only where the copy's baseline task printed, framed in lines of
+# =, that family-update did NOT run (a Python older than 3.14) or the copy took --skip-tasks,
+# since on 3.14 that task offers them to the file the copy kept; and the data-root guard, which
+# no lane offers, for a settings file that lacks it (syntek-author's update never adds it either);
 # then the permissions script's --write, which carries the asks and denies to the other
 # clients' files (D80; syntek-author D49); (3) the ElevenLabs line, with the rule that its base
 # path must contain the project; (4) the LFS tripwire's write to this repository's
@@ -1577,18 +1578,26 @@ _message_after_copy: |
      .claude, Codex's sandbox fails on it. Follow the bridge's setup steps for missing files,
      a real folder or manual integration of an existing .agents.
 
-  2. Permissions. If .claude/settings.json was skipped, add these entries to it by hand.
-     Under "permissions", in "allow" (syntek-author's settings already allow the last two):
+  2. Permissions. If .claude/settings.json was skipped, add these to its "permissions", in
+     "allow", by hand: no copy or update offers them (syntek-author's settings already allow
+     the last two):
        "Bash(python3 toolkit/*.py *)",
        "Bash(uv run toolkit/*.py *)",
        "Bash(ffmpeg *)",
        "Bash(ffprobe *)",
        "WebSearch",
        "WebFetch"
-     and in "ask" (every ElevenLabs tool that spends credits; the server marks each one
-     read-only, so only an ask rule makes Claude Code stop and ask; and voice remix run, the
-     one ElevenLabs call the toolkit makes itself, which the toolkit allow above would
-     otherwise let run unprompted, D82 and D66):
+     The copy's last task offered the seed's other entries to the file you kept, once each, and
+     every update offers any it still lacks, never removing or changing one of yours. Only if a
+     message above, framed in lines of =, says family-update did NOT run (Copier ran on a
+     Python older than 3.14), or this copy ran with --skip-tasks, add them by hand too.
+     At the top level:
+       "autoCompactEnabled": false,
+       "idleCompaction": false
+     In "ask" (every ElevenLabs tool that spends credits; the server marks each one read-only,
+     so only an ask rule makes Claude Code stop and ask; voice remix run, the one ElevenLabs
+     call the toolkit makes itself, which the toolkit allow above would otherwise let run
+     unprompted, D82 and D66; then the family's Scrapling and code-review-graph tools):
        "mcp__elevenlabs__text_to_speech",
        "mcp__elevenlabs__speech_to_text",
        "mcp__elevenlabs__compose_music",
@@ -1599,16 +1608,7 @@ _message_after_copy: |
        "mcp__elevenlabs__text_to_voice",
        "mcp__elevenlabs__create_voice_from_preview",
        "Bash(python3 toolkit/media.py voice remix run *)",
-       "Bash(uv run toolkit/media.py voice remix run *)"
-     and in "deny" (so nothing in a generated or renders folder is edited by hand):
-       "Edit(**/generated/**)",
-       "Edit(**/renders/**)"
-     The seed's other entries are syntek-author's, byte for byte, and a settings.json that
-     syntek-author v0.7.0 or later seeded holds them already. Add them to any other, since
-     .mcp.json and each client's file declare the Scrapling and code-review-graph servers and
-     every file under how-to/ is read-only. At the top level:
-       "idleCompaction": false
-     In "ask":
+       "Bash(uv run toolkit/media.py voice remix run *)",
        "mcp__scrapling__stealthy_fetch",
        "mcp__scrapling__bulk_stealthy_fetch",
        "mcp__scrapling__open_session",
@@ -1617,14 +1617,18 @@ _message_after_copy: |
        "mcp__scrapling__bulk_fetch",
        "mcp__code-review-graph__apply_refactor_tool",
        "mcp__code-review-graph__generate_wiki_tool"
-     in "deny" (the first keeps the user guide under how-to/ read-only):
+     In "deny" (nothing in a generated or renders folder is edited by hand, and every file
+     under how-to/ is read-only):
+       "AskUserQuestion",
+       "Edit(**/generated/**)",
+       "Edit(**/renders/**)",
        "Edit(/how-to/**)",
        "mcp__code-review-graph__embed_graph_tool"
-     and the whole "hooks" object of template/.claude/settings.json at the template's source:
-     the two handoff hooks (UserPromptSubmit, PreCompact auto and manual, and SessionStart
-     compact), then two PreToolUse entries, the data-root guard and the guide guard.
-     syntek-author's update offers a file it seeded earlier all of these but the data-root
-     guard: add that by hand.
+     And from the "hooks" object of template/.claude/settings.json at the template's source:
+     the handoff-hook entries (UserPromptSubmit, PreCompact auto and manual, and SessionStart
+     compact) and the guide guard's PreToolUse entry.
+     Either way, add the data-root guard, the seed's other PreToolUse entry, by hand to a
+     settings file that lacks it: it is the one hook entry no lane offers, in either template.
      Then, skipped or not, carry the asks and denies to the other coding agents' files here
      (it never creates one, and prints what a client cannot express):
        python3 .claude/syntek-media-permissions.py --write
@@ -1733,12 +1737,15 @@ _tasks:
   # ORDER MATTERS IN THIS LIST: Copier runs _tasks top to bottom, on `copy` AND on `update`.
   # A task that must not touch a live project carries an explicit
   # `when: "<% _copier_operation == 'copy' %>"`; the absence of one means it runs on every
-  # update. Every task below is copy-only: media has no database to build, its hooks are
-  # copy-only shared files (D80), and an update never touches a repository's set-up. Every
-  # task is non-fatal wherever git is installed (DESIGN.md Section 3.5), because a failing task
-  # aborts the whole generation — or the whole update — after the files are already written.
-  # Tasks 1 and 2 are syntek-author's exact commands, so without git task 1 fails as
-  # syntek-author's does; the toolkit and the skills need git in any case.
+  # update. Every task below is copy-only (five since 0.6.0): media has no database to build,
+  # its hooks are copy-only shared files (D80), and an update changes files only through the
+  # merge and the migrations, the family 'update' block last, which report what they did
+  # (D81). Every task is non-fatal wherever git is installed (DESIGN.md Section 3.5), because
+  # a failing task aborts the whole generation, or the whole update, after the files are
+  # already written. Tasks 1 and 2 are syntek-author's exact commands, so without git task 1
+  # fails as syntek-author's does; the toolkit and the skills need git in any case. Task 5 is
+  # syntek-author's too, transcribed byte for byte from its v0.7.0 copier.yml, and stays last.
+  # No task runs the permissions script: _message_after_copy item (2) gives its --write.
   #
   # There are no `mv` seed tasks. Seeds are _skip_if_exists, which is safe over an existing
   # project; an `mv` onto an existing file clobbers it (probe e1).
@@ -1775,4 +1782,31 @@ _tasks:
       git config --get filter.lfs.clean >/dev/null 2>&1 ||
       git config filter.lfs.required true ||
       echo 'LFS tripwire not set (git config failed): run python3 toolkit/media.py check before you add a large design export.'
+    when: "<% _copier_operation == 'copy' %>"
+
+  # 4. The copy-time warning (DESIGN.md D84). syntek-author ships its user guide from v0.6.0,
+  #    ungated, starting at how-to/src/TEMPLATE-GUIDE/syntek-author/01-overview.md; a project
+  #    whose syntek-author answers file stands without that file was made by an older
+  #    syntek-author, which a combined project must not keep, because the guide's shared files
+  #    and read-only rule are both templates' from 0.6.0. It is a task, not message text,
+  #    because it tests files at run time: a message may read _external_data only in D14's
+  #    three places, and this reads no answer, no token and nothing of syntek-author's record.
+  #    It prints to stdout and never fails; coexist-test.sh check 23 reads it, and check 19's
+  #    copy over a syntek-author render that has its guide proves it silent there.
+  - command: >-
+      [ ! -f .copier-answers.syntek-author.yml ] ||
+      [ -f how-to/src/TEMPLATE-GUIDE/syntek-author/01-overview.md ] ||
+      echo 'syntek-media: .copier-answers.syntek-author.yml stands here without how-to/src/TEMPLATE-GUIDE/syntek-author/01-overview.md, so this syntek-author is older than v0.6.0, which a combined project must not keep. Update syntek-author to v0.6.0 or later now, from a clean tree, and update it before syntek-media from then on.'
+    when: "<% _copier_operation == 'copy' %>"
+
+  # 5. LAST: syntek-author's baseline task (DESIGN.md D81; syntek-author D51, D52), verbatim.
+  #    On Python 3.14 it records this project's render of the version just copied in
+  #    refs/syntek-media/ inside .git, so the first update reports from a recorded render, and
+  #    offers the settings entries and MCP servers migrations/family-refresh.json lists to the
+  #    files the copy kept (an existing .claude/settings.json or MCP file), once each. It needs
+  #    the repository task 1 made and always exits 0. On an older Python it records nothing and
+  #    prints a framed message that family-update did NOT run, which item (2) of
+  #    _message_after_copy answers; a copy with --skip-tasks does not run it at all.
+  #    shipped-seeds.sh check 30 holds it here, line for line.
+  - command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/family-update.py" baseline --src "<% _copier_conf.src_path %>" --to <% _copier_conf.vcs_ref_hash %> --answers "<% _copier_conf.answers_file %>"'
     when: "<% _copier_operation == 'copy' %>"
