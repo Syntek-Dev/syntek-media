@@ -17,8 +17,10 @@
 #              file at .agents, with the printed hand fix run step by step under sh), and the
 #              data-root resolver and the permissions script under media's names,
 #              template/.claude/syntek-media-dataroot.py and syntek-media-permissions.py, which
-#              ship in every project. Those three run with SYNTEK_DATA_ROOT unset (env -u), so
-#              no self-test ever reaches a maintainer's real data root.
+#              ship in every project, and since 0.6.0 the update script, migrations/family-update.py
+#              (D81). Those four run with SYNTEK_DATA_ROOT unset (env -u), so no self-test ever
+#              reaches a maintainer's real data root, and on Python 3.14, which _common.sh pins:
+#              below it each exits 1 or 2.
 #
 #              Discipline, from SB: every script's --self-test runs FIRST, because a detector
 #              nobody has seen fail is a detector nobody knows works (rule 38); failures
@@ -120,9 +122,11 @@ INTEGRATED=(update-test coexist-test)
 ALL_SCRIPTS=(check-template-tokens gen-mode-excludes generate-all shipped-brands byte-identity docs-pairing
              doc-references shipped-seeds skill-conformance line-cap update-test coexist-test
              toolkit-smoke scrub dev-isolation community-files)
-# The vendored family-shared scripts (DESIGN.md D80, D85): each one's own --self-test runs with
-# the others, the outside-link migration at the root and the two that ship under template/.
+# The vendored family-shared scripts (DESIGN.md D80, D81, D85): each one's own --self-test runs
+# with the others, the outside-link migration and the update script at the root and the two that
+# ship under template/.
 OUTSIDE_PY="$SM_ROOT/$SM_OUTSIDE_MIGRATION"
+FAMILY_UPDATE_PY="$SM_ROOT/migrations/family-update.py"
 DATAROOT_PY="$SM_ROOT/template/.claude/syntek-media-dataroot.py"
 PERMISSIONS_PY="$SM_ROOT/template/.claude/syntek-media-permissions.py"
 
@@ -180,6 +184,7 @@ run_checks() {
     section "Self-tests"
     for s in "${ALL_SCRIPTS[@]}"; do step "$s --self-test" bash "$SCRIPTS/$s.sh" --self-test; done
     step "agents-outside-link.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$OUTSIDE_PY" --self-test
+    step "family-update.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$FAMILY_UPDATE_PY" --self-test
     step "syntek-media-dataroot.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$DATAROOT_PY" --self-test
     step "syntek-media-permissions.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$PERMISSIONS_PY" --self-test
   fi
@@ -278,7 +283,7 @@ fi
 exit 0
 EOF
   done
-  for s in agents-outside-link syntek-media-dataroot syntek-media-permissions; do
+  for s in agents-outside-link family-update syntek-media-dataroot syntek-media-permissions; do
     printf 'import os, sys\nif "SYNTEK_DATA_ROOT" in os.environ:\n    print("%s: saw SYNTEK_DATA_ROOT"); sys.exit(2)\nsys.exit(1 if os.environ.get("STUB_FAIL") == "%s:self:1" else 0)\n' \
       "$s" "$s" > "$d/$s.py"
   done
@@ -296,7 +301,7 @@ probe_skip() { # $1 = label, $2 = the step label that must read SKIP
 }
 
 self_test() {
-  local tmp real_scripts="$SCRIPTS" real_ol="$OUTSIDE_PY" real_dr="$DATAROOT_PY" real_pm="$PERMISSIONS_PY"
+  local tmp real_scripts="$SCRIPTS" real_ol="$OUTSIDE_PY" real_dr="$DATAROOT_PY" real_pm="$PERMISSIONS_PY" real_fu="$FAMILY_UPDATE_PY"
   bold "▸ $SCRIPT_NAME --self-test"; log ""
   tmp="$(sm_mktemp)"
   # shellcheck disable=SC2064
@@ -304,6 +309,7 @@ self_test() {
   write_stubs "$tmp/stubs"
   SCRIPTS="$tmp/stubs"; OUTSIDE_PY="$tmp/stubs/agents-outside-link.py"; OUT="$tmp/out"; STEP_SINK="$tmp/sink"
   DATAROOT_PY="$tmp/stubs/syntek-media-dataroot.py"; PERMISSIONS_PY="$tmp/stubs/syntek-media-permissions.py"
+  FAMILY_UPDATE_PY="$tmp/stubs/family-update.py"
   export STUB_FAIL="" STUB_SKIP=""
   st_baseline "a run of stubs that all pass"
   STUB_FAIL="scrub:run:1";         probe "check 1 fires when an audit reports findings" "check 1 — scrub reported findings"
@@ -311,6 +317,8 @@ self_test() {
   STUB_FAIL="line-cap:self:1";     probe "check 3 fires when a self-test stops separating" "check 3 — line-cap --self-test"
   STUB_FAIL="agents-outside-link:self:1"
   probe "check 3 fires when the vendored outside-link script's self-test fails" "check 3 — agents-outside-link.py --self-test"
+  STUB_FAIL="family-update:self:1"
+  probe "check 3 fires when the vendored update script's self-test fails (D81)" "check 3 — family-update.py --self-test"
   STUB_FAIL="syntek-media-dataroot:self:1"
   probe "check 3 fires when the vendored data-root resolver's self-test fails" "check 3 — syntek-media-dataroot.py --self-test"
   STUB_FAIL="syntek-media-permissions:self:1"
@@ -323,7 +331,7 @@ self_test() {
   export SYNTEK_DATA_ROOT="$tmp/decoy"
   probe_clean "no vendored script's self-test sees a SYNTEK_DATA_ROOT the runner itself holds"
   unset SYNTEK_DATA_ROOT
-  SCRIPTS="$real_scripts"; OUTSIDE_PY="$real_ol"; DATAROOT_PY="$real_dr"; PERMISSIONS_PY="$real_pm"; OUT=""; STEP_SINK=""
+  SCRIPTS="$real_scripts"; OUTSIDE_PY="$real_ol"; DATAROOT_PY="$real_dr"; PERMISSIONS_PY="$real_pm"; FAMILY_UPDATE_PY="$real_fu"; OUT=""; STEP_SINK=""
   st_finish "a run that reports every failure from one that hides them"
 }
 

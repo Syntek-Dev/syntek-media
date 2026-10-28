@@ -22,7 +22,8 @@
 #                    one syntek-author tag and never edited here, so a project that takes both
 #                    templates holds one set of bytes whichever comes first. The root
 #                    family-shared.json records them in the family's format, and checks 21–27
-#                    hold the files, the three blocks and the renders to that record.
+#                    hold the files, the four blocks and the renders to that record (since
+#                    0.6.0 forty-three files from syntek-author's v0.7.0, D81, D84).
 #
 #                    Twenty-nine checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
@@ -39,11 +40,13 @@
 #                         table header with no rows is empty: the website and blog profiles'
 #                         `## Sites` and the newsletter profile's `## Lists` ship that way
 #                         (DESIGN.md D61, Section 6.15).
-#                      8. Each shared path has its update-gated _exclude line
-#                         ("_copier_operation == 'update'"), and so does each of the two client
-#                         folders syntek-author gates whole (.codex and .gemini, which take no
-#                         _skip_if_exists line: D80); nothing else carries that gate, a family
-#                         skill's folder included (its MEDIA-*.md mode files are template-owned).
+#                      8. Each shared path (fifty since 0.6.0: D11, D80, D84) has its
+#                         update-gated _exclude line ("_copier_operation == 'update'"), and so
+#                         does each of the two client folders syntek-author gates whole (.codex
+#                         and .gemini, which take no _skip_if_exists line: D80); nothing else
+#                         carries that gate, a family skill's folder included (its MEDIA-*.md
+#                         mode files are template-owned), nor /how-to or a folder under it (its
+#                         three syntek-media/ folders hold media's template-owned files, D84).
 #                      9. A Markdown register or brand seed lacks the seeded-stub banner. Index
 #                         pairs carry none: a pair is navigation.
 #                     10. In a render, .mcp.json is not the family's file: its SHA-256 is not
@@ -61,14 +64,15 @@
 #                         production/src/scenes/ (D64): a piece's words, mouth cues, cue index or
 #                         scene code left there would ship.
 #                     12. .claude/settings.json breaks DESIGN.md D13: model opus,
-#                         autoCompactEnabled false; exactly the three denies and the family's
-#                         embed_graph_tool deny, the six allows, the nine ElevenLabs asks, the two
-#                         voice remix run asks (D82) and the family's eight MCP asks, those eight
-#                         in the family's order (D80); a hooks key equal, as parsed JSON, to the
-#                         family's three registrations (the context-threshold and pre-compact
-#                         handoff hooks and the data-root guard, byte for byte from syntek-author's
-#                         seed: D80); and no owner-specific key (effortLevel, ultracode,
-#                         enabledPlugins, disable*).
+#                         autoCompactEnabled false and, since 0.6.0, idleCompaction false (D81);
+#                         exactly the three denies, the guide's Edit(/how-to/**) (D84) and the
+#                         family's embed_graph_tool deny, in that order, the six allows, the nine
+#                         ElevenLabs asks, the two voice remix run asks (D82) and the family's
+#                         eight MCP asks, those eight in the family's order (D80); a hooks key
+#                         equal, as parsed JSON, to syntek-author's v0.7.0 seed's hooks object
+#                         (the four handoff-hook entries, SessionStart compact among them, then
+#                         the data-root guard and the guide guard: D80, D81, D84); and no
+#                         owner-specific key (effortLevel, ultracode, enabledPlugins, disable*).
 #                     13. .claude/settings.json does not parse as JSON. Read only where the file
 #                         is plain JSON (every render; the source while it holds no block).
 #                     14. An index seed (a docs/project/ or workflows/local/ pair) lists an entry
@@ -97,14 +101,19 @@
 #                         migrations/v0.4.2-agents-folder.py after the update, or a migration
 #                         names a script that is not in migrations/ at this repository's root
 #                         (D76; copier.yml's house shape).
-#                     20. copier.yml's _migrations does not open with D76's outside-link pair,
-#                         the only entries keyed to no release (D11's second, transient
-#                         exception): first an entry with no version: running
-#                         migrations/agents-outside-link.py hold at _stage 'before', then one
-#                         running it with restore at _stage 'after', so the link is held before
-#                         the render and restored before every other after-stage migration; or
-#                         any later entry carries no version:. Where _migrations is missing
-#                         altogether, check 19 claims it and this check stays quiet.
+#                     20. copier.yml's _migrations does not open with D76's outside-link pair
+#                         (D11's second, transient exception): first an entry with no version:
+#                         running migrations/agents-outside-link.py hold at _stage 'before', then
+#                         one running it with restore at _stage 'after', so the link is held
+#                         before the render and restored before every other after-stage
+#                         migration; or, since 0.6.0, it does not close with the one entry of
+#                         the family 'update' block, unversioned, running
+#                         migrations/family-update.py update at _stage 'after' (D81: D11's
+#                         third exception, which must see what every earlier entry left); or an
+#                         entry between them carries no version:. One finding per fault: the
+#                         update entry missing or not last is one, and each other unversioned
+#                         entry one more. Where _migrations is missing altogether, check 19
+#                         claims it and this check stays quiet.
 #                     21. migrations/agents-outside-link.py is not syntek-author's family-shared
 #                         script as media vendored it (DESIGN.md D85, D80; syntek-author D48): its
 #                         SHA-256 is not the one this repository's family-shared.json records for
@@ -142,10 +151,9 @@
 #                     24. Its files are not exactly _common.sh's SM_FAMILY_SHARED — each
 #                         destination path (the family's, <template> kept), source, kind and
 #                         scope, in byte order of the path — or its blocks are not exactly the
-#                         questions and migrations blocks of copier.yml, then rules-web-tools of
-#                         rules 06 with its destination, in that order, with the family's
-#                         marker lines. syntek-author's family-update.py and its update block are
-#                         not listed until D81.
+#                         questions, migrations and, since 0.6.0, update blocks of copier.yml,
+#                         then rules-web-tools of rules 06 with its destination, in that order,
+#                         the manifest's, with the family's marker lines (D81).
 #                     25. A listed file (the outside-link script apart: check 21's) is not a
 #                         file, or its size and SHA-256 differ from its entry, or its mode does
 #                         ("mode": "755" for an executable; read from Git's index where the
@@ -158,25 +166,29 @@
 #                         lines strictly between them differ in size or SHA-256 from its entry.
 #                     27. In a render, a token-free family file other than .mcp.json (check
 #                         10's) is not byte for byte what family-shared.json records, or a file
-#                         recorded at mode 755 (the two session hooks) is not executable. Copier
+#                         recorded at mode 755 (the two session hooks and, since 0.6.0, the
+#                         guide guard, D84) is not executable. Copier
 #                         renders every file: a delimiter that reached one of them would change
 #                         it here. .codex/config.toml, .gemini/settings.json and opencode.json
 #                         carry the seven shared keys and are rendered by design, so they are
 #                         not read; nor is template/ (check 25's), nor the .agents/skills link
 #                         (shipped-brands.sh check 13's).
 #                     28. The data-root map, .claude/syntek-media-dataroot.json, is not exactly
-#                         {"format": 1, "folders": []}: media files nothing on the data root in
-#                         0.5.0 (D80), and a folder it claimed could equal or overlap one of
+#                         {"format": 1, "folders": []}: media files nothing on the data root
+#                         since 0.5.0 (D80), and a folder it claimed could equal or overlap one of
 #                         syntek-author's, which refuses every data command touching it.
 #                     29. In a standalone render, `python3 .claude/syntek-media-permissions.py
 #                         --check` exits other than 0 or 1, or finds missing a rule that is not
 #                         one of media's own seed rules (the ElevenLabs and voice remix run
-#                         asks, the two Edit denies, the six allows: DESIGN.md D13): the vendored
+#                         asks, the two Edit denies, the six allows: DESIGN.md D13; never the
+#                         guide's Edit(/how-to/**), a family rule, D84): the vendored
 #                         client files carry the family's eight asks and its deny already (D80),
 #                         so only media's own reach them by hand, through the --write line of
 #                         _message_after_copy; or, in a scratch copy of the render, --write
 #                         fails or leaves --check exiting other than 0. A render that ticks no
-#                         client has nothing to check (exit 0).
+#                         client has nothing to check (exit 0). The script needs Python 3.14
+#                         since its v0.6.0 bytes (D81) and exits 2 below it, which _common.sh's
+#                         pin refuses before anything runs.
 #
 #                    Checks 1–4, 8 and 16–26 read copier.yml, template/, migrations/, rules 06
 #                    and family-shared.json (static, once; checks 21 and 25 also read Git's
@@ -216,10 +228,10 @@
 #            finding each; then proves the render checks on a render-shaped copy, and the
 #            over-author scope on a tree with a .owned list.
 #
-# Requirements: bash 4+, grep, awk, python3 (checks 10, 12, 13 and 21–29; 3.11 or later for
-#               check 29, which runs the vendored permissions script), sha256sum or
-#               shasum (checks 21 and 22), git (checks 21 and 25, and the self-test). No
-#               network.
+# Requirements: bash 4+, grep, awk, python3 3.14 or later (checks 10, 12, 13 and 21–29;
+#               _common.sh refuses an older one, and check 29 runs the vendored permissions
+#               script, which needs it), sha256sum or shasum (checks 21 and 22), git (checks 21
+#               and 25, and the self-test). No network.
 #
 # Usage: shipped-seeds.sh [--root DIR] [--write-manifest] [--quiet] [--self-test] [--help]
 #                         [<tree>...]
@@ -436,7 +448,8 @@ static_checks() {
     [[ -f "$SM_ROOT/$item" ]] || finding "check 19 — a migration runs $item, which is not in this repository (it is read from the template clone: _copier_conf.src_path)"
   done < <(grep -oE 'src_path *%>/migrations/[^" ]+' <<< "$mig" | sed -E 's#^.*%>/##')
 
-  # ── 20. D76's outside-link pair opens _migrations; every other entry is versioned ──
+  # ── 20. D76's outside-link pair opens _migrations, D81's update entry closes it, and every
+  #        entry between them is versioned ──
   local pair_ok=false
   if [[ -n "$mig" ]]; then
     local -a ver=() cmd=() whn=()
@@ -458,9 +471,19 @@ static_checks() {
     else
       pair_ok=true
     fi
+    # The family 'update' entry (D81): unversioned, after the render, and last. Only the last
+    # entry may be it; one found anywhere else is that one fault, and nothing more.
+    local last=$((n - 1)) upd_at=-1
     for ((i = 2; i < n; i++)); do
+      [[ "${cmd[$i]}" == *"/$SM_FAMILY_UPDATE_SCRIPT\" update "* ]] && upd_at=$i
+    done
+    if [[ "$n" -lt 3 || "$upd_at" -ne "$last" || "${ver[$last]}" != - || "${whn[$last]}" != *"_stage == 'after'"* ]]; then
+      finding "check 20 — _migrations does not close with the family 'update' block's one entry, unversioned, running $SM_FAMILY_UPDATE_SCRIPT update at _stage 'after' $( [[ "$upd_at" -ge 0 && "$upd_at" -ne "$last" ]] && printf '(it is entry %d of %d)' "$((upd_at + 1))" "$n" || printf '(none is last)'): it must run last, after every versioned entry, so it sees what each left (DESIGN.md D81, D11)"
+    fi
+    for ((i = 2; i < last; i++)); do
       [[ "${ver[$i]}" != - ]] && continue
-      finding "check 20 — an unversioned _migrations entry runs $(grep -oE 'migrations/[^" ]+' <<< "${cmd[$i]}" || printf '%s' "${cmd[$i]}"): only D76's outside-link pair is keyed to no release (DESIGN.md D76; .claude/CLAUDE.md Section 9)"
+      [[ "$i" -eq "$upd_at" ]] && continue
+      finding "check 20 — an unversioned _migrations entry runs $(grep -oE 'migrations/[^" ]+' <<< "${cmd[$i]}" || printf '%s' "${cmd[$i]}"): only D76's outside-link pair, first, and D81's family update entry, last, are keyed to no release (DESIGN.md D76, D81; .claude/CLAUDE.md Section 7.7)"
     done
   fi
 
@@ -532,6 +555,7 @@ json_check() { # $1 = mode (settings|parse), $2 = file → prints one problem pe
   SM_ASK="$(printf '%s\n' "${SM_SETTINGS_ASK[@]}" "${SM_SETTINGS_FAMILY_ASK[@]}")" \
   SM_FAMILY_ASK="$(printf '%s\n' "${SM_SETTINGS_FAMILY_ASK[@]}")" \
   SM_HOOKS="$SM_SETTINGS_HOOKS" SM_BANNED="$SM_SETTINGS_BANNED_KEYS" \
+  SM_TOP="$(printf '%s\n' "${SM_SETTINGS_TOP[@]}")" \
   python3 - "$1" "$2" <<'PY'
 import json, os, sys
 mode, path = sys.argv[1], sys.argv[2]
@@ -547,11 +571,14 @@ if not isinstance(data, dict):
     print("is not a JSON object"); sys.exit(0)
 if data.get("model") != "opus":
     print(f"model is {data.get('model')!r}, not 'opus'")
-if data.get("autoCompactEnabled") is not False:
-    print("autoCompactEnabled is not false — hand off, never compact (DESIGN.md D35)")
+for kv in [t for t in os.environ["SM_TOP"].split("\n") if t]:
+    key, val = kv.split("=", 1)
+    if data.get(key, "absent") != json.loads(val):
+        print(f"{key} is not {val} — hand off, never compact (DESIGN.md D13, D35, D81)")
 if data.get("hooks") != json.loads(os.environ["SM_HOOKS"]):
-    print("hooks are not exactly the family's three registrations — the context-threshold and pre-compact handoff hooks "
-          "and the data-root guard — byte for byte as syntek-author's seed holds them (DESIGN.md D13, D35, D80)")
+    print("hooks are not exactly syntek-author's v0.7.0 seed's hooks object — the four handoff-hook entries (UserPromptSubmit, "
+          "PreCompact auto and manual, SessionStart compact), then the data-root guard and the guide guard — as parsed JSON "
+          "(DESIGN.md D13, D35, D80, D81, D84)")
 for k in data:
     if k in os.environ["SM_BANNED"].split() or k.startswith("disable"):
         print(f"carries the owner-specific key {k}")
@@ -569,6 +596,11 @@ family = [w for w in os.environ["SM_FAMILY_ASK"].split("\n") if w]
 order = [h for h in perms.get("ask") or [] if h in family]
 if sorted(order) == sorted(family) and order != family:
     print("asks the family's eight MCP tools out of the family's order (Scrapling's six, then code-review-graph's two; DESIGN.md D13, D80)")
+wdeny = [w for w in os.environ["SM_DENY"].split("\n") if w]
+hdeny = [h for h in perms.get("deny") or [] if h in wdeny]
+if sorted(hdeny) == sorted(wdeny) and hdeny != wdeny:
+    print("denies its rules out of D13's order: media's three, then the guide's Edit(/how-to/**), then the family's "
+          "embed_graph_tool deny (DESIGN.md D13, D84)")
 PY
 }
 
@@ -579,9 +611,14 @@ SM_PERMISSIONS_PY=".claude/syntek-media-permissions.py"
 permissions_checks() { # on TREE
   local out rc line rule scratch r
   local -A mine=()
-  python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' \
-    || die "check 29 needs python3 3.11 or later, which the vendored permissions script needs"
-  for r in "${SM_SETTINGS_ASK[@]}" "${SM_SETTINGS_DENY[@]}" "${SM_SETTINGS_ALLOW[@]}"; do mine["$r"]=1; done
+  sm_py_older "$(sm_py_version python3 || printf '0.0')" \
+    && die "check 29 needs python3 $SM_PYTHON_MIN or later, which the vendored permissions script needs since its v0.6.0 bytes (DESIGN.md D81)"
+  # Media's own seed rules: the guide's Edit(/how-to/**) is syntek-author's (D84; syntek-author
+  # D56), which the vendored opencode.json already holds as how-to/*, so it is never one of them.
+  for r in "${SM_SETTINGS_ASK[@]}" "${SM_SETTINGS_DENY[@]}" "${SM_SETTINGS_ALLOW[@]}"; do
+    [[ "$r" == "Edit(/how-to/"* ]] && continue
+    mine["$r"]=1
+  done
   rc=0; out="$(cd "$TREE" && env -u SYNTEK_DATA_ROOT python3 "$SM_PERMISSIONS_PY" --check 2>&1)" || rc=$?
   if [[ "$rc" -ne 0 && "$rc" -ne 1 ]]; then
     finding "check 29 — $SM_PERMISSIONS_PY --check exits $rc in a fresh render: $(grep -v '^[[:space:]]*$' <<< "$out" | tail -1 | cut -c1-160)"
@@ -656,7 +693,7 @@ tree_checks() { # on TREE
   # ── 28. The data-root map is empty (D80) ────────────────────────────────────
   f="$TREE/$SM_DATAROOT_MAP"
   if [[ -f "$f" ]] && is_owned_file "$SM_DATAROOT_MAP"; then
-    python3 - "$f" <<'PYMAP' || finding "check 28 — $SM_DATAROOT_MAP is not exactly {\"format\": 1, \"folders\": []}: media files nothing on the data root in 0.5.0, and a folder it claimed could overlap one of syntek-author's, which refuses every data command there (DESIGN.md D80)"
+    python3 - "$f" <<'PYMAP' || finding "check 28 — $SM_DATAROOT_MAP is not exactly {\"format\": 1, \"folders\": []}: media files nothing on the data root since 0.5.0, and a folder it claimed could overlap one of syntek-author's, which refuses every data command there (DESIGN.md D80)"
 import json, sys
 try:
     data = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -767,6 +804,8 @@ write_fixture() { # $1 = repo root
     printf '_migrations:\n'
     sm_family_migrations_block
     printf '  - version: %s\n    command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_VERSION" "$SM_D76_MIGRATION" "$q" "$q"
+    # The family update block (D81), byte for byte the tag's, closing _migrations.
+    sm_family_update_block
   } > "$r/copier.yml"
   for s in $SM_SHARED $SM_SEEDS; do
     [[ "$s" == .agents || "$s" == .agents/skills ]] && continue
@@ -801,7 +840,8 @@ PYSTUB
     [[ -z "$fpath" || -e "$r/$fsrc" || -L "$r/$fsrc" ]] && continue
     mkdir -p "$(dirname "$r/$fsrc")"; printf '# %s — a family stand-in\n' "$fpath" > "$r/$fsrc"
   done <<< "$SM_FAMILY_SHARED"
-  chmod 755 "$t/.claude/hooks/context-threshold-handoff.sh" "$t/.claude/hooks/pre-compact-handoff.sh"
+  chmod 755 "$t/.claude/hooks/context-threshold-handoff.sh" "$t/.claude/hooks/pre-compact-handoff.sh" \
+    "$t/.claude/hooks/how-to-read-only.sh" "$r/$SM_FAMILY_UPDATE_SCRIPT"
   mkdir -p "$t/.claude/rules/syntek-media"
   printf '# 06-global-rules.md\n\n## 13. Web and code tools\n\n<!-- BEGIN family-shared rules: web and code tools -->\n- Use the plainest tool.\n<!-- END family-shared rules: web and code tools -->\n' \
     > "$t/.claude/rules/syntek-media/06-global-rules.md"
@@ -833,7 +873,7 @@ PYSTUB
     for s in "${SM_MEMORY_H2S[@]}"; do printf '## %s\n\n_No entries yet._\n\n' "$s"; done; } > "$t/.claude/MEMORY.md"
   printf '{"mcpServers": {}}\n' > "$t/.mcp.json"
   {
-    printf '{\n  "model": "opus",\n  "autoCompactEnabled": false,\n  "permissions": {\n'
+    printf '{\n  "model": "opus",\n  "autoCompactEnabled": false,\n  "idleCompaction": false,\n  "permissions": {\n'
     printf '    "deny": [%s],\n' "$(for s in "${SM_SETTINGS_DENY[@]}" "${SM_SETTINGS_FAMILY_DENY[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
     printf '    "allow": [%s],\n' "$(for s in "${SM_SETTINGS_ALLOW[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
     printf '    "ask": [%s]\n' "$(for s in "${SM_SETTINGS_ASK[@]}" "${SM_SETTINGS_FAMILY_ASK[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
@@ -918,6 +958,10 @@ self_test() {
   probe "check 8 fires when a client folder loses its update gate (D80)" "check 8 — the client folder .gemini/ has no update-gated _exclude line"
   awk -v q="'" '/^_skip_if_exists:/ { print "  - \"<: if _copier_operation == " q "update" q " :>/.claude/skills/grilling<: endif :>\"" } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
   probe "check 8 fires when a family skill's folder, not its SKILL.md, takes the shared gate (D80)" "check 8 — /.claude/skills/grilling carries the shared files' update gate"
+  awk -v q="'" '/^_skip_if_exists:/ { print "  - \"<: if _copier_operation == " q "update" q " :>/how-to<: endif :>\"" } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 8 fires when /how-to takes the shared gate, not its family files one by one (D84)" "check 8 — /how-to carries the shared files' update gate"
+  grep -vF "/how-to/src/TEMPLATE-GUIDE/the-data-root.md<: endif" "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 8 fires when one of the guide's family files loses its update gate (D84)" "check 8 — the shared file how-to/src/TEMPLATE-GUIDE/the-data-root.md"
   cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
 
   f=publishing/src/schedule.md; cp "$t/$f" "$tmp/h"
@@ -937,7 +981,13 @@ self_test() {
   sed -i 's/"autoCompactEnabled": false/"autoCompactEnabled": true/' "$t/.claude/settings.json"; probe "check 12 fires when compaction is switched on" "check 12 — .claude/settings.json autoCompactEnabled"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/, "mcp__elevenlabs__voice_clone"//' "$t/.claude/settings.json"; probe "check 12 fires when a credit-spending tool is not asked" "check 12 — .claude/settings.json does not ask mcp__elevenlabs__voice_clone"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"ask": \[/"ask": ["mcp__elevenlabs__list_models", /' "$t/.claude/settings.json"; probe "check 12 fires on an ask D13 does not list" "check 12 — .claude/settings.json asks mcp__elevenlabs__list_models"; cp "$tmp/h" "$t/.claude/settings.json"
-  sed -i 's/"timeout":10}]}],"PreToolUse"/"timeout":30}]}],"PreToolUse"/' "$t/.claude/settings.json"; probe "check 12 fires when a family hook registration drifts (D80)" "check 12 — .claude/settings.json hooks are not exactly the family's three"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/"timeout":10}]}],"PreToolUse"/"timeout":30}]}],"PreToolUse"/' "$t/.claude/settings.json"; probe "check 12 fires when a family hook registration drifts (D80)" "check 12 — .claude/settings.json hooks are not exactly syntek-author's v0.7.0 seed's hooks object"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/"idleCompaction": false/"idleCompaction": true/' "$t/.claude/settings.json"; probe "check 12 fires when idle compaction is switched on (D81)" "check 12 — .claude/settings.json idleCompaction is not false"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's#"Edit(/how-to/\*\*)", ##' "$t/.claude/settings.json"; probe "check 12 fires when the guide's deny is lost (D84)" "check 12 — .claude/settings.json does not deny Edit(/how-to/**)"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's#"Edit(/how-to/\*\*)", "mcp__code-review-graph__embed_graph_tool"#"mcp__code-review-graph__embed_graph_tool", "Edit(/how-to/**)"#' "$t/.claude/settings.json"
+  probe "check 12 fires when the guide's deny leaves D13's order (D84)" "check 12 — .claude/settings.json denies its rules out of D13's order"; cp "$tmp/h" "$t/.claude/settings.json"
+  python3 -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p)); del d["hooks"]["SessionStart"]; json.dump(d,open(p,"w"))' "$t/.claude/settings.json"
+  probe "check 12 fires when the SessionStart compact entry is lost (D81)" "check 12 — .claude/settings.json hooks are not exactly"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"mcp__scrapling__stealthy_fetch", "mcp__scrapling__bulk_stealthy_fetch"/"mcp__scrapling__bulk_stealthy_fetch", "mcp__scrapling__stealthy_fetch"/' "$t/.claude/settings.json"
   probe "check 12 fires when the family's asks leave the family's order (D80)" "check 12 — .claude/settings.json asks the family's eight MCP tools out of the family's order"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/, "mcp__code-review-graph__embed_graph_tool"//' "$t/.claude/settings.json"; probe "check 12 fires when the embed_graph_tool deny is lost (D80)" "check 12 — .claude/settings.json does not deny mcp__code-review-graph__embed_graph_tool"; cp "$tmp/h" "$t/.claude/settings.json"
@@ -980,7 +1030,8 @@ self_test() {
   probe "check 18 fires on a third entry in the agent folder" "check 18 — template/.agents holds 'mcp_config.json rules.md skills'"
   rm -f "$t/.agents/rules.md"
   # 19: the migration entry and its script.
-  awk '/^_migrations:/ { exit } { print }' "$tmp/c" > "$COPIER"
+  # The v0.4.2 entry alone goes: the update block below it stays, which check 26 holds whole.
+  awk -v v="  - version: $SM_D76_VERSION" '$0 == v { skip = 3 } skip { skip--; next } { print }' "$tmp/c" > "$COPIER"
   probe "check 19 fires when the D76 migration is not declared" "check 19 — _migrations has no $SM_D76_VERSION entry"
   cp "$tmp/c" "$COPIER"; mv "$tmp/$SM_D76_MIGRATION" "$tmp/mig-held"
   probe "check 19 fires when a migration's script is missing" "check 19 — a migration runs $SM_D76_MIGRATION"
@@ -989,8 +1040,12 @@ self_test() {
   sed -i "0,/_stage == 'before'/s//_stage == 'after'/" "$COPIER"; SM_SETS_FOR=""
   probe "check 20 fires when the outside-link hold does not run before the render" "check 20 — _migrations does not open with D76's outside-link pair"
   cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
-  printf '  - command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_MIGRATION" "'" "'" >> "$COPIER"
-  probe "check 20 fires on an unversioned entry beyond the pair" "check 20 — an unversioned _migrations entry runs $SM_D76_MIGRATION"
+  awk -v e="$(printf '  - command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"' "$SM_D76_MIGRATION" "'" "'")" \
+    '$0 == "# BEGIN family-shared update (D48)" { print e } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 20 fires on an unversioned entry between the pair and the update entry" "check 20 — an unversioned _migrations entry runs $SM_D76_MIGRATION"
+  printf '  - version: v9.9.9\n    command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_MIGRATION" "'" "'" > "$tmp/extra"
+  cat "$tmp/c" "$tmp/extra" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 20 fires when the family update entry is not last (D81)" "check 20 — _migrations does not close with the family 'update' block's one entry"
   cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
   # 21: one byte of the vendored script; then its mode, outside a Git work tree (the executable
   # bit) and inside one (the index alone: the working tree's bit is not what a commit records).
@@ -1047,10 +1102,17 @@ self_test() {
   printf 'x\n' >> "$f";                                       probe "check 25 fires when one vendored byte changes" "check 25 — template/.claude/skills/wayfinder/SKILL.md has SHA-256"; cp "$tmp/h" "$f"
   chmod 644 "$t/.claude/hooks/pre-compact-handoff.sh";         probe "check 25 fires when a session hook loses its executable bit" "check 25 — template/.claude/hooks/pre-compact-handoff.sh is at mode 644, not 755"
   chmod 755 "$t/.claude/hooks/pre-compact-handoff.sh"
+  chmod 644 "$t/.claude/hooks/how-to-read-only.sh";            probe "check 25 fires when the guide guard loses its executable bit (D84)" "check 25 — template/.claude/hooks/how-to-read-only.sh is at mode 644, not 755"
+  chmod 755 "$t/.claude/hooks/how-to-read-only.sh"
+  chmod 644 "$tmp/$SM_FAMILY_UPDATE_SCRIPT";                   probe "check 25 fires when the vendored update script loses its executable bit (D81)" "check 25 — $SM_FAMILY_UPDATE_SCRIPT is at mode 644, not 755"
+  chmod 755 "$tmp/$SM_FAMILY_UPDATE_SCRIPT"
   sed -i 's#"target": "../.claude/skills"#"target": "../.claude/skillz"#' "$m"; probe "check 25 fires when the record names another target for the D76 link" "check 25 — template/.agents/skills is the link"; cp "$tmp/manifest.held" "$m"
   cp "$COPIER" "$tmp/c"
   sed -i 's/^  multiselect: true$/  multiselect: false/' "$COPIER"; SM_SETS_FOR=""
   probe "check 26 fires when one byte of the questions block changes" "check 26 — the lines between copier.yml's family-shared questions markers"
+  cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
+  sed -i 's/^  # each file this update did not deliver/  # Each file this update did not deliver/' "$COPIER"; SM_SETS_FOR=""
+  probe "check 26 fires when one byte of the update block changes (D81)" "check 26 — the lines between copier.yml's family-shared update markers"
   cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""
   f="$t/.claude/rules/syntek-media/06-global-rules.md"; cp "$f" "$tmp/h"
   sed -i '/^<!-- END family-shared rules/d' "$f";             probe "check 26 fires when rules 06 loses the block's END marker" "check 26 — template/.claude/rules/syntek-media/06-global-rules.md holds"; cp "$tmp/h" "$f"
@@ -1072,10 +1134,15 @@ self_test() {
   chmod 644 "$rt/.claude/hooks/context-threshold-handoff.sh"
   probe "check 27 fires when a render's session hook is not executable" "check 27 — .claude/hooks/context-threshold-handoff.sh is not executable in the render"
   chmod 755 "$rt/.claude/hooks/context-threshold-handoff.sh"
+  chmod 644 "$rt/.claude/hooks/how-to-read-only.sh"
+  probe "check 27 fires when a render's guide guard is not executable (D84)" "check 27 — .claude/hooks/how-to-read-only.sh is not executable in the render"
+  chmod 755 "$rt/.claude/hooks/how-to-read-only.sh"
   printf 'x\n' >> "$rt/.codex/config.toml"
   probe_clean "a render of a family file that carries the shared keys is not compared byte for byte"
   STUB_PERM_MISSING='mcp__elevenlabs__voice_clone|mcp__scrapling__fetch' \
     probe "check 29 fires when the permissions script finds a family rule missing in a render" "check 29 — $SM_PERMISSIONS_PY --check finds mcp__scrapling__fetch missing"
+  STUB_PERM_MISSING='Edit(**/renders/**)|Edit(/how-to/**)' \
+    probe "check 29 fires when the guide's deny, a family rule, is missing in a render (D84)" "check 29 — $SM_PERMISSIONS_PY --check finds Edit(/how-to/**) missing"
   STUB_PERM_STILL=1 \
     probe "check 29 fires when --write leaves a rule missing" "check 29 — after $SM_PERMISSIONS_PY --write, --check still exits 1"
   STUB_PERM_EXIT=2 \

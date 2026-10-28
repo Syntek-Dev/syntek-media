@@ -140,9 +140,14 @@
 #                       updated to v<VERSION> with --defaults, standalone and, where a
 #                       syntek-author tree is found (--author, SYNTEK_AUTHOR_DIR or
 #                       ../syntek-author), over a syntek-author project copied first: the update
-#                       succeeds with no conflict; it records AGENT_CLIENTS [] and DATA_STORE
-#                       repo, or the store syntek-author's answers file records; it creates no
-#                       copy-only family path (D11: an update never renders one); it delivers
+#                       succeeds with no conflict; it records AGENT_CLIENTS and DATA_STORE as
+#                       the family questions default them (D80, D81: the project's own record
+#                       where the copy at the earlier tag holds them, as every copy since 0.5.0
+#                       does; otherwise syntek-author's record where its answers file holds
+#                       them; otherwise [] and repo); it creates no copy-only family path but
+#                       the twenty-seven D81's update script may write where the project never
+#                       had them (the working-practice files and the guide's, never a client
+#                       file or .mcp.json; D11: Copier never renders one); it delivers
 #                       media's own data-root map and two family scripts and the kind's
 #                       MEDIA-<KIND>.md mode files; over syntek-author it changes no file
 #                       syntek-author's copy wrote; it prints _message_after_update; and a
@@ -266,7 +271,7 @@ CRASH_CONTROL_WROTE=false; CRASH_FOUND_HELD=false; CRASH_FOUND_MOVED=""
 # over-author) what the copy and the updates did.
 REL_REPO=""; REL_TAG=""; REL_TO=""; REL_WHY=""; REL_AUTHOR=""; REL_VARIANTS=""
 declare -A REL_COPY=() REL_UPD=() REL_LOG=() REL_CONF=() REL_CLIENTS=() REL_STORE=() REL_WANT=()
-declare -A REL_NEW=() REL_MISS=() REL_TOUCHED=() REL_AGAIN=() REL_DIRTY=()
+declare -A REL_NEW=() REL_MISS=() REL_TOUCHED=() REL_AGAIN=() REL_DIRTY=() REL_WANT_CLIENTS=()
 REL_MSG_MARK="Until syntek-media 0.6.0, an update never adds or refreshes"
 
 # The author's own files in the folder the podcast platform gates (DESIGN.md D59, Section 6.17):
@@ -690,6 +695,20 @@ prepare_release_repo() { # $1 = dest
 # The files media's own update must deliver to a project made before 0.5.0: the data-root map and
 # the two family scripts (template-owned, D80) and, for the kind, each moded family skill's
 # MEDIA-<KIND>.md (D7).
+# AGENT_CLIENTS as an answers file records it: 'absent' where the key is not there, otherwise the
+# list, sorted, as [a, b] ([] for none), so two records compare whatever order each was written in.
+rel_clients_of() { # $1 = answers file
+  grep -q '^AGENT_CLIENTS:' "$1" 2>/dev/null || { printf 'absent'; return 0; }
+  printf '[%s]' "$(answer_list AGENT_CLIENTS "$1" | LC_ALL=C sort | paste -sd',' - | sed 's/,/, /g')"
+}
+
+# The copy-only family paths D81's update script may write where the project never had them:
+# its refresh set, the working-practice files and the guide's (never a client file or .mcp.json).
+rel_refresh_path() { # $1 = path
+  case "$1" in .claude/skills/*/SKILL.md|.claude/hooks/*|handoffs/*|how-to/*) return 0 ;; esac
+  return 1
+}
+
 release_own_files() {
   local s g m
   printf '%s\n' .claude/syntek-media-dataroot.json .claude/syntek-media-dataroot.py .claude/syntek-media-permissions.py
@@ -705,7 +724,7 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
   local -a args=()
   REL_LOG["$v"]="$log"; REL_COPY["$v"]=0; REL_UPD["$v"]=0; REL_CONF["$v"]=""; REL_CLIENTS["$v"]=""
   REL_STORE["$v"]=""; REL_WANT["$v"]=repo; REL_NEW["$v"]=""; REL_MISS["$v"]=""; REL_TOUCHED["$v"]=""
-  REL_AGAIN["$v"]=0; REL_DIRTY["$v"]=""
+  REL_AGAIN["$v"]=0; REL_DIRTY["$v"]=""; REL_WANT_CLIENTS["$v"]="[]"
   : > "$log"
   REL_VARIANTS+="$v "
   author_files="$w/rel-$v.author"; : > "$author_files"
@@ -719,19 +738,33 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
   SM_VCS_REF="$REL_TAG" sm_render "$REL_REPO" "$p" "$KIND" "${args[@]}" >>"$log" 2>&1 || { REL_COPY["$v"]=$?; return 0; }
   [[ -d "$p/.git" ]] || sm_git "$p" init -q
   sm_commit_all "$p" "syntek-media $REL_TAG"
+  # What the family questions default to (D80, D81): the record the copy at the earlier tag
+  # wrote, where it holds the answer; then syntek-author's; then [] and repo.
+  f="$(rel_clients_of "$p/$SM_ANSWERS_FILE")"
+  if [[ "$f" != absent ]]; then REL_WANT_CLIENTS["$v"]="$f"
+  elif [[ "$v" == over-author && "$(rel_clients_of "$p/$SM_AUTHOR_ANSWERS")" != absent ]]; then
+    REL_WANT_CLIENTS["$v"]="$(rel_clients_of "$p/$SM_AUTHOR_ANSWERS")"
+  fi
+  local prior_store
+  prior_store="$(answer_value DATA_STORE "$p/$SM_ANSWERS_FILE")"
   before="$w/rel-$v.before"; tree_files "$p" > "$before"
   SM_VCS_REF="$REL_TO" sm_update "$p" >>"$log" 2>&1 || REL_UPD["$v"]=$?
   REL_CONF["$v"]="$(conflicts_in "$p" | paste -sd' ' -)"
-  REL_CLIENTS["$v"]="$(answer_value AGENT_CLIENTS "$p/$SM_ANSWERS_FILE")"
+  REL_CLIENTS["$v"]="$(rel_clients_of "$p/$SM_ANSWERS_FILE")"
   REL_STORE["$v"]="$(answer_value DATA_STORE "$p/$SM_ANSWERS_FILE")"
-  if [[ "$v" == over-author ]]; then
+  if [[ -n "$prior_store" ]]; then
+    REL_WANT["$v"]="$prior_store"
+  elif [[ "$v" == over-author ]]; then
     f="$(answer_value DATA_STORE "$p/$SM_AUTHOR_ANSWERS")"
     [[ -n "$f" ]] && REL_WANT["$v"]="$f"
+  fi
+  if [[ "$v" == over-author ]]; then
     REL_TOUCHED["$v"]="$(git -C "$p" status --porcelain 2>/dev/null | cut -c4- | sed 's/^"\(.*\)"$/\1/' \
       | LC_ALL=C sort -u | LC_ALL=C comm -12 - "$author_files" | paste -sd' ' -)"
   else
     for f in $SM_FAMILY_PATHS; do
       case "$f" in .claude/syntek-media-dataroot.py|.claude/syntek-media-permissions.py) continue ;; esac
+      rel_refresh_path "$f" && continue
       if [[ -e "$p/$f" || -L "$p/$f" ]] && ! grep -qxF -- "$f" "$before"; then
         REL_NEW["$v"]+="$f "
       fi
@@ -750,7 +783,7 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
 run_release_flow() { # $1 = work dir — needs REL_REPO (and REL_AUTHOR for the over-author half)
   REL_VARIANTS=""
   REL_COPY=(); REL_UPD=(); REL_LOG=(); REL_CONF=(); REL_CLIENTS=(); REL_STORE=(); REL_WANT=()
-  REL_NEW=(); REL_MISS=(); REL_TOUCHED=(); REL_AGAIN=(); REL_DIRTY=()
+  REL_NEW=(); REL_MISS=(); REL_TOUCHED=(); REL_AGAIN=(); REL_DIRTY=(); REL_WANT_CLIENTS=()
   [[ -n "$REL_REPO" ]] || return 0
   release_variant "$1" "$1/rel-standalone" standalone
   [[ -n "$REL_AUTHOR" ]] && release_variant "$1" "$1/rel-over-author" over-author
@@ -990,12 +1023,12 @@ run_checks() {
       continue
     fi
     [[ -z "${REL_CONF[$v]}" ]] || finding "check 24 — $R conflict left behind: ${REL_CONF[$v]}"
-    [[ "${REL_CLIENTS[$v]}" == "[]" ]] \
-      || finding "check 24 — $R the update recorded AGENT_CLIENTS '${REL_CLIENTS[$v]}', not [] (D80: the first update that asks it records no client)"
+    [[ "${REL_CLIENTS[$v]}" == "${REL_WANT_CLIENTS[$v]:-[]}" ]] \
+      || finding "check 24 — $R the update recorded AGENT_CLIENTS '${REL_CLIENTS[$v]}', not '${REL_WANT_CLIENTS[$v]:-[]}' (D80, D81: the project's own record, then syntek-author's, then none)"
     [[ "${REL_STORE[$v]}" == "${REL_WANT[$v]}" ]] \
       || finding "check 24 — $R the update recorded DATA_STORE '${REL_STORE[$v]}', not '${REL_WANT[$v]}' (D80)"
     [[ -z "${REL_NEW[$v]}" ]] \
-      || finding "check 24 — $R the update created the copy-only family path(s) ${REL_NEW[$v]} (D11: an update never renders a copy-only path)"
+      || finding "check 24 — $R the update created the copy-only family path(s) ${REL_NEW[$v]} (D11: Copier never renders a copy-only path, and D81's update script writes only its refresh set, never a client file)"
     [[ -z "${REL_MISS[$v]}" ]] \
       || finding "check 24 — $R the update did not deliver media's own ${REL_MISS[$v]}"
     [[ -z "${REL_TOUCHED[$v]}" ]] \
@@ -1155,7 +1188,7 @@ self_test() {
   REL_TAG=v0.4.6; REL_TO=v0.5.0; REL_VARIANTS="standalone over-author "
   for v in standalone over-author; do
     printf '  %s the skills, hooks and handoffs/\n' "$REL_MSG_MARK" > "$tmp/rel-$v.log"
-    REL_COPY[$v]=0; REL_UPD[$v]=0; REL_LOG[$v]="$tmp/rel-$v.log"; REL_CONF[$v]=""; REL_CLIENTS[$v]="[]"
+    REL_COPY[$v]=0; REL_UPD[$v]=0; REL_LOG[$v]="$tmp/rel-$v.log"; REL_CONF[$v]=""; REL_CLIENTS[$v]="[]"; REL_WANT_CLIENTS[$v]="[]"
     REL_STORE[$v]=repo; REL_WANT[$v]=repo; REL_NEW[$v]=""; REL_MISS[$v]=""; REL_TOUCHED[$v]=""
     REL_AGAIN[$v]=0; REL_DIRTY[$v]=""
   done
@@ -1163,7 +1196,8 @@ self_test() {
   REL_COPY[standalone]=1; probe "check 24 fires when the copy at the earlier release fails" "check 24 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the copy at v0.4.6 failed"; REL_COPY[standalone]=0
   REL_UPD[over-author]=1; probe "check 24 fires when the update from the earlier release fails" "check 24 — [author-nonfiction] (over-author, v0.4.6 to v0.5.0) the update failed"; REL_UPD[over-author]=0
   REL_CONF[standalone]="README.md.rej"; probe "check 24 fires on a conflict left by that update" "check 24 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) conflict left behind"; REL_CONF[standalone]=""
-  REL_CLIENTS[standalone]="[codex, gemini-cli, antigravity, opencode]"; probe "check 24 fires when the update records clients" "recorded AGENT_CLIENTS"; REL_CLIENTS[standalone]="[]"
+  REL_CLIENTS[standalone]="[antigravity, codex, gemini-cli, opencode]"; probe "check 24 fires when the update records clients neither record holds" "recorded AGENT_CLIENTS '[antigravity, codex, gemini-cli, opencode]', not '[]'"; REL_CLIENTS[standalone]="[]"
+  REL_WANT_CLIENTS[over-author]="[antigravity, codex, gemini-cli, opencode]"; probe "check 24 fires when the update ignores syntek-author's recorded clients (D81)" "check 24 — [author-nonfiction] (over-author, v0.4.6 to v0.5.0) the update recorded AGENT_CLIENTS '[]', not '[antigravity"; REL_WANT_CLIENTS[over-author]="[]"
   REL_STORE[over-author]=repo; REL_WANT[over-author]=external; probe "check 24 fires when the store differs from syntek-author's record" "check 24 — [author-nonfiction] (over-author, v0.4.6 to v0.5.0) the update recorded DATA_STORE 'repo', not 'external'"; REL_WANT[over-author]=repo
   REL_NEW[standalone]="handoffs/CONTEXT.md"; probe "check 24 fires when the update creates a copy-only family path" "created the copy-only family path(s) handoffs/CONTEXT.md"; REL_NEW[standalone]=""
   REL_MISS[standalone]=".claude/syntek-media-dataroot.py"; probe "check 24 fires when media's own file is not delivered" "did not deliver media's own .claude/syntek-media-dataroot.py"; REL_MISS[standalone]=""
@@ -1202,7 +1236,7 @@ for kind in $KINDS; do
   run_release_flow "$work"
   run_checks
   if [[ ${#FINDINGS[@]} -eq 0 ]]; then
-    log "  ✓ $kind — edits kept, examples still gone, publish-log.md recreated, own piece untouched, $TARGET_REL updated; shared files left alone; BRAND_KIND change refused untouched; warning printed; $REMOVE_PLATFORM taken away with exactly its $(wc -w <<< "$REMOVE_WANT") file(s)${FIXTURE_SUMS[*]:+, the show register and saved feed kept}; a second update a no-op; a stop after the render undone by the hand fix, with .agents absent and standing again${REL_VARIANTS:+; updated from $REL_TAG to $REL_TO (${REL_VARIANTS% }) with AGENT_CLIENTS [] and DATA_STORE recorded, no copy-only family path created, and the data-root map, the two scripts and the MEDIA- mode files delivered}"
+    log "  ✓ $kind — edits kept, examples still gone, publish-log.md recreated, own piece untouched, $TARGET_REL updated; shared files left alone; BRAND_KIND change refused untouched; warning printed; $REMOVE_PLATFORM taken away with exactly its $(wc -w <<< "$REMOVE_WANT") file(s)${FIXTURE_SUMS[*]:+, the show register and saved feed kept}; a second update a no-op; a stop after the render undone by the hand fix, with .agents absent and standing again${REL_VARIANTS:+; updated from $REL_TAG to $REL_TO (${REL_VARIANTS% }) with AGENT_CLIENTS and DATA_STORE recorded as the family defaults give them, no copy-only family path created but the refresh set, and the data-root map, the two scripts and the MEDIA- mode files delivered}"
     sm_rmtree "$work"
   else
     bold "✗ $kind — ${#FINDINGS[@]} finding(s) (work kept in $work; Copier's output in $work/flow.log):"

@@ -46,7 +46,8 @@ What is written (version 1: deny and ask rules only):
                          disabled); a user policy sketch is printed for the owner
 
   Antigravity: nothing is written; the script prints what to set in the app (a
-  'dir/**' rule as write_file(dir), which covers the folder; other globs are reported).
+  'dir/**' or '/dir/**' rule as write_file(dir), which covers the folder; other globs
+  are reported).
 
   Gemini CLI warns at every start that tools.exclude is deprecated (0.64.0). It is the
   only project-level way to hide ask_user while workspace policies are disabled, so it
@@ -54,7 +55,11 @@ What is written (version 1: deny and ask rules only):
 
 What Codex and Gemini CLI read takes effect only in a trusted project or folder.
 
-Python 3.11 or later, standard library only, no network.
+Python 3.14 or later (PYTHON_MIN, below), standard library only, no network. On an older
+Python it does NOT run: it reads and writes nothing, prints a framed message on stderr naming
+the Python it found and the one it needs, and exits 2 (--help still prints this text). The
+check runs before any other import, and the file parses as Python 3.8, so an old Python
+reaches the message instead of a SyntaxError.
 
 Usage: python3 .claude/<this file> [--check | --write] [--client NAME]... [--root DIR]
        python3 .claude/<this file> --self-test
@@ -68,8 +73,30 @@ from __future__ import annotations
 
 import sys
 
-if sys.version_info < (3, 11):
-    sys.stderr.write("This script needs Python 3.11 or later (tomllib).\n")
+# The one place the minimum is set: the move to a newer Python changes this line and the text
+# above, nothing else.
+PYTHON_MIN = (3, 14)
+RULE = "=" * 78
+
+
+def too_old_text(version):
+    """The framed message printed on stderr, in place of any run, on a Python older than PYTHON_MIN."""
+    need, have = "%d.%d" % tuple(PYTHON_MIN), "%d.%d" % tuple(version[:2])
+    return "\n".join([
+        RULE,
+        "ERROR: the permissions script did NOT run, because this is Python %s and it needs Python %s "
+        "or later." % (have, need),
+        "No client file was read, checked or written.",
+        "Upgrade to Python %s or later, then run the command again." % need,
+        RULE]) + "\n"
+
+
+if __name__ == "__main__" and sys.version_info < PYTHON_MIN:
+    if sys.argv[1:2] in (["-h"], ["--help"]):
+        print(__doc__)
+        sys.exit(0)
+    sys.stderr.write(too_old_text(sys.version_info))
+    sys.stderr.flush()
     sys.exit(2)
 
 import argparse
@@ -281,12 +308,15 @@ def gemini_plan(rules: list[tuple[str, str]]) -> Plan:
 
 
 def antigravity_folder(spec: str | None) -> str | None:
-    """'dir/**' (no other wildcard, relative) as the folder an Antigravity rule names, else None."""
+    """'dir/**' or '/dir/**' (no other wildcard; a leading / anchors at the project) as the
+    folder an Antigravity rule names, else None."""
     if not spec or not spec.endswith("/**"):
         return None
     p = spec[:-3]
     if p.startswith("./"):
         p = p[2:]
+    elif p.startswith("/") and not p.startswith("//"):
+        p = p[1:]  # project-anchored, as edit_resources reads it for OpenCode
     if not p or p.startswith(("/", "~")) or any(c in p for c in "*?[]{}!\\"):
         return None
     return p
@@ -605,6 +635,40 @@ def self_test() -> int:
         return code, buf.getvalue()
 
     print("▸ permissions --self-test\n")
+    # An older Python: read from PYTHON_MIN, never typed.
+    import ast
+    import subprocess
+    source = Path(__file__).read_text(encoding="utf-8")
+    try:
+        ast.parse(source, feature_version=(3, 8))
+        parses = True
+    except SyntaxError:
+        parses = False
+    check("the file parses as Python 3.8, so an old Python reaches the version check", parses)
+    check("the version check runs before any other import",
+          source.index("sys.version_info < PYTHON_MIN:") < source.index("\nimport argparse\n"))
+    need = "%d.%d" % PYTHON_MIN
+    check("the docstring states the minimum PYTHON_MIN sets",
+          f"Python {need} or later (PYTHON_MIN, below)" in " ".join((__doc__ or "").split()))
+    older = (PYTHON_MIN[0], PYTHON_MIN[1] - 1)
+
+    def older_python(argv: list[str]) -> subprocess.CompletedProcess:
+        code = ("import runpy, sys; sys.version_info = %r; sys.argv = [%r] + %r; "
+                "runpy.run_path(sys.argv[0], run_name='__main__')" % (older + (0, "final", 0), str(Path(__file__)), argv))
+        return subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True, check=False)
+
+    for argv in (["--check"], ["--write"], ["--self-test"], []):
+        r = older_python(argv)
+        lines = r.stderr.splitlines()
+        check(f"older Python: {' '.join(argv) or 'no option'} exits 2 with the framed ERROR message alone, on stderr",
+              r.returncode == 2 and r.stdout == "" and r.stderr == too_old_text(older)
+              and lines[0] == lines[-1] == RULE
+              and lines[1] == (f"ERROR: the permissions script did NOT run, because this is Python "
+                               f"{older[0]}.{older[1]} and it needs Python {need} or later.")
+              and lines[3] == f"Upgrade to Python {need} or later, then run the command again.")
+    r = older_python(["--help"])
+    check("older Python: --help still prints the docstring", r.returncode == 0 and "PYTHON_MIN" in r.stdout and r.stderr == "")
+
     # The mappings themselves.
     check("Edit(**/*.pdf) -> *.pdf", edit_resources("**/*.pdf") == (["*.pdf"], ""))
     check("Edit(build/**) -> build/*", edit_resources("build/**") == (["build/*"], ""))
@@ -651,6 +715,11 @@ def self_test() -> int:
     check("Antigravity: document only", any("mcp(voice/speak)" in n for n in ag.notes))
     check("Antigravity: Edit(build/**) -> deny write_file(build)", any("deny write_file(build)" in n for n in ag.notes))
     check("Antigravity: Edit(**/*.pdf) is reported", any(u.startswith("Edit(**/*.pdf): cannot be expressed") for u in ag.unmapped))
+    check("Antigravity: /how-to/** -> folder how-to", antigravity_folder("/how-to/**") == "how-to")
+    check("Antigravity: Edit(/how-to/**) -> deny write_file(how-to)",
+          any("deny write_file(how-to)" in n for n in antigravity_plan([("deny", "Edit(/how-to/**)")]).notes))
+    for bad in ("//how-to/**", "/**", "~/how-to/**", "/a/*/b/**"):
+        check(f"Antigravity: {bad} names no folder", antigravity_folder(bad) is None)
     check("Gemini CLI: the policy sketch for **/*.pdf", '[^"]*/[^/"]*\\.pdf"' in gemini_policy("Edit(**/*.pdf)", "**/*.pdf"))
 
     # A project: check, write, write again.

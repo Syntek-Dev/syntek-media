@@ -2,8 +2,11 @@
 # context-threshold-handoff.sh — warn the session before its context window runs out.
 #
 # Registered in .claude/settings.json under hooks.UserPromptSubmit (no matcher). The entry
-# resolves this script from the git root and guards it with [ -f … ], so a missing script is a
-# silent no-op, never an error.
+# resolves this script from the git root in the silent form, `ROOT=$(git rev-parse
+# --show-toplevel …) || exit 0; [ -f … ] || exit 0; exec bash …`, so outside a git repository,
+# or with this script missing, it exits 0 and prints nothing. An entry an earlier release wired
+# in the `[ -f … ] && exec` form is kept as it was; there a missing script shows Claude Code's
+# 'hook error' notice.
 #
 # A hook CANNOT invoke a skill, write a handoff or stop a turn; only the model can. So this
 # script measures and reminds, and the session-boundaries rule (07-session-boundaries.md in the
@@ -23,11 +26,36 @@
 # larger window). A wrong guess fires early rather than never. CLAUDE_CONTEXT_ADVISE_PCT and
 # CLAUDE_CONTEXT_INSIST_PCT move the thresholds.
 #
+# It needs Python 3.14 or later (PYTHON_MIN, below). On an older python3 it measures nothing:
+# on every prompt it prints the JSON that has Claude Code warn the person (systemMessage) and the
+# session (additionalContext) that it did NOT work and that Python needs upgrading. The Python
+# below parses as Python 3.8, so an old python3 reaches that warning, never a SyntaxError.
+#
+# Before it measures, it passes the payload to pre-compact-handoff.sh relay, which needs no
+# Python: where that hook stopped an automatic compaction in this session since the last prompt
+# (its marker for this session; another session's is never read), the relay prints the note for
+# it (a systemMessage for the person, additionalContext for the session), and that note is this
+# prompt's only output; the measure resumes on the next prompt.
+#
 # stdin  = the UserPromptSubmit JSON payload (transcript_path, session_id).
-# stdout = added to the model's context.
+# stdout = added to the model's context; on a python3 older than PYTHON_MIN, the warning JSON;
+#          after a stopped compaction, the relayed note's JSON.
 # Exit code: always 0. A miscounted token must never block a prompt; without python3, without a
 # transcript or without a usable record it prints nothing.
 set -uo pipefail
+
+# The payload, read once: the relay and the measure both need it.
+payload=""
+[ -t 0 ] || payload="$(cat 2>/dev/null)" || payload=""
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || here=""
+if [ -n "$here" ] && [ -f "$here/pre-compact-handoff.sh" ]; then
+  relayed="$(printf '%s' "$payload" | bash "$here/pre-compact-handoff.sh" relay 2>/dev/null)" || relayed=""
+  if [ -n "$relayed" ]; then
+    printf '%s\n' "$relayed"
+    exit 0
+  fi
+fi
 
 command -v python3 >/dev/null 2>&1 || exit 0
 
@@ -37,6 +65,9 @@ import os
 import re
 import sys
 
+# The one place the minimum is set: the move to a newer Python changes this line and the
+# header above, nothing else.
+PYTHON_MIN = (3, 14)
 TAIL = 4 * 1024 * 1024
 
 
@@ -95,7 +126,30 @@ def measure(path):
         return last_usage(handle.read().decode("utf-8", "replace").splitlines())
 
 
+def too_old(version):
+    """The warning JSON for a python3 older than PYTHON_MIN; the prompt goes ahead."""
+    need, have = "%d.%d" % PYTHON_MIN, "%d.%d" % tuple(version[:2])
+    person = ("WARNING: the context-window warning did NOT work: python3 here is Python %s, and the "
+              "hook needs Python %s or later, so nothing measures this session's context or warns "
+              "before it fills. Upgrade to Python %s or later." % (have, need, need))
+    session = ("The project's context-window hook, .claude/hooks/context-threshold-handoff.sh, did not "
+               "run for this prompt: python3 here is Python %s, and the hook needs Python %s or later, so "
+               "nothing measures this session's context or warns before the window fills. The "
+               "person has to upgrade to Python %s or later for the hook to work, and needs to hear this "
+               "from the session. Until then the session-boundaries rule still holds without the hook's "
+               "measure: a handoff at each natural stopping point keeps the window from filling." % (have, need, need))
+    return json.dumps({"systemMessage": person,
+                       "hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": session}})
+
+
 def main():
+    if sys.version_info < PYTHON_MIN:
+        try:
+            sys.stdin.read()   # the whole payload, so the client never writes to a closed pipe
+        except Exception:
+            pass
+        print(too_old(sys.version_info))
+        return
     try:
         payload = json.load(sys.stdin)
     except ValueError:
@@ -163,5 +217,5 @@ except Exception:
     pass
 PY
 
-python3 -I -c "$PROBE" 2>/dev/null || true
+printf '%s' "$payload" | python3 -I -c "$PROBE" 2>/dev/null || true
 exit 0

@@ -52,12 +52,51 @@ the copy recipe is in the bridge (.claude/syntek-*-agents.md) and in README.md.
 a held link committed beside .agents, a held link the owner restores by hand, and a hold that
 fails before it renames anything.
 
-Python 3.11 or later, standard library only. Exit codes: 0 = always (--self-test: 0 passed,
-1 a probe failed). A non-zero exit from a stage would abort the update.
+Python 3.14 or later (PYTHON_MIN, below), standard library only. Copier runs it on its own
+Python, which uvx may choose from those it already holds, so every update command asks for
+uvx --python '>=3.14'. On an older Python it does NOT run: hold prints a framed message on
+stderr that it held nothing, naming the Python it found and the rerun, restore prints it only
+where a link is held, and both exit 0, so where .agents links outside the project Copier then
+stops the update; a --self-test there fails, and --help still prints this text. The check runs
+before any other import, and the file parses as Python 3.8, so an old Python reaches the
+message instead of a SyntaxError. Exit codes: 0 = always (--self-test: 0 passed, 1 a probe
+failed). A non-zero exit from a stage would abort the update.
 """
 
-import os
 import sys
+
+# The one place the minimum is set: the move to a newer Python changes this line and the text
+# above, nothing else.
+PYTHON_MIN = (3, 14)
+
+
+def too_old(stage, ver):
+    """The framed message printed on stderr, in place of any run, where Python is older than
+    PYTHON_MIN; stage is the subcommand, ver the running Python's version."""
+    need, have = '%d.%d' % tuple(PYTHON_MIN), '%d.%d' % tuple(ver[:2])
+    if stage == '--self-test':
+        body = ['agents-outside-link did NOT run, because this is Python %s and it needs Python %s or later.'
+                % (have, need),
+                'The self-test did not run.',
+                'Upgrade to Python %s or later, then run the self-test again.' % need]
+    else:
+        body = ['agents-outside-link did NOT run, because Copier runs on Python %s here'
+                ' and it needs Python %s or later.' % (have, need),
+                'It held and put back nothing: where .agents is a link outside the project, Copier stops',
+                'this update, and a link an earlier update held as .agents.syntek-held stays held.',
+                'Upgrade to Python %s or later, then run the same update again, starting' % need,
+                "uvx --python '>=%s' copier update." % need]
+    rule = '  ' + '=' * 76
+    return '\n'.join([rule] + ['  ' + line for line in body] + [rule]) + '\n'
+
+
+if __name__ == '__main__' and sys.version_info < PYTHON_MIN and sys.argv[1:2] not in (['--help'], ['-h']):
+    if sys.argv[1:2] != ['restore'] or __import__('os').path.lexists('.agents.syntek-held'):
+        sys.stderr.write('\n' + too_old(sys.argv[1] if len(sys.argv) > 1 else '', sys.version_info))
+        sys.stderr.flush()
+    sys.exit(1 if sys.argv[1:2] == ['--self-test'] else 0)
+
+import os  # noqa: E402  (after the version check above)
 
 ALIAS = '.agents'
 HELD = '.agents.syntek-held'
@@ -412,6 +451,70 @@ def self_test():
                       and at(proj, ALIAS) == 'a link to ../outside-agents' and at(proj, HELD) == 'absent')
         finally:
             os.chmod(proj, 0o755)
+
+        # ── An older Python: a framed message on stderr, nothing moved; read from PYTHON_MIN ──
+        need = '%d.%d' % PYTHON_MIN
+        older = (PYTHON_MIN[0], PYTHON_MIN[1] - 1)
+        have = '%d.%d' % older
+        old_h, old_t = too_old('hold', older), too_old('--self-test', older)
+        framed = all(t.splitlines()[0] == t.splitlines()[-1] == '  ' + '=' * 76 and t.endswith('\n')
+                     for t in (old_h, old_t))
+        check('old Python: the framed message names the Python, the minimum, what it skipped and the quoted rerun',
+              framed and old_h.splitlines()[1] == '  agents-outside-link did NOT run, because Copier runs on Python '
+              '%s here and it needs Python %s or later.' % (have, need)
+              and 'It held and put back nothing' in old_h and 'Upgrade to Python %s or later' % need in old_h
+              and "uvx --python '>=%s' copier update." % need in old_h
+              and old_t.splitlines()[1:3] == ['  agents-outside-link did NOT run, because this is Python %s'
+                                              ' and it needs Python %s or later.' % (have, need),
+                                              '  The self-test did not run.'])
+        check('old Python: the docstring states the minimum PYTHON_MIN sets',
+              ('Python %s or later (PYTHON_MIN, below)' % need) in ' '.join(__doc__.split())
+              and ("uvx --python '>=%s'" % need) in __doc__)
+        import ast
+        with open(os.path.abspath(__file__), encoding='utf-8') as f:
+            source = f.read()
+        try:
+            ast.parse(source, feature_version=(3, 8))
+            parses = True
+        except SyntaxError:
+            parses = False
+        check('old Python: the file parses as Python 3.8, so an old Python reaches the message', parses)
+        check('old Python: the version check runs before any other import',
+              source.index("sys.exit(1 if sys.argv[1:2] == ['--self-test'] else 0)") < source.index('\nimport os')
+              and source.index('\nimport sys\n') < source.index('\nPYTHON_MIN = '))
+
+        def aged(arg, proj):
+            """This file run as __main__ with arg, on a Python faked one minor release below PYTHON_MIN."""
+            return subprocess.run([sys.executable, '-I', '-c',
+                                   'import runpy, sys; sys.version_info = %r; sys.argv = [%r, %r]; '
+                                   'runpy.run_path(sys.argv[0], run_name="__main__")'
+                                   % (older + (0, 'final', 0), os.path.abspath(__file__), arg)],
+                                  cwd=proj, capture_output=True, text=True)
+
+        proj, outside = fresh()
+        inside, before = tree(proj), tree(outside)
+        r = aged('hold', proj)
+        ok = (r.returncode == 0 and r.stdout == '' and r.stderr == '\n' + old_h
+              and tree(proj) == inside and tree(outside) == before)
+        check('old Python: hold exits 0, with the framed message alone on stderr, and holds nothing'
+              + ('' if ok else ' (%r)' % (r,)), ok)
+        r = aged('restore', proj)
+        ok = r.returncode == 0 and r.stdout == '' and r.stderr == '' and tree(proj) == inside
+        check('old Python: restore with nothing held exits 0 and prints nothing'
+              + ('' if ok else ' (%r)' % (r,)), ok)
+        proj, outside = crash('link')
+        inside = tree(proj)
+        r = aged('restore', proj)
+        ok = (r.returncode == 0 and r.stdout == '' and r.stderr == '\n' + too_old('restore', older)
+              and tree(proj) == inside)
+        check('old Python: restore with a link held exits 0, with the framed message, and moves nothing'
+              + ('' if ok else ' (%r)' % (r,)), ok)
+        r = aged('--self-test', proj)
+        ok = r.returncode == 1 and r.stdout == '' and r.stderr == '\n' + old_t
+        check('old Python: --self-test exits 1, with its framed message' + ('' if ok else ' (%r)' % (r,)), ok)
+        r = aged('--help', proj)
+        ok = r.returncode == 0 and 'PYTHON_MIN' in r.stdout and r.stderr == ''
+        check('old Python: --help still prints the docstring' + ('' if ok else ' (%r)' % (r,)), ok)
     print()
     if fails:
         print('✗ Self-test failed: ' + str(fails) + ' of ' + str(probes) + ' probes.')

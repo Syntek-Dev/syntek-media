@@ -47,7 +47,8 @@
 #                        the shared files, the .claude/ and .codex/ containers, and the
 #                        family-shared set excepted (D80: the seven family skills and every
 #                        top-level entry a family path passes through, .gemini, handoffs,
-#                        opencode.json among them, are both templates' by design).
+#                        opencode.json and, since 0.6.0, how-to (D84) among them, are both
+#                        templates' by design).
 #                    14. Both rules folders are present: .claude/rules/syntek-author/ and
 #                        .claude/rules/syntek-media/.
 #                    15. Media first, then syntek-author: both apply without --overwrite.
@@ -63,10 +64,11 @@
 #                        Section 7): podcast and audiobook for author-nonfiction, so the
 #                        removal that deletes a whole gated folder is the one proved.
 #                    19. Media's copy output (without --quiet) carries every _message_after_copy
-#                        line of _common.sh's lists: the shared files and the skip rule, each
-#                        D13 allow, ask and Edit deny, the ELEVENLABS_MCP_BASE_PATH line, the
-#                        filter.lfs.required line, the check --setup line and the -a update
-#                        command; and Section 8's lines: Copier's 'conflict' then 'skip' is
+#                        line of _common.sh's lists: the shared files (D84's fourteen among them
+#                        since 0.6.0) and the skip rule, each D13 allow, ask and Edit deny, the
+#                        ELEVENLABS_MCP_BASE_PATH line, the filter.lfs.required line, the check
+#                        --setup line and the -a update command, run as uvx --python '>=3.14'
+#                        copier (D81); and Section 8's lines: Copier's 'conflict' then 'skip' is
 #                        expected, the optional line in .claude/CLAUDE.md, and nothing to add
 #                        to .gitignore or .mcp.json.
 #                    20. syntek-author-names.txt equals the names of the --author tree. Drift
@@ -80,12 +82,14 @@
 #                        from (CI pins the same tag as SYNTEK_AUTHOR_TAG); every file media
 #                        vendors is listed there with the same kind, scope, size, SHA-256, mode
 #                        and link target, and every block with the same markers, destination,
-#                        size and SHA-256; every file or block it lists is one media vendors or
-#                        one it defers to D81 (migrations/family-update.py, the update block),
-#                        so a family file added in a later tag fails until it is adopted; and
-#                        _common.sh's family asks, deny and hooks equal the --author tree's own
-#                        settings seed (its gates removed), which media's seed copies (D13 as D80
-#                        amends it). Together with shipped-seeds.sh checks 21–27, which hold
+#                        size and SHA-256; every file or block it lists is one media vendors,
+#                        none deferred since 0.6.0 (D81: SM_FAMILY_DEFERRED is empty), so a
+#                        family file added in a later tag fails until it is adopted; and
+#                        _common.sh's family asks, denies (the guide's Edit(/how-to/**) among
+#                        them, D84), top-level values (autoCompactEnabled, idleCompaction) and
+#                        hooks equal the --author tree's own settings seed (its gates removed),
+#                        which media's seed copies (D13 as D80, D81 and D84 amend it).
+#                        Together with shipped-seeds.sh checks 21–27, which hold
 #                        media's files to its manifest, it proves the vendored bytes are the
 #                        tag's. Against syntek-author's main (CI's advisory job) it reports the
 #                        drift the next adoption will take.
@@ -280,7 +284,8 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
     # An entry under a linked folder (syntek-author's .agents -> .claude) is not a path of its
     # own: hash_tree never follows the link, so fingerprinting through it would invent a change.
     [[ "$p" == */* && -L "$PROJ/${p%/*}" ]] && continue
-    [[ -f "$PROJ/$p" || -L "$PROJ/$p" ]] && printf '%s\t%s\n' "$p" "$(path_fingerprint "$PROJ/$p")"
+    # An if, never `[[ ]] &&`: a last path that is absent must not fail the pipeline (pipefail).
+    if [[ -f "$PROJ/$p" || -L "$PROJ/$p" ]]; then printf '%s\t%s\n' "$p" "$(path_fingerprint "$PROJ/$p")"; fi
   done | LC_ALL=C sort > "$w/shared-after.sha"
   sm_update "$PROJ" >>"$log" 2>&1 || B_AGAIN_STATUS=$?
   changed_paths "$PROJ" > "$w/b-again.txt"; sm_commit_all "$PROJ" 'update syntek-media again'
@@ -513,6 +518,7 @@ write_family_fixtures() { # $1 = fixture media, $2 = fixture syntek-author
   SMF_FILES="$SM_FAMILY_SHARED" SMF_LINKS="$SM_FAMILY_LINKS" SMF_BLOCKS="$SM_FAMILY_BLOCKS" \
   SMF_RELEASE="$SM_FAMILY_RELEASE" SMF_HOOKS="$SM_SETTINGS_HOOKS" \
   SMF_ASK="$(printf '%s\n' "${SM_SETTINGS_FAMILY_ASK[@]}")" SMF_DENY="$(printf '%s\n' "${SM_SETTINGS_FAMILY_DENY[@]}")" \
+  SMF_TOP="$(printf '%s\n' "${SM_SETTINGS_TOP[@]}")" \
   python3 - "$1" "$2" <<'PYFIX'
 import hashlib, json, os, sys
 from pathlib import Path
@@ -547,15 +553,18 @@ def manifest(owner, release, src_of, extra_files=(), extra_blocks=()):
     blocks += list(extra_blocks)
     return {"format": 1, "owner": owner, "release": release, "files": sorted(files, key=lambda e: e["path"]), "blocks": blocks}
 (media / "family-shared.json").write_text(json.dumps(manifest("syntek-media", "unreleased", lambda p, s: s), indent=2) + "\n")
-theirs = manifest("syntek-author", E["SMF_RELEASE"], lambda p, s: s.replace("syntek-media", "syntek-author"),
-                  [{"path": "migrations/family-update.py", "source": "migrations/family-update.py", "kind": "file",
-                    "scope": "repository", "bytes": 1, "sha256": "0" * 64, "mode": "755"}],
-                  [{"name": "update", "source": "copier.yml", "begin": "# BEGIN family-shared update (D48)",
-                    "end": "# END family-shared update (D48)", "bytes": 1, "sha256": "0" * 64}])
+# Since D81 media vendors every entry the tag lists (the update script and its block among
+# them, through SM_FAMILY_SHARED and SM_FAMILY_BLOCKS), so syntek-author's manifest holds no
+# extra entry of its own here.
+theirs = manifest("syntek-author", E["SMF_RELEASE"], lambda p, s: s.replace("syntek-media", "syntek-author"))
 (author / "family-shared.json").write_text(json.dumps(theirs, indent=2) + "\n")
 seed = author / "template" / ".claude" / "settings.json"
 data = json.loads(seed.read_text())
-data["permissions"] = {"ask": [a for a in E["SMF_ASK"].splitlines() if a], "deny": ["AskUserQuestion"] + [d for d in E["SMF_DENY"].splitlines() if d]}
+for kv in [t for t in E["SMF_TOP"].splitlines() if t]:
+    key, val = kv.split("=", 1)
+    data[key] = json.loads(val)
+data["permissions"] = {"ask": [a for a in E["SMF_ASK"].splitlines() if a],
+                       "deny": ["AskUserQuestion", "Edit(**/*.pdf)", "Edit(build/**)", "Edit(/how-to/**)"] + [d for d in E["SMF_DENY"].splitlines() if d]}
 data["hooks"] = json.loads(E["SMF_HOOKS"])
 seed.write_text(json.dumps(data, indent=2) + "\n")
 PYFIX
@@ -649,6 +658,18 @@ STUB
   FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
   probe "check 22 fires when syntek-author's seed hooks differ from the ones media's seed copies" "check 22 — _common.sh's SM_SETTINGS_HOOKS is not the --author tree's seed's hooks key"
   cp "$tmp/seed.held" "$seed"
+  sed -i 's/"idleCompaction": false/"idleCompaction": true/' "$seed"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
+  probe "check 22 fires when syntek-author's seed sets a top-level value media's does not (D81)" "check 22 — _common.sh's SM_SETTINGS_TOP sets idleCompaction to false"
+  cp "$tmp/seed.held" "$seed"
+  sed -i 's#"Edit(/how-to/\*\*)",##' "$seed"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
+  probe "check 22 fires when syntek-author's seed no longer denies the guide's edits (D84)" "check 22 — _common.sh's SM_SETTINGS_DENY holds the guide's Edit(/how-to/**)"
+  cp "$tmp/seed.held" "$seed"
+  python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); m["blocks"].append({"name": "later", "source": "copier.yml", "begin": "# BEGIN family-shared later (D48)", "end": "# END family-shared later (D48)", "bytes": 1, "sha256": "0"*64}); json.dump(m,open(sys.argv[2],"w"))' "$tmp/manifest.held" "$am"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
+  probe "check 22 fires on a family block a later tag adds, which nothing defers since D81" "check 22 — the --author tree's family-shared.json lists the later block"
+  cp "$tmp/manifest.held" "$am"
   FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
   probe_clean "the fixtures share the project cleanly again once every mutation is undone"
 

@@ -57,7 +57,12 @@ env:
   # The syntek-author release media vendors from (DESIGN.md D85, Section 7). Jobs 2 and 3 test
   # against it, so syntek-author's main moving never turns this run red; bump it at each
   # adoption, with coexist-test.sh --refresh-names (check 20 fails while the two disagree).
-  SYNTEK_AUTHOR_TAG: v0.5.0
+  SYNTEK_AUTHOR_TAG: v0.7.0
+  # Python 3.14 is media's base (DESIGN.md D81). setup-python alone does not choose the Python
+  # uvx runs Copier on: uv prefers a managed interpreter it already has. Below 3.14 the vendored
+  # scripts' self-tests fail, and the outside-link stages do nothing, so update-test.sh check 20
+  # stops with ForbiddenPathError. _common.sh refuses an older UV_PYTHON or python3 (exit 2).
+  UV_PYTHON: "3.14"
 
 jobs:
   source:
@@ -70,7 +75,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       # Tokens, the generated mode-file block, pairs and routed shapes, the line cap, personal
       # data, development isolation, the community files (D83), seeds and skills — every one
@@ -83,7 +88,8 @@ jobs:
       # .agents, with the printed hand fix run step by step under sh; then the data-root resolver
       # and the permissions script every project receives, template/.claude/syntek-media-
       # dataroot.py and syntek-media-permissions.py, with SYNTEK_DATA_ROOT unset, so neither
-      # self-test can reach a real data root.
+      # self-test can reach a real data root. Since 0.6.0 (D81) also migrations/family-update.py,
+      # the vendored update script, with SYNTEK_DATA_ROOT unset, on Python 3.14 as every step is.
       - name: Prove each detector, then run it on the template source
         run: |
           status=0
@@ -102,6 +108,10 @@ jobs:
           echo "::group::agents-outside-link.py"
           python3 migrations/agents-outside-link.py --self-test \
             || { echo "::error::agents-outside-link.py — the vendored migration's self-test failed"; status=1; }
+          echo "::endgroup::"
+          echo "::group::family-update.py"
+          env -u SYNTEK_DATA_ROOT python3 migrations/family-update.py --self-test \
+            || { echo "::error::family-update.py — the vendored update script's self-test failed"; status=1; }
           echo "::endgroup::"
           echo "::group::syntek-media-dataroot.py"
           env -u SYNTEK_DATA_ROOT python3 template/.claude/syntek-media-dataroot.py --self-test \
@@ -126,7 +136,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       # ffmpeg is a short apt install and runs the toolkit end to end on every render, so
       # toolkit-smoke.sh gets --require-ffmpeg: a missing ffmpeg is an error here, never a skip.
@@ -208,7 +218,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Fetch syntek-author at its pinned tag, or warn
         run: |
@@ -251,7 +261,7 @@ jobs:
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       # Advisory only (DESIGN.md Section 7): syntek-author's default branch, not the pinned tag.
       # What coexist-test.sh finds here is printed as warnings and the job always exits 0, so a

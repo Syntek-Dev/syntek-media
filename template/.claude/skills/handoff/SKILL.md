@@ -41,21 +41,28 @@ layer's procedures. The rule it carries out:
 Compaction summarises lossily, without knowing which details were load-bearing; in a project
 like this the detail it drops is usually the one that matters (an interpretation the author chose
 an hour ago, a line they rejected and why, which of two drafts is live). **This is enforced, not
-merely encouraged.** The seed `.claude/settings.json` sets `autoCompactEnabled` to false, so the
-harness never compacts on its own. A copy over a project's own `settings.json`, or an update, adds
-false where the key is absent and reports any other value it leaves alone. Two hooks, registered in
-the same file, back it up:
+merely encouraged.** The seed `.claude/settings.json` sets `autoCompactEnabled` and
+`idleCompaction` to false, so the harness never compacts on its own, neither as the window fills
+nor while the session sits idle. A copy over a project's own `settings.json`, or an update, adds
+each as false where the key is absent and reports any other value it leaves alone. Two hooks,
+registered in the same file, back it up:
 
 - `.claude/hooks/context-threshold-handoff.sh` (`UserPromptSubmit`) measures the window: it
   advises a handoff once when the session passes half of it, and insists on every prompt past
   three quarters.
 - `.claude/hooks/pre-compact-handoff.sh` (`PreCompact`) catches anything that still reaches a
-  compaction: on `auto` it **blocks** it, and on a manual `/compact` it warns and lets the
-  author's choice through.
+  compaction: on `auto` it **blocks** it, and the author's next prompt shows that automatic
+  compaction was stopped and to run `/handoff`, then `/clear` (or, where `/handoff` has no room
+  to run, `/compact` first, which the project allows, then `/handoff`); a manual `/compact` goes
+  ahead, the author's choice, and once it is done (`SessionStart`) a note says that a handoff
+  gives a cleaner break, so next time `/handoff`, then `/clear`.
 
 No setting or hook can write the handoff: a hook has only an exit code and a message. That part
 is the model's. Notice the window filling, hand off **before** it is full (a compaction blocked at
-the hard limit leaves the current request to fail), and stop.
+the hard limit leaves the current request to fail), and stop. Where the window has no room left
+to write one, say so rather than start a handoff that cannot finish: the author may run
+`/compact`, then `/handoff`. After a `/compact` the author ran to make room for one, offer the
+handoff at once.
 
 ## Where the handoff lives
 
@@ -149,7 +156,7 @@ teaching skill first among the next skills.
 - The project's session-boundaries rule (`.claude/rules/`) — the rule this skill carries out,
   and the rule both hooks cite.
 - `.claude/hooks/context-threshold-handoff.sh` · `.claude/hooks/pre-compact-handoff.sh` — the
-  `UserPromptSubmit` and `PreCompact` hooks; registered in `.claude/settings.json`.
+  `UserPromptSubmit`, `PreCompact` and `SessionStart` hooks; registered in `.claude/settings.json`.
 - `handoffs/CONTEXT.md` — the folder and its naming.
 - `.claude/skills/grill-with-docs/SKILL.md` — how durable decisions are recorded before a handoff.
 - `.claude/skills/wayfinder/SKILL.md` — work whose continuity spans many sessions by design.

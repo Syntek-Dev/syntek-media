@@ -68,23 +68,28 @@ _answers_file: .copier-answers.syntek-media.yml
 # its defaults (DESIGN.md D80): a recorded answer is kept, and a record without one (a project
 # from before 0.5.0) keeps the project as it is.
 #
-# `peer` is syntek-author's record (D14 as D80 widens it; syntek-author D50), read for its
-# data-root answers (DATA_*) alone, and for whether it exists at all: a first data-root answer
-# here defaults to syntek-author's and must equal it, and a syntek-author record without
-# DATA_STORE (from before its data root) makes media's first store `repo`. It sits here,
-# outside the block, because each template names the OTHER one's file. Where syntek-author has
-# never been applied, Copier prints a second MissingFileWarning, for this file, and
-# `_external_data.peer` is empty: the same accepted cost, doubled.
+# `peer` is syntek-author's record (D14 as D80 widens it; syntek-author D50). It is read for
+# its data-root answers (DATA_*) and, since 0.6.0, inside the family block, for its client and
+# model answers (AGENT_CLIENTS, CODEX_MODEL, GEMINI_MODEL and the OPENCODE_* keys; D81,
+# syntek-author D47), and for whether it exists at all: a first data-root answer here defaults
+# to syntek-author's and must equal it, a syntek-author record without DATA_STORE (from before
+# its data root) makes media's first store `repo`, and the client and model defaults take
+# syntek-author's recorded values where media's own record holds none. Nothing reads
+# syntek-author's `_commit`. It sits here, outside the block, because each template names the
+# OTHER one's file. Where syntek-author has never been applied, Copier prints a second
+# MissingFileWarning, for this file, and `_external_data.peer` is empty: the same accepted
+# cost, doubled.
 #
-# THE READS OF EXTERNAL DATA ARE THESE THREE, AND NO OTHER (D14, widened by D80): BRAND_KIND's
-# validator (prev); the defaults and validators inside the family-shared questions block (prev
-# and peer); and _message_after_update, which reads peer alone to report a data-root
-# disagreement. Never in a file body, a computed value, an _exclude gate, _message_after_copy
-# or _message_before_update: an update's temporary renders find no answers file, so data
-# rendered into a body differs between the old and the new render and leaves conflict markers
-# on the first update (probe c2c), and a read in _message_before_update aborts the update
-# (probe c3). A skill that needs to know whether syntek-author is present checks for its file
-# at run time.
+# THE READS OF EXTERNAL DATA ARE THESE THREE, AND NO OTHER (D14, widened by D80; its text
+# corrected, not amended, by D81): BRAND_KIND's validator (prev); the defaults and validators
+# inside the family-shared questions block (prev and peer); and _message_after_update, which
+# reads peer alone to report a data-root disagreement. Never in a file body, a computed value,
+# an _exclude gate, _message_after_copy or _message_before_update: an update's temporary
+# renders find no answers file, so data rendered into a body differs between the old and the
+# new render and leaves conflict markers on the first update (probe c2c), and a read in
+# _message_before_update aborts the update (probe c3). A skill that needs to know whether
+# syntek-author is present checks for its file at run time, as the copy-time warning task
+# does (D84): it reads files, never _external_data.
 _external_data:
   prev: .copier-answers.syntek-media.yml
   peer: .copier-answers.syntek-author.yml
@@ -181,18 +186,25 @@ _exclude:
   #
   # ── Shared root files: copy only, never on update (DESIGN.md D11, Section 3.6) ──
   #
-  # The thirty-six shared paths (D73, D76, D80): the nineteen below, then D80's seventeen
-  # after the D76 note. syntek-author ships every one of them but the retired
-  # .claude/mcp_config.json. Each has TWO lines in this file and needs both:
-  # this update gate, so an update never renders it and a copy the author deleted is never
-  # recreated; and its anchored line in _skip_if_exists below, so a copy over a project that
-  # already has it skips it (exit 0) instead of stopping with 'Interactive session required'.
-  # With both lines the file is written by a copy into an empty place, skipped by a copy over
-  # an existing file, never touched by an update and never recreated after deletion (probes
-  # b1–b4, h1 and gate.sh, 03/10/2026). That is stricter than syntek-author's seed-if-missing
-  # shared files (overrides syntek-author D17), because coexistence rule 3 says they render on
-  # copy only, never on update. Existing shared paths remain the author's; media fills only
-  # missing paths. Nothing media needs lives only in them (D5, D73).
+  # The fifty shared paths (D73, D76, D80, D84): the nineteen below, then D80's seventeen
+  # after the D76 note, then D84's fourteen. syntek-author ships every one of them but the
+  # retired .claude/mcp_config.json. Each has TWO lines in this file and needs both:
+  # this update gate, so Copier's update never renders it and never recreates a copy the
+  # author deleted; and its anchored line in _skip_if_exists below, so a copy over a project
+  # that already has it skips it (exit 0) instead of stopping with 'Interactive session
+  # required'. With both lines Copier writes the file on a copy into an empty place, skips it
+  # on a copy over an existing file and never renders it on update (probes b1–b4, h1 and
+  # gate.sh, 03/10/2026). D11 still overrides syntek-author D17, but since 0.6.0 its copy-only
+  # rule binds Copier alone, and coexistence rule 3 no longer calls media stricter (D81). D81's
+  # update script, last in _migrations, is the stated exception for the paths its refresh data
+  # lists:
+  # it refreshes the twenty-seven listed family-shared files where the project's copy still
+  # equals a revision of its render history, and writes one only where the owner never had it
+  # (a deleted one stays deleted); it offers the listed settings entries and top-level values
+  # to .claude/settings.json and the two MCP servers to the MCP files once each; and it puts
+  # the guide under how-to/ back (D84). No other shared path is refreshed, offered to or
+  # restored. Existing shared paths remain the author's; media fills only missing paths.
+  # Nothing media needs lives only in them (D5, D73).
   #
   # NEVER DELETE ONE OF THESE LINES. Without it the file becomes seed-if-missing, and a shared
   # file the author deleted is recreated from media's copy on the next update — inside
@@ -241,7 +253,7 @@ _exclude:
   - /.claude/mcp_config.json
   #
   # D80: seventeen more shared paths, syntek-author's family-shared files (syntek-author D48,
-  # D51), vendored byte for byte from its v0.5.0 tag and listed in family-shared.json: the
+  # D51), vendored byte for byte from its v0.7.0 tag and listed in family-shared.json: the
   # Gemini CLI settings and their pair, OpenCode's settings, the SKILL.md of the seven
   # working-practice skills, the two session hooks with the .claude/hooks/ pair, and the
   # handoffs/ pair. Each takes the same two lines as the nineteen, FILE by file, never the
@@ -249,9 +261,9 @@ _exclude:
   # are template-owned and update (the generated block below). syntek-author writes the same
   # paths copy-only, so neither template's update renders, merges or deletes the copy the
   # other one wrote, and a combined project holds one copy whichever template came first.
-  # A copy-only file reaches an existing project only through an update script, which media
-  # takes with D81 (0.6.0): until then an update delivers none of these, and
-  # _message_after_update says so. A line here is never removed once released (D11).
+  # A copy-only file reaches an existing project only through an update script: D81's update
+  # script delivers the listed ones (the seven SKILL.md, both hooks, the two pairs), never a
+  # client file. A line here is never removed once released (D11).
   - "<: if _copier_operation == 'update' :>/.gemini/settings.json<: endif :>"
   - "<: if _copier_operation == 'update' :>/.gemini/CONTEXT.md<: endif :>"
   - "<: if _copier_operation == 'update' :>/.gemini/CLAUDE.md<: endif :>"
@@ -269,6 +281,32 @@ _exclude:
   - "<: if _copier_operation == 'update' :>/.claude/hooks/CLAUDE.md<: endif :>"
   - "<: if _copier_operation == 'update' :>/handoffs/CONTEXT.md<: endif :>"
   - "<: if _copier_operation == 'update' :>/handoffs/CLAUDE.md<: endif :>"
+  #
+  # D84: fourteen more shared paths, syntek-author's family-shared files for the user guide
+  # (syntek-author D56), vendored byte for byte from its v0.7.0 tag with every other family
+  # file and listed in family-shared.json: the guide guard, .claude/hooks/how-to-read-only.sh,
+  # then the five container pairs of how-to/ and its three shared chapters, in syntek-author's
+  # order. Each takes the same two lines as the rest, FILE by file: never a line naming /how-to
+  # or a folder under it, because every how-to folder also holds media's own files under its
+  # three syntek-media/ folders, which are template-owned and update. Copier never renders one
+  # on update; D81's update script writes one only where the project never had it, refreshes
+  # one the owner has not changed, and, since how-to/ is read-only (family-refresh.json
+  # "restore"), puts the new render's bytes back on any file under how-to/ that differs, never
+  # over another template's version of a shared one (D84). These lines are permanent (D11).
+  - "<: if _copier_operation == 'update' :>/.claude/hooks/how-to-read-only.sh<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/CONTEXT.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/CLAUDE.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/docs/CONTEXT.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/docs/CLAUDE.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/src/CONTEXT.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/src/CLAUDE.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/src/TEMPLATE-GUIDE/CONTEXT.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/src/TEMPLATE-GUIDE/CLAUDE.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/src/TEMPLATE-GUIDE/the-data-root.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/src/TEMPLATE-GUIDE/updating-and-recovery.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/workflows/CONTEXT.md<: endif :>"
+  - "<: if _copier_operation == 'update' :>/how-to/workflows/CLAUDE.md<: endif :>"
   #
   # The two client folders as well, syntek-author's own lines (its copier.yml, D47), so an
   # update never creates an empty .codex/ or .gemini/ in a project that never had one or whose
@@ -485,10 +523,12 @@ _exclude:
 # preview cards) and why that emptiness is audited by `.github/scripts/shipped-seeds.sh`, not
 # trusted.
 #
-# The thirty-six shared paths are here for a second reason (D11, D76, D80): a copy over a
+# The fifty shared paths are here for a second reason (D11, D76, D80, D84): a copy over a
 # project that already has one must skip it rather than abort. Their update-gated lines in
-# _exclude above make them copy-only as well, so unlike every other line here they are never
-# recreated.
+# _exclude above make them copy-only as well, so unlike every other line here Copier never
+# recreates them. The exceptions are D81's update script, which writes a listed family-shared
+# file only where the owner never had it, and D84's restore, which puts the guide's files under
+# how-to/ back on every full update.
 #
 # EVERY PATTERN IS ANCHORED. These are gitignore-style patterns like _exclude: an unanchored
 # `CONTEXT.md` would match every governance pair in the tree and freeze all of them against
@@ -548,6 +588,21 @@ _skip_if_exists:
   - /.claude/hooks/CLAUDE.md
   - /handoffs/CONTEXT.md
   - /handoffs/CLAUDE.md
+  # ── D84: the guide guard and the user guide's thirteen family files (also update-gated in _exclude) ──
+  - /.claude/hooks/how-to-read-only.sh
+  - /how-to/CONTEXT.md
+  - /how-to/CLAUDE.md
+  - /how-to/docs/CONTEXT.md
+  - /how-to/docs/CLAUDE.md
+  - /how-to/src/CONTEXT.md
+  - /how-to/src/CLAUDE.md
+  - /how-to/src/TEMPLATE-GUIDE/CONTEXT.md
+  - /how-to/src/TEMPLATE-GUIDE/CLAUDE.md
+  - /how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md
+  - /how-to/src/TEMPLATE-GUIDE/the-data-root.md
+  - /how-to/src/TEMPLATE-GUIDE/updating-and-recovery.md
+  - /how-to/workflows/CONTEXT.md
+  - /how-to/workflows/CLAUDE.md
   # ── brand/: the design register, the design system and the spoken voice ──
   # tokens.css and the two layout components (previews/thumbnail.html and previews/card.html)
   # are the brand's source of truth, synced with its Claude Design project by the author (D18).
@@ -907,16 +962,21 @@ DATE:
 # project uses, and their models (syntek-author D47); where its binary files are kept, and
 # with what layout (syntek-author D50); and which service keeps a copy of that data root
 # (syntek-author D53). Since 0.5.0 (D80) the lines strictly between the two marker lines below
-# are syntek-author's family-shared 'questions' block, byte for byte at its v0.5.0 tag, as
-# family-shared.json records it. Never edit them here: they come again only from a later
-# syntek-author tag (one tag for all, D85). The marker lines are syntek-author's too, byte for
-# byte, so that its family-shared.sh finds the block: their D48 is syntek-author's decision,
-# never media's D48. So the block names no template and no media path: where its comments and
-# help say 'the other template' or 'the sibling', read syntek-author.
+# are syntek-author's family-shared 'questions' block, byte for byte: since 0.6.0 at its v0.7.0
+# tag, not its v0.5.0 (D81), as family-shared.json records it. Never edit them here: they come
+# again only from a later syntek-author tag (one tag for all, D85). Its client and model
+# defaults now read the project's previous answers, then syntek-author's record (syntek-author
+# D47 and its Section 9 rule 7), so its peer read covers AGENT_CLIENTS, CODEX_MODEL,
+# GEMINI_MODEL and the OPENCODE_* keys as well as DATA_* (D14's text, corrected by D81). The
+# marker lines are syntek-author's too, byte for byte, so that its family-shared.sh finds the
+# block: their D48 is syntek-author's decision, never media's D48. So the block names no
+# template and no media path: where its comments and help say 'the other template' or 'the
+# sibling', read syntek-author.
 #
 # Inside the block a delimiter reads only its own fifteen keys, `_external_data` (prev and
-# peer, named above, outside the block), `_folder_name` (the slug's default) and Copier's
-# `UNSET` (the same default, where no slug can be derived; the floor above admits it). The one
+# peer, named above, outside the block), `_folder_name` (the slug's default), Copier's `UNSET`
+# (the same default, where no slug can be derived; the floor above admits it) and the
+# short local names its own `set` statements make (since v0.7.0's defaults). The one
 # name besides them is syntek-author's retired INCLUDE_DRIVE_SYNC, inside two string literals
 # in DATA_PROVIDER's default: media never asked it, so media's own record never holds it, and
 # the default goes on to syntek-author's answer, then none. The block sits LAST, after DATE,
@@ -926,7 +986,7 @@ DATE:
 # What the answers do here. AGENT_CLIENTS gates each client's files (the coding-agent block of
 # _exclude, which acts on a copy only) and the rows of the model table in
 # .claude/rules/syntek-media/05-model-allocation.md; a model answer is written into its
-# client's own file on a copy only. The data-root answers place nothing in 0.5.0: media's map,
+# client's own file on a copy only. The data-root answers place nothing yet: media's map,
 # .claude/syntek-media-dataroot.json, names no folder (D80), so footage stays where
 # production/src/footage/manifest.toml lists it. They keep the family's records in agreement,
 # which the data-root resolver requires of every answers file in the project, and
@@ -934,22 +994,36 @@ DATE:
 # content block that reads one of these answers repeats its question's `when:` test, and tests
 # DATA_STORE by equality with a value, never `!=` (syntek-author D50).
 #
-# Existing projects need no migration (D80): the update that first asks these records
-# AGENT_CLIENTS [] (so it writes no client's files) and DATA_STORE repo, or the store
-# syntek-author already records; _message_before_update says so.
+# Existing projects need no migration (D80, D81): the update that first asks these writes no
+# client's files, and records syntek-author's AGENT_CLIENTS where its record holds a list (an
+# empty one included), otherwise [], and DATA_STORE repo, or the store syntek-author already
+# records; _message_before_update says so. Over syntek-author, a first copy likewise takes
+# syntek-author's recorded clients and models, so it writes no client file syntek-author's
+# answers leave out.
 # BEGIN family-shared questions (D48)
 # The client values are the gate strings and never change; the labels may. Gemini CLI and
 # Antigravity are two choices, not one: they share GEMINI.md and the .agents/skills link, but
 # only Gemini CLI reads .gemini/settings.json and only Antigravity reads
 # .agents/mcp_config.json.
 #
-# The default reads the previous answers record. A record that already holds this answer
-# keeps it (only its values that are still choices), so a copy over an existing project
-# (re-adoption) never resets the clients, unless a Copier settings file sets them. A
-# record without it belongs to a project being updated, and the update that first asks this
-# question must record no client whose files the project never received, so the default
-# there is none. A fresh copy, with no record, gets all four. `_copier_operation` cannot make
-# this test: it is undefined in question defaults.
+# One project, one set of client files and one model table: the default reads this
+# template's previous answers record, then the other template's, and takes from either only
+# a list (never a string or a mapping), keeping only its values that are still choices. A
+# previous record that holds this answer keeps it, so a copy over an existing project
+# (re-adoption) never resets the clients, unless a Copier settings file sets them. Next
+# comes the other template's list, an empty one included: the client files are written once,
+# by whichever template comes first, so a template applied second writes no client file the
+# first left out, and both records, and so both model tables, name the same clients. Where
+# neither record holds a list, a previous record belongs to a project being updated, which
+# must record no client whose files it never received, so the default there is none. So the
+# update that first asks this question beside another template's record of clients takes
+# those clients, not none. That update writes no client file, so the model table follows the
+# answer and then matches the files the other template wrote; the update script, which
+# offers its MCP servers only to the client files the answers name, may then add each once
+# to those files where it never stood, and its report lists those clients' files the project
+# lacks as not added. A fresh copy, alone or beside another template's record from before
+# this question, gets all four. `_copier_operation` cannot make this test: it is undefined
+# in question defaults.
 AGENT_CLIENTS:
   type: str
   multiselect: true
@@ -957,27 +1031,30 @@ AGENT_CLIENTS:
     Which coding agents besides Claude Code will you use here? Each adds its entrypoint and
     settings; all of them read the same rules, skills and memory in .claude/. These files
     are written once: an update never adds, changes or recreates them. On an update that
-    first asks this, the default is none: tick a client to add its row to the model table,
-    then follow the agents bridge in .claude/ (the .claude/syntek-*-agents.md file) to add
-    its files. Tick none to keep the project Claude-only.
+    first asks this, the default is none, or the clients another template in this project
+    records: tick a client to add its row to the model table, then follow the agents bridge
+    in .claude/ (the .claude/syntek-*-agents.md file) to add its files. Tick none to keep the
+    project Claude-only.
   choices:
     "Codex — OpenAI's coding agent (AGENTS.md, .codex/)": codex
     "Gemini CLI — Google's terminal agent (GEMINI.md, .gemini/)": gemini-cli
     "Antigravity — Google's agent IDE (GEMINI.md, .agents/mcp_config.json)": antigravity
     "OpenCode 2 or later — any model, including a local server (AGENTS.md, opencode.json)": opencode
-  default: "<% (_external_data.prev.AGENT_CLIENTS | select('in', ['codex', 'gemini-cli', 'antigravity', 'opencode']) | list | tojson) if (_external_data.prev.get('AGENT_CLIENTS') is sequence and _external_data.prev.get('AGENT_CLIENTS') is not string) else ('[]' if _external_data.prev.get('_commit') else '[codex, gemini-cli, antigravity, opencode]') %>"
+  default: "<: set o = ['codex', 'gemini-cli', 'antigravity', 'opencode'] :><: set q = (_external_data.prev or {}).get('AGENT_CLIENTS') :><: set p = (_external_data.peer or {}).get('AGENT_CLIENTS') :><% (q | select('in', o) | list | tojson) if (q is sequence and q is not string and q is not mapping) else ((p | select('in', o) | list | tojson) if (p is sequence and p is not string and p is not mapping) else ('[]' if (_external_data.prev or {}).get('_commit') else '[codex, gemini-cli, antigravity, opencode]')) %>"
 
 # Blank leaves the client's own default. Codex ignores `model_provider`, `model_providers` and
 # `profile(s)` in a project file, with a warning (0.160.1), so running Codex on a local model
 # is the owner's user-level setting, not this answer. Model names are checked as character
 # sets (no Jinja regular expressions), so an answer can never break the TOML or JSON it is
-# written into.
+# written into. Each model's default reads the previous answers record, then the other
+# template's, as the clients' does, and takes a recorded name only where it is a string that
+# passes the validator's character check; otherwise it is blank.
 CODEX_MODEL:
   type: str
   help: >-
     Which model should Codex use for substantive work? Leave blank to use Codex's own
     default. Written to .codex/config.toml once; change it there later.
-  default: ""
+  default: "<: set c = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:/@+-' :><: set q = (_external_data.prev or {}).get('CODEX_MODEL') :><: set p = (_external_data.peer or {}).get('CODEX_MODEL') :><% q if (q is string and q | reject('in', c) | list | length == 0) else (p if (p is string and p | reject('in', c) | list | length == 0) else '') %>"
   when: "<% 'codex' in AGENT_CLIENTS %>"
   validator: >-
     <: if 'codex' in AGENT_CLIENTS and CODEX_MODEL | reject('in', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:/@+-') | list | length > 0 :>
@@ -989,7 +1066,7 @@ GEMINI_MODEL:
   help: >-
     Which model should Gemini CLI use for substantive work? Leave blank to use its own
     default. Written to .gemini/settings.json once; change it there later.
-  default: ""
+  default: "<: set c = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:/@+-' :><: set q = (_external_data.prev or {}).get('GEMINI_MODEL') :><: set p = (_external_data.peer or {}).get('GEMINI_MODEL') :><% q if (q is string and q | reject('in', c) | list | length == 0) else (p if (p is string and p | reject('in', c) | list | length == 0) else '') %>"
   when: "<% 'gemini-cli' in AGENT_CLIENTS %>"
   validator: >-
     <: if 'gemini-cli' in AGENT_CLIENTS and GEMINI_MODEL | reject('in', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:/@+-') | list | length > 0 :>
@@ -1003,6 +1080,14 @@ GEMINI_MODEL:
 # needs one gets it from OpenCode's own credential store or an environment variable the owner
 # sets. A committed provider replaces, for every collaborator, the address of any provider of
 # theirs with the same id, which is why the default writes none.
+#
+# The OpenCode defaults read the previous answers record, then the other template's, as the
+# clients' does. The provider takes a recorded value only where it is one of its choice
+# values, which its default repeats: Copier checks `choices` even on a hidden value, so a
+# value not offered must never reach it. The address, the model and the context take a
+# recorded value only from a record whose provider equals this answer, and only where the
+# question's validator would accept it, so a provider the person changes never inherits
+# another provider's address, model or context.
 OPENCODE_PROVIDER:
   type: str
   help: >-
@@ -1017,7 +1102,7 @@ OPENCODE_PROVIDER:
     "vLLM": vllm
     "LM Studio": lmstudio
     "Another OpenAI-compatible server": openai-compatible
-  default: user
+  default: "<: set o = ['user', 'named', 'llama-cpp', 'ollama', 'vllm', 'lmstudio', 'openai-compatible'] :><: set q = (_external_data.prev or {}).get('OPENCODE_PROVIDER') :><: set p = (_external_data.peer or {}).get('OPENCODE_PROVIDER') :><% q if q in o else (p if p in o else 'user') %>"
   when: "<% 'opencode' in AGENT_CLIENTS %>"
 
 # The defaults are each server's documented local port. The validator matches
@@ -1031,8 +1116,16 @@ OPENCODE_BASE_URL:
     The server's OpenAI-compatible address, ending /v1. The default is the server's usual
     local port.
   default: >-
-    <% {'llama-cpp': 'http://127.0.0.1:8080/v1', 'ollama': 'http://127.0.0.1:11434/v1',
-    'vllm': 'http://127.0.0.1:8000/v1', 'lmstudio': 'http://127.0.0.1:1234/v1'}.get(OPENCODE_PROVIDER, '') %>
+    <: set r = _external_data.prev or {} :><: set e = _external_data.peer or {} :><: set q =
+    r.get('OPENCODE_BASE_URL') if r.get('OPENCODE_PROVIDER') == OPENCODE_PROVIDER else none :><: set p =
+    e.get('OPENCODE_BASE_URL') if e.get('OPENCODE_PROVIDER') == OPENCODE_PROVIDER else none :><: set qb =
+    (q[8:] if q.startswith('https://') else (q[7:] if q.startswith('http://') else '')) if q is string else '' :><: set
+    qb = qb[:-1] if qb.endswith('/v1/') else qb :><: set pb = (p[8:] if p.startswith('https://') else (p[7:] if
+    p.startswith('http://') else '')) if p is string else '' :><: set pb = pb[:-1] if pb.endswith('/v1/') else pb :><%
+    q if (qb.endswith('/v1') and (qb[:-3] | length) > 0 and (q.split() | join) == q and '"' not in q) else (p if
+    (pb.endswith('/v1') and (pb[:-3] | length) > 0 and (p.split() | join) == p and '"' not in p) else
+    {'llama-cpp': 'http://127.0.0.1:8080/v1', 'ollama': 'http://127.0.0.1:11434/v1',
+    'vllm': 'http://127.0.0.1:8000/v1', 'lmstudio': 'http://127.0.0.1:1234/v1'}.get(OPENCODE_PROVIDER, '')) %>
   when: "<% 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER not in ['user', 'named'] %>"
   validator: >-
     <: if 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER not in ['user', 'named'] :><: set u = OPENCODE_BASE_URL :><: set body = u[8:] if u.startswith('https://') else (u[7:] if u.startswith('http://') else '') :><: set body = body[:-1] if body.endswith('/v1/') else body :><: if not body.endswith('/v1') or (body[:-3] | length) < 1 or (u.split() | join) != u or '"' in u :>Use the server's address with http:// or https:// and ending /v1 or /v1/, for example http://127.0.0.1:8080/v1.<: endif :><: endif :>
@@ -1044,7 +1137,7 @@ OPENCODE_MODEL:
   help: >-
     The model's ID. For a local server, the name it lists at /v1/models (Ollama, for example,
     qwen3:30b). For a model you name, provider/model as OpenCode lists it.
-  default: ""
+  default: "<: set c = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:/@+-' :><: set r = _external_data.prev or {} :><: set e = _external_data.peer or {} :><: set q = r.get('OPENCODE_MODEL') if r.get('OPENCODE_PROVIDER') == OPENCODE_PROVIDER else none :><: set p = e.get('OPENCODE_MODEL') if e.get('OPENCODE_PROVIDER') == OPENCODE_PROVIDER else none :><% q if (q is string and q and q | reject('in', c) | list | length == 0 and (OPENCODE_PROVIDER != 'named' or '/' in q)) else (p if (p is string and p and p | reject('in', c) | list | length == 0 and (OPENCODE_PROVIDER != 'named' or '/' in p)) else '') %>"
   when: "<% 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER != 'user' %>"
   validator: >-
     <: if 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER != 'user' :><: if not OPENCODE_MODEL :>Name the model: a local server's ID as it lists it at /v1/models, or provider/model.<: elif OPENCODE_MODEL | reject('in', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:/@+-') | list | length > 0 :>Use a model ID: letters, digits and . _ : / @ + - only, no spaces or quotation marks.<: elif OPENCODE_PROVIDER == 'named' and '/' not in OPENCODE_MODEL :>Write a model you name as provider/model, as OpenCode lists it.<: endif :><: endif :>
@@ -1059,7 +1152,7 @@ OPENCODE_CONTEXT:
     the server's setting: raise the server's own setting and this number together. Ollama's
     default depends on the GPU's memory (4k, 32k or 256k) unless OLLAMA_CONTEXT_LENGTH or a
     model's num_ctx sets it.
-  default: "<% {'llama-cpp': 262144, 'ollama': 4096, 'lmstudio': 4096, 'vllm': 32768}.get(OPENCODE_PROVIDER, 32768) %>"
+  default: "<: set r = _external_data.prev or {} :><: set e = _external_data.peer or {} :><: set q = (r.get('OPENCODE_CONTEXT') if r.get('OPENCODE_PROVIDER') == OPENCODE_PROVIDER else 0) | string | int :><: set p = (e.get('OPENCODE_CONTEXT') if e.get('OPENCODE_PROVIDER') == OPENCODE_PROVIDER else 0) | string | int :><% q if (q >= 1024 and q <= 10000000) else (p if (p >= 1024 and p <= 10000000) else {'llama-cpp': 262144, 'ollama': 4096, 'lmstudio': 4096, 'vllm': 32768}.get(OPENCODE_PROVIDER, 32768)) %>"
   when: "<% 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER not in ['user', 'named'] %>"
   validator: >-
     <: if 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER not in ['user', 'named'] and (OPENCODE_CONTEXT | int < 1024 or OPENCODE_CONTEXT | int > 10000000) :>Use the server's context length in tokens, from 1024 to 10000000.<: endif :>
@@ -1067,7 +1160,7 @@ OPENCODE_CONTEXT:
 # The data-root questions. Portable and path-free: each machine names its root in the
 # SYNTEK_DATA_ROOT environment variable, never in a file here, and the project's resolver
 # (.claude/syntek-*-dataroot.py) reads these answers at run time. The defaults read this
-# template's previous answers, then the sibling template's (data-root keys only), then
+# template's previous answers, then the sibling template's data-root answers, then
 # whether the project already exists (a previous record, or a sibling's record from before
 # the data root). Only a value offered here is ever taken from a record, and every gate on
 # the store tests it by equality, so a value a newer template adds opens nothing.
@@ -1232,16 +1325,20 @@ DATA_PROVIDER:
 # they exist, so a release that changes what a seed must contain ships that change as a
 # migration too. And a release that stops shipping a seed ships a migration that preserves it
 # first: a seed dropped from template/ is deleted from the project by the next update, filled
-# in or not (probe h2; Section 10). The thirty-six shared paths are not seeds of media's to
-# migrate: media never mutates a shared file (D11), so a change to what one should hold reaches
-# a project only as a hand edit that the release's notes and README.md name (0.5.0's
-# family-shared files included: the update script that adds and refreshes them is D81's, in
-# 0.6.0, and no 0.5.0 migration stands in for it). THERE ARE TWO STATED
-# EXCEPTIONS (D11, D76). D76's v0.4.2 migration below replaces the shipped .agents -> .claude
+# in or not (probe h2; Section 10). The fifty shared paths are not seeds of media's to
+# migrate: media never mutates a shared file (D11) but by its stated exceptions. THERE ARE
+# THREE (D11, D76, D81). D76's v0.4.2 migration below replaces the shipped .agents -> .claude
 # link with the real folder, because the link breaks every sandboxed Codex command in the
-# project. And the unversioned agents-outside-link.py pair, the second and transient one,
-# renames an .agents link that leaves the project aside before the render and back after it:
-# the net change is zero, and the link's target is never touched.
+# project. The unversioned agents-outside-link.py pair, the second and transient one, renames
+# an .agents link that leaves the project aside before the render and back after it: the net
+# change is zero, and the link's target is never touched. And since 0.6.0 D81's update script,
+# migrations/family-update.py, run by the family 'update' entry that closes this list: its
+# lanes refresh the twenty-seven listed
+# family-shared files the owner never changed, write one only where the owner never had it,
+# offer the listed settings entries, top-level values and MCP servers once each, and put the
+# guide under how-to/ back, as migrations/family-refresh.json lists them (D81, D84). Every
+# other change to what a shared file should hold reaches a project only as a hand edit that
+# the release's notes and README.md name.
 #
 # House shape for a migration script: it lives in migrations/ at this repository's root
 # (outside template/, so it never ships) and is read from the template clone through
@@ -1251,12 +1348,19 @@ DATA_PROVIDER:
 # destination it has not delivered) is never touched; and it always exits 0, because a
 # non-zero exit aborts every migration declared after it and leaves the project half-upgraded.
 # Key it to the release the folder MOVED in, never the release somebody noticed: every
-# migration is keyed to a release, with ONE STATED EXCEPTION, the agents-outside-link.py pair
-# at the top of the list (D76), which must run on every update and so carries no `version:`.
+# migration is keyed to a release, with TWO STATED EXCEPTIONS, each of which must run on every
+# update and so carries no `version:`: the agents-outside-link.py pair at the top of the list
+# (D76), and D81's family 'update' entry at the bottom, which closes the list; D81 is the
+# maintainer's approval and the DESIGN.md decision that .claude/CLAUDE.md Section 7.7 asks for.
 # Migrations run in declaration order, from the destination folder. A script is bash or
-# python3, standard library only (the toolkit already needs Python 3.11), and ends by printing
-# the command that runs it again, because the update's clone of the template is deleted when
-# the update ends (the outside-link pair needs no clone and prints its hand fix instead).
+# python3, standard library only, and ends by printing the command that runs it again, because
+# the update's clone of the template is deleted when the update ends (the outside-link pair
+# needs no clone and prints its hand fix instead; the update script prints its own report).
+# Python 3.14 is media's base since 0.6.0 (D81): the vendored scripts need it and, below it,
+# do nothing but print a framed message and exit 0. Media's own scripts keep to D85: the
+# v0.4.2 script keeps its python3 entry, and one media adds from 0.6.0 on (its v0.6.0
+# crossing report first) runs through _copier_python, as the family entries do, and
+# parses and exits 0 on Python 3.10, the oldest Copier 9.12.0 supports (D84).
 #
 # A `version:` entry runs only when the update crosses that version (new >= version > old),
 # which Copier reads from the template's git tags (PEP 440): an update to an untagged HEAD
@@ -1274,8 +1378,10 @@ _migrations:
   # bridge, .claude/syntek-media-agents.md, and README.md.
   #
   # Since 0.4.5 the pair is syntek-author's family-shared 'migrations' block (D85; syntek-author
-  # D48): the lines strictly between the two marker lines below are that block's bytes at
-  # syntek-author's v0.5.0 tag, as migrations/agents-outside-link.py is its script. Never edit
+  # D48): the lines strictly between the two marker lines below are that block's bytes, since
+  # 0.6.0 at syntek-author's v0.7.0 tag (D81), as migrations/agents-outside-link.py is its
+  # script. The block's bytes are unchanged since v0.5.0; the script now needs Python 3.14 and,
+  # below it, moves nothing and prints a framed message naming the Python found. Never edit
   # either here; both come again only from a later syntek-author tag (shipped-seeds.sh checks
   # 21 and 22 pin them). The marker lines are syntek-author's too, byte for byte, so that its
   # family-shared.sh finds the block: their D48 is syntek-author's decision, never media's D48.
@@ -1299,10 +1405,26 @@ _migrations:
   # .claude/mcp_config.json to .agents/mcp_config.json only where the new path is free. A real
   # folder, a link elsewhere, a text file left by core.symlinks=false or no .agents at all is
   # left untouched and reported. It never deletes author content, is idempotent and always
-  # exits 0. This is D11's one stated exception: media changes a shared path only here.
+  # exits 0. This is D11's first stated exception (D76), the only one keyed to a release.
   - version: v0.4.2
     command: python3 "<% _copier_conf.src_path %>/migrations/v0.4.2-agents-folder.py"
     when: "<% _stage == 'after' %>"
+  # D81 (0.6.0): syntek-author's family-shared 'update' block, byte for byte from its v0.7.0
+  # tag; the marker lines are syntek-author's too, so their D48 is syntek-author's decision,
+  # never media's D48. Its one entry runs migrations/family-update.py, vendored from the same
+  # tag and never edited here, through _copier_python. It is the second stated exception to
+  # the version-keyed rule (above, and .claude/CLAUDE.md Section 7.7), and it stays LAST, so it
+  # sees what every earlier entry left. On Python 3.14 it ends every update with media's own
+  # report, refs/syntek-media/ inside .git, and the refresh, offers and restore that
+  # migrations/family-refresh.json lists; without that file it reports and changes nothing.
+  # Nothing follows its END marker inside _migrations (shipped-seeds.sh check 20).
+# BEGIN family-shared update (D48)
+  # Unversioned and last, so it runs after every other migration on every update. It reports
+  # each file this update did not deliver, refreshes the shared files the owner had not
+  # changed, and records the render in refs/<template>/ inside .git. Always exits 0.
+  - command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/family-update.py" update --src "<% _copier_conf.src_path %>" --to <% _copier_conf.vcs_ref_hash %> --answers "<% _copier_conf.answers_file %>"'
+    when: "<% _stage == 'after' %>"
+# END family-shared update (D48)
 
 # ── Before an update ─────────────────────────────────────────────────────────
 #
@@ -1391,20 +1513,23 @@ _message_before_update: |
 # ── After a copy ─────────────────────────────────────────────────────────────
 #
 # DESIGN.md D13 and Section 8: what coexistence leaves to the author, in D13's order — (1) the
-# thirty-six shared paths and the skip rule (Copier prints an existing one as `conflict` then
-# `skip`, or `identical`), the client files only for the clients ticked in AGENT_CLIENTS, with
-# Section 8's hand edits 2 and 3: the optional index lines, and nothing to add to .gitignore or
-# .mcp.json, and, over syntek-author, that media takes no coding-agent answer from its answers
-# file (D80); (2) the allow, ask and Edit deny entries for an existing settings.json that are
-# media's own, exactly as the standalone seed holds them, then the family's eight asks, its
-# embed_graph_tool deny and its hooks object, syntek-author's bytes, for a settings file that
-# syntek-author v0.5.0 or later did not seed (syntek-author's update never adds the data-root
-# guard to an older one, its family-refresh.json at v0.5.0), then the permissions script's
-# --write, which carries the asks and denies to the other clients' files (D80; syntek-author
-# D49); (3) the ElevenLabs line, with the
-# rule that its base path must contain the project; (4) the LFS tripwire's write to this
-# repository's .git/config; (5) the setup check (D49); (6) the update command with `-a`,
-# with Git's housekeeping off (DESIGN.md Section 10).
+# shared paths a copy writes (D84's fourteen among them since 0.6.0) and the skip rule (Copier
+# prints an existing one as `conflict` then `skip`, or `identical`), the client files only for
+# the clients ticked in AGENT_CLIENTS, with Section 8's hand edits 2 and 3: the optional index
+# lines, and nothing to add to .gitignore or .mcp.json. Since 0.6.0 the family questions block
+# takes syntek-author's recorded clients over syntek-author (D81), so no static advice on
+# matching them stands here; (2) the allow, ask and Edit deny entries for an existing
+# settings.json that are media's own, exactly as the standalone seed holds them, then
+# syntek-author's entries, byte for byte as its v0.7.0 seed holds them: "idleCompaction":
+# false, the family's eight asks, the guide's Edit(/how-to/**) deny and the embed_graph_tool
+# deny, and its hooks object (the four handoff-hook entries, SessionStart compact among them,
+# the data-root guard and the guide guard), for a settings file that syntek-author v0.7.0 or
+# later did not seed (syntek-author's update never adds the data-root guard to an older one),
+# then the permissions script's --write, which carries the asks and denies to the other
+# clients' files (D80; syntek-author D49); (3) the ElevenLabs line, with the rule that its base
+# path must contain the project; (4) the LFS tripwire's write to this repository's
+# .git/config; (5) the setup check (D49); (6) the update command with `-a`, run as
+# `uvx --python '>=3.14' copier` (D3, D81), with Git's housekeeping off (DESIGN.md Section 10).
 # Unlike the message before an update it renders answers (probe c1), but never _external_data
 # (D14). Messages go to stderr, and --quiet suppresses them.
 #
@@ -1424,16 +1549,25 @@ _message_after_copy: |
      .claude/skills/grill-with-docs/SKILL.md, .claude/skills/grilling/SKILL.md,
      .claude/skills/handoff/SKILL.md, .claude/skills/to-questionnaire/SKILL.md,
      .claude/skills/wait-what/SKILL.md and .claude/skills/wayfinder/SKILL.md, the hooks
-     .claude/hooks/pre-compact-handoff.sh and .claude/hooks/context-threshold-handoff.sh with
-     .claude/hooks/CONTEXT.md and .claude/hooks/CLAUDE.md, handoffs/CONTEXT.md and
-     handoffs/CLAUDE.md, and, for the coding agents you chose, AGENTS.md, GEMINI.md, the
-     .agents folder with .agents/skills (a link to ../.claude/skills) and
+     .claude/hooks/pre-compact-handoff.sh and .claude/hooks/context-threshold-handoff.sh and
+     the guide guard .claude/hooks/how-to-read-only.sh, with .claude/hooks/CONTEXT.md and
+     .claude/hooks/CLAUDE.md, handoffs/CONTEXT.md and handoffs/CLAUDE.md, the user guide's
+     shared files how-to/CONTEXT.md, how-to/CLAUDE.md, how-to/docs/CONTEXT.md,
+     how-to/docs/CLAUDE.md, how-to/src/CONTEXT.md, how-to/src/CLAUDE.md,
+     how-to/src/TEMPLATE-GUIDE/CONTEXT.md, how-to/src/TEMPLATE-GUIDE/CLAUDE.md,
+     how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md,
+     how-to/src/TEMPLATE-GUIDE/the-data-root.md,
+     how-to/src/TEMPLATE-GUIDE/updating-and-recovery.md, how-to/workflows/CONTEXT.md and
+     how-to/workflows/CLAUDE.md, and, for the coding agents you chose, AGENTS.md, GEMINI.md,
+     the .agents folder with .agents/skills (a link to ../.claude/skills) and
      .agents/mcp_config.json, .codex/config.toml, .codex/CONTEXT.md, .codex/CLAUDE.md,
      .gemini/settings.json, .gemini/CONTEXT.md, .gemini/CLAUDE.md and opencode.json are
      written only where they did not exist; a missing one is added inside an existing
      .agents folder. Any that Copier reported as 'conflict' then 'skip', or as 'identical',
-     was left exactly as it was, and no syntek-media update will touch it: that pair is
-     expected and is not a collision.
+     was left exactly as it was: that pair is expected and is not a collision. Copier never
+     renders one of these files on update; the update script that ends every syntek-media
+     update refreshes only the family-shared files it lists, and only where you never changed
+     them, and every file under how-to/ is read-only and put back by each full update.
      The media rules in .claude/rules/syntek-media/ load at launch whatever those files say,
      so naming the media layers in README.md and CONTEXT.md, and .claude/rules/syntek-media/
      in .claude/CLAUDE.md, is optional. Nothing needs adding to .gitignore or .mcp.json:
@@ -1442,11 +1576,6 @@ _message_after_copy: |
      Preserve any existing entrypoint, agent settings or .agents; where .agents is a link to
      .claude, Codex's sandbox fails on it. Follow the bridge's setup steps for missing files,
      a real folder or manual integration of an existing .agents.
-     Over syntek-author, media reads no coding-agent answer from syntek-author's answers file,
-     and a first copy ticks all four clients by default. Compare AGENT_CLIENTS and the model
-     answers in the two answers files; where they differ, remove each client file this copy
-     created for a client syntek-author's answers leave out, then record the same clients on
-     media's next update with --data "AGENT_CLIENTS=[...]".
 
   2. Permissions. If .claude/settings.json was skipped, add these entries to it by hand.
      Under "permissions", in "allow" (syntek-author's settings already allow the last two):
@@ -1475,8 +1604,10 @@ _message_after_copy: |
        "Edit(**/generated/**)",
        "Edit(**/renders/**)"
      The seed's other entries are syntek-author's, byte for byte, and a settings.json that
-     syntek-author v0.5.0 or later seeded holds them already. Add them to any other, since
-     .mcp.json and each client's file declare the Scrapling and code-review-graph servers.
+     syntek-author v0.7.0 or later seeded holds them already. Add them to any other, since
+     .mcp.json and each client's file declare the Scrapling and code-review-graph servers and
+     every file under how-to/ is read-only. At the top level:
+       "idleCompaction": false
      In "ask":
        "mcp__scrapling__stealthy_fetch",
        "mcp__scrapling__bulk_stealthy_fetch",
@@ -1486,11 +1617,14 @@ _message_after_copy: |
        "mcp__scrapling__bulk_fetch",
        "mcp__code-review-graph__apply_refactor_tool",
        "mcp__code-review-graph__generate_wiki_tool"
-     in "deny":
+     in "deny" (the first keeps the user guide under how-to/ read-only):
+       "Edit(/how-to/**)",
        "mcp__code-review-graph__embed_graph_tool"
      and the whole "hooks" object of template/.claude/settings.json at the template's source:
-     the two handoff hooks and the data-root guard. syntek-author's update offers a file it
-     seeded before v0.5.0 all of these but the guard, its PreToolUse entry: add that by hand.
+     the two handoff hooks (UserPromptSubmit, PreCompact auto and manual, and SessionStart
+     compact), then two PreToolUse entries, the data-root guard and the guide guard.
+     syntek-author's update offers a file it seeded earlier all of these but the data-root
+     guard: add that by hand.
      Then, skipped or not, carry the asks and denies to the other coding agents' files here
      (it never creates one, and prints what a client cannot express):
        python3 .claude/syntek-media-permissions.py --write
@@ -1517,7 +1651,9 @@ _message_after_copy: |
      answers file, with Git's automatic housekeeping off for the run (README.md 'Updating
      a project', at the template's source, says why and gives the recovery if it stops):
        GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false \
-         uvx copier update --trust -a .copier-answers.syntek-media.yml
+         uvx --python '>=3.14' copier update --trust -a .copier-answers.syntek-media.yml
+     Run Copier on Python 3.14 or later, as that command does: the update script that ends
+     every update, and the migrations around it, do nothing on an older Python.
 
 # ── After an update (DESIGN.md D80; D14 as D80 widens it) ────────────────────
 #
