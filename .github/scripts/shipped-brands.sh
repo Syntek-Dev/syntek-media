@@ -44,7 +44,10 @@
 #                          .agents/ for any client, .codex/, .gemini/, .agents/mcp_config.json
 #                          and opencode.json for their own client).
 #                       7. No numbered workflow folder in a media layer that DESIGN.md Section
-#                          4.3 does not number.
+#                          4.3 does not number, and since 0.6.0 no numbered procedure under
+#                          how-to/workflows/syntek-media/ that Section 4.4 does not number
+#                          (D84: numbered from 01, frozen and append-only, D32), each known from
+#                          its catalogue row. The layers' own glob never reached that folder.
 #                       8. No template-only or never-ship path (copier.yml, DESIGN.md, examples/,
 #                          .github/, .claude/agents/, .claude/commands/, a root CLAUDE.md or
 #                          .gitattributes …).
@@ -109,7 +112,10 @@
 #                     What it CANNOT check: a file's CONTENT — a gated row inside an index file
 #                     that names an absent path is doc-references.sh's, and a shared file that
 #                     differs between renders is byte-identity.sh's. Nor a path DESIGN.md never
-#                     named; check 7 covers workflows, the one family whose numbering is frozen.
+#                     named; check 7 covers workflows and media's procedures under how-to/, the
+#                     two families whose numbering is frozen. Nor whether a catalogued
+#                     procedure's number matches Section 4.4's table: the catalogue transcribes
+#                     it, and a row typed wrong is read as right.
 #
 # SELF-TEST. --self-test builds a business tree from the catalogue at runtime, with a fixture
 #            names file, proves it clean, then applies one mutation per check and asserts
@@ -264,7 +270,7 @@ run_checks() {
 
   # ── 7. Workflow folders DESIGN.md does not number ───────────────────────────
   while read -r gate kind path; do
-    [[ "$path" == */workflows/[0-9][0-9]-* ]] && wf_known["$path"]=1
+    [[ "$path" == */workflows/[0-9][0-9]-* || "$path" == how-to/workflows/syntek-media/[0-9][0-9]-* ]] && wf_known["$path"]=1
   done <<< "$SM_PATHS"
   for l in $SM_LAYERS; do
     [[ -d "$TREE/$l/workflows" ]] || continue
@@ -274,6 +280,15 @@ run_checks() {
       finding "check 7 — $rel/ is a workflow DESIGN.md Section 4.3 does not number (author procedures belong in workflows/local/)"
     done < <(cd "$TREE" && find "./$l/workflows" -mindepth 1 -maxdepth 1 -type d -name '[0-9][0-9]-*' | sed 's#^\./##' | sort)
   done
+  # Media's procedures under how-to/ (D84, Section 4.4). Over syntek-author, only the folders
+  # media's copy added are read: syntek-author's procedures are under its own folder.
+  if [[ -d "$TREE/how-to/workflows/syntek-media" ]]; then
+    while IFS= read -r rel; do
+      [[ -n "${wf_known[$rel]:-}" ]] && continue
+      is_owned_dir "$rel" || continue
+      finding "check 7 — $rel/ is a procedure DESIGN.md Section 4.4 does not number (media's procedures are numbered from 01, frozen and append-only; D84, D32)"
+    done < <(cd "$TREE" && find ./how-to/workflows/syntek-media -mindepth 1 -maxdepth 1 -type d -name '[0-9][0-9]-*' | sed 's#^\./##' | sort)
+  fi
 
   # ── 8. Template-only and never-ship paths ───────────────────────────────────
   if ! $SM_OWNED_MODE; then
@@ -502,12 +517,19 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   require_author_names
   A_KIND=business; A_PLATFORMS="youtube linkedin instagram"; A_KINDS="short-video long-video voiceover"; A_SEED=true
   A_CLIENTS="$SM_CLIENTS"
+  # Check 7 knows a procedure only from its catalogue row. Where the catalogue numbers none yet,
+  # the fixture catalogues one, so the placement probes below have a known procedure to hold.
+  local real_paths="$SM_PATHS"
+  grep -Eq '^always +d +how-to/workflows/syntek-media/[0-9][0-9]-[^/ ]+$' <<< "$SM_PATHS" \
+    || SM_PATHS="$SM_PATHS"$'\n''always        d  how-to/workflows/syntek-media/01-finish-a-copy'
   TREE="$tmp/gen"; EXPECT=""; load_owned "$TREE"
   build_tree "$TREE"
   st_baseline "a business tree built from the catalogue, with every client and the family's skills, hooks, handoffs pair and how-to files (syntek-author names by design, D80, D84)"
   probe_clean "how-to, a syntek-author name, is the family's folder: no check 11 finding (D84)"
 
-  # 16: media's placement under how-to/ (D84).
+  # 16: media's placement under how-to/ (D84). The how-to/ the catalogue built is held and put
+  # back, so the probes never take away a catalogued path (check 6's).
+  cp -a "$TREE/how-to" "$tmp/howto-held"
   mkdir -p "$TREE/how-to/docs/syntek-media" "$TREE/how-to/src/TEMPLATE-GUIDE/syntek-media" "$TREE/how-to/workflows/syntek-media/01-finish-a-copy"
   printf 'x\n' > "$TREE/how-to/docs/syntek-media/updating-the-template.md"
   printf 'x\n' > "$TREE/how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md"
@@ -518,7 +540,7 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   rm -f "$TREE/how-to/notes.md"
   mkdir -p "$TREE/how-to/docs/syntek-author"; printf 'x\n' > "$TREE/how-to/docs/syntek-author/x.md"; printf 'x\n' > "$TREE/how-to/docs/syntek-author/y.md"
   probe "check 16 fires once on a folder named for another template, not on each file in it" "check 16 — how-to/docs/syntek-author/ ships under how-to/"
-  rm -rf "$TREE/how-to/docs/syntek-author" "$TREE/how-to/docs/syntek-media" "$TREE/how-to/src/TEMPLATE-GUIDE/syntek-media" "$TREE/how-to/workflows/syntek-media"
+  rm -rf "$TREE/how-to"; cp -a "$tmp/howto-held" "$TREE/how-to"
 
   # The client gates (D80): a file ships only for a ticked client.
   cp "$TREE/$SM_ANSWERS_FILE" "$tmp/answers-held"
@@ -601,6 +623,9 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   mkdir -p "$TREE/publishing/workflows/99-invent-a-step"
   probe "check 7 fires on an unnumbered workflow" "check 7"
   rmdir "$TREE/publishing/workflows/99-invent-a-step"
+  mkdir -p "$TREE/how-to/workflows/syntek-media/07-invent-a-step"
+  probe "check 7 fires on a procedure under how-to/ that Section 4.4 does not number (D84)" "check 7 — how-to/workflows/syntek-media/07-invent-a-step/ is a procedure"
+  rmdir "$TREE/how-to/workflows/syntek-media/07-invent-a-step"
 
   printf 'x\n' > "$TREE/copier.yml"
   probe "check 8 fires when copier.yml leaks" "check 8 — copier.yml"
@@ -675,7 +700,7 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   probe "check 16 fires on a media-owned stray under how-to/, over syntek-author" "check 16 — how-to/stray.md ships under how-to/"
   SM_OWNED_MODE=false; SM_OWNED=()
 
-  SM_AUTHOR_NAMES_FILE="$real_names"
+  SM_AUTHOR_NAMES_FILE="$real_names"; SM_PATHS="$real_paths"
   st_finish "a correctly gated render from a leaking or incomplete one"
 }
 

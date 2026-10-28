@@ -40,8 +40,9 @@
 #                    10. .claude/rules/ carries a CONTEXT.md or CLAUDE.md.
 #                    11. A drafts/ folder lacks README.md, or carries a pair (media ships none;
 #                        the check stands so one never arrives unnoticed).
-#                    12. A workflow folder (layer/workflows/NN-name/) lacks STEPS.md or
-#                        CHECKLIST.md.
+#                    12. A workflow folder (layer/workflows/NN-name/, or since 0.6.0 one of
+#                        media's procedures, how-to/workflows/syntek-media/NN-name/, D84) lacks
+#                        STEPS.md or CHECKLIST.md. Checks 13–15 and 17 read both kinds.
 #                    13. STEPS.md or CHECKLIST.md routing frontmatter is wrong: `workflow:` is
 #                        not the folder name, `phase:` is not one of plan · research · produce ·
 #                        review · publish · convert · author, `skills:` or `model:` is missing,
@@ -50,10 +51,11 @@
 #                    15. A STEPS.md step (## N.) does not open with `> **Skill:**`, or does not
 #                        carry _Substantive._ or _Mechanical._ (a parenthetical before the full
 #                        stop is allowed, and may wrap: _Substantive (the author's call)._).
-#                    16. A guide (docs/reference/*.md) breaks the house format: frontmatter
-#                        `type: guide`, `skills:`, `model:`; `**What it is.**`; the H2s How we
-#                        apply it here, Who implements it, and Governing standard (last); 54–82
-#                        lines (DESIGN.md D33).
+#                    16. A guide (docs/reference/*.md, or since 0.6.0 one of media's guides,
+#                        how-to/docs/syntek-media/*.md, the pair apart, D84) breaks the house
+#                        format: frontmatter `type: guide`, `skills:`, `model:`; `**What it
+#                        is.**`; the H2s How we apply it here, Who implements it, and Governing
+#                        standard (last); 54–82 lines (DESIGN.md D33).
 #                    17. A STEPS.md, CHECKLIST.md or guide lacks the metadata header
 #                        (**Last Updated** … **Version** … **Maintained By** …, then
 #                        **Language**: British English (en_GB)). Media has no standards folder.
@@ -68,17 +70,28 @@
 #                   an index file is judged as the row it renders to; headings inside fenced
 #                   code (an entry template quoted in a CLAUDE.md) are not read as headings.
 #
+#                   The user guide (D84, Section 4.4): its shared family pairs under how-to/
+#                   are read as any pair is (checks 1–9), and checks 12–17 reach media's
+#                   procedures and guides there, as syntek-author's audit reads its own.
+#                   Checks 12–17 read media's own folders there only: a procedure or guide in
+#                   a folder named for another template is shipped-brands.sh check 16's
+#                   finding, never this audit's.
+#
 #                   Over-author scope (DESIGN.md Section 7): on a tree with a <tree>.owned
 #                   beside it, only media-owned folders and files are checked — syntek-author's
 #                   own folders are its audit's business, and its exempt_dir does not know
 #                   media's README-only folders.
 #
 #                   What it CANNOT check: whether a paragraph says anything. A script proves a
-#                   heading and a tree exist; only a reader can tell whether they orient.
+#                   heading and a tree exist; only a reader can tell whether they orient. Nor
+#                   the shape of a chapter under how-to/src/TEMPLATE-GUIDE/syntek-media/
+#                   (DESIGN.md Section 6.18): it has no frontmatter to read, and syntek-author's
+#                   make lint and make flags read it (coexist-test.sh check 24).
 #
 # SELF-TEST. --self-test builds a conformant tree at runtime — pairs, a skill, the rules folder,
-#            a workflow, a guide, a piece folder, a generated/ folder — proves it clean, then
-#            applies one mutation per check and asserts exactly one finding each.
+#            a workflow, a guide, a how-to procedure and guide, a piece folder, a generated/
+#            folder — proves it clean, then applies one mutation per check and asserts exactly
+#            one finding each.
 #
 # Requirements: bash 4+, grep, awk, sed, find. No network.
 #
@@ -147,8 +160,13 @@ fm_value() { # $1 = key, stdin = frontmatter
 }
 
 is_guide() { # tree-relative path
-  [[ "$1" == */docs/reference/*.md || "$1" == docs/reference/*.md ]] || return 1
   local b="${1##*/}"
+  # Media's guides under how-to/ (D84): how-to/docs/syntek-media/*.md, the pair apart.
+  if [[ "$1" == how-to/docs/syntek-media/*.md && "$1" != how-to/docs/syntek-media/*/* ]]; then
+    [[ "$b" == CONTEXT.md || "$b" == CLAUDE.md ]] && return 1
+    return 0
+  fi
+  [[ "$1" == */docs/reference/*.md || "$1" == docs/reference/*.md ]] || return 1
   [[ "$b" == CONTEXT.md || "$b" == CLAUDE.md ]] && return 1
   [[ "$b" =~ ^[A-Z0-9-]+\.md$ ]] && return 1     # SCREAMING-CASE sub-docs behind an index
   [[ "$1" == */docs/reference/*/* ]] && return 1
@@ -265,7 +283,7 @@ run_checks() {
     if [[ -n "$d" && ! -f "$TREE/$d/CLAUDE.md" ]]; then finding "check 2 — $d/ has no CLAUDE.md"; fi
     [[ -f "$TREE/${d:+$d/}CLAUDE.md" && -n "$d" ]] && check_claude "$d/CLAUDE.md"
     [[ -f "$TREE/${d:+$d/}CONTEXT.md" ]] && check_context "${d:+$d/}CONTEXT.md"
-    if [[ "$d" =~ ^[^/]+/workflows/[0-9][0-9]-[^/]+$ ]]; then check_workflow "$d"; fi
+    if [[ "$d" =~ ^[^/]+/workflows/[0-9][0-9]-[^/]+$ || "$d" =~ ^how-to/workflows/syntek-media/[0-9][0-9]-[^/]+$ ]]; then check_workflow "$d"; fi
   done < <(cd "$TREE" && find . \( -name .git -o -name build -o -name audio -o -name __pycache__ -o -name node_modules \) -prune -o -type d -print0 | sort -z)
 
   # ── 10. Nothing in .claude/rules/ that would load as a rule ─────────────────
@@ -290,7 +308,7 @@ run_checks() {
     f="${f#./}"
     is_owned_file "$f" || continue
     if is_guide "$f"; then check_guide "$f"; fi
-  done < <(cd "$TREE" && find . -name .git -prune -o -path '*/docs/reference/*' -name '*.md' -print0 | sort -z)
+  done < <(cd "$TREE" && find . -name .git -prune -o \( -path '*/docs/reference/*' -o -path './how-to/docs/syntek-media/*' \) -name '*.md' -print0 | sort -z)
 
   # ── 18. A piece folder carries its brief ────────────────────────────────────
   if [[ -d "$TREE/scripts/src/pieces" ]]; then
@@ -353,6 +371,21 @@ write_fixture() { # $1 = tree
     for i in $(seq 1 34); do printf 'Line %d of the topic.\n' "$i"; done
     printf '\n## How we apply it here\n\nOne sentence or beat per segment.\n\n## Who implements it\n\nThe voiceover skill.\n\n## Governing standard\n\nThe rules own the rule; this guide owns the explanation.\n'
   } > "$t/production/docs/reference/voiceover.md"
+  # The user guide (D84): the family's container pairs, media's folders, a procedure and a guide.
+  local hp="how-to/workflows/syntek-media/04-update-the-template" hg="how-to/docs/syntek-media/updating-the-template.md"
+  for d in how-to how-to/docs how-to/docs/syntek-media how-to/workflows how-to/workflows/syntek-media "$hp"; do
+    write_pair "$t" "$d"
+  done
+  for f in STEPS CHECKLIST; do
+    printf -- '---\nworkflow: 04-update-the-template\nphase: review\nskills: []\nmodel: sonnet\n---\n\n# %s.md — update the template\n\n%s\n\n' "$f" "$HEADER" > "$t/$hp/$f.md"
+  done
+  printf '## 1. Check the tree\n\n> **Skill:** none · **Guide:** `%s`\n\nConfirm the working tree is clean. _Mechanical._\n' "$hg" >> "$t/$hp/STEPS.md"
+  printf '## Pre-Conditions\n\n- [ ] The tree is clean. · _sonnet_\n\n## Done When\n\n- [ ] **The update finished.** · _sonnet_\n' >> "$t/$hp/CHECKLIST.md"
+  {
+    printf -- '---\ntype: guide\nskills: []\nmodel: sonnet\n---\n\n# Updating the template — one release at a time\n\n%s\n\n**What it is.** An update takes the project to a later release.\n\n## Releases\n\n' "$HEADER"
+    for i in $(seq 1 34); do printf 'Line %d of the topic.\n' "$i"; done
+    printf '\n## How we apply it here\n\nThe procedure runs it.\n\n## Who implements it\n\nThe owner, step by step.\n\n## Governing standard\n\nThe rules own the rule; this guide owns the explanation.\n'
+  } > "$t/$hg"
 }
 
 self_test() {
@@ -403,6 +436,13 @@ self_test() {
   sed -i 's/^## Who implements it/## Who does it/' "$t/$g";   probe "check 16 fires on a guide missing a section" "check 16"; cp "$tmp/h" "$t/$g"
   sed -i '/^Line [0-9]* of the topic\./d' "$t/$g";            probe "check 16 fires on a guide that is too short" "check 16 — $g is"; cp "$tmp/h" "$t/$g"
   sed -i '/^\*\*Language\*\*/d' "$t/$g";                      probe "check 17 fires on a guide with no header" "check 17"; cp "$tmp/h" "$t/$g"
+  local hp="how-to/workflows/syntek-media/04-update-the-template" hg="how-to/docs/syntek-media/updating-the-template.md"
+  mv "$t/$hp/CHECKLIST.md" "$tmp/h";                          probe "check 12 fires on a procedure under how-to/ with no CHECKLIST.md (D84)" "check 12 — $hp/ has no CHECKLIST.md"; mv "$tmp/h" "$t/$hp/CHECKLIST.md"
+  cp "$t/$hp/STEPS.md" "$tmp/h"
+  sed -i 's/^workflow: .*/workflow: 04-update-a-template/' "$t/$hp/STEPS.md"; probe "check 13 fires on a procedure whose workflow key is not its folder (D84)" "check 13 — $hp/STEPS.md says workflow: '04-update-a-template'"; cp "$tmp/h" "$t/$hp/STEPS.md"
+  cp "$t/$hg" "$tmp/h"
+  awk -v k="$(( $(wc -l < "$t/$hg") - 40 ))" '/^Line [0-9]+ of the topic\./ && k > 0 { k--; next } { print }' "$tmp/h" > "$t/$hg"
+  probe "check 16 fires on a guide under how-to/ of 40 lines (D84)" "check 16 — $hg is 40 lines"; cp "$tmp/h" "$t/$hg"
   mv "$t/$piece/brief.md" "$tmp/h";                           probe "check 18 fires on a piece folder with no brief" "check 18 — $piece/"; mv "$tmp/h" "$t/$piece/brief.md"
   mv "$t/production/src/renders/README.md" "$tmp/h";          probe "check 19 fires on a renders/ with no README.md" "check 19 — production/src/renders/ has no README.md"; mv "$tmp/h" "$t/production/src/renders/README.md"
   printf '# x\n' > "$t/production/src/voiceover/generated/CONTEXT.md"
