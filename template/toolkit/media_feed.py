@@ -48,7 +48,7 @@ so a published episode is never silently left unchecked (DESIGN D65).
 The register is edited line by line (as 'take add' edits its register): the author's comments
 and values survive every write, and a value the author set is never rewritten.
 
-Standard library only; Python 3.11+.
+Standard library only; Python 3.14+.
 """
 from __future__ import annotations
 
@@ -162,9 +162,10 @@ def need_folder() -> Path:
     folder = C.path(C.PODCAST)
     if not folder.is_dir():
         raise C.Fatal(f"this project has no {C.PODCAST}/: the podcast platform is not chosen. Add podcast to "
-                      "PLATFORMS with 'uvx copier update --trust -a .copier-answers.syntek-media.yml' (run "
-                      "with Git's housekeeping off, as the template's README.md 'Updating a project' shows), "
-                      "which adds the folder; the toolkit never makes it")
+                      "PLATFORMS with the update "
+                      "\"uvx --python '>=3.14' copier update --trust -a .copier-answers.syntek-media.yml\" "
+                      "(run with Git's housekeeping off, as how-to/workflows/syntek-media/04-update-the-template/ "
+                      "shows), which adds the folder; the toolkit never makes it")
     return folder
 
 

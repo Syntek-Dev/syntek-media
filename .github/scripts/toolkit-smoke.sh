@@ -15,7 +15,7 @@
 #                    ElevenLabs call: a "take" is a tone or a few fake bytes, and the toolkit's
 #                    handling of the files around a call is what is proved (credits).
 #
-#                    Twenty-eight checks, per render: 1–28.
+#                    Twenty-nine checks, per render: 1–29.
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
 #                         exercises the media_*.py modules, card.py and transcribe.py). A self-test reads only
 #                         the toolkit, so one result serves every render whose toolkit/ is
@@ -186,6 +186,13 @@
 #                         scene's frame count, its sound as long as its picture and within ±1 LU
 #                         of its loudness target; one frame captured twice is identical; an edit
 #                         decision list with a [[clip]] row is exit 2.
+#                     29. transcribe.py's interpreter, chosen through media_common.uv_python in the
+#                         scratch copy (DESIGN.md D20, D67, D81), with UV_PYTHON naming this
+#                         python3 (3.14), MEDIA_TRANSCRIBE_PYTHON unset and a stub uv first on PATH
+#                         that logs every call: where the stub answers 'python find --system
+#                         >=3.10,<3.14' with a fake 3.12, that is the choice, never UV_PYTHON; where
+#                         it finds none, the call is exit 2 naming MEDIA_TRANSCRIBE_PYTHON. Either
+#                         way the log holds no uv run, venv, sync or pip: nothing is built.
 #
 #                    Numbers are stable identifiers. Append, never renumber.
 #
@@ -209,7 +216,7 @@
 #            render records — proves it clean, then changes one recorded fact per probe and
 #            asserts exactly one finding each. It needs no ffmpeg, uv or Chromium.
 #
-# Requirements: bash 4.3+, git, python3 ≥ 3.11; ffmpeg and ffprobe (libass, libx264, libmp3lame)
+# Requirements: bash 4.3+, git, python3 ≥ 3.14; ffmpeg and ffprobe (libass, libx264, libmp3lame)
 #               for most checks; uv and Playwright's Chromium for card.py. No network, unless uv
 #               must fetch card.py's pinned Playwright on its first run.
 #
@@ -768,6 +775,63 @@ SHIM
     rec skip.23 'the timing guard with voice fixtures (no ffmpeg or ffprobe)'
   fi
   smoke_scene
+
+  # ── 29. transcribe.py's interpreter: never a UV_PYTHON outside its range (D20, D67, D81) ──
+  smoke_uvpython
+}
+
+smoke_uvpython() {
+  local st=0 stub="$W/uvstub"
+  mkdir -p "$stub"
+  cat > "$stub/uv" <<'SH'
+#!/bin/sh
+# A stub uv for check 29: logs every call; answers only 'python find'.
+printf '%s\n' "$*" >> "$STUB_UV_LOG"
+if [ "$1" = python ] && [ "$2" = find ]; then
+  case "$3" in
+    --system) [ -n "$STUB_UV_SYSTEM" ] && { printf '%s\n' "$STUB_UV_SYSTEM"; exit 0; }; exit 2 ;;
+    /*) printf '%s\n' "$3"; exit 0 ;;
+  esac
+fi
+exit 2
+SH
+  chmod 755 "$stub/uv"
+  printf '#!/bin/sh\necho %s\n' "'{\"version\": [3, 12, 3], \"base\": \"\", \"venv\": false}'" > "$stub/python3.12"
+  chmod 755 "$stub/python3.12"
+  (cd "$T" && env -u MEDIA_TRANSCRIBE_PYTHON PATH="$stub:$PATH" PYTHONDONTWRITEBYTECODE=1 \
+      python3 - "$T" "$stub" "$RESULTS" >"$OUT/uvpython.log" 2>&1 <<'PY') || st=$?
+import os, sys
+from pathlib import Path
+root, stub, receipt = map(Path, sys.argv[1:4])
+sys.path.insert(0, str(root / 'toolkit'))
+import media_common as C
+def record(key, good):
+    with receipt.open('a') as f: f.write(key + '\t' + ('yes' if good else 'no') + '\n')
+log = stub / 'uv.log'
+os.environ.update(UV_PYTHON=os.path.realpath(sys.executable), STUB_UV_LOG=str(log))
+script = root / 'toolkit' / 'transcribe.py'
+os.environ['STUB_UV_SYSTEM'] = str(stub / 'python3.12')
+try:
+    chosen = C.uv_python(str(stub / 'uv'), script)
+except C.Fatal as err:
+    chosen = ('error', str(err))
+print('with a 3.12:', chosen)
+record('transcribe.uvpython.choice', chosen == (str(stub / 'python3.12'), 'uv python find --system')
+       and "--system >=3.10,<3.14" in log.read_text())
+os.environ['STUB_UV_SYSTEM'] = ''
+try:
+    chosen = C.uv_python(str(stub / 'uv'), script)
+    refused = False
+except C.Fatal as err:   # media.py's exit 2
+    chosen, refused = str(err), 'MEDIA_TRANSCRIBE_PYTHON' in str(err)
+print('with none:', chosen)
+record('transcribe.uvpython.none', refused)
+calls = log.read_text().splitlines()
+print('\n'.join(calls))
+record('transcribe.uvpython.built', bool(calls) and not any(
+    c.split()[:1] == ['run'] or any(w in c.split() for w in ('venv', 'sync', 'pip')) for c in calls))
+PY
+  rec transcribe.uvpython.status "$st"
 }
 
 manifest_id() { # $1 = kind → the first footage ID of that kind
@@ -2710,6 +2774,18 @@ run_checks() {
     finding "check 26 — $L missing WhisperX was not an optional note naming transcribe fetch"
   fi
 
+  # 29: transcribe.py's interpreter is never a UV_PYTHON outside its range.
+  if [[ -n "${RES[transcribe.uvpython.status]:-}" ]]; then
+    [[ "${RES[transcribe.uvpython.status]}" == 0 ]] \
+      || finding "check 29 — $L the interpreter fixture could not run (exit ${RES[transcribe.uvpython.status]})"
+    [[ "${RES[transcribe.uvpython.choice]:-no}" == yes ]] \
+      || finding "check 29 — $L transcribe.py did not take uv python find --system's interpreter for its range over UV_PYTHON"
+    [[ "${RES[transcribe.uvpython.none]:-no}" == yes ]] \
+      || finding "check 29 — $L with no Python in transcribe.py's range, the choice was not exit 2 naming MEDIA_TRANSCRIBE_PYTHON"
+    [[ "${RES[transcribe.uvpython.built]:-no}" == yes ]] \
+      || finding "check 29 — $L choosing transcribe.py's interpreter ran uv run, venv, sync or pip"
+  fi
+
   # 24
   if [[ -n "${RES[real.status]:-}" ]]; then
     [[ "${RES[real.status]}" == 0 ]] || finding "check 24 — $L real fixture could not run (exit ${RES[real.status]})"
@@ -3090,6 +3166,10 @@ timing.cache	yes
 timing.captions	yes
 timing.live	yes
 setup.transcribe	yes
+transcribe.uvpython.status	0
+transcribe.uvpython.choice	yes
+transcribe.uvpython.none	yes
+transcribe.uvpython.built	yes
 mouth.status	0
 mouth.dialogue	yes
 mouth.native	yes
@@ -3261,6 +3341,10 @@ self_test() {
   done
   mut timing.status 2;                   probe "check 22 fires when its fixture could not run" "check 22 — [fixture] timing fixture could not run"
   mut setup.transcribe no;               probe "check 26 fires when absent WhisperX is not an optional setup note" "check 26 — [fixture] missing WhisperX"
+  mut transcribe.uvpython.status 1;      probe "check 29 fires when its interpreter fixture could not run" "check 29 — [fixture] the interpreter fixture could not run"
+  mut transcribe.uvpython.choice no;     probe "check 29 fires when UV_PYTHON outside the range is chosen" "check 29 — [fixture] transcribe.py did not take uv python find"
+  mut transcribe.uvpython.none no;       probe "check 29 fires when no Python in range is not exit 2" "check 29 — [fixture] with no Python in transcribe.py's range"
+  mut transcribe.uvpython.built no;      probe "check 29 fires when the choice builds an environment" "check 29 — [fixture] choosing transcribe.py's interpreter ran uv run"
   mut where.hidden "production/src/renders/914-smoke-where/914-smoke-where.master.mp4"; probe "check 24 fires when where lists inside an ignored folder" "check 24 — [fixture] where 914-smoke-where named what is inside an ignored per-piece folder"
   mut where.folders "production/src/renders/914-smoke-where/=exists"; probe "check 24 fires when where does not name all three folders" "check 24 — [fixture] where 914-smoke-where did not name its three ignored per-piece folders"
   for feature in times lists delivery audio unmatched untimed finite links boards guards; do
@@ -3420,7 +3504,8 @@ PYTEST
     printf '* filter=lfs\n' > "$r/attributes"; printf 'probe.bin\n' > "$r/ignore"
   done
   vector() { # $1 = home, xdg, global or system: plant only that route (call it in a subshell)
-    unset GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM XDG_CONFIG_HOME; export HOME="$leak/none"
+    # GIT_CONFIG_NOSYSTEM from the caller would hide the system plant from the plain read too.
+    unset GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM GIT_CONFIG_NOSYSTEM XDG_CONFIG_HOME; export HOME="$leak/none"
     case "$1" in
       (home) export HOME="$leak/home" ;;
       (xdg) export XDG_CONFIG_HOME="$leak/xdg" ;;
@@ -3460,7 +3545,8 @@ if $SELF_TEST; then
   exit $?
 fi
 command -v git >/dev/null 2>&1 || die "git is not installed"
-python3 -c 'import tomllib' 2>/dev/null || die "python3 is older than 3.11 (no tomllib), which the toolkit needs"
+python3 -c 'import sys; sys.exit(sys.version_info < (3, 14))' 2>/dev/null \
+  || die "python3 is older than 3.14, the toolkit's base (DESIGN.md D20, D81)"
 $REQUIRE_FFMPEG && ! $HAVE_FFMPEG && die "ffmpeg or ffprobe is not installed and --require-ffmpeg was given"
 [[ ${#TARGETS[@]} -gt 0 ]] || die "no rendered tree given (see generate-all.sh)"
 SM_AUDIT_FLAGS=""

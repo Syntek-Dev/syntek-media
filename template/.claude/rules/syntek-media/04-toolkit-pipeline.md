@@ -165,12 +165,14 @@ browsers (NixOS), it must ship the same revision.
   them, and a working copy in a piece's `timing` folder is never opened, because the command
   that wrote it printed what it found
   (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
-- **Keep the toolkit minimal**: standard-library Python 3.11+ and author-edited TOML; tool-written
+- **Keep the toolkit minimal**: standard-library Python 3.14 or later and author-edited TOML; tool-written
   timing is finite JSON. Heavy dependencies stay in pinned PEP 723 scripts: `toolkit/card.py`
   and `toolkit/scene.py` (Playwright 1.63.0), and `toolkit/transcribe.py` (WhisperX 3.8.6; Python >=3.10,<3.14).
 - **Transcription stays offline** after the author runs `python3 toolkit/media.py transcribe fetch`
-  once. Never run fetch from a skill. `MEDIA_TRANSCRIBE_PYTHON` names an existing interpreter at
-  user scope; otherwise the uv helper runs with `--offline`. Missing cache files are exit 2.
+  once. Never run fetch from a skill. `MEDIA_TRANSCRIBE_PYTHON` names an existing interpreter by
+  path, at user scope, which `media.py` runs directly, never an environment the author activates;
+  otherwise the uv helper runs with `--offline`, never on a user-scope `UV_PYTHON` outside
+  `transcribe.py`'s range. Missing cache files are exit 2.
 
 ---
 
@@ -179,9 +181,9 @@ browsers (NixOS), it must ship the same revision.
 | Tool | For |
 |---|---|
 | `ffmpeg` and `ffprobe`, built with libass, x264 and mp3lame | every render, probe, loudness pass and caption burn |
-| `python3` (3.11 or later) and `git` | every `media.py` command; the repository root and what Git ignores |
+| `python3` (3.14 or later) and `git` | every `media.py` command; the repository root and what Git ignores |
 | `uv`, with Playwright's Chromium | `toolkit/card.py`, `toolkit/scene.py`, and the card PNGs `assemble` renders |
-| WhisperX 3.8.6 and its fetched English weights, punkt_tab and cross-check model (optional) | `transcribe`; the author runs `transcribe fetch` once, no skill downloads models |
+| WhisperX 3.8.6 and its fetched English weights, punkt_tab and cross-check model (optional), on a Python from 3.10 to 3.13 kept beside 3.14, in uv's environment or at the interpreter path `MEDIA_TRANSCRIBE_PYTHON` names, never an environment the author activates | `transcribe`; the author runs `transcribe fetch` once, no skill downloads models |
 | Rhubarb Lip Sync 1.14.0 (optional), unzipped at user scope and linked onto PATH | `lipsync`; keep res/sphinx/cmudict-en-us.dict beside the real executable, never copy the binary alone |
 | `git-lfs` | large design exports in `brand/src/exports/large/` |
 | ffmpeg's libwebp, an AV1 encoder (libaom-av1 or libsvtav1) and the `avif` muxer (optional) | `media.py image` to WebP and AVIF; JPEG and PNG need none |
@@ -194,6 +196,7 @@ browsers (NixOS), it must ship the same revision.
 entries of `.claude/settings.json` (the two `voice remix run` ask entries among them, each missing
 one a finding), whether `ELEVENLABS_API_KEY` is set in the shell (a note, never its value), and
 whether the ElevenLabs server's base path contains the
-project (`brand/workflows/06-check-the-setup/`). Optional tools' absence is a note naming the commands blocked; an installed tool that is broken
+project, and the transcribe interpreter's own Python against `transcribe.py`'s range, `>=3.10,<3.14`
+(`brand/workflows/06-check-the-setup/`). Optional tools' absence is a note naming the commands blocked; an installed tool that is broken
 is a finding with its fix. Rhubarb's version alone cannot prove its dictionary is present.
 If a tool is missing, say which one and which command it blocks. Never report a command as passed when it could not run.

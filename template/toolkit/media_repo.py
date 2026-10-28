@@ -47,7 +47,7 @@ Nothing here reads a file git ignores (DESIGN D50): flags, where and the large-f
 only what git tracks or would track; footage verify opens a mirrored file only by the path the
 manifest names, and prints names and hashes, never content.
 
-Standard library only; Python 3.11+.
+Standard library only; Python 3.14+.
 """
 from __future__ import annotations
 
@@ -610,21 +610,8 @@ def suggested_base(root: Path) -> str:
 
 
 UV_SCRIPTS = ("card.py", "scene.py")   # the scripts an author or a skill may start with a plain 'uv run' (D20)
-PYTHON_PROBE = ("import json, sys; print(json.dumps({'version': list(sys.version_info[:3]), "
-                "'base': getattr(sys, '_base_executable', '') or '', 'venv': sys.prefix != sys.base_prefix}))")
-
-
-def python_info(python: str):
-    """{version, base, venv} from an interpreter's own answer to -c (its base being the interpreter
-    uv would link a new environment to), or None where it cannot be run. Nothing is installed."""
-    try:
-        proc = subprocess.run([python, "-I", "-c", PYTHON_PROBE], capture_output=True, text=True, timeout=30)
-        said = proc.stdout.strip().splitlines() if proc.returncode == 0 else []
-        info = json.loads(said[-1]) if said else None
-    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
-        return None
-    ok = isinstance(info, dict) and isinstance(info.get("version"), list) and len(info["version"]) >= 2
-    return info if ok else None
+PYTHON_PROBE = C.PYTHON_PROBE   # one probe, shared with media_common.uv_python (D20)
+python_info = C.python_info
 
 
 def same_file(a: str, b: str) -> bool:
@@ -635,14 +622,15 @@ def same_file(a: str, b: str) -> bool:
 
 
 def uv_interpreter_rows(root: Path) -> list:
-    """(ok, label, fix) for each requires-python range among the uv scripts here (DESIGN D20, D49):
+    """(ok, label, fix) for each requires-python range among the uv scripts here (DESIGN D20, D49, D81):
     whether the interpreter a plain 'uv run' would choose from the project root (UV_PYTHON where it
     is set, else 'uv python find' for the range, an active virtual environment, its bin on PATH and
     a .venv here all counted) is a virtual environment's whose base is another Python version. uv
-    would record one version and link the other, and the script's packages would not import. The
-    check asks 'uv python find' with downloads and the network off and runs each interpreter with
-    -c only, so it builds no environment and fetches nothing. A FAIL names the interpreter media.py
-    itself takes ('uv python find --system'), which never mislinks."""
+    would record one version and link the other, and the script's packages would not import. A
+    UV_PYTHON outside a script's range fails too: a plain 'uv run' would take it, and media.py never
+    does. The check asks 'uv python find' with downloads and the network off and runs each
+    interpreter with -c only, so it builds no environment and fetches nothing. A FAIL names the
+    interpreter media.py itself takes ('uv python find --system'), which never mislinks."""
     uv = shutil.which("uv")
     if not uv:
         return [(None, "uv's interpreter: not checked, because uv is not installed", "")]
@@ -656,16 +644,17 @@ def uv_interpreter_rows(root: Path) -> list:
                 want = ""
             ranges.setdefault(want, []).append(name)
     named = os.environ.get("UV_PYTHON", "").strip()
-    install = ("install a Python in that range (for example 'uv python install 3.12', or your system's package), "
-               "or set UV_PYTHON at user scope to one")
     rows = []
     for want, names in ranges.items():
+        example = C.install_example(want)
+        install = ("install a Python in that range (" + (f"for example 'uv python install {example}', or "
+                   if example else "") + "your system's package), or set UV_PYTHON at user scope to one")
         head = f"uv's interpreter for {' and '.join(names)}{f' ({want})' if want else ''}: "
         chosen = C.uv_find(uv, named or want, cwd=root)
         system = "" if named else C.uv_find(uv, want, system=True, cwd=root)
         who = f"UV_PYTHON names {named}, and a plain 'uv run' takes " if named else "a plain 'uv run' here takes "
         if named:
-            fix = ("point UV_PYTHON at an interpreter outside any virtual environment "
+            fix = ("point UV_PYTHON at an interpreter in the range outside any virtual environment "
                    "('uv python find --system' lists one), which media.py then takes too")
         else:
             to = f" to {system}, the interpreter media.py itself takes" if system else ""
@@ -680,6 +669,13 @@ def uv_interpreter_rows(root: Path) -> list:
             rows.append((False, head + who + f"{chosen}, which could not be run", fix))
             continue
         version = ".".join(str(n) for n in info["version"][:3])
+        if named and not C.meets_range(info["version"][:3], want):
+            least = f"Python {example} or later" if example and want.startswith(">=") and "," not in want \
+                else "a Python in that range"
+            rows.append((False, head + who + f"{chosen}, Python {version}, outside the range: media.py never "
+                         "uses it for these scripts, but a plain 'uv run' would",
+                         f"point UV_PYTHON at {least} outside any virtual environment, or unset it"))
+            continue
         base = str(info.get("base") or "")
         if info.get("venv") and base and not same_file(base, chosen):
             known = python_info(base)
@@ -721,7 +717,7 @@ def setup_report(root: Path) -> tuple:
         item(False, "ffmpeg is not installed", C.INSTALL["ffmpeg"])
     item(bool(shutil.which("ffprobe")), "ffprobe" + ("" if shutil.which("ffprobe") else " is not installed"),
          C.INSTALL["ffprobe"])
-    item(sys.version_info >= (3, 11), f"Python {sys.version.split()[0]} (3.11 or later)")
+    item(sys.version_info >= (3, 14), f"Python {sys.version.split()[0]} (3.14 or later)")
     uv = shutil.which("uv")
     item(bool(uv), "uv" if uv else "uv is not installed (card.py runs through it)", C.INSTALL["uv"])
     for ok, label, fix in uv_interpreter_rows(root):
@@ -729,9 +725,11 @@ def setup_report(root: Path) -> tuple:
     import media_audio as A
     import transcribe as T
     python = A.transcribe_python()
+    span = f"transcribe.py's range, {T.PYTHON_RANGE}, below media's base"
     if not python:
-        item(None, 'WhisperX interpreter absent: transcribe needs the author-run transcribe fetch, '
-                   'or MEDIA_TRANSCRIBE_PYTHON at user scope')
+        item(None, 'WhisperX interpreter absent: transcribe needs the author-run transcribe fetch, or '
+                   'MEDIA_TRANSCRIBE_PYTHON at user scope naming the path of a Python 3.10 to 3.13 interpreter '
+                   f'that holds WhisperX ({span}), never an environment you activate')
     else:
         try:
             proc = subprocess.run([python, str(A.transcribe_script()), 'status'], capture_output=True,
@@ -739,10 +737,14 @@ def setup_report(root: Path) -> tuple:
             status = json.loads(proc.stdout) if proc.returncode == 0 else {}
         except (OSError, subprocess.TimeoutExpired, ValueError):
             status = {}
+        info = python_info(python)
+        own = '.'.join(str(n) for n in info['version'][:3]) if info else 'unknown'
         version = status.get('version', '')
-        item(version == T.VERSION and status.get('supported_python') is True,
-             f'WhisperX interpreter: {python}; version {version or "missing or broken"}'
-             f' (requires {T.VERSION})', C.INSTALL['whisperx'])
+        supported = status.get('supported_python') is True
+        item(version == T.VERSION and supported,
+             f'WhisperX interpreter: {python}; Python {own}'
+             + ('' if supported or not status else ', outside ' + span) + (f' ({span})' if supported else '')
+             + f'; version {version or "missing or broken"} (requires {T.VERSION})', C.INSTALL['whisperx'])
     missing = T.missing_cache(T.cache_paths())
     for label in ('English wav2vec2 weights', "nltk's English punkt_tab",
                   'faster-whisper large-v3-turbo in the default Hugging Face cache'):

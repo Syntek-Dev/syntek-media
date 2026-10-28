@@ -80,7 +80,7 @@ a footage file's, stays at the top of its renders folder.
 In an edit decision list, x = 0 (the skeleton's default) means a centred crop; a crop from a
 chosen left edge gives that edge in source pixels, 1 or more.
 
-Standard library only; Python 3.11+.
+Standard library only; Python 3.14+.
 """
 from __future__ import annotations
 

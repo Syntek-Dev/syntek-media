@@ -53,7 +53,7 @@ a file the server names .mp3: it is renamed .pcm and read with the register's sa
 output format is the chapter register's output_format, else the Output format of its voice_use
 row in brand/src/voice/voice.md.
 
-Standard library only; Python 3.11+.
+Standard library only; Python 3.14+.
 """
 from __future__ import annotations
 
@@ -668,7 +668,8 @@ def run_transcribe(argv: list, fetch=False):
                             C.ROOT, True, time.monotonic() + 1200, 'transcribe.py', 1200,
                             'check MEDIA_TRANSCRIBE_PYTHON and the fetched files')
     return C.uv_script(transcribe_script(), argv, timeout=1200, cwd=C.ROOT, offline=not fetch,
-                       hint='run transcribe fetch once, or set MEDIA_TRANSCRIBE_PYTHON at user scope')
+                       hint='run transcribe fetch once, or set MEDIA_TRANSCRIBE_PYTHON at user scope to the path '
+                            'of a Python 3.10 to 3.13 interpreter that holds WhisperX')
 
 
 def cmd_transcribe(args) -> int:
