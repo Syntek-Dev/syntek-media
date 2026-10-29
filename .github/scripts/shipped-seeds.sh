@@ -23,7 +23,7 @@
 #                    templates holds one set of bytes whichever comes first. The root
 #                    family-shared.json records them in the family's format, and checks 21–27
 #                    hold the files, the four blocks and the renders to that record (since
-#                    0.6.0 forty-three files from syntek-author's v0.7.0, D81, D84).
+#                    0.6.0 forty-three files from syntek-author's v0.8.0, D81, D84).
 #
 #                    Thirty-one checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
@@ -69,7 +69,7 @@
 #                         family's embed_graph_tool deny, in that order, the six allows, the nine
 #                         ElevenLabs asks, the two voice remix run asks (D82) and the family's
 #                         eight MCP asks, those eight in the family's order (D80); a hooks key
-#                         equal, as parsed JSON, to syntek-author's v0.7.0 seed's hooks object
+#                         equal, as parsed JSON, to syntek-author's v0.8.0 seed's hooks object
 #                         (the four handoff-hook entries, SessionStart compact among them, then
 #                         the data-root guard and the guide guard: D80, D81, D84); and no
 #                         owner-specific key (effortLevel, ultracode, enabledPlugins, disable*).
@@ -795,7 +795,7 @@ for kv in [t for t in os.environ["SM_TOP"].split("\n") if t]:
     if data.get(key, "absent") != json.loads(val):
         print(f"{key} is not {val} — hand off, never compact (DESIGN.md D13, D35, D81)")
 if data.get("hooks") != json.loads(os.environ["SM_HOOKS"]):
-    print("hooks are not exactly syntek-author's v0.7.0 seed's hooks object — the four handoff-hook entries (UserPromptSubmit, "
+    print("hooks are not exactly syntek-author's v0.8.0 seed's hooks object — the four handoff-hook entries (UserPromptSubmit, "
           "PreCompact auto and manual, SessionStart compact), then the data-root guard and the guide guard — as parsed JSON "
           "(DESIGN.md D13, D35, D80, D81, D84)")
 for k in data:
@@ -1224,7 +1224,7 @@ self_test() {
   sed -i 's/"autoCompactEnabled": false/"autoCompactEnabled": true/' "$t/.claude/settings.json"; probe "check 12 fires when compaction is switched on" "check 12 — .claude/settings.json autoCompactEnabled"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/, "mcp__elevenlabs__voice_clone"//' "$t/.claude/settings.json"; probe "check 12 fires when a credit-spending tool is not asked" "check 12 — .claude/settings.json does not ask mcp__elevenlabs__voice_clone"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"ask": \[/"ask": ["mcp__elevenlabs__list_models", /' "$t/.claude/settings.json"; probe "check 12 fires on an ask D13 does not list" "check 12 — .claude/settings.json asks mcp__elevenlabs__list_models"; cp "$tmp/h" "$t/.claude/settings.json"
-  sed -i 's/"timeout":10}]}],"PreToolUse"/"timeout":30}]}],"PreToolUse"/' "$t/.claude/settings.json"; probe "check 12 fires when a family hook registration drifts (D80)" "check 12 — .claude/settings.json hooks are not exactly syntek-author's v0.7.0 seed's hooks object"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/"timeout":10}]}],"PreToolUse"/"timeout":30}]}],"PreToolUse"/' "$t/.claude/settings.json"; probe "check 12 fires when a family hook registration drifts (D80)" "check 12 — .claude/settings.json hooks are not exactly syntek-author's v0.8.0 seed's hooks object"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"idleCompaction": false/"idleCompaction": true/' "$t/.claude/settings.json"; probe "check 12 fires when idle compaction is switched on (D81)" "check 12 — .claude/settings.json idleCompaction is not false"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's#"Edit(/how-to/\*\*)", ##' "$t/.claude/settings.json"; probe "check 12 fires when the guide's deny is lost (D84)" "check 12 — .claude/settings.json does not deny Edit(/how-to/**)"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's#"Edit(/how-to/\*\*)", "mcp__code-review-graph__embed_graph_tool"#"mcp__code-review-graph__embed_graph_tool", "Edit(/how-to/**)"#' "$t/.claude/settings.json"

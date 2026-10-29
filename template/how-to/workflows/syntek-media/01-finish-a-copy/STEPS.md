@@ -60,7 +60,7 @@ the message prints it, changing nothing else in the file:
 
 Where the message has gone, `python3 toolkit/media.py check --setup` at step 7 reports the
 missing entries the toolkit needs: its allows, the ElevenLabs and voice-remix asks, and the
-denies on `generated/` and `renders/`. It never checks the others, so compare the file with
+denies on every generated and renders folder. It never checks the others, so compare the file with
 item 2 by hand. _Substantive._
 
 ## 3. Carry the asks and denies to the other coding agents

@@ -10,7 +10,7 @@ This chapter lists them, says what each one is for, and shows how to check which
 | ffmpeg and ffprobe, built with libass, x264 and mp3lame | Every render, cut, encode, loudness pass and caption burn, and every check of a file | Yes |
 | Python 3.14 or later | `toolkit/media.py`, the scripts in `.claude/` and the update script that ends every update | Yes |
 | uv | Running Copier, the thumbnail and card renderer, and the two MCP servers | Yes |
-| git | Recording every version of the project; every update relies on it | Yes |
+| git 2.31 or later | Recording every version of the project; every update relies on it, and the update script reads the Git history of the files it updates | Yes |
 | Playwright's Chromium | Rendering thumbnails, cards and scenes to images | Yes, for any card or thumbnail |
 | git-lfs | Large design exports in `brand/src/exports/large/`, and nothing else | Only for large design exports |
 | espeak-ng | A rough offline voice for timing a script, labelled approximate | Optional |
@@ -63,6 +63,15 @@ This command prints the version of Copier that `uvx` runs:
 
 ```bash
 uvx --python '>=3.14' copier --version
+```
+
+The update script that ends every update also reads the Git history of the files it updates, and it needs Git 2.31 or later.
+With an older Git, each part of it that reads the history stops, and says so in one line.
+The five `GIT_CONFIG_*` variables in every update command need Git 2.31 or later too, and an older Git ignores them.
+This command prints the version of Git:
+
+```bash
+git --version
 ```
 
 ## Accounts

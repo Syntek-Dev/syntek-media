@@ -73,6 +73,7 @@ Its list holds the working-practice skills, the hooks and their pair, the pair o
 - Outside the guide, a listed file you deleted stays deleted.
 - It adds the listed settings entries, top-level settings and MCP servers to the files that lack them, once each.
 - It never adds back one it has offered before, never removes or reorders one of yours, and never weakens one.
+- Where it leaves one out because a committed version of the file held it, it names it once, in one line.
 - It never creates a coding agent's files, and only adds the MCP servers to a recorded client's file that already exists.
 
 **The guide in `how-to/`** is put back on every full update.

@@ -209,7 +209,10 @@ command, the lines starting `-` are the template's and those starting `+` the au
   act only on their word.
 
 Note, too, the lines starting `▸ syntek-media: added` that name the settings entries and MCP
-servers it added, and the other `▸ syntek-media:` lines naming what to add or run by hand. A line saying a client file exists
+servers it added, and the other `▸ syntek-media:` lines naming what to add or run by hand. A line
+starting `▸ syntek-media: not added to …, because you allow it` or `…, because a committed
+version of the file held it (you removed it)` names an entry it left out for that reason; it
+needs nothing unless the author wants it back. A line saying a client file exists
 but the recorded answers do not name its client sends the author on to
 `how-to/workflows/syntek-media/06-enable-a-coding-agent-client/`, to record it. Where no report
 appeared, look for conflict markers and `.rej` files by hand, with `git status`. _Substantive._

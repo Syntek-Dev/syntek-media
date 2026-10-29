@@ -31,7 +31,7 @@ Subcommands (run from the project root; Copier runs both through _copier_python)
 The refresh replaces a listed file only when it is a regular file the update left untouched
 (the work tree equals HEAD), whose bytes equal a render this project recorded, and which
 differs from the new render. A listed file that is absent and that the owner never had (no
-commit of HEAD's history, and no render this template or a sibling recorded before the update
+commit of HEAD's history, every side of every merge read, and no render this template or a sibling recorded before the update
 and the project committed, held it) is added, so one the owner deleted stays deleted and one a
 skipped refresh never wrote arrives with the next full run. A hook written or refreshed under
 .claude/hooks/ is left mode 755. A file that cannot be written is reported and the run goes on
@@ -109,9 +109,11 @@ counts as allowed where an allow rule is the same rule or, for mcp__S__T, is mcp
 mcp__S__* or a tool-name glob after mcp__S__ that matches T: Claude Code takes the first of
 deny, ask and allow that matches, however specific, so the ask would override the owner's
 allow. A deny counts as allowed only by the same rule. The render record lists every entry offered
-('settings: ' lines), so an entry the owner removed after it was offered stays removed. Where no record lists them (a project
+('settings: ' lines), so an entry the owner removed after it was offered stays removed. Where there is no record (a project
 older than the record, a fresh clone, a copy without tasks), an entry counts as offered when
-any committed version of settings.json held it. Entries are inserted as text into the
+any committed version of settings.json held it (every side of every merge, no bound), and so
+does a top-level value where the record lists none; a record that lists one decides alone. Such
+an entry is never added; where the file is read and lacks it, one line names it, once. Entries are inserted as text into the
 owner's file, in its own indentation and line endings; the file is written only when
 something is added; a file that is not plain JSON is reported and left alone; if the result
 would not parse to exactly the planned settings, the file is rewritten as JSON in its own key
@@ -128,7 +130,8 @@ names the servers to add by hand, and the offer is recorded. A file that does no
 reported, and its servers are offered again. A server already there by name is only
 recorded; where its value differs, one line says so, once, naming the sibling template whose
 recorded render holds that value. A missing server is added unless the record lists it as
-offered or any commit of HEAD's history held it there (the owner removed it). JSON is
+offered or any commit of HEAD's history held it there (the owner removed it; one line names it,
+once). JSON is
 inserted into the owner's text as settings are, and must parse to the plan; TOML gets the new
 render's [mcp_servers.<server>] tables appended (its env and tools tables included) and is
 written only if the result parses to the owner's file plus exactly those servers, with no
@@ -688,19 +691,31 @@ def same_answers(info, blob):
 
 
 def answers_held(path):
-    """Every blob HEAD's history held at path (the new blob of each commit that changed it, a
-    merge's against each parent, so a blob a merge alone made or a side branch it set aside is
-    seen too), or None where that cannot tell which records the project committed: there is no
+    """Every blob HEAD's history held at path (history_blobs: the new blob of each commit that
+    changed it, a merge's against each parent, so a blob a merge alone made or a side branch it
+    set aside is seen too, whatever the owner's log settings), or None where that cannot tell which records the project committed: there is no
     HEAD, or git ignores path (so no commit holds it), or git cannot say whether it does."""
     if not verify('HEAD') or ignored(path) is not False:
         return None
-    out = set()
-    for line in git('log', '-m', '--full-history', '--no-abbrev', '--format=', '--raw', 'HEAD', '--',
-                    ':(literal)' + path, check=False).splitlines():
+    try:
+        return set(history_blobs(path))
+    except RuntimeError:   # git cannot walk the history (older than 2.31, say): it cannot say
+        return None
+
+
+def history_blobs(path):
+    """Every blob a commit of HEAD's history held at path, newest first, each once: every parent of
+    every merge followed (--full-history), each merge read against each parent and the root commit
+    read too, whatever the owner's log settings, with no bound on depth."""
+    if not verify('HEAD'):
+        return []
+    out = {}
+    for line in git('log', '--full-history', '--diff-merges=separate', '--root', '--no-abbrev', '--format=',
+                    '--raw', 'HEAD', '--', ':(literal)' + path).splitlines():   # an error raises: never an empty history
         parts = line.split()
-        if line.startswith(':') and len(parts) >= 5:
-            out.add(parts[3])
-    return out
+        if line.startswith(':') and len(parts) >= 5 and parts[3].strip('0'):
+            out.setdefault(parts[3], None)
+    return list(out)
 
 
 def committed_record(cur, commit, answers, held):
@@ -757,7 +772,7 @@ def owner_held(p, yours):
     """True where the owner's committed history, or the tree at the last update, held p."""
     if p in yours:
         return True
-    return bool(git('log', '-1', '--format=%H', 'HEAD', '--', ':(literal)' + p, check=False).strip())
+    return bool(git('log', '-1', '--full-history', '--format=%H', 'HEAD', '--', ':(literal)' + p, check=False).strip())
 
 
 def written_blobs(msg):
@@ -1120,16 +1135,16 @@ def read_json_blob(tree, path):
 
 
 def committed_ids(items):
-    """The ids of the items that any committed .claude/settings.json of HEAD's history held:
-    entries the owner had, so one missing now was removed, not never added."""
-    found = set()
-    for sha in git('log', '--format=%H', 'HEAD', '--', SETTINGS, check=False).split()[:200]:
-        try:
-            st = json.loads(git('show', '%s:%s' % (sha, SETTINGS), check=False) or 'null')
-        except ValueError:
-            continue
+    """The ids of the items that any committed .claude/settings.json of HEAD's history held (every
+    side of every merge, no bound): entries the owner had, so one missing now was removed, not
+    never added."""
+    found, want = set(), {entry_id(i) for i in items}
+    for blob in history_blobs(SETTINGS):
+        st = blob_value(blob, SETTINGS)   # a byte-order mark ignored; one that does not parse, skipped
         if isinstance(st, dict):
             found |= {entry_id(i) for i in items if present(st, i)}
+        if found >= want:
+            break
     return found
 
 
@@ -1265,7 +1280,9 @@ def settings_merge(data, N, offered, skip):
     """Add the settings entries the template offers and this project was never offered.
 
     data: the template's family-refresh.json; N: the new render; offered: the ids recorded as
-    offered before (None: no record, so the committed history of settings.json decides).
+    offered before (None: no record, so the committed history of settings.json decides; a record
+    listing no top-level value leaves those to it). An entry the history alone counts as offered
+    is never added, and is named once where the file is read and lacks it.
     Returns (report lines, the ids now offered)."""
     want = data.get('settings') or {}
     new = read_json_blob(N, SETTINGS) if SETTINGS in N else None
@@ -1278,18 +1295,19 @@ def settings_merge(data, N, offered, skip):
     items += [('setting', key, value) for key, value in sorted(want.items()) if key not in ('hooks', 'permissions')
               and is_scalar(value) and isinstance(new, dict) and key in new and same(new[key], value)]
     seen = set(offered) if offered is not None else committed_ids(items)
-    if offered is not None:
+    if offered is not None and not any(x.startswith('setting ') for x in offered):
         # A record written by a script older than top-level values never lists them: the
-        # committed history then decides, so a key the owner deleted is not added back.
+        # committed history then decides, so a key the owner deleted is not added back. A record
+        # that lists one decides alone, as it does for hook entries and rules.
         late = [i for i in items if i[0] == 'setting' and entry_id(i) not in seen]
         seen |= committed_ids(late) if late else set()
-    # The history only stops a top-level value being added back; an owner's other value that no
-    # record lists as offered is still reported, once.
-    history_only = {entry_id(i) for i in items if i[0] == 'setting' and entry_id(i) in seen
-                    and entry_id(i) not in (offered or ())}
-    pending = [i for i in items if entry_id(i) not in seen or entry_id(i) in history_only]
-    # An early return records no history-only value: the first run that can read the file
-    # reports it.
+    # Counted as offered only because a committed version held it: never added, and named once
+    # where the file is read and lacks it. An owner's other top-level value is still reported, once.
+    held = {entry_id(i) for i in items if entry_id(i) in seen and entry_id(i) not in (offered or ())}
+    history_only = {x for x in held if x.startswith('setting ')}
+    pending = [i for i in items if entry_id(i) not in seen or entry_id(i) in held]
+    # An early return records no history-only top-level value: the first run that can read the
+    # file judges it. A held hook entry or rule is recorded without a line.
     if not pending or SETTINGS in skip or not os.path.lexists(SETTINGS):
         # Nothing new; a conflict in the file (reported there); or the owner has none.
         return [], seen - history_only
@@ -1297,7 +1315,7 @@ def settings_merge(data, N, offered, skip):
     if ig is not False:
         # Never read (its ignore rule may guard a credential): one line names the entries to add
         # by hand, and none is recorded, so they are offered again.
-        hand = [i for i in pending if entry_id(i) not in history_only]
+        hand = [i for i in pending if entry_id(i) not in held]
         return (['▸ %s %s, so it was not read and these entries were not added (add them by hand; they are '
                  'offered again by the next update): %s' % (
                      SETTINGS, 'is ignored by git' if ig else 'could not be checked against the ignore rules',
@@ -1311,7 +1329,7 @@ def settings_merge(data, N, offered, skip):
         if why == 'is a link' and os.path.isfile(SETTINGS) and inside_project(SETTINGS):
             with open(SETTINGS, 'rb') as f:
                 raw = f.read()
-        return settings_unwritable('%s %s' % (SETTINGS, why), pending, raw, seen - history_only, history_only)
+        return settings_unwritable('%s %s' % (SETTINGS, why), pending, raw, seen - history_only, held)
     with open(SETTINGS, 'rb') as f:
         raw = f.read()
     bom = b'\xef\xbb\xbf' if raw.startswith(b'\xef\xbb\xbf') else b''
@@ -1321,15 +1339,16 @@ def settings_merge(data, N, offered, skip):
     except ValueError:
         cur = None
     if not isinstance(cur, dict):
-        return settings_unwritable('%s is not plain JSON' % SETTINGS, pending, raw, seen - history_only, history_only)
+        return settings_unwritable('%s is not plain JSON' % SETTINGS, pending, raw, seen - history_only, held)
     # A hook entry is added only beside its script: one the owner removed, or that could not be
-    # written, is reported and offered again by the next update.
-    missing = [i for i in pending if i[0] == 'hook' and not present(cur, i)
+    # written, is reported and offered again by the next update; one the history holds aside is
+    # named by the history line instead.
+    missing = [i for i in pending if i[0] == 'hook' and entry_id(i) not in held and not present(cur, i)
                and any(not os.path.isfile('.claude/hooks/' + s) for s in hook_scripts(i[2]))]
     pending = [i for i in pending if i not in missing]
     unwired = ['▸ not added to %s, because its script is not in .claude/hooks/ (it is offered again by the next update): %s' % (
         SETTINGS, '; '.join(describe(i) for i in missing))] if missing else []
-    plan, added, allowed, refused, kept = json.loads(text), [], [], [], []
+    plan, added, allowed, refused, kept, gone = json.loads(text), [], [], [], [], []
     ops = []
     for i in pending:
         seen.add(entry_id(i))
@@ -1338,13 +1357,17 @@ def settings_merge(data, N, offered, skip):
                 if not same(plan[i[1]], i[2]):
                     kept.append(i)
                 continue
-            if entry_id(i) in history_only:
+            if entry_id(i) in held:
+                gone.append(i)
                 continue
             plan[i[1]] = i[2]
             ops.append(([i[1]], i[2]))
             added.append(describe(i))
             continue
         if present(plan, i):
+            continue
+        if entry_id(i) in held:
+            gone.append(i)   # before allow_covers: a removed ask is the owner's removal, not their allow
             continue
         if i[0] == 'hook':
             path, value = ['hooks', i[1]], [i[2]]
@@ -1387,6 +1410,8 @@ def settings_merge(data, N, offered, skip):
         lines.append('▸ not added to %s, because you allow it: %s' % (SETTINGS, '; '.join(allowed)))
     if refused:
         lines.append('▸ not added to %s: %s' % (SETTINGS, '; '.join(refused)))
+    if gone:
+        lines.append(history_line(SETTINGS, [held_name(i) for i in gone]))
     lines += [kept_line(i, plan[i[1]]) for i in kept]
     return lines + unwired, seen
 
@@ -1398,16 +1423,31 @@ def kept_line(item, value):
         json.dumps(item[2]), json.dumps(item[2]), SETTINGS)
 
 
+HELD_WHY = 'because a committed version of the file held it (you removed it)'
+
+
+def history_line(path, names, sep='; '):
+    """The one line for entries not added because a committed version of the file held them."""
+    return '▸ not added to %s, %s: %s' % (path, HELD_WHY, sep.join(names))
+
+
+def held_name(item):
+    """An entry as the history line names it: a top-level value by its key alone, since the
+    value the history held may not be the one offered."""
+    return 'the key %s' % json.dumps(item[1]) if item[0] == 'setting' else describe(item)
+
+
 def inside_project(p):
     """True where the path resolves to a place inside the project (the working folder)."""
     root = os.path.realpath('.')
     return os.path.realpath(p).startswith(root + os.sep)
 
 
-def settings_unwritable(what, pending, raw, seen, history_only):
+def settings_unwritable(what, pending, raw, seen, held):
     """settings.json cannot be written (a link, or not plain JSON). What it holds is read where
     it can be, so the 'add by hand' line names only entries really missing, an owner's other
-    top-level value is reported once instead, and a value the owner removed is never named.
+    top-level value is reported once instead, and an entry the history counts as offered (held)
+    is never named for adding: it is recorded, and named once where the file parses and lacks it.
     raw: the file's bytes, or None where it is not read. Returns (report lines, ids offered)."""
     try:
         text = raw.decode('utf-8-sig') if raw is not None else None
@@ -1417,7 +1457,7 @@ def settings_unwritable(what, pending, raw, seen, history_only):
         cur = json.loads(text) if text is not None else None
     except ValueError:
         cur = None
-    seen, lines, hand = set(seen), [], []
+    seen, lines, hand, gone = set(seen), [], [], []
     for i in pending:
         if isinstance(cur, dict) and present(cur, i):
             seen.add(entry_id(i))
@@ -1436,12 +1476,16 @@ def settings_unwritable(what, pending, raw, seen, history_only):
                 if not same(v, i[2]):
                     lines.append(kept_line(i, v))
                 continue
-        if entry_id(i) in history_only:
-            # The owner removed it: never named for adding; recorded once the file is read.
+        if entry_id(i) in held:
+            # Counted as offered by the history: recorded, never added; named only where the file
+            # parses, so whether it lacks the entry can be told.
+            seen.add(entry_id(i))
             if isinstance(cur, dict):
-                seen.add(entry_id(i))
+                gone.append(i)
             continue
         hand.append(i)
+    if gone:
+        lines.append(history_line(SETTINGS, [held_name(i) for i in gone]))
     if hand:
         lines.append('▸ %s, so these entries were not added (add them by hand): %s' % (
             what, '; '.join(describe(i) for i in hand)))
@@ -1583,11 +1627,11 @@ def ignored(p):
 
 
 def committed_servers(path, keys, servers):
-    """The servers any commit of HEAD's history held at the key path of path: ones the owner
-    had, so one missing now was removed, never to be added back."""
+    """The servers any commit of HEAD's history held at the key path of path (every side of every
+    merge, no bound): ones the owner had, so one missing now was removed, never to be added back."""
     found = set()
-    for sha in git('log', '--format=%H', 'HEAD', '--', ':(literal)' + path, check=False).split()[:200]:
-        st, node = servers_at(parse_bytes(path, git('show', '%s:%s' % (sha, path), check=False, binary=True)), keys)
+    for blob in history_blobs(path):
+        st, node = servers_at(blob_value(blob, path), keys)
         if st == 'ok':
             found |= {s for s in servers if s in node}
         if found >= set(servers):
@@ -1906,6 +1950,8 @@ def mcp_merge(spec, N, offered, skip, rendered, others, t):
         absent = [s for s in todo if s not in present]
         gone = committed_servers(path, keys, absent) if absent else set()
         seen.update({(path, s): hashes[s] for s in gone})   # removed by the owner: never re-added
+        if gone:
+            lines.append(history_line(path, [s for s in absent if s in gone], ', '))
         add = [s for s in absent if s not in gone]
         if add and path in ASK_FORMS:
             if asks is None:
@@ -2837,8 +2883,10 @@ def settings_probe(base, check):
         N = {SETTINGS: ('100644', sha)}
         lines, seen = settings_merge(data, N, None, set())
         cur = json.loads(open(SETTINGS).read())
-        check(not has_hook(cur, 'UserPromptSubmit', hook) and has_hook(cur, 'PreCompact', pre),
-              'no record: a hook a committed settings.json held is not re-added; one it never held is')
+        check(not has_hook(cur, 'UserPromptSubmit', hook) and has_hook(cur, 'PreCompact', pre)
+              and ['▸ not added to %s, %s: the UserPromptSubmit hook for probe-hook.sh' % (SETTINGS, HELD_WHY)]
+              == [l for l in lines if HELD_WHY in l],
+              'no record: a hook a committed settings.json held is not re-added, and named once; one it never held is (%r)' % lines)
         with open(SETTINGS, 'w', encoding='utf-8') as f:
             f.write('{\n  "model": "opus"\n}\n')
         lines, _ = settings_merge(data, N, seen, set())
@@ -2979,8 +3027,11 @@ def setting_probe(base, check):
         # No record: a committed settings.json that held the key means the owner removed it.
         N, _ = case('history', '{\n  "model": "opus"\n}\n', history=('{\n  "autoCompactEnabled": false\n}\n',))
         lines, seen = settings_merge(data, N, None, set())
-        check(not lines and 'autoCompactEnabled' not in open(SETTINGS).read() and 'setting autoCompactEnabled' in seen,
-              'top-level history: a key a committed settings.json held is not re-added (%r)' % lines)
+        check(lines == ['▸ not added to %s, %s: the key "autoCompactEnabled"' % (SETTINGS, HELD_WHY)]
+              and 'autoCompactEnabled' not in open(SETTINGS).read() and 'setting autoCompactEnabled' in seen,
+              'top-level history: a key a committed settings.json held is not re-added, and named once (%r)' % lines)
+        again, _ = settings_merge(data, N, seen, set())
+        check(not again, 'top-level history: the record then keeps it quiet (%r)' % again)
         os.chdir(old)
         N, mtime = case('history-true', '{\n  "autoCompactEnabled": true\n}\n', history=('{\n  "autoCompactEnabled": true\n}\n',))
         lines, seen = settings_merge(data, N, None, set())
@@ -2991,8 +3042,11 @@ def setting_probe(base, check):
         os.chdir(old)
         N, _ = case('old-record', '{\n  "model": "opus"\n}\n', history=('{\n  "autoCompactEnabled": false\n}\n',))
         lines, seen = settings_merge(data, N, {'deny Edit(build/**)'}, set())
-        check(not lines and 'autoCompactEnabled' not in open(SETTINGS).read() and 'setting autoCompactEnabled' in seen,
-              'top-level old-record: a record that never listed the key leaves it to the history (%r)' % lines)
+        check(lines == ['▸ not added to %s, %s: the key "autoCompactEnabled"' % (SETTINGS, HELD_WHY)]
+              and 'autoCompactEnabled' not in open(SETTINGS).read() and 'setting autoCompactEnabled' in seen,
+              'top-level old-record: a record that lists no top-level value leaves it to the history (%r)' % lines)
+        again, _ = settings_merge(data, N, seen, set())
+        check(not again, 'top-level old-record: the record then keeps it quiet (%r)' % again)
         os.chdir(old)
         N, _ = case('old-record-new', '{\n  "model": "opus"\n}\n', history=('{\n  "model": "opus"\n}\n',))
         lines, seen = settings_merge(data, N, {'deny Edit(build/**)'}, set())
@@ -3047,6 +3101,209 @@ def setting_probe(base, check):
         N, mtime = case('unknown', '{\n  "model": "opus"\n}\n', {'model': 'opus', 'env': {'A': '1'}})
         lines, seen = settings_merge({'settings': {'env': {'A': '1'}, 'nothing': None}}, N, None, set())
         check(not lines and not seen, 'top-level unknown: an object or null value is ignored (%r)' % lines)
+    finally:
+        os.chdir(old)
+
+
+
+def history_probe(base, check):
+    """An entry the history alone keeps out: never added, named once where the file is read and
+    lacks it, and recorded; a record that lists a top-level value decides alone; every side of
+    every merge, every depth and every version is read, whatever the owner's log settings."""
+    HELD = HELD_WHY
+    hook = {'hooks': [{'type': 'command', 'command': 'bash .claude/hooks/probe-hook.sh', 'timeout': 10}]}
+    pre = {'matcher': 'auto', 'hooks': [{'type': 'command', 'command': 'bash .claude/hooks/pre.sh auto'}]}
+    full = {'settings': {'autoCompactEnabled': False, 'hooks': {'UserPromptSubmit': [hook], 'PreCompact': [pre]},
+                         'permissions': {'deny': ['Edit(build/**)', 'Bash(rm *)'], 'ask': ['Bash(git push *)']}}}
+    rendered = {'autoCompactEnabled': False, 'hooks': {'PreCompact': [pre], 'UserPromptSubmit': [hook]},
+                'permissions': {'deny': ['Edit(build/**)', 'Bash(rm *)'], 'ask': ['Bash(git push *)']}}
+    js = lambda v: json.dumps(v, indent=2) + '\n'
+    old = os.getcwd()
+
+    def put(rel, text):
+        os.makedirs(os.path.dirname(rel) or '.', exist_ok=True)
+        with open(rel, 'w', encoding='utf-8', newline='') as f:
+            f.write(text)
+
+    def repo(name, history=(), current=None, scripts=('probe-hook.sh', 'pre.sh'), render=rendered):
+        d = os.path.join(base, name); os.makedirs(os.path.join(d, '.claude', 'hooks'))
+        os.chdir(d); git('init', '-q')
+        for s in scripts:
+            put('.claude/hooks/' + s, 'exit 0\n')
+        for i, h in enumerate(history):
+            put(SETTINGS, h); git('add', '-A'); git('commit', '-q', '-m', 'h%d' % i, env=IDENT)
+        if current is not None:
+            put(SETTINGS, current)
+        sha = git('hash-object', '-w', '--stdin', inp=js(render)).strip()
+        return {SETTINGS: ('100644', sha)}
+
+    def side(path, base_text, side_text, other='other'):
+        """base on the default branch; on side: side_text then base_text; merge --no-ff."""
+        put(path, base_text); git('add', '-A'); git('commit', '-q', '-m', 'base', env=IDENT)
+        git('checkout', '-q', '-b', 'side')
+        put(path, side_text); git('commit', '-q', '-am', 'held', env=IDENT)
+        put(path, base_text); git('commit', '-q', '-am', 'removed', env=IDENT)
+        git('checkout', '-q', '-')
+        put(other, 'x\n'); git('add', '-A'); git('commit', '-q', '-m', 'other', env=IDENT)
+        git('merge', '-q', '--no-ff', 'side', '-m', 'merge', env=IDENT)
+
+    try:
+        two = {'settings': {'autoCompactEnabled': False, 'idleCompaction': False}}
+        r2 = {'model': 'opus', 'autoCompactEnabled': False, 'idleCompaction': False}
+        # record-decides (fix 1)
+        N = repo('record-decides', history=('{\n  "idleCompaction": true\n}\n',), current='{\n  "model": "opus"\n}\n', render=r2)
+        lines, seen = settings_merge(two, N, {'setting autoCompactEnabled', 'deny Edit(build/**)'}, set())
+        cur = json.loads(open(SETTINGS).read())
+        check(cur.get('idleCompaction') is False and 'autoCompactEnabled' not in cur and len(lines) == 1
+              and lines[0].startswith('▸ added to') and '"idleCompaction": false' in lines[0] and 'setting idleCompaction' in seen,
+              'record-decides: a record listing a top-level value decides alone (%r)' % lines)
+        os.chdir(old)
+        # jsonc-held (contract F1)
+        N = repo('jsonc-held', history=('{\n  "idleCompaction": false\n}\n',), current='{\n  // mine\n  "autoCompactEnabled": true\n}\n', render=r2)
+        lines, seen = settings_merge(two, N, None, set())
+        check(len(lines) == 1 and lines[0].startswith('▸ kept your "autoCompactEnabled": true') and HELD not in lines[0]
+              and seen == {'setting autoCompactEnabled', 'setting idleCompaction'},
+              'jsonc-held run 1: kept line once, both recorded, no history line (%r, %r)' % (lines, seen))
+        put(SETTINGS, '{\n  "autoCompactEnabled": true\n}\n')
+        again, _ = settings_merge(two, N, seen, set())
+        check(not again and 'idleCompaction' not in open(SETTINGS).read(), 'jsonc-held run 2: quiet, not added (%r)' % again)
+        os.chdir(old)
+        # held-present: fresh clone of a healthy project is silent
+        N = repo('held-present', history=(js(rendered),))
+        mt = os.stat(SETTINGS).st_mtime_ns
+        lines, seen = settings_merge(full, N, None, set())
+        check(not lines and os.stat(SETTINGS).st_mtime_ns == mt and len(seen) == 6, 'held-present: silent, all six recorded (%r %d)' % (lines, len(seen)))
+        os.chdir(old)
+        # held-rules: a held deny and a held ask the owner allows: the history line, not 'because you allow it'
+        rules = {'settings': {'permissions': {'deny': ['Edit(build/**)'], 'ask': ['Bash(git push *)']}}}
+        rr = {'permissions': {'deny': ['Edit(build/**)'], 'ask': ['Bash(git push *)']}}
+        cur_text = js({'permissions': {'allow': ['Bash(git push *)']}})
+        N = repo('held-rules', history=(js(rr),), current=cur_text, render=rr)
+        lines, seen = settings_merge(rules, N, None, set())
+        check(lines == ['▸ not added to %s, %s: deny Edit(build/**); ask Bash(git push *)' % (SETTINGS, HELD)]
+              and open(SETTINGS).read() == cur_text and seen == {'deny Edit(build/**)', 'ask Bash(git push *)'},
+              'held-rules: one history line, nothing written, no allow line (%r)' % lines)
+        again, _ = settings_merge(rules, N, seen, set())
+        check(not again, 'held-rules: quiet next (%r)' % again)
+        os.chdir(old)
+        # held-noscript
+        hk = {'settings': {'hooks': {'UserPromptSubmit': [hook]}}}
+        hr = {'hooks': {'UserPromptSubmit': [hook]}}
+        N = repo('held-noscript', history=(js(hr),), current='{\n  "model": "opus"\n}\n', scripts=(), render=hr)
+        lines, seen = settings_merge(hk, N, None, set())
+        check(lines == ['▸ not added to %s, %s: the UserPromptSubmit hook for probe-hook.sh' % (SETTINGS, HELD)]
+              and seen == {'hook UserPromptSubmit "" probe-hook.sh'}, 'held-noscript: history line, not the script line (%r %r)' % (lines, seen))
+        again, _ = settings_merge(hk, N, seen, set())
+        check(not again, 'held-noscript: quiet next (%r)' % again)
+        os.chdir(old)
+        # held-unread
+        N = repo('held-unread', history=(js(hr),), current='{\n  // mine\n  "model": "opus"\n}\n', render=hr)
+        lines, seen = settings_merge(hk, N, None, set())
+        check(not lines and seen == {'hook UserPromptSubmit "" probe-hook.sh'}, 'held-unread: no line, recorded (%r %r)' % (lines, seen))
+        put(SETTINGS, '{\n  "model": "opus"\n}\n')
+        again, _ = settings_merge(hk, N, seen, set())
+        check(not again and 'hooks' not in open(SETTINGS).read(), 'held-unread run 2: quiet, not added (%r)' % again)
+        os.chdir(old)
+        # bom-history (impl F5): a committed settings.json with a byte-order mark is read
+        N = repo('bom-history', history=('﻿' + js(hr),), current='{\n  "model": "opus"\n}\n', render=hr)
+        lines, seen = settings_merge(hk, N, None, set())
+        check('hooks' not in open(SETTINGS).read() and len(lines) == 1 and HELD in lines[0], 'bom-history: a BOM version is read (%r)' % lines)
+        os.chdir(old)
+        # side-settings (fix 3)
+        N = repo('side-settings', render=hr)
+        side(SETTINGS, '{"model":"opus"}\n', js({'model': 'opus', **hr}))
+        ctrl = git('log', '--format=%H', 'HEAD', '--', SETTINGS).split()
+        lines, seen = settings_merge(hk, N, None, set())
+        check(len(ctrl) == 1, 'side-settings control: the default walk lists one commit (%d)' % len(ctrl))
+        check('hooks' not in open(SETTINGS).read() and lines == ['▸ not added to %s, %s: the UserPromptSubmit hook for probe-hook.sh' % (SETTINGS, HELD)]
+              and 'hook UserPromptSubmit "" probe-hook.sh' in seen, 'side-settings: not added, named, recorded (%r)' % lines)
+        os.chdir(old)
+        # log settings (hardening): root commit read under log.showRoot=false; evil merge under log.diffMerges=combined
+        N = repo('log-root', history=(js(hr),), current='{\n  "model": "opus"\n}\n', render=hr)
+        git('config', 'log.showRoot', 'false'); git('config', 'log.diffMerges', 'combined')
+        lines, seen = settings_merge(hk, N, None, set())
+        check('hooks' not in open(SETTINGS).read() and len(lines) == 1 and HELD in lines[0], 'log-root: root read whatever log.showRoot (%r)' % lines)
+        os.chdir(old)
+        N = repo('log-evil', render=hr)
+        git('config', 'log.diffMerges', 'combined')
+        put(SETTINGS, '{"model":"opus"}\n'); git('add', '-A'); git('commit', '-q', '-m', 'base', env=IDENT)
+        git('checkout', '-q', '-b', 'side'); put(SETTINGS, '{"model":"opus","a":1}\n'); git('commit', '-q', '-am', 'a', env=IDENT)
+        git('checkout', '-q', '-'); put(SETTINGS, '{"model":"opus","b":1}\n'); git('commit', '-q', '-am', 'b', env=IDENT)
+        git('merge', '-q', 'side', '-m', 'm', env=IDENT, check=False)
+        put(SETTINGS, js({'model': 'opus', 'a': 1, 'b': 1, **hr})); git('commit', '-q', '-am', 'resolved with the hook', env=IDENT)
+        put(SETTINGS, '{"model":"opus","a":1,"b":1}\n'); git('commit', '-q', '-am', 'hook removed', env=IDENT)
+        lines, seen = settings_merge(hk, N, None, set())
+        check('hooks' not in open(SETTINGS).read() and len(lines) == 1 and HELD in lines[0], 'log-evil: a merge-only version read under log.diffMerges=combined (%r)' % lines)
+        os.chdir(old)
+        # deep (fix 4) settings + mcp
+        d = os.path.join(base, 'deep'); os.makedirs(d); os.chdir(d); git('init', '-q')
+        both = {'code-review-graph': PROBE_CRG, 'scrapling': PROBE_SCR}
+        stream = []
+        def blobcmd(path, text):
+            b = text.encode()
+            stream.append(b'M 100644 inline ' + path.encode() + b'\ndata %d\n' % len(b) + b + b'\n')
+        for k in range(206):
+            stream.append(b'commit refs/heads/probe-deep\nmark :%d\ncommitter p <p@x> %d +0000\ndata 2\nc\n' % (k + 1, 1700000000 + k))
+            if k:
+                stream.append(b'from :%d\n' % k)
+            blobcmd(SETTINGS, js({'n': k, **(hr if k == 0 else {})}))
+            blobcmd('.mcp.json', js({'n': k, 'mcpServers': {'scrapling': PROBE_SCR} if k == 0 else {}}))
+        git('fast-import', '--quiet', inp=b''.join(stream).decode())
+        git('checkout', '-q', '-f', 'probe-deep')
+        os.makedirs('.claude/hooks', exist_ok=True); put('.claude/hooks/probe-hook.sh', 'exit 0\n')
+        sha = git('hash-object', '-w', '--stdin', inp=js(hr)).strip()
+        N = {SETTINGS: ('100644', sha), '.mcp.json': ('100644', git('hash-object', '-w', '--stdin', inp=js({'mcpServers': both})).strip())}
+        lines, seen = settings_merge(hk, N, None, set())
+        check(len(git('log', '--format=%H', 'HEAD', '--', SETTINGS).split()) == 206, 'deep: 206 commits')
+        check('hooks' not in open(SETTINGS).read() and len(lines) == 1 and HELD in lines[0], 'deep settings: held beyond 200 (%r)' % lines)
+        data = {'mcp': {'servers': ['code-review-graph', 'scrapling'], 'files': {'.mcp.json': ['mcpServers']}}}
+        ml, mseen, _ = mcp_lane(data, N, None, set(), {}, {}, 'probe', [])
+        check('scrapling' not in json.loads(open('.mcp.json').read())['mcpServers'] and ('.mcp.json', 'scrapling') in mseen
+              and any(HELD in l and l.endswith(': scrapling') for l in ml), 'deep mcp: held beyond 200 (%r)' % ml)
+        os.chdir(old)
+        # side-mcp
+        d = os.path.join(base, 'side-mcp'); os.makedirs(d); os.chdir(d); git('init', '-q')
+        side('.mcp.json', '{"mcpServers": {}}\n', js({'mcpServers': {'scrapling': PROBE_SCR}}))
+        N = {'.mcp.json': ('100644', git('hash-object', '-w', '--stdin', inp=js({'mcpServers': both})).strip())}
+        ml, mseen, _ = mcp_lane(data, N, None, set(), {}, {}, 'probe', [])
+        check(ml == ['▸ not added to .mcp.json, %s: scrapling' % HELD, '▸ added 1 MCP server to .mcp.json: code-review-graph']
+              and ('.mcp.json', 'scrapling') in mseen, 'side-mcp: (%r)' % ml)
+        again, _, _ = mcp_lane(data, N, mseen, set(), {}, {}, 'probe', [])
+        check(not again, 'side-mcp: quiet next (%r)' % again)
+        os.chdir(old)
+        # side-shared (fix 5)
+        d = os.path.join(base, 'side-shared'); os.makedirs(d); os.chdir(d); git('init', '-q')
+        put('a', 'a\n'); git('add', '-A'); git('commit', '-q', '-m', 'base', env=IDENT)
+        git('checkout', '-q', '-b', 'side'); put('.claude/skills/x/SKILL.md', 's\n'); git('add', '-A'); git('commit', '-q', '-m', 'add', env=IDENT)
+        git('rm', '-q', '.claude/skills/x/SKILL.md'); git('commit', '-q', '-m', 'del', env=IDENT)
+        git('checkout', '-q', '-'); put('b', 'b\n'); git('add', '-A'); git('commit', '-q', '-m', 'other', env=IDENT)
+        git('merge', '-q', '--no-ff', 'side', '-m', 'merge', env=IDENT)
+        check(owner_held('.claude/skills/x/SKILL.md', {}), 'side-shared: owner_held sees a side branch')
+        check(not owner_held('.claude/skills/y/SKILL.md', {}), 'side-shared: a file never held is not')
+        os.chdir(old)
+        # wait: the history line names a removed MCP ask; the wait line follows once
+        crg_ask, scr_ask = 'mcp__code-review-graph__apply_refactor_tool', 'mcp__scrapling__fetch'
+        d = os.path.join(base, 'wait'); os.makedirs(os.path.join(d, '.claude')); os.chdir(d); git('init', '-q')
+        put(SETTINGS, js({'permissions': {'ask': [crg_ask, scr_ask]}})); git('add', '-A'); git('commit', '-q', '-m', 'asks', env=IDENT)
+        put(SETTINGS, js({'permissions': {'ask': [crg_ask]}})); git('commit', '-q', '-am', 'no scrapling ask', env=IDENT)
+        catch = js({'permissions': [{'action': '*', 'resource': '*', 'effect': 'allow'}]})
+        put('opencode.json', catch); git('add', '-A'); git('commit', '-q', '-m', 'oc', env=IDENT)
+        srend = {'permissions': {'ask': [crg_ask, scr_ask]}}
+        oc_new = js({'$schema': 'x', 'mcp': {'servers': {k: {'type': 'local', 'command': [v['command']] + v['args']} for k, v in both.items()}},
+                     'permissions': [{'action': 'scrapling_fetch', 'resource': '*', 'effect': 'ask'},
+                                     {'action': 'code-review-graph_apply_refactor_tool', 'resource': '*', 'effect': 'ask'}]})
+        N = {SETTINGS: ('100644', git('hash-object', '-w', '--stdin', inp=js(srend)).strip()),
+             'opencode.json': ('100644', git('hash-object', '-w', '--stdin', inp=oc_new).strip())}
+        sd = {'settings': {'permissions': {'ask': [crg_ask, scr_ask]}}}
+        slines, sseen = settings_merge(sd, N, None, set())
+        odata = {'mcp': {'servers': ['code-review-graph', 'scrapling'], 'files': {'opencode.json': ['mcp', 'servers']}}}
+        ml, mseen, _ = mcp_lane(odata, N, None, set(), {}, {}, 'probe', slines)
+        check(slines == ['▸ not added to %s, %s: ask %s' % (SETTINGS, HELD, scr_ask)], 'wait: settings history line (%r)' % slines)
+        check(sum('wait for ask rules --write cannot carry' in l for l in ml) == 1, 'wait: the wait line once (%r)' % ml)
+        slines2, _ = settings_merge(sd, N, sseen, set())
+        ml2, _, _ = mcp_lane(odata, N, mseen, set(), {}, {}, 'probe', slines2)
+        check(not slines2 and not any('wait for ask rules' in l for l in ml2), 'wait: not again (%r %r)' % (slines2, ml2))
+        os.chdir(old)
     finally:
         os.chdir(old)
 
@@ -3269,8 +3526,11 @@ def mcp_probe(base, check):
         os.chdir(old)
         N = project('history', {'.mcp.json': only}, commits=({'.mcp.json': new['.mcp.json']}, {'.mcp.json': only}))
         lines, seen, _ = lane(N)
-        check(get('.mcp.json') == only.encode() and not lines and ('.mcp.json', 'scrapling') in seen,
-              'mcp history: a server the committed history held is not re-added (%r)' % lines)
+        check(get('.mcp.json') == only.encode() and lines == ['▸ not added to .mcp.json, %s: scrapling' % HELD_WHY]
+              and ('.mcp.json', 'scrapling') in seen,
+              'mcp history: a server the committed history held is not re-added, and named once (%r)' % lines)
+        again, _, _ = lane(N, offered=seen)
+        check(not again, 'mcp history: quiet on the next run (%r)' % again)
         os.chdir(old)
         N = project('clean', {'.mcp.json': old_mcp}, commits=({'.mcp.json': old_mcp},))
         lines, _, _ = lane(N)
@@ -3799,7 +4059,8 @@ def self_test():
             clone = os.path.join(tmp, 'clone-' + label.replace(' ', '-'))
             git('clone', '-q', proj_saved, clone)
             out = run(clone, 'update', '--to', shas['v3'], *common, env={**env3, **env})
-            # A clone holds no record: the owner's allow rule is reported once more beside it.
+            # A clone holds no record: the owner's allow rule, and an entry the history keeps out,
+            # are reported once more beside it.
             report = [l for l in out.strip().splitlines() if not l.startswith('▸ probe: not added')]
             check(len(report) == 1, '%s: one line (%r)' % (label, out))
         proj = proj_saved
@@ -4492,7 +4753,7 @@ def self_test():
 
         settings_probe(os.path.join(tmp, 'settings'), check)
         for probe in (lambda: mcp_probe(os.path.join(tmp, 'mcp'), check), lambda: allow_probe(check),
-                      lambda: answers_probe(check)):
+                      lambda: answers_probe(check), lambda: history_probe(os.path.join(tmp, 'history'), check)):
             try:
                 probe()
             except Exception as err:   # a probe that raises is a failure, never a crash

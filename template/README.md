@@ -97,7 +97,7 @@ directly: `python3 toolkit/media.py voice remix run`, which designs a character'
 own cloned voice (`production/workflows/11-design-character-voices/`), reads the same key from
 your shell and asks before it runs.
 
-**Requirements:** `git`; Python 3.11 or later; `ffmpeg` and `ffprobe` built with libass, x264
+**Requirements:** `git` 2.31 or later; Python 3.11 or later; `ffmpeg` and `ffprobe` built with libass, x264
 and mp3lame; `uv`, for Copier and for `toolkit/card.py`, with Playwright's Chromium
 (`uv run --with playwright==1.63.0 playwright install chromium`, or a system browser bundle at the same revision, as on NixOS); `git-lfs`, if you keep large
 design exports; and `espeak-ng` (optional, for a scratch voice track). `check --setup` reports

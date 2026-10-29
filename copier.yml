@@ -253,7 +253,7 @@ _exclude:
   - /.claude/mcp_config.json
   #
   # D80: seventeen more shared paths, syntek-author's family-shared files (syntek-author D48,
-  # D51), vendored byte for byte from its v0.7.0 tag and listed in family-shared.json: the
+  # D51), vendored byte for byte from its v0.8.0 tag and listed in family-shared.json: the
   # Gemini CLI settings and their pair, OpenCode's settings, the SKILL.md of the seven
   # working-practice skills, the two session hooks with the .claude/hooks/ pair, and the
   # handoffs/ pair. Each takes the same two lines as the nineteen, FILE by file, never the
@@ -283,7 +283,7 @@ _exclude:
   - "<: if _copier_operation == 'update' :>/handoffs/CLAUDE.md<: endif :>"
   #
   # D84: fourteen more shared paths, syntek-author's family-shared files for the user guide
-  # (syntek-author D56), vendored byte for byte from its v0.7.0 tag with every other family
+  # (syntek-author D56), vendored byte for byte from its v0.8.0 tag with every other family
   # file and listed in family-shared.json: the guide guard, .claude/hooks/how-to-read-only.sh,
   # then the five container pairs of how-to/ and its three shared chapters, in syntek-author's
   # order. Each takes the same two lines as the rest, FILE by file: never a line naming /how-to
@@ -962,7 +962,7 @@ DATE:
 # project uses, and their models (syntek-author D47); where its binary files are kept, and
 # with what layout (syntek-author D50); and which service keeps a copy of that data root
 # (syntek-author D53). Since 0.5.0 (D80) the lines strictly between the two marker lines below
-# are syntek-author's family-shared 'questions' block, byte for byte: since 0.6.0 at its v0.7.0
+# are syntek-author's family-shared 'questions' block, byte for byte: since 0.6.0 at its v0.8.0
 # tag, not its v0.5.0 (D81), as family-shared.json records it. Never edit them here: they come
 # again only from a later syntek-author tag (one tag for all, D85). Its client and model
 # defaults now read the project's previous answers, then syntek-author's record (syntek-author
@@ -1379,7 +1379,7 @@ _migrations:
   #
   # Since 0.4.5 the pair is syntek-author's family-shared 'migrations' block (D85; syntek-author
   # D48): the lines strictly between the two marker lines below are that block's bytes, since
-  # 0.6.0 at syntek-author's v0.7.0 tag (D81), as migrations/agents-outside-link.py is its
+  # 0.6.0 at syntek-author's v0.8.0 tag (D81), as migrations/agents-outside-link.py is its
   # script. The block's bytes are unchanged since v0.5.0; the script now needs Python 3.14 and,
   # below it, moves nothing and prints a framed message naming the Python found. Never edit
   # either here; both come again only from a later syntek-author tag (shipped-seeds.sh checks
@@ -1409,7 +1409,7 @@ _migrations:
   - version: v0.4.2
     command: python3 "<% _copier_conf.src_path %>/migrations/v0.4.2-agents-folder.py"
     when: "<% _stage == 'after' %>"
-  # D81 (0.6.0): syntek-author's family-shared 'update' block, byte for byte from its v0.7.0
+  # D81 (0.6.0): syntek-author's family-shared 'update' block, byte for byte from its v0.8.0
   # tag; the marker lines are syntek-author's too, so their D48 is syntek-author's decision,
   # never media's D48. Its one entry runs migrations/family-update.py, vendored from the same
   # tag and never edited here, through _copier_python. It is the second stated exception to
@@ -1744,7 +1744,7 @@ _tasks:
   # a failing task aborts the whole generation, or the whole update, after the files are
   # already written. Tasks 1 and 2 are syntek-author's exact commands, so without git task 1
   # fails as syntek-author's does; the toolkit and the skills need git in any case. Task 5 is
-  # syntek-author's too, transcribed byte for byte from its v0.7.0 copier.yml, and stays last.
+  # syntek-author's too, transcribed byte for byte from its v0.8.0 copier.yml, and stays last.
   # No task runs the permissions script: _message_after_copy item (2) gives its --write.
   #
   # There are no `mv` seed tasks. Seeds are _skip_if_exists, which is safe over an existing

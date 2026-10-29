@@ -887,7 +887,7 @@ SM_CRASH_VERSION="v0.4.3"
 # coexist-test.sh check 22 can tell one from a family file media has never heard of. Since
 # D81 (0.6.0) it is empty: media vendors every file and block the tag lists, so a family file
 # a later tag adds fails check 22 until it is adopted.
-SM_FAMILY_RELEASE="v0.7.0"
+SM_FAMILY_RELEASE="v0.8.0"
 SM_FAMILY_MANIFEST="family-shared.json"
 SM_FAMILY_OWNER="syntek-media"
 # destination path · source in this repository · scope (blank: project, under template/). The
@@ -955,7 +955,7 @@ rules-web-tools|template/.claude/rules/syntek-media/06-global-rules.md|.claude/r
 EOF
 )
 # syntek-author's entries media takes later: file paths, then `block:<name>`. Empty since D81
-# (0.6.0), which vendors every entry of v0.7.0's manifest; kept, so a later adoption can defer.
+# (0.6.0), which vendors every entry of v0.8.0's manifest; kept, so a later adoption can defer.
 SM_FAMILY_DEFERRED=""
 # The family files that are template-owned in every family template (syntek-author D49, D50):
 # updated by every update, so they take no _skip_if_exists or update-gated line. Every other
@@ -1053,7 +1053,7 @@ SM_SETTINGS_FAMILY_ASK=(
 )
 SM_SETTINGS_FAMILY_DENY=("mcp__code-review-graph__embed_graph_tool")
 # The seed's hooks key: syntek-author's seed's hooks object, byte for byte as JSON, at
-# SM_FAMILY_RELEASE (D80; since 0.6.0 its v0.7.0, D81, D84): four handoff-hook entries in the
+# SM_FAMILY_RELEASE (D80; since 0.6.0 its v0.8.0, D81, D84): four handoff-hook entries in the
 # silent `|| exit 0` form, the context-threshold handoff on UserPromptSubmit, the pre-compact
 # handoff on PreCompact (auto and manual) and on SessionStart (compact, `compacted`); then two
 # PreToolUse entries, the data-root guard and the guide guard (how-to-read-only.sh). Each finds
@@ -2538,7 +2538,7 @@ EOF
   } > Makefile
   cd - >/dev/null || return 1
   printf '0.7.0\n' > "$t/VERSION"
-  # syntek-author's update block (its v0.7.0) runs the same family script, last, on 3.14, and
+  # syntek-author's update block (since its v0.7.0) runs the same family script, last, on 3.14, and
   # its baseline task on copy, with refresh data of its own (one server over .mcp.json).
   mkdir -p "$t/migrations"
   cp "$SM_ROOT/$SM_FAMILY_UPDATE_SCRIPT" "$t/$SM_FAMILY_UPDATE_SCRIPT" || return 1

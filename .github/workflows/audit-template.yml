@@ -57,7 +57,7 @@ env:
   # The syntek-author release media vendors from (DESIGN.md D85, Section 7). Jobs 2 and 3 test
   # against it, so syntek-author's main moving never turns this run red; bump it at each
   # adoption, with coexist-test.sh --refresh-names (check 20 fails while the two disagree).
-  SYNTEK_AUTHOR_TAG: v0.7.0
+  SYNTEK_AUTHOR_TAG: v0.8.0
   # Python 3.14 is media's base (DESIGN.md D81). setup-python alone does not choose the Python
   # uvx runs Copier on: uv prefers a managed interpreter it already has. Below 3.14 the vendored
   # scripts' self-tests fail, and the outside-link stages do nothing, so update-test.sh check 20

@@ -44,7 +44,7 @@
     {"path": "how-to/workflows/CLAUDE.md", "source": "template/how-to/workflows/CLAUDE.md", "kind": "file", "bytes": 2396, "sha256": "876ab794968968be1d4f6fc4035052f5450726af88a2a322652ea7f96f048b45"},
     {"path": "how-to/workflows/CONTEXT.md", "source": "template/how-to/workflows/CONTEXT.md", "kind": "file", "bytes": 2192, "sha256": "0dcc64d0e8010335ba3f2288c0f22c238677e55dadb804712ad2c5f90f63e9a0"},
     {"path": "migrations/agents-outside-link.py", "source": "migrations/agents-outside-link.py", "kind": "file", "scope": "repository", "bytes": 29296, "sha256": "f5fb9f130a3a2acd7facbb240cfeb1c1c706e4867d00ad4366b6c5f364a28072", "mode": "755"},
-    {"path": "migrations/family-update.py", "source": "migrations/family-update.py", "kind": "file", "scope": "repository", "bytes": 284776, "sha256": "468e8d7ce41f1d73f86d03f75dcd0a2cd03b8982c6deeff767e02cf277feb470", "mode": "755"},
+    {"path": "migrations/family-update.py", "source": "migrations/family-update.py", "kind": "file", "scope": "repository", "bytes": 303830, "sha256": "fd5223a3854d29a7eba959c6dac59891b8e1f09117910dd32b54bfac8e06a8bb", "mode": "755"},
     {"path": "opencode.json", "source": "template/opencode.json", "kind": "file", "bytes": 4035, "sha256": "dd9aa85a962ec57803e42fcb0514daa24452651f36243b447287a989b2f0d687"}
   ],
   "blocks": [
