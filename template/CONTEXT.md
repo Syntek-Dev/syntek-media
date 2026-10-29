@@ -22,10 +22,11 @@ in `.claude/rules/syntek-media/01-layout-and-routing.md` Section 1, and the rule
 │   ├── syntek-media-agents.md ← shared read order and client setup (template-owned)
 │   ├── CLAUDE.md           ← the project brief and where the rules live (read first)
 │   ├── MEMORY.md           ← project memory (read second)
-│   ├── hooks/              ← the two session hooks: hand off, never compact (shared)
+│   ├── hooks/              ← the two session hooks (hand off, never compact) and the guide guard (shared)
 │   ├── rules/syntek-media/ ← loaded at launch: the brand brief (01, Section 1) and the template's rules (never edit)
 │   └── skills/             ← one folder per skill
 ├── handoffs/               ← session handoffs, one per handed-over session (the pair is shared)
+├── how-to/                 ← the user guide: chapters, guides and procedures (read-only; the shared pairs and chapters are the family's)
 ├── brand/                  ← LAYER (production): design tokens and layouts, design exports, the spoken voice, platform profiles
 ├── scripts/                ← LAYER (production): one folder per piece (brief, script or transcript, storyboard, shot list)
 ├── production/             ← LAYER (production): source media, voiceover, edit decision lists, cards, timing, scenes, rights, credits<: if 'audiobook' in MEDIA_KINDS :>, audiobooks<: endif :>
@@ -54,6 +55,9 @@ in `.claude/rules/syntek-media/01-layout-and-routing.md` Section 1, and the rule
   source media. A piece's tracked files stay flat in the layers, under the piece's name.
 - **Source footage** — kept in external storage and listed in
   `production/src/footage/manifest.toml`; the local mirror beside it is git-ignored.
+- **User guide** — `how-to/`, read-only and put back by every update: the template's chapters,
+  guides and step-by-step procedures, media's in folders named syntek-media. It starts at
+  `how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md`.
 - **Coding agents** — Claude Code reads `.claude/` natively; every other client this project was
   generated for reaches the same rules, skills and memory through `.claude/syntek-media-agents.md`.
 - **Every folder carries a `CONTEXT.md` and a `CLAUDE.md`**, with the exceptions listed in

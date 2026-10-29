@@ -57,29 +57,40 @@ paths and paid-call discipline. Do not infer author approval from client permiss
   `handoff` skill before the context runs low, and start a new session from it. Turn off
   automatic compaction or summarising where the client allows it (OpenCode's opencode.json does).
 - **The settings file's denies and asks are rules.** `.claude/settings.json` denies some edits
-  and tools in Claude Code (hand edits in every generated and renders folder, the dialog tool,
-  the cloud-embedding tool) and asks before every credit-spending ElevenLabs tool, the voice
-  remix, and the browser and writing tools of the two shipped MCP servers. Treat every deny
-  there as a rule in this client too, and every ask as a question to the author before the
-  call. Where it denies asking the author through a dialog, ask in the conversation instead.
+  and tools in Claude Code (hand edits in every generated and renders folder and in the user
+  guide, the dialog tool, the cloud-embedding tool) and asks before every credit-spending
+  ElevenLabs tool, the voice remix, and the browser and writing tools of the two shipped MCP
+  servers. Treat every deny there as a rule in this client too, and every ask as a question to
+  the author before the call. Where it denies asking the author through a dialog, ask in the
+  conversation instead.
 - **Passing the settings to each client.** `python3 .claude/syntek-media-permissions.py --check`
-  (Python 3.11 or later) prints which of those denies and asks each client's file already
+  (Python 3.14 or later) prints which of those denies and asks each client's file already
   carries, which it cannot express and why, and exits 1 if one it can express is missing.
   `--write` adds the missing ones to the client files that already exist, changing only their
   permission keys; it never creates a file. Run it once after the first copy, because the
   ElevenLabs asks reach Gemini CLI and OpenCode only this way (and Codex only where its own
   settings declare the server), and again after changing `.claude/settings.json` or adding a
-  client, with the author's agreement. Allow rules stay with each client. Every
-  `.claude/syntek-*-permissions.py` present is the same script.
+  client, with the author's agreement. Run `--write` too when an update report gives it: the two
+  MCP servers reach opencode.json and Gemini CLI's settings only once each holds every ask form.
+  Allow rules stay with each client. Every `.claude/syntek-*-permissions.py` present is the same
+  script.
 - **The data root stays out of the session.** A data root is a folder outside every
   repository that holds a `.syntek-data-root` marker; this machine's is the one
   `SYNTEK_DATA_ROOT` names. Claude Code's `PreToolUse` hook (where `.claude/settings.json`
   wires it) blocks its file tools' edits and writes there, and its searches where it offers
   `Grep` and `Glob`; no other client runs it. Never browse, search, list or edit anything under
   a data root, by any tool or shell command. Media files nothing there:
-  `python3 .claude/syntek-media-dataroot.py store` and `root` (Python 3.11 or later) report the
+  `python3 .claude/syntek-media-dataroot.py store` and `root` (Python 3.14 or later) report the
   store and the root, and `.claude/rules/syntek-media/06-global-rules.md` Section 12 says the
-  rest; never work round a refusal.
+  rest; never work round a refusal. Where one of these scripts warns that it did not run because
+  Python is older than 3.14, tell the author at once, in its words, and ask them to upgrade.
+- **The user guide is read-only.** Claude Code denies edits under `how-to/`, and its guide
+  guard (`.claude/hooks/how-to-read-only.sh`, a `PreToolUse` hook) refuses them; no other
+  client runs the guard, and OpenCode holds the `how-to/*` deny only where its file carries it
+  (a new copy's does; `--write` adds it to an older one). Never edit, write, move or delete
+  anything under `how-to/`, except through a template's update, its recovery and the commands
+  an update report prints for a file there: every full update puts the guide's files back. A
+  departure goes where `.claude/rules/syntek-media/01-layout-and-routing.md` Section 10 says.
 - **Permission is not approval.** A client that lets you edit or run a command has not given
   the author's approval. Approving a script, a take, a cut or a post, and anything else the
   rules reserve to the author, still needs the author's explicit word.
@@ -112,8 +123,9 @@ and the rules ship always.
   each folder's CONTEXT.md and CLAUDE.md yourself. Start it at the project root: its permission
   paths are relative to the folder it starts in, and the last matching rule wins. OpenCode
   also lists CONTEXT.md and CLAUDE.md in `.claude/skills` as two skills, `CONTEXT` and
-  `CLAUDE`: they are the folder's map, not procedures, so never run them. The three edit
-  denies opencode.json ships name another template's paths and are inert here.
+  `CLAUDE`: they are the folder's map, not procedures, so never run them. Of the four edit
+  denies opencode.json ships, three name another template's paths and are inert here, and the
+  fourth, `how-to/*`, is the guide's.
 - **Local models** run through OpenCode: opencode.json names the server and its context,
   which must not exceed what the server loads. Test tool calling on a scratch repository
   before trusting a local model with a script. Codex can use a local model only through your
@@ -139,28 +151,32 @@ and the rules ship always.
   `install-deps chromium` installs them with administrator rights: the author runs it, never a
   session. ElevenLabs is not among the project's servers: it is configured once at user scope,
   as `production/docs/reference/elevenlabs.md` says, and its key never enters a project file.
-  Media's update never adds a server to a client file; add any other server from that client's
-  current documentation, preserve existing entries and keep credentials out of Git.
+  An update offers the two servers once to each recorded client's MCP file that lacks them, and
+  never adds back one counted as offered (OpenCode's and Gemini CLI's only after `--write`). Add
+  any other server from that client's current documentation, preserve existing entries and keep
+  credentials out of Git.
 
 Before copying media into a project where .agents is a link, add --exclude /.agents to the
 Copier copy command, then follow step 3 below. Where .agents/skills is a real directory,
 preserve it and add --exclude /.agents/skills; a .agents/skills link of any target needs no
 exclude, because Copier skips it and leaves it as it is. Copier fails before its skip check when
 rendering a link onto a path that resolves to a directory. Integrate that existing skill tree
-manually after the copy; never rename or remove it to make the copy succeed. Updates never
-write under .agents.
+manually after the copy; never rename or remove it to make the copy succeed. Copier's update
+never renders under .agents; the update script only adds the two servers once to an existing
+mcp_config.json there, and never writes through a link.
 
 Where .agents is a link to a folder outside the project, Copier refuses to render anything
 beneath it, exclusions included, so the link alone is moved aside and put back. Updates do
-this themselves: they rename it to .agents.syntek-held before the render and back
-afterwards, never touching its target. If an update stops before it ends (a refused answer,
-Ctrl-C at a question, or Copier failing as it cleans up after the render), the link stays
-held as `.agents.syntek-held`, and the next update refuses the changed tree; where the link
-is committed and the update stopped after its render, Copier has already put an identical
-`.agents` link back. Put the link back from the project root, in a POSIX shell (Terminal on
-macOS and Linux, Git Bash on Windows; never PowerShell's `rm`), before anything else, and
-before discarding the stopped update with `git reset --hard` and `git clean -fd`, which
-would delete a held link Git does not track. First check what stands at `.agents`:
+this themselves on Python 3.14 or later: they rename it to .agents.syntek-held before the
+render and back afterwards, never touching its target. Below 3.14 the update stops with
+`ForbiddenPathError`: run it again as `uvx --python '>=3.14' copier`. If an update stops
+before it ends (a refused answer, Ctrl-C at a question, or Copier failing as it cleans up after
+the render), the link stays held as `.agents.syntek-held`, and the next update refuses the
+changed tree; where the link is committed and the update stopped after its render, Copier has
+already put an identical `.agents` link back. Put the link back from the project root, in a
+POSIX shell (Terminal on macOS and Linux, Git Bash on Windows; never PowerShell's `rm`), before
+anything else, and before discarding the stopped update with `git reset --hard` and
+`git clean -fd`, which would delete a held link Git does not track. First check what stands at `.agents`:
 `ls -ld .agents .agents.syntek-held`. Where it shows no `.agents.syntek-held`, nothing is
 held: stop here and change nothing. Where `.agents` is a link (its line shows `->`), remove
 that link alone with `rm .agents` (never `rm -r`, never a trailing slash); where it is a
@@ -192,16 +208,29 @@ differ between formats: do not copy configuration blindly. Keep secrets out of G
 existing server entries, and keep ElevenLabs's base path covering the project. A configured
 server does not approve a credit-spending call.
 
+## The user guide
+
+Media's guide lies in `how-to/src/TEMPLATE-GUIDE/syntek-media/` (its chapters),
+`how-to/docs/syntek-media/` (its guides) and `how-to/workflows/syntek-media/` (its procedures);
+start at `how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md`. Read it, never edit it. Run a
+procedure there as its folder says, with its checklist open; `run-media-workflow` never routes one.
+Another template's guide sits beside it, in folders named for that template.
+
 ## Enabling an existing project
 
-These entrypoints, the client settings, the family-shared skills, the session hooks and the
-handoffs folder's pair are copy-only shared files. Copier update delivers this bridge, the
-rules and the media skills, but never creates a copy-only file in an existing project, so a
-project updated from a release before 0.5.0 takes the files new in 0.5.0 by hand, below.
-Updating across 0.4.2 runs one migration: where .agents is a link to .claude, it makes the
-real folder and moves .claude/mcp_config.json into it where that path is free, and reports
-anything else. An .agents link to a folder outside the project is held aside and restored by
-every update, as Client setup says; it is never converted.
+The procedure that follows these steps:
+`how-to/workflows/syntek-media/06-enable-a-coding-agent-client/`.
+
+The entrypoints and the client settings are copy-only shared files, and never arrive by
+update. Copier update delivers this bridge, the rules and the media skills. Since 0.6.0 the
+listed family-shared files (the seven skills, the session hooks and the guide guard, the
+handoffs folder's pair and the shared files of the guide) arrive through the update script, on
+Python 3.14 or later, which also adds the two servers once to a recorded client's existing MCP
+file. On the update that first asks which clients, the answer defaults to none, or to the
+clients syntek-author's answers record. Updating across 0.4.2 runs one migration: where .agents
+is a link to .claude, it makes the real folder and moves .claude/mcp_config.json into it where
+that path is free, and reports anything else. An .agents link to a folder outside the project
+is held aside and restored by every update, as Client setup says; it is never converted.
 
 1. Read .copier-answers.syntek-media.yml for the recorded source, ref and answers. Generate a
    fresh project in a separate temporary folder using that source and ref and those answers
@@ -212,13 +241,17 @@ every update, as Client setup says; it is never converted.
 
    ```bash
    GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false \
-     uvx copier update --trust -a .copier-answers.syntek-media.yml --data 'AGENT_CLIENTS=[…]'
+     uvx --python '>=3.14' copier update --trust -a .copier-answers.syntek-media.yml --data 'AGENT_CLIENTS=[…]'
    ```
+
+   `--python '>=3.14'` runs Copier on Python 3.14, which the update report needs; keep the
+   quotes, or the shell reads `>` as a redirection.
 
 2. Review the generated AGENTS.md, GEMINI.md, .codex and .gemini with their pairs,
    opencode.json, the .agents folder, the seven family-shared skills' SKILL.md files, the
-   scripts and pair in `.claude/hooks` and the handoffs folder's pair. Copy only missing files
-   into the project, keeping the two hook scripts executable. An existing file, folder or link
+   scripts and pair in `.claude/hooks` and the handoffs folder's pair. Copy only missing client
+   files into the project; copy a family-shared file by hand only where the update script did
+   not run, keeping the three hook scripts executable. An existing file, folder or link
    must be preserved; ask the owner how to combine settings or route its existing entrypoint
    to this bridge.
 3. Where .agents is absent, create the folder, then the relative link
@@ -227,9 +260,10 @@ every update, as Client setup says; it is never converted.
    with the owner's agreement remove that link (never its target) and do the same. Do not
    replace a real folder or another link.
 4. Compare the fresh project's `.claude/settings.json` with the real one and, with the owner's
-   agreement, add only the entries the real one lacks: the asks, the deny,
-   `autoCompactEnabled` and the three hook entries. Never remove or weaken an entry the owner
-   has.
+   agreement, add by hand only the six allows and, where the file lacks it, the data-root
+   guard. The asks, the denies, the compaction values, the four handoff-hook entries and the
+   guide guard come from the copy or the update script; add them by hand only where it did not
+   run. Never remove or weaken an entry the owner has.
 5. Add an agreed pointer to this bridge in an existing AGENTS.md or GEMINI.md, telling the
    client to read every `.claude/syntek-*-agents.md` present. Review any existing Codex
    configuration before adding the CLAUDE.md fallback. Then run

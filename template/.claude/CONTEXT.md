@@ -16,9 +16,9 @@ marks which is which.
 ├── CLAUDE.md               ← the project brief, where the rules live, project rules (read first; yours)
 ├── CONTEXT.md              ← this file (yours)
 ├── MEMORY.md               ← project memory: facts, decisions, feedback, status (read second; yours)
-├── settings.json           ← model, permissions, the ask rules, the session hooks and the data-root guard (yours)
+├── settings.json           ← model, compaction off, permissions, the ask rules, the session hooks, the guide guard and the data-root guard (yours)
 ├── settings.local.json     ← your machine-only overrides, if any (git-ignored; never committed)
-├── hooks/                  ← context-threshold-handoff.sh, pre-compact-handoff.sh and the pair (all shared)
+├── hooks/                  ← context-threshold-handoff.sh, pre-compact-handoff.sh, how-to-read-only.sh and the pair (all shared)
 ├── rules/                  ← rules loaded at launch, one folder per template (no pair here)
 │   └── syntek-media/       ← the template's rules, loaded at launch (template-owned; never edit)
 │       ├── 01-layout-and-routing.md   ← the brand brief (Section 1), layers, the piece, ownership
@@ -44,22 +44,24 @@ marks which is which.
   project would add its own folder beside it.
 - `MEMORY.md` — the durable memory every session reads second. Template files name its six
   headings. It splits into `memory/<topic>.md` files once it passes 300 lines.
-- `settings.json` — `"model": "opus"`, `"autoCompactEnabled": false`, an allow list for the
-  toolkit, ffmpeg and ffprobe, an ask list that makes every credit-spending ElevenLabs tool and
-  the shipped MCP servers' browser and writing tools prompt, a deny list that keeps hand edits
-  out of generated and renders folders, and the `UserPromptSubmit` window hook, the
-  `PreCompact` hook and the `PreToolUse` data-root guard. It is committed and shared; personal
-  overrides (such as `CLAUDE_CONTEXT_WINDOW` under `"env"`, for a larger window) belong in
-  `settings.local.json`.
+- `settings.json` — `"model": "opus"`, `"autoCompactEnabled": false` and
+  `"idleCompaction": false`, an allow list for the toolkit, ffmpeg and ffprobe, an ask list that
+  makes every credit-spending ElevenLabs tool and the shipped MCP servers' browser and writing
+  tools prompt, a deny list that keeps hand edits out of generated and renders folders and out
+  of the user guide (`Edit(/how-to/**)`), and the hooks: the `UserPromptSubmit` window hook, the
+  `PreCompact` hook, the `SessionStart` `compact` entry, and, under `PreToolUse`, the data-root
+  guard and the guide guard. To a `settings.json` the project already had, the copy and every
+  update add the listed entries once each. It is committed and shared; personal overrides (such
+  as `CLAUDE_CONTEXT_WINDOW` under `"env"`, for a larger window) belong in `settings.local.json`.
 - `hooks/` and `skills/` — see each folder's own `CONTEXT.md`.
 - `syntek-media-agents.md` — how the other coding agents reach this folder: the read order they
   follow by hand, the model tiers, each client's setup and how to add a client later.
-- `syntek-media-permissions.py` — run with `python3` (3.11 or later): `--check` reports which of
+- `syntek-media-permissions.py` — run with `python3` (3.14 or later): `--check` reports which of
   `settings.json`'s denies and asks each other client's file carries, and `--write` adds the
   missing ones to client files that already exist. It never creates a file.
 - `syntek-media-dataroot.py` and its map `syntek-media-dataroot.json` — the data-root resolver
-  every Syntek template ships and the guard the `PreToolUse` hook runs; media's map names no
-  folder (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
+  every Syntek template ships (`python3`, 3.14 or later) and the guard the `PreToolUse` hook
+  runs; media's map names no folder (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
 
 ## Cross-references
 

@@ -32,7 +32,8 @@ In the other coding agents (Codex, Gemini CLI, Antigravity, OpenCode), these ali
 work tiers: each client runs them on the model the project's answers name for it (Section 4,
 where the project uses that client), or on the model the owner chooses there; nothing switches
 provider automatically. Apply the same substantive review boundary and read
-`.claude/syntek-media-agents.md` for client setup.
+`.claude/syntek-media-agents.md` for client setup; to add a client,
+`how-to/workflows/syntek-media/06-enable-a-coding-agent-client/`.
 
 ---
 
@@ -68,7 +69,10 @@ work and never higher, and why the fallback never drops below the tier the work 
 Claude Code runs the tiers above. The other clients the answers name run them on these models,
 the substantive tier first; the mechanical tier uses the same model unless the owner sets a
 cheaper one in the client. A client's files exist only if the project was generated with it,
-or it was added by the steps in `.claude/syntek-media-agents.md`.
+or it was added by the steps in `.claude/syntek-media-agents.md` or by
+`how-to/workflows/syntek-media/06-enable-a-coding-agent-client/`. Over syntek-author, the client
+and model answers default to syntek-author's record, so both templates' tables name the same
+clients.
 
 | Client | Model | Set in |
 |---|---|---|
@@ -78,7 +82,10 @@ or it was added by the steps in `.claude/syntek-media-agents.md`.
 <: endif :><: if 'opencode' in AGENT_CLIENTS :>| OpenCode | <: if 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER not in ['user', 'named'] :>`<%OPENCODE_MODEL%>` on <%OPENCODE_PROVIDER%> at <% OPENCODE_BASE_URL.rstrip('/') %>, <%OPENCODE_CONTEXT%> tokens of context<: elif 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER == 'named' :>`<%OPENCODE_MODEL%>`<: else :>your own OpenCode settings<: endif :> | <: if 'opencode' in AGENT_CLIENTS and OPENCODE_PROVIDER == 'user' :>outside this project<: else :>`opencode.json`<: endif :> |
 <: endif :>
 This table follows the project's answers and is updated with this file. The client files are
-written once and are the owner's: after a change of answer, change the client file to match.
+written once and are the owner's: an update never creates or refreshes one, so after a change of
+answer, change the client file to match. Since 0.6.0 an update adds the two MCP servers once to a
+recorded client's existing MCP file; OpenCode's and Gemini CLI's settings get them only once the
+permissions script's `--write` has run.
 Elsewhere, `opus` and `sonnet` stay tier labels in every client. A local model must handle tool
 calls reliably before it drafts: test it on a scratch copy first, and when in doubt keep
 substantive work on the strongest model available. Client setup: `.claude/syntek-media-agents.md`.

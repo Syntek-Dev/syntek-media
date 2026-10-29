@@ -6,5 +6,6 @@
 #
 # Do not edit it by hand in a generated project: `copier update` overwrites it.
 # Its name is not Copier's default, so every update names it:
-#   uvx copier update --trust -a .copier-answers.syntek-media.yml
+#   GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false \
+#     uvx --python '>=3.14' copier update --trust -a .copier-answers.syntek-media.yml
 <% _copier_answers|to_nice_yaml -%>

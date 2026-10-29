@@ -52,6 +52,10 @@ pattern and are not files in this project.
 | `F0001` · `RR0001` · `cNN` · `sNN` · `chNN` · `pNN` | — | footage, rights, cut, segment, chapter and part IDs: permanent |
 | `workflows/NN-verb-first-name/`, `workflows/local/NN-verb-first-name/` | 02-make-a-voiceover/ | a template procedure (numbers frozen) / the author's own |
 | `kebab-case.md` in `docs/`; `SCREAMING-SNAKE-CASE.md` | writing-for-the-ear.md; STEPS.md | a guide, named for its question; structural files and sub-documents |
+| `TEMPLATE-GUIDE` | how-to/src/TEMPLATE-GUIDE/ | the folder of the guide's chapters: the family's name, frozen, and the one upper-case folder in the project |
+| `kebab-title.md` | updating-and-recovery.md | a shared chapter, unnumbered, directly in `how-to/src/TEMPLATE-GUIDE/`, or one of media's guides, in `how-to/docs/syntek-media/` |
+| `NN-kebab-title.md` | 01-overview.md | one of media's chapters, in `how-to/src/TEMPLATE-GUIDE/syntek-media/`, numbered from 01, frozen and append-only |
+| `NN-verb-first-name/` | 04-update-the-template/ | one of media's procedures, in `how-to/workflows/syntek-media/`, numbered from 01, frozen and append-only |
 
 **Folders.** In an output folder, a name that begins with a piece's key lands in that piece's
 folder: a take in its takes folder, a card PNG in its cards folder, the working copy of a timing
