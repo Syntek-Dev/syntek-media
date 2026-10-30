@@ -52,7 +52,7 @@ Grouped by what each script reads:
   repository outside `template/` that Git holds or would add, the community files and the
   `README.md` included, but never `CHANGELOG.md` or this folder. A printf placeholder beside the
   quoted minimum, the `'>=%s'` of a script that sets `PYTHON_MIN = (3, 14)`, and the bare form
-  on a comment, an issue form's `placeholder:` or a line pointing to a section pass
+  on a comment or a line pointing to a section ('see', 'gives' or 'shows') pass
   (`.claude/CLAUDE.md` Section 9).
 - **The family-shared set** (DESIGN.md D80, D85; syntek-author D48): the files and blocks media
   vendors byte for byte from one syntek-author tag. The root `family-shared.json` records them

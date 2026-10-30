@@ -78,10 +78,10 @@
 #                        '>=%s' in a file that sets PYTHON_MIN = (X, Y), as the vendored update
 #                        and outside-link scripts do; and, media's allowance from
 #                        .claude/CLAUDE.md Section 9, the bare `uvx copier` on a comment line (a
-#                        # comment outside Markdown, or a line opening an HTML comment), on an
-#                        issue form's placeholder: line, or on a line that points to a section
-#                        giving the full form ('Section N', a link to a heading, or a file named
-#                        with a quoted section title). Not read: CHANGELOG.md, the record of past
+#                        # comment outside Markdown, or a line opening an HTML comment), or on a
+#                        line that points to a section giving the full form: a pointer word
+#                        ('see', 'gives' or 'shows') and the section ('Section N', a link to a
+#                        heading, or a file named with a quoted section title). Not read: CHANGELOG.md, the record of past
 #                        releases, and .github/scripts/, whose audits run Copier on the pinned
 #                        UV_PYTHON and show no command. Over syntek-author, media-owned files
 #                        only.
@@ -305,8 +305,8 @@ check_guide() { # $1 = rel
 # or "uvx --python %s " on a line that holds the quoted '>=X.Y' a printf fills in, or
 # "uvx --python '>=%s' " in a file that sets PYTHON_MIN = (X, Y), which fills it in. Media's
 # allowance (.claude/CLAUDE.md Section 9): the bare "uvx copier" on a comment line (# outside
-# Markdown, or a line opening an HTML comment), an issue form's placeholder: line, or a line that
-# points to a section giving the full form. Prose that names uvx without a Copier command is not
+# Markdown, or a line opening an HTML comment), or a line that points to a section giving the full
+# form, with a pointer word ('see', 'gives', 'shows') and the section itself. Prose that names uvx without a Copier command is not
 # read.
 copier_form() { # $1 = file
   local filled=0 md=0
@@ -322,8 +322,9 @@ copier_form() { # $1 = file
     index($0, "uvx") {
       line = $0; rest = line; bad = 0
       lead = line; sub(/^[ \t]+/, "", lead)
-      allowed = (!md && substr(lead, 1, 1) == "#") || substr(lead, 1, 4) == "<!--" || lead ~ /^placeholder:/ \
-        || line ~ /Section [0-9]/ || line ~ /\]\([^)]*#[^)]+\)/ || line ~ titled
+      allowed = (!md && substr(lead, 1, 1) == "#") || substr(lead, 1, 4) == "<!--" \
+        || ((line ~ /Section [0-9]/ || line ~ /\]\([^)]*#[^)]+\)/ || line ~ titled) \
+            && line ~ /([Ss]ee |[^A-Za-z](gives|shows)[^A-Za-z])/)
       while (!bad && (p = index(rest, "uvx")) > 0) {
         pre = (p > 1) ? substr(rest, p - 1, 1) : ""
         after = substr(rest, p + 3); rest = after
@@ -591,13 +592,14 @@ self_test() {
   printf '%s\n' "PYTHON_MIN = (${SM_PYTHON_MIN%%.*}, ${SM_PYTHON_MIN#*.})" "rerun = \"uvx --python '>=%s' copier update\" % '%d.%d' % PYTHON_MIN" > "$SM_ROOT/migrations/probe.py"
   printf '%s\n' '# then run uvx copier update --trust -a .copier-answers.syntek-media.yml' > "$t/production/update.sh"
   printf '%s\n' '<!-- uvx copier update --trust -a .copier-answers.syntek-media.yml, protected as the guide shows -->' >> "$t/production/CONTEXT.md"
-  printf '%s\n' 'Run `uvx copier update --trust -a .copier-answers.syntek-media.yml` with the five settings of [Updating a project](#updating-a-project).' >> "$SM_ROOT/README.md"
+  printf '%s\n' 'Run `uvx copier update --trust -a .copier-answers.syntek-media.yml` as [Updating a project](#updating-a-project) gives it, with its five settings.' >> "$SM_ROOT/README.md"
   printf '%s\n' "Run it again with \`uvx --python '>=$SM_PYTHON_MIN'\` in place of \`uvx\`; uvx may choose a Python." >> "$SM_ROOT/README.md"
   printf '%s\n' "Run \`uvx copier update --trust -a .copier-answers.syntek-media.yml\` as README.md 'Updating a project' gives it." >> "$SM_ROOT/README.md"
+  probe_clean "a printf filling in the quoted minimum, the PYTHON_MIN form, comment, pointer and titled-file lines, prose naming uvx, and CHANGELOG.md pass check 20"
   printf '%s\n' 'body:' '  - type: input' '    attributes:' '      placeholder: uvx copier update --trust -a .copier-answers.syntek-media.yml' > "$t/production/form.yml"
-  probe_clean "a printf filling in the quoted minimum, the PYTHON_MIN form, comment, pointer, titled-file and placeholder: lines, prose naming uvx, and CHANGELOG.md pass check 20"
-  sed -i 's/placeholder: uvx/value: uvx/' "$t/production/form.yml"
-  probe "check 20 fires on the same bare line once it is no issue form's placeholder:" "check 20 — production/form.yml:4"; rm -f "$t/production/form.yml"
+  probe "check 20 fires on a bare command in an issue form's placeholder:" "check 20 — production/form.yml:4"; rm -f "$t/production/form.yml"
+  printf '%s\n' 'Run `uvx copier update --trust -a .copier-answers.syntek-media.yml` (Section 3).' >> "$SM_ROOT/README.md"
+  probe "check 20 fires on a bare line that names a section without pointing to it" "check 20 — README.md (the repository):"; sed -i '$d' "$SM_ROOT/README.md"
   sed -i "s/as README.md 'Updating a project' gives it/as README.md gives it/" "$SM_ROOT/README.md"
   probe "check 20 fires on the same bare line once the file names no quoted section title" "check 20 — README.md (the repository):"
   sed -i '$d' "$SM_ROOT/README.md"
