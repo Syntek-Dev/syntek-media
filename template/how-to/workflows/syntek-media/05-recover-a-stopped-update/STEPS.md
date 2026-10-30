@@ -159,8 +159,7 @@ GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_
   uvx --python '>=3.14' copier update --trust -a .copier-answers.syntek-media.yml
 ```
 
-Where the stopped run changed an answer with `--data`, add the same `--data` at the end; where
-the project was rendered from a local clone at `HEAD`, add `--vcs-ref=HEAD` too. A session has
+Where the stopped run changed an answer with `--data`, add the same `--data` at the end. A session has
 no terminal for Copier's questions, so it never runs the command above; where the author asks a
 session to run the update, it runs this form, which keeps every recorded answer:
 

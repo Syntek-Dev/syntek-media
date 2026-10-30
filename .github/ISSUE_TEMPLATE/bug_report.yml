@@ -86,12 +86,13 @@ body:
       label: Steps to reproduce
       description: >
         The exact commands, from the directory you ran them in, with every flag. The example
-        renders a fresh project from a clone of this repository; replace it with what you ran, or
-        clear it if no command was involved.
+        renders a fresh project from the release on GitHub, with that release's example answers;
+        replace it with what you ran, or clear it if no command was involved.
       render: shell
       value: |
-        # from a clone of syntek-media; <kind> is business, author-fiction or author-nonfiction
-        uvx copier copy --trust --data-file examples/<kind>.answers.yml gh:Syntek-Dev/syntek-media /tmp/repro
+        # <kind> is business, author-fiction or author-nonfiction; <tag> is the release, such as v0.6.0
+        curl -fsSL -o /tmp/answers.yml https://raw.githubusercontent.com/Syntek-Dev/syntek-media/<tag>/examples/<kind>.answers.yml
+        uvx --python '>=3.14' copier copy --trust --vcs-ref=<tag> --data-file /tmp/answers.yml gh:Syntek-Dev/syntek-media /tmp/repro
     validations:
       required: false
 
@@ -109,7 +110,7 @@ body:
     attributes:
       label: syntek-media version
       description: "`_commit` in your project's `.copier-answers.syntek-media.yml`, the release you generated from, or the release or branch of the file you read."
-      placeholder: v0.5.0
+      placeholder: v0.6.0
     validations:
       required: true
 
@@ -118,7 +119,7 @@ body:
     attributes:
       label: syntek-author version
       description: "`_commit` in `.copier-answers.syntek-author.yml`, where the project has one."
-      placeholder: v0.5.0
+      placeholder: v0.8.0
     validations:
       required: false
 
@@ -126,8 +127,10 @@ body:
     id: copier-version
     attributes:
       label: Copier version
-      description: The output of `uvx copier --version`. Leave it blank if no command was involved.
-      placeholder: copier 9.12.0
+      description: >
+        The output of `uvx copier --version`, and the `--python` you ran Copier with: below Python
+        3.14 the family scripts do not run. Leave it blank if no command was involved.
+      placeholder: "copier 9.12.0, --python '>=3.14'"
     validations:
       required: false
 

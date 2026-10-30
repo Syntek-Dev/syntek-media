@@ -108,8 +108,7 @@ GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_
   uvx --python '>=3.14' copier update --trust --defaults -a .copier-answers.syntek-media.yml --data 'PLATFORMS=[youtube, podcast]'
 ```
 
-Add `--vcs-ref=HEAD` where step 5 of `how-to/workflows/syntek-media/04-update-the-template/` says
-to. A refused `BRAND_KIND` stops the update before it writes anything. _Mechanical._
+A refused `BRAND_KIND` stops the update before it writes anything. _Mechanical._
 
 ## 7. Read the report and the changes
 

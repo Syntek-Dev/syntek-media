@@ -20,7 +20,7 @@ Nothing here is rendered, and nothing here writes under `template/`.
 ├── run-all.sh                ← renders once, runs every self-test (the four vendored family scripts' too) and audit, keeps PASS, FINDINGS, ERROR and SKIP apart, and names and counts every SKIP
 ├── check-template-tokens.sh  ← token syntax, registration, the spine-set discipline, list-membership index gates
 ├── gen-mode-excludes.sh      ← writes, or --check's, copier.yml's generated BRAND_KIND mode-file block (MEDIA-*.md beside the family skills included)
-├── docs-pairing.sh           ← folder pairs; CONTEXT, CLAUDE, workflow, guide and header shapes, media's how-to procedures and guides included; piece briefs; README-only folders
+├── docs-pairing.sh           ← folder pairs; CONTEXT, CLAUDE, workflow, guide and header shapes, media's how-to procedures and guides included; piece briefs; README-only folders; every shown Copier command run as uvx --python '>=3.14' copier (check 20)
 ├── line-cap.sh               ← 300 lines for every instructional .md, the chapters under how-to/src/ included
 ├── scrub.sh                  ← personal data, secrets, voice IDs, Claude Design links, absolute paths
 ├── dev-isolation.sh          ← template skills (media's and the seven family skills) denied and off in the root settings; CLAUDE.md excludes; Codex product-skill exclusions, development entrypoints and the real .agents/ folder
@@ -46,6 +46,14 @@ Grouped by what each script reads:
   `community-files.sh`, `shipped-seeds.sh`, `skill-conformance.sh`. `community-files.sh` is the one audit of the root's GitHub files
   (D83); it holds the approved `LICENSE` text itself, pinned by its sha256, and reads the issue
   forms with a top-level-key reader in awk, since the source job installs no YAML library.
+  `docs-pairing.sh` check 20 (D3, D81), ported from syntek-author's check 21, holds every shown
+  Copier copy, update or recopy command to `uvx --python '>=3.14' copier`, quoted
+  (`SM_UVX_COPIER`): in every text file of a tree and, run on the source, in every file of the
+  repository outside `template/` that Git holds or would add, the community files and the
+  `README.md` included, but never `CHANGELOG.md` or this folder. A printf placeholder beside the
+  quoted minimum, the `'>=%s'` of a script that sets `PYTHON_MIN = (3, 14)`, and the bare form
+  on a comment, an issue form's `placeholder:` or a line pointing to a section pass
+  (`.claude/CLAUDE.md` Section 9).
 - **The family-shared set** (DESIGN.md D80, D85; syntek-author D48): the files and blocks media
   vendors byte for byte from one syntek-author tag. The root `family-shared.json` records them
   in the family's own format (owner `syntek-media`, each file's source, bytes, sha256 and mode,

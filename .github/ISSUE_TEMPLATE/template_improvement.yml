@@ -80,9 +80,11 @@ body:
     attributes:
       label: Effect on existing projects
       description: >
-        Projects already generated take changes with `copier update`, but seeds and copy-only
-        shared files never update. Would this need a migration or a hand edit? Would removing an
-        option delete files the owner has filled in? Leave it blank if you are not sure.
+        Projects already generated take changes with `copier update`. Copier never renders seeds
+        and copy-only shared files on update, but the update script refreshes the family files it
+        lists and adds the settings entries and MCP servers it lists, once each. Would this need
+        a migration or a hand edit? Would removing an option delete files the owner has filled
+        in? Leave it blank if you are not sure.
 
   - type: textarea
     id: coexistence

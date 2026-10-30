@@ -159,21 +159,22 @@ The project's syntek-author must be v0.6.0 or later, updated to it before media 
    git switch -c apply-syntek-media
    ```
 
-2. **Copy the template into the project**, answering the questions, or with an answers file you have edited from `examples/`:
+2. **Copy the template into the project**, answering the questions, or with an answers file you have edited from one of the example answers files in `examples/` on GitHub, one per brand kind, taken at the release tag you copy so that it names only that release's questions:
 
    ```bash
    uvx --python '>=3.14' copier copy --trust gh:Syntek-Dev/syntek-media .
    ```
 
    ```bash
-   cp /path/to/syntek-media/examples/business.answers.yml /tmp/answers.yml   # then edit every value
-   uvx --python '>=3.14' copier copy --trust --data-file /tmp/answers.yml \
+   TAG=$(git ls-remote --tags --refs --sort=-v:refname https://github.com/Syntek-Dev/syntek-media.git 'v*' | sed -n '1s#.*refs/tags/##p')
+   curl -fsSL -o /tmp/answers.yml \
+     "https://raw.githubusercontent.com/Syntek-Dev/syntek-media/$TAG/examples/business.answers.yml"   # then edit every value
+   uvx --python '>=3.14' copier copy --trust --vcs-ref="$TAG" --data-file /tmp/answers.yml \
      --data SEED_EXAMPLES=false gh:Syntek-Dev/syntek-media .
    ```
 
-   In your copy of the example, delete the `DATA_*` lines, and the coding-agent lines (`AGENT_CLIENTS`, `CODEX_MODEL`, `GEMINI_MODEL` and the four `OPENCODE_*` keys), wherever syntek-author records its own: media then takes syntek-author's answers. Every syntek-author project from its v0.5.0 records the data-root answers, and a first answer that differs is refused, because one project keeps one store.
+   `TAG` is the latest release on GitHub, the one a plain `copier copy` renders; `--vcs-ref="$TAG"` holds the copy to the same release as the answers file. In your copy of the example, delete the `DATA_*` lines, and the coding-agent lines (`AGENT_CLIENTS`, `CODEX_MODEL`, `GEMINI_MODEL` and the four `OPENCODE_*` keys), wherever syntek-author records its own: media then takes syntek-author's answers. Every syntek-author project from its v0.5.0 records the data-root answers, and a first answer that differs is refused, because one project keeps one store.
    The coding-agent answers follow the same records since 0.6.0 (D81): a first copy records syntek-author's clients and models where its answers file records them, and all four clients otherwise, and takes the OpenCode address, model and context only from a record with the same `OPENCODE_PROVIDER`. So it writes no client file syntek-author's answers left out, and the model tables in both templates' rules agree.
-   To apply from a local clone instead, replace `gh:Syntek-Dev/syntek-media` with the clone's absolute path, such as `"$(realpath ../syntek-media)"`, and add `--vcs-ref=HEAD` (see [Generating a standalone project](#generating-a-standalone-project)).
    **Never pass `--overwrite`.** Copier leaves existing shared files alone, printing each as `conflict` then `skip` (or as `identical`, where the two copies match). That pair is expected and is not a collision; missing shared paths are filled by media.
    Any other path that already exists is a collision, which is a template bug: a non-interactive copy stops with 'Interactive session required' before it writes that file, and an interactive one asks 'Overwrite …?' with yes as the default — answer no.
    Either way, `git status` shows anything written before the stop; remove it and report the collision.
@@ -250,20 +251,13 @@ The copy prints these at the end, with your answers filled in:
 
 ## Generating a standalone project
 
-From the published template:
+From the published template on GitHub, at its latest release tag:
 
 ```bash
 uvx --python '>=3.14' copier copy --trust gh:Syntek-Dev/syntek-media my-channel
 ```
 
-From a local clone, rendering the checkout you have rather than the latest release tag:
-
-```bash
-uvx --python '>=3.14' copier copy --trust --vcs-ref=HEAD "$(realpath ../syntek-media)" my-channel
-```
-
-The template path must be absolute, as `"$(realpath ../syntek-media)"` makes it, because Copier records it in the answers file and every later update reads the template from there; a relative path makes every update fail with 'Updating is only supported in git-tracked templates'.
-A project rendered from `HEAD` must also be updated with `--vcs-ref=HEAD` (still with `-a .copier-answers.syntek-media.yml`) until a newer release tag exists, because Copier refuses to move it back to the older tag.
+Copier records `gh:Syntek-Dev/syntek-media` in the answers file, and every later update reads the template from there.
 
 **The `MissingFileWarning` is expected.** On a fresh copy, and on every update, Copier may warn that `.copier-answers.syntek-media.yml` was not found. It is harmless. The template looks for your previous answers so that an update can refuse a changed `BRAND_KIND`; on a first copy there are none yet, and an update's temporary renders read the path too. Since 0.5.0, where syntek-author has never been applied, Copier also warns that `.copier-answers.syntek-author.yml` was not found, on every copy and update. That is harmless too: Copier reads syntek-author's answers file only for the family questions' defaults and validators (its data-root answers and, since 0.6.0, its client and model answers) and, after an update, to report a data-root difference, so that one project keeps one store and one set of agent clients (DESIGN.md D14, D80, D81).
 
@@ -423,7 +417,6 @@ After a change, edit by hand the files that describe your options, because an up
 `BRAND_KIND` cannot change: an update that answers it differently stops before touching a file, because the mode files, the worked example and the brand seeds were written for one kind of brand. A different brand kind is a new project.
 
 The `MissingFileWarning` about `.copier-answers.syntek-media.yml` appears on every update and is harmless, as does a second one about `.copier-answers.syntek-author.yml` in a project syntek-author has never been applied to (since 0.5.0: media reads that file for syntek-author's data-root answers and, since 0.6.0, its client and model answers).
-A project rendered from a local clone at `HEAD` (see [Generating a standalone project](#generating-a-standalone-project)) updates with `--vcs-ref=HEAD` added to the command above, until a newer release tag exists.
 A project that recorded `AGENT_CLIENTS: []` while it holds client files (one made before 0.5.0, standalone or over syntek-author, whose update into 0.5.0 recorded none) gets no MCP server added to them until you record its clients with `--data "AGENT_CLIENTS=[...]"` on an update.
 
 **Migrations.** When a release moves a folder that can hold your work, or stops shipping a seed, the update runs a migration script from the template after it has written the new tree; a versioned migration, like the outside-link pair below, moves or keeps your files only where exactly one outcome is right, and never overwrites or deletes one; the family 'update' entry, the third exception below, is the one that writes over files. Media changes a shared path only through three stated exceptions (D11), two of which are keyed to no release and run on every update.
@@ -465,7 +458,7 @@ done
 git status
 ```
 
-The loop never replaces a file you have, and `cp -p` keeps each hook's mode 755. Then add by hand to `.claude/settings.json` what `"$T/.claude/settings.json"` holds and yours lacks, the data-root guard among it. Compare `.mcp.json` with the temporary copy's and take its two servers if you want them; with the code-review-graph server, also add the line `/.code-review-graph/` to your `.gitignore`, as `"$T/.gitignore"` has it, so that Git ignores the graph's database. A coding agent's files come from the bridge's steps, `.claude/syntek-media-agents.md`, after you record the client with `--data "AGENT_CLIENTS=[...]"` on an update. Where you update from a local clone, give its absolute path in place of `gh:Syntek-Dev/syntek-media`.
+The loop never replaces a file you have, and `cp -p` keeps each hook's mode 755. Then add by hand to `.claude/settings.json` what `"$T/.claude/settings.json"` holds and yours lacks, the data-root guard among it. Compare `.mcp.json` with the temporary copy's and take its two servers if you want them; with the code-review-graph server, also add the line `/.code-review-graph/` to your `.gitignore`, as `"$T/.gitignore"` has it, so that Git ignores the graph's database. A coding agent's files come from the bridge's steps, `.claude/syntek-media-agents.md`, after you record the client with `--data "AGENT_CLIENTS=[...]"` on an update.
 
 Commit `.copier-answers.syntek-media.yml` and never edit it by hand; it is the record every future update merges against.
 
@@ -611,7 +604,7 @@ The template checks itself with the scripts in `.github/scripts/`, and CI runs e
 | `generate-all.sh`                | Renders every brand kind in three profiles (defaults, all, minimal) from a copy of the working tree, plus one render per kind over the matching syntek-author project; the example answers files match the questions; the message after a copy carries every hand edit.                                                                                           |
 | `shipped-brands.sh <tree>`       | The right skills, mode files and gated paths in a rendered tree for its answers; no syntek-author path in a standalone render; no media name that syntek-author uses; no surviving token; nothing but its `README.md` in any `generated/`, `renders/` or `raw/` folder, at any depth, so no per-piece output folder ships; no numbered procedure under `how-to/workflows/syntek-media/` that DESIGN.md Section 4.4 does not number (check 7); and nothing under `how-to/` but the thirteen family paths and media's three `syntek-media/` folders (check 16). |
 | `byte-identity.sh`               | Shared files are identical across the standalone renders that ship them.                                                                                                                                                                                                                                                                                          |
-| `docs-pairing.sh`                | Every folder, the user guide's included, has its `CONTEXT.md` and `CLAUDE.md`, apart from the declared exceptions; every piece folder has its brief; every `generated/`, `renders/` and `raw/` folder holds only its `README.md`; media's procedures and guides under `how-to/` are in the house shape of any workflow and guide. |
+| `docs-pairing.sh`                | Every folder, the user guide's included, has its `CONTEXT.md` and `CLAUDE.md`, apart from the declared exceptions; every piece folder has its brief; every `generated/`, `renders/` and `raw/` folder holds only its `README.md`; media's procedures and guides under `how-to/` are in the house shape of any workflow and guide; every shown Copier command, in the renders and in every file of this repository outside `template/` that Git holds or would add (never `CHANGELOG.md` or `.github/scripts/`), runs as `uvx --python '>=3.14' copier`, quoted, where a comment, an issue form's `placeholder:` line, or a line pointing to a section that gives the full form, may show it bare (check 20, D3, D81). |
 | `doc-references.sh <tree>`       | Every path a shipped file cites exists in that render, the user guide's included; companions are named in prose, never backticked; no syntek-author path is backticked, its folders under `how-to/` included; workflows are cited by full folder name. |
 | `shipped-seeds.sh`               | Seeds carry their headings and no entries; every seed and shared file is in `_skip_if_exists`; the fifty shared paths are copy-only, with no line naming `/how-to` or a folder under it; the standalone `settings.json`, the family's hooks, `idleCompaction`, the asks and denies and `Edit(/how-to/**)` included, is exactly as designed; every `!` negation in `_exclude` brings back an output folder's own `README.md` and nothing else, listed above every gated line; `_migrations` opens with the unversioned outside-link pair, declares `v0.6.0` after `v0.4.2` and closes with the family 'update' block, every other entry versioned; `_tasks` ends with syntek-author's `baseline` task, line for line; `migrations/family-refresh.json` has the family's shape, every listed hook and rule is in the seed, and the data-root guard is never listed; `family-shared.json` records every family file and block vendored from syntek-author, the 'update' block among them, and each one holds the bytes and mode it records (the outside-link and update scripts executable in Git, mode 100755); each render keeps those bytes and the hooks executable, and its permissions script finds only media's own seed rules waiting for `--write`; the data-root map claims no folder. |
 | `skill-conformance.sh`           | Skill frontmatter, sections, the mode contract and mode-file headings; no name syntek-author uses; every skill that can spend ElevenLabs credits carries the guard.                                                                                                                                                                                               |
@@ -627,13 +620,17 @@ The template checks itself with the scripts in `.github/scripts/`, and CI runs e
 Run one, or all of them before a commit:
 
 ```bash
+git clone https://github.com/Syntek-Dev/syntek-media.git && cd syntek-media
+TAG=$(sed -n 's/^ *SYNTEK_AUTHOR_TAG: *//p' .github/workflows/audit-template.yml)
+A="$(mktemp -d)/syntek-author"
+git clone --branch "$TAG" --depth 1 https://github.com/Syntek-Dev/syntek-author.git "$A"
 bash .github/scripts/check-template-tokens.sh
-bash .github/scripts/run-all.sh --author /path/to/syntek-author
+bash .github/scripts/run-all.sh --author "$A"
 ```
 
 `shipped-brands.sh`, `doc-references.sh` and `toolkit-smoke.sh` take a rendered tree; `generate-all.sh` makes them.
 The audits need Python 3.14: `.github/scripts/_common.sh` pins `UV_PYTHON` to `python3` where it is unset, so every Copier they run, and the family scripts inside it, run on 3.14, and it stops a run with exit `2` where `python3` or `UV_PYTHON` is older.
-The renders over syntek-author, the over-author half of `update-test.sh` check 24 and `coexist-test.sh` need a syntek-author checkout: `--author DIR`, which defaults to `../syntek-author` and should be a clean clone at the tag media vendors from, `v0.8.0` (`SYNTEK_AUTHOR_TAG` in `.github/workflows/audit-template.yml`), or the checks that compare the family files and the frozen names report the drift. Without one they print a named SKIP and exit `0`; `coexist-test.sh` check 24 also SKIPs where that checkout is older than v0.6.0 or `make` is missing. A SKIP is never reported as a pass, and no release is tagged while `run-all.sh`'s summary counts one for `coexist-test.sh`.
+The renders over syntek-author, the over-author half of `update-test.sh` check 24 and `coexist-test.sh` need a syntek-author checkout, named with `--author DIR`: a clean clone of [github.com/Syntek-Dev/syntek-author](https://github.com/Syntek-Dev/syntek-author) at the tag media vendors from, `v0.8.0` (`SYNTEK_AUTHOR_TAG` in `.github/workflows/audit-template.yml`), made with `git clone --branch "$TAG"` as above, which reads the tag from the workflow, as CI makes it, or the checks that compare the family files and the frozen names report the drift. Without one they print a named SKIP and exit `0`; `coexist-test.sh` check 24 also SKIPs where that checkout is older than v0.6.0 or `make` is missing. A SKIP is never reported as a pass, and no release is tagged while `run-all.sh`'s summary counts one for `coexist-test.sh`.
 
 ---
 

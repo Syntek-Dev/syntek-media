@@ -37,7 +37,7 @@ its run. Tick the audit box only for a local run you saw finish.
 
 **Audits**
 
-- [ ] `bash .github/scripts/run-all.sh --author ../syntek-author` exited 0 locally with no SKIP, against syntek-author commit: <!-- git -C ../syntek-author rev-parse --short HEAD -->
+- [ ] `bash .github/scripts/run-all.sh --author DIR` exited 0 locally with no SKIP, `DIR` a clean clone of https://github.com/Syntek-Dev/syntek-author at `SYNTEK_AUTHOR_TAG`, as CI clones it (`CONTRIBUTING.md` 'Testing'), at tag: <!-- SYNTEK_AUTHOR_TAG in .github/workflows/audit-template.yml -->
 
 **Safety**
 

@@ -12,14 +12,7 @@ uvx --python '>=3.14' copier copy --trust SOURCE my-channel
 ```
 
 The source is the template's address, which its README gives, and which the `_src_path` line of `.copier-answers.syntek-media.yml` records in every project made from it.
-To copy from a local clone of the template instead, give the clone's absolute path and add `--vcs-ref=HEAD`, so that Copier renders the checkout you have:
-
-```bash
-uvx --python '>=3.14' copier copy --trust --vcs-ref=HEAD "$(realpath ../syntek-media)" my-channel
-```
-
-Never give a relative path: Copier records the source in the answers file, and every later update would fail.
-A project made from `HEAD` is updated with `--vcs-ref=HEAD` too, until a newer release of the template exists.
+Copier takes the latest release of the template and records the source in the answers file, so every later update reads the template from the same place.
 Copier asks each question in turn, and `BRAND_KIND` has no default, so that a brand kind is always chosen on purpose.
 
 ## What the copy writes

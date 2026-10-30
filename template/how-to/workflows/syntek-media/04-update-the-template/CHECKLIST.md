@@ -29,7 +29,7 @@ model: opus
 
 **The update**
 
-- [ ] The update run with `uvx --python '>=3.14'`, the five `GIT_CONFIG_*` variables and `-a .copier-answers.syntek-media.yml`; `--defaults` added only where a session ran it, on the author's word, and `--vcs-ref=HEAD` only for a project rendered from a local clone at `HEAD`. · _sonnet_
+- [ ] The update run with `uvx --python '>=3.14'`, the five `GIT_CONFIG_*` variables and `-a .copier-answers.syntek-media.yml`; `--defaults` added only where a session ran it, on the author's word. · _sonnet_
 - [ ] It ended with the line starting `▸ syntek-media update report`; a stop with an error went to `how-to/workflows/syntek-media/05-recover-a-stopped-update/`, with nothing committed; a framed `family-update did NOT run` told to the author and the update run again on Python 3.14 or later. · _sonnet_
 
 **The output**

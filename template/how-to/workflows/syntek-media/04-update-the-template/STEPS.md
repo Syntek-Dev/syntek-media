@@ -155,8 +155,7 @@ GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_
   uvx --python '>=3.14' copier update --trust --defaults -a .copier-answers.syntek-media.yml
 ```
 
-Where the project was rendered from a local clone of the template at `HEAD`, add
-`--vcs-ref=HEAD` at the end of either form, until a newer release tag exists. It ends with the
+Either form ends with the
 update report, whose first line starts `▸ syntek-media update report`. If it stops instead with
 `OSError: [Errno 39] Directory not empty`, or with `FileExistsError: [Errno 17]` or
 `NotADirectoryError` naming `how-to`, or with `ForbiddenPathError` naming a path in `how-to` or,

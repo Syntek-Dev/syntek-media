@@ -29,7 +29,10 @@ Run, read and maintain the audits that prove the template keeps every promise `D
      audits run on Python 3.14; `_common.sh` refuses an older one with exit 2.
   2. One audit on the source: `bash .github/scripts/<script>.sh`. One audit on renders:
      `bash .github/scripts/generate-all.sh DIR > trees.txt`, then
-     `bash .github/scripts/<script>.sh $(cat trees.txt)`.
+     `bash .github/scripts/<script>.sh $(cat trees.txt)`. On the source, `docs-pairing.sh`
+     also reads the repository root: its check 20 reports a shown Copier command not run as
+     `uvx --python '>=3.14' copier` in any file Git holds or would add outside `template/`;
+     convert the file, never widen the exemption.
   3. Regenerate the mode-file block after adding or removing a `BUSINESS.md`, `FICTION.md` or
      `NONFICTION.md`: `bash .github/scripts/gen-mode-excludes.sh` — never type a line between
      its markers by hand.
