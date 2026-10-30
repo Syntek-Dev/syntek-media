@@ -66,7 +66,7 @@ KINDS = ("video", "audio", "music", "stock", "image", "generated")
 LARGE = 10 * 1024 * 1024
 FLAG_RE = re.compile(r"(?:^|[^`])(?:<!--\s*|/\*\s*|#\s*)(AUTHOR TO CONFIRM|VERIFY):\s*(.*)")
 MEDIA_LAYERS = ("brand", "scripts", "production", "publishing")
-PLAYWRIGHT_REVISION = "1243"   # Chromium and chromium-headless-shell in Playwright 1.63.0's browsers.json
+PLAYWRIGHT_REVISION = "1248"   # Chromium and chromium-headless-shell in Playwright 1.64.0's browsers.json
                                # (checked 14/10/2026; read it again on every pin change)
 SETTINGS_ALLOW = ("Bash(python3 toolkit/*.py *)", "Bash(uv run toolkit/*.py *)", "Bash(ffmpeg *)",
                   "Bash(ffprobe *)", "WebSearch", "WebFetch")
@@ -763,8 +763,8 @@ def setup_report(root: Path) -> tuple:
                    'broken executable or missing res/sphinx/cmudict-en-us.dict'), C.INSTALL['rhubarb'])
     cache = playwright_cache()
     found = sorted(d.name for d in cache.glob(f"chromium*-{PLAYWRIGHT_REVISION}")) if cache.is_dir() else []
-    item(bool(found), f"Chromium for Playwright 1.63.0 ({', '.join(found) or 'not installed'})",
-         "uv run --with playwright==1.63.0 playwright install chromium; where the browsers come from "
+    item(bool(found), f"Chromium for Playwright 1.64.0 ({', '.join(found) or 'not installed'})",
+         "uv run --with playwright==1.64.0 playwright install chromium; where the browsers come from "
          "a system bundle (NixOS, where playwright install cannot write), it must ship revision "
          f"{PLAYWRIGHT_REVISION}, set in PLAYWRIGHT_BROWSERS_PATH or by a uv wrapper")
     large = root / "brand/src/exports/large"

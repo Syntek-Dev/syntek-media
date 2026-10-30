@@ -128,7 +128,7 @@ The card and scene renderers draw through Playwright's Chromium, and the command
 It prints the command that installs the browser, which you run yourself:
 
 ```bash
-uv run --with playwright==1.63.0 playwright install chromium
+uv run --with playwright==1.64.0 playwright install chromium
 ```
 
 **The setup check says ffmpeg lacks a library.**

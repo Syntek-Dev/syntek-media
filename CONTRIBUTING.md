@@ -183,7 +183,7 @@ the CI workflow:
 | [uv](https://docs.astral.sh/uv/) (`uvx`) | Copier 9.12.0 or newer (`_min_copier_version` in `copier.yml`), and the toolkit's browser scripts |
 | Python 3.11 or newer (CI uses 3.12) | The toolkit, the migrations and the audits' helpers |
 | ffmpeg and ffprobe, with libass, x264 and mp3lame | `toolkit-smoke.sh`; without them it prints a named SKIP |
-| Playwright 1.63.0's Chromium | Cards, thumbnails and scenes in `toolkit-smoke.sh`; `--skip-thumbnails` drops them |
+| Playwright 1.64.0's Chromium | Cards, thumbnails and scenes in `toolkit-smoke.sh`; `--skip-thumbnails` drops them |
 | Rhubarb and a WhisperX interpreter (optional) | Their `toolkit-smoke.sh` checks, which SKIP by name without them |
 | A network connection | The first time `uvx` fetches each tool, and the syntek-author clone |
 

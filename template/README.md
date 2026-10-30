@@ -102,7 +102,7 @@ your shell and asks before it runs.
 **Requirements:** `git` 2.31 or later; Python 3.14 or later (the toolkit, the hooks and every
 update need it); `ffmpeg` and `ffprobe` built with libass, x264 and mp3lame; `uv`, for Copier on
 3.14 (`uvx --python '>=3.14' copier`) and for `toolkit/card.py`, with Playwright's Chromium
-(`uv run --with playwright==1.63.0 playwright install chromium`, or a system browser bundle at the same revision, as on NixOS); `git-lfs`, if you keep large
+(`uv run --with playwright==1.64.0 playwright install chromium`, or a system browser bundle at the same revision, as on NixOS); `git-lfs`, if you keep large
 design exports; and `espeak-ng` (optional, for a scratch voice track). `check --setup` reports
 each one. Optional lip sync needs Rhubarb Lip Sync 1.14.0, unzipped with its resources at user
 scope and linked onto PATH; `lipsync` checks its dictionary beside the real executable.

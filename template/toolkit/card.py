@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.14"
-# dependencies = ["playwright==1.63.0"]
+# dependencies = ["playwright==1.64.0"]
 # ///
 """card.py: render a thumbnail or card layout (HTML and CSS) to PNG, and check a layout.
 
@@ -10,7 +10,7 @@ Usage (run through uv, which fetches Playwright for this script alone; nothing i
     uv run toolkit/card.py check HTML
     uv run toolkit/card.py --self-test
 
-render  Opens HTML in headless Chromium through Playwright 1.63.0 (pinned: an unpinned version
+render  Opens HTML in headless Chromium through Playwright 1.64.0 (pinned: an unpinned version
         asks for a browser build that may not be installed), with the viewport at the output
         size and a device scale of 1. It sets --safe-top, --safe-right, --safe-bottom and
         --safe-left (pixels, from the deliverable's safe_zone in toolkit/data/platforms.toml,
@@ -40,7 +40,7 @@ check   The layout contract of DESIGN Section 6.11: <!doctype html> and <html la
         is <!-- @dsCard group="Colors|Type|Spacing|Brand|Components" -->.
 
 A missing browser is exit 2 with the command that installs it:
-    uv run --with playwright==1.63.0 playwright install chromium
+    uv run --with playwright==1.64.0 playwright install chromium
 
 Exit codes: 0 = done (or clean); 1 = a finding (a request over the network, a missing token,
 font or image, a PNG of the wrong size or over max_size, a contract breach); 2 = could not run (bad arguments, a missing
@@ -63,7 +63,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import media_common as C  # noqa: E402
 
-INSTALL_BROWSER = "uv run --with playwright==1.63.0 playwright install chromium"
+INSTALL_BROWSER = "uv run --with playwright==1.64.0 playwright install chromium"
 DSCARD_RE = re.compile(r'^<!--\s*@dsCard\s+group="(Colors|Type|Spacing|Brand|Components)"\s*-->')
 SET_VARS = """(vars) => {
   const root = document.documentElement;
@@ -167,7 +167,7 @@ class Browser:
         except self.Error as err:
             self.pw.stop()
             if "Executable doesn't exist" in str(err) or "playwright install" in str(err):
-                raise C.Fatal(f"Chromium for Playwright 1.63.0 is not installed: {INSTALL_BROWSER}") from None
+                raise C.Fatal(f"Chromium for Playwright 1.64.0 is not installed: {INSTALL_BROWSER}") from None
             raise C.Fatal(f"Chromium would not start: {str(err).splitlines()[0]}") from None
         return self
 
@@ -673,7 +673,7 @@ window.firstFrameVars = ['--frame-width','--safe-left'].map(key =>
                     else:
                         sys.modules[m] = module
 
-        def no_chromium(go):     # Playwright 1.63.0 is there, its browser is not
+        def no_chromium(go):     # Playwright 1.64.0 is there, its browser is not
             global playwright
 
             class Gone(Exception):

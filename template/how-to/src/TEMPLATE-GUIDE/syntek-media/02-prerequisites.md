@@ -23,7 +23,7 @@ A missing optional tool blocks only the commands that need it, and the toolkit's
 Install Playwright's Chromium once, with the pinned version the toolkit uses:
 
 ```bash
-uv run --with playwright==1.63.0 playwright install chromium
+uv run --with playwright==1.64.0 playwright install chromium
 ```
 
 Where your system supplies its own browser bundle instead, as NixOS does, it must be the same revision.

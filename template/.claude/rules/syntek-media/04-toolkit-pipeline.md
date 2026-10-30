@@ -100,7 +100,7 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 in Chromium, offline, with the safe-zone variables set and, for a deliverable, `data-deliverable`
 and `data-platform` on `:root` (so a newsletter image shows its play button); `check HTML` proves the tokens resolve
 and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
-`uv run --with playwright==1.63.0 playwright install chromium`; where a system bundle supplies the
+`uv run --with playwright==1.64.0 playwright install chromium`; where a system bundle supplies the
 browsers (NixOS), it must ship the same revision.
 
 ---
@@ -167,7 +167,7 @@ browsers (NixOS), it must ship the same revision.
   (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
 - **Keep the toolkit minimal**: standard-library Python 3.14 or later and author-edited TOML; tool-written
   timing is finite JSON. Heavy dependencies stay in pinned PEP 723 scripts: `toolkit/card.py`
-  and `toolkit/scene.py` (Playwright 1.63.0), and `toolkit/transcribe.py` (WhisperX 3.8.6; Python >=3.10,<3.14).
+  and `toolkit/scene.py` (Playwright 1.64.0), and `toolkit/transcribe.py` (WhisperX 3.8.6; Python >=3.10,<3.14).
 - **Transcription stays offline** after the author runs `python3 toolkit/media.py transcribe fetch`
   once. Never run fetch from a skill. `MEDIA_TRANSCRIBE_PYTHON` names an existing interpreter by
   path, at user scope, which `media.py` runs directly, never an environment the author activates;
