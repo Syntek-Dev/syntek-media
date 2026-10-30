@@ -1551,12 +1551,15 @@ message_missing_lines() { # $1 = Copier's output (stdout and stderr, captured wi
 
 # ── Rendering ────────────────────────────────────────────────────────────────
 
+# The audits run one Copier, pinned (maintainer, 30/10/2026): the top of the range each release is
+# tested on. COPIER_CMD overrides it, as the floor's measurement does (D2: 9.12.0).
+SM_COPIER_VERSION=9.19.1
 SM_COPIER=()
 copier_init() {
   if [[ -n "${COPIER_CMD:-}" ]]; then
     read -r -a SM_COPIER <<< "$COPIER_CMD"
   elif command -v uvx >/dev/null 2>&1; then
-    SM_COPIER=(uvx copier)
+    SM_COPIER=(uvx "copier==$SM_COPIER_VERSION")
   elif command -v copier >/dev/null 2>&1; then
     SM_COPIER=(copier)
   else
