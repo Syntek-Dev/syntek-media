@@ -13,7 +13,7 @@ syntek-media/
 ├── README.md                 ← the user guide: applying over syntek-author, standalone, the questions, updating, coexistence, audio, audits, the licence
 ├── DESIGN.md                 ← the build contract; where any file disagrees with it, DESIGN.md wins
 ├── copier.yml                ← questions, gated _exclude, _skip_if_exists, messages, _tasks, _migrations
-├── VERSION                   ← the template's release number (0.5.0)
+├── VERSION                   ← the template's release number (0.6.0)
 ├── CHANGELOG.md              ← the template's history, Keep a Changelog
 ├── family-shared.json        ← the family-shared files and blocks media vendors from syntek-author's release tag, with their sizes and hashes (D80)
 ├── LICENSE · CONTRIBUTING.md · SECURITY.md · CODE_OF_CONDUCT.md   ← community files (D83), never shipped: MIT; changes to the template; private vulnerability reports; Contributor Covenant 2.1
