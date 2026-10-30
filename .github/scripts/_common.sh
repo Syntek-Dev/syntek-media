@@ -1065,6 +1065,20 @@ SM_SETTINGS_HOOKS=$(cat <<'EOF'
 EOF
 )
 
+# D84's crossing migration: media's own report-only script, run by the update that crosses
+# v0.6.0 (shipped-seeds.sh check 32 holds its _migrations entry: after v0.4.2's, before the
+# 'update' block, through _copier_python). Where media's guide starts and its update procedure,
+# which _message_after_copy item (7) names; the crossing report's marker fragment (its heading,
+# distinct from syntek-author's own v0.6.0 heading in a combined update's log); and the head of
+# the report the vendored family-update.py prints after it. Each copied from the script's and
+# copier.yml's final text; update-test.sh check 24 reads them in the crossing update's log.
+SM_HOWTO_MIGRATION="migrations/v0.6.0-how-to.py"
+SM_HOWTO_VERSION="v0.6.0"
+SM_GUIDE_START="how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md"
+SM_GUIDE_PROCEDURE="how-to/workflows/syntek-media/04-update-the-template/"
+SM_HOWTO_MARK="▸ v0.6.0 migration (syntek-media)"
+SM_UPDATE_REPORT_HEAD="▸ syntek-media update report"
+
 # What _message_after_copy must say, in DESIGN.md D13's order: (1) every shipped shared path
 # (the eighteen of D11, the seventeen of D80 and, since 0.6.0, the fourteen of D84) and the
 # skip rule, that Copier's 'conflict' then 'skip' pair is expected, and Section 8's hand edits
@@ -1075,8 +1089,10 @@ EOF
 # `claude mcp add` line with ELEVENLABS_MCP_BASE_PATH; (4) the repository-local
 # filter.lfs.required and `git lfs install`; (5) the setup check; (6) the update command with
 # -a, run as `uvx --python '>=3.14' copier` since 0.6.0 (D3, D81), with Git's housekeeping off
-# (DESIGN.md Section 10). Since 0.5.0 (D13, D80) item 2 also gives the family's eight asks and
-# its deny, from the same lists shipped-seeds.sh check 12 holds the seed to, and the seed's
+# (DESIGN.md Section 10); (7), since 0.6.0 (D84), where the user guide starts, that everything
+# under how-to/ is read-only, and media's update procedure, by its full folder path. Since
+# 0.5.0 (D13, D80) item 2 also gives the family's eight asks and its deny, from the same
+# lists shipped-seeds.sh check 12 holds the seed to, and the seed's
 # "hooks" object with its PreToolUse data-root guard, for a settings.json that syntek-author
 # did not seed; since 0.6.0 also "idleCompaction": false and the SessionStart entry. Item 1's
 # 0.5.0 sentence on coding-agent answers went with D81: the family questions block now takes
@@ -1103,6 +1119,8 @@ SM_AFTER_COPY_LINES+=("claude mcp add" "ELEVENLABS_MCP_BASE_PATH=" "filter.lfs.r
                       "GIT_CONFIG_KEY_1=maintenance.auto")
 SM_AFTER_COPY_LINES+=("'conflict' then 'skip'" ".claude/rules/syntek-media/ in .claude/CLAUDE.md"
                       "Nothing needs adding to .gitignore or .mcp.json")
+SM_AFTER_COPY_LINES+=("The user guide starts at $SM_GUIDE_START" "Everything under how-to/ is read-only"
+                      "$SM_GUIDE_PROCEDURE")
 unset _sm_x
 
 # ── D81's offers: the baseline task and media's refresh data (DESIGN.md D81, D84) ──
@@ -2179,12 +2197,14 @@ PYFAMILY
 # sm_fixture_template: a minimal syntek-media with the real repository's shape — the house
 # delimiters, the named answers file, the copy-only shared paths (the retired one excluded
 # on copy as well), the D76 .agents folder and its v0.4.2 migration after the family-shared
-# migrations block (D85: the vendored outside-link pair), a register seed and a
+# migrations block (D85: the vendored outside-link pair), a stand-in for D84's v0.6.0 crossing
+# script before the family 'update' block, a register seed and a
 # brand seed, a gated profile and platform guide per platform, the podcast platform's gate on
 # the pair-only folder of the show registers (DESIGN.md D59), the audiobook gate on a folder
 # and a skill, one seed-once example, a moded skill with its generated mode block, the D14
 # guard (the previous answers through _external_data, BRAND_KIND's validator), the static
-# _message_before_update, and a _message_after_copy carrying every SM_AFTER_COPY_LINES fragment.
+# _message_before_update, and a _message_after_copy carrying every SM_AFTER_COPY_LINES fragment,
+# item (7)'s guide line among them (D84).
 # sm_author_fixture_template: syntek-author's own fixture, ported from its _common.sh — its
 # answers file, its D17 seeds, its rules folder, its run-workflow skill and its Makefile.
 # The integration self-tests run their whole flow against these, so the harness is proven
@@ -2226,6 +2246,9 @@ EOF
     cat <<'EOF'
   - version: v0.4.2
     command: python3 "<% _copier_conf.src_path %>/migrations/v0.4.2-agents-folder.py"
+    when: "<% _stage == 'after' %>"
+  - version: v0.6.0
+    command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/v0.6.0-how-to.py"'
     when: "<% _stage == 'after' %>"
 EOF
     sm_family_update_block
@@ -2273,6 +2296,7 @@ EOF
     printf '  This copy may have set filter.lfs.required in .git/config; git lfs install makes it harmless.\n'
     printf '  Then run: python3 toolkit/media.py check --setup\n'
     printf '  Update with: GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false uvx --python %s>=3.14%s copier update --trust -a .copier-answers.syntek-media.yml\n' "$q" "$q"
+    printf '  The user guide starts at %s.\n  Everything under how-to/ is read-only; update with the steps in\n    %s\n' "$SM_GUIDE_START" "$SM_GUIDE_PROCEDURE"
     cat <<'EOF'
 _templates_suffix: ""
 _envops:
@@ -2431,6 +2455,9 @@ EOF
   mkdir -p "$t/migrations"
   cp "$SM_ROOT/$SM_D76_MIGRATION" "$t/$SM_D76_MIGRATION" || return 1
   cp "$SM_ROOT/$SM_OUTSIDE_MIGRATION" "$t/$SM_OUTSIDE_MIGRATION" || return 1
+  # A stand-in for D84's crossing script (the real one reads a real guide): it prints the
+  # crossing report's marker and the guide start, and exits 0, as the real one always does.
+  printf 'print()\nprint(%s)\nprint("    %s")\n' "'$SM_HOWTO_MARK — a fixture crossing report'" "$SM_GUIDE_START" > "$t/$SM_HOWTO_MIGRATION"
   # The real update script (D81), which the fixture's update block runs last and its baseline
   # task on copy, on 3.14, with a minimal refresh data so that every lane has something to do:
   # the guide guard refreshed, its hook entry and one deny offered, one server over .mcp.json.

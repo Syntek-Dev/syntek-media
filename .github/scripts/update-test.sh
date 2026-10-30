@@ -151,21 +151,31 @@
 #                       the twenty-seven D81's update script may write where the project never
 #                       had them (the working-practice files and the guide's, never a client
 #                       file or .mcp.json; D11: Copier never renders one); it delivers
-#                       media's own data-root map and two family scripts and the kind's
+#                       media's own data-root map and two family scripts, every file of its
+#                       own user guide under how-to/*/syntek-media/ (D84) and the kind's
 #                       MEDIA-<KIND>.md mode files; over syntek-author it changes no file
 #                       syntek-author's copy wrote, but for the entries media's update script
 #                       adds once to .claude/settings.json (D81: sm_settings_offered_only finds
-#                       nothing else); it prints _message_after_update; and a second update is
-#                       a no-op. Where the update crosses v0.6.0 (VERSION 0.6.0 or later; until
-#                       then these are gated on the target tag, and quiet), also: standalone,
-#                       the thirteen shared how-to files and the guide guard are written where
-#                       the project never had them, the guard executable; .claude/settings.json
+#                       nothing else); it prints _message_after_update (its line on the records
+#                       under refs/syntek-media/, which syntek-author's never holds); and a
+#                       second update is a no-op. Where the update crosses v0.6.0 (the
+#                       earlier tag below v0.6.0, VERSION 0.6.0 or later; otherwise these are
+#                       gated off, and quiet), also: standalone, the thirteen shared how-to
+#                       files and the guide guard are written where the project never had
+#                       them, the guard executable; .claude/settings.json
 #                       gains idleCompaction false, the SessionStart compact entry,
 #                       Edit(/how-to/**) and the guide guard's PreToolUse entry, each once, and
 #                       its data-root guard entries keep their count, since no lane offers it;
-#                       over syntek-author, the fourteen keep syntek-author's bytes (D81, D84).
-#                       Without a release tag older than VERSION (a shallow clone) it SKIPs,
-#                       named; without a syntek-author tree, so does its over-author half.
+#                       over syntek-author, the fourteen keep syntek-author's bytes (D81, D84);
+#                       and, in both, the crossing update's output holds media's crossing report
+#                       ('▸ v0.6.0 migration (syntek-media)', migrations/v0.6.0-how-to.py)
+#                       exactly once, naming how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md
+#                       on a line of its own, then the vendored update script's report
+#                       ('▸ syntek-media update report'), and the second update's output holds
+#                       no crossing report (D84, D81). The integration runs Copier, and so the
+#                       migrations, on Python 3.14 (_common.sh's pin). Without a release tag
+#                       older than VERSION (a shallow clone) it SKIPs, named; without a
+#                       syntek-author tree, so does its over-author half.
 #
 #                  Copier prints a MissingFileWarning on a fresh copy and on every update (the
 #                  previous answers are read through _external_data, D14). It is expected and
@@ -298,8 +308,13 @@ declare -A REL_NEW=() REL_MISS=() REL_TOUCHED=() REL_AGAIN=() REL_DIRTY=() REL_W
 # Since 0.6.0 (D81, D84), where the update crosses v0.6.0: what the update script left undone
 # under how-to/ and in the settings file, one problem per line.
 declare -A REL_HOWTO=() REL_SETTINGS=()
+# Since 0.6.0 (D84), where the update crosses v0.6.0: what the two updates' output got wrong about
+# the crossing report and the update report, one problem per line.
+declare -A REL_REPORT=()
 REL_CROSS=false
-REL_MSG_MARK="Until syntek-media 0.6.0, an update never adds or refreshes"
+# A line only media's _message_after_update holds (D81): syntek-author's own names
+# refs/syntek-author/, so an over-author log cannot stand in for it.
+REL_MSG_MARK="Its records live in .git under refs/syntek-media/"
 REL_GUARD=".claude/hooks/how-to-read-only.sh"
 
 # The author's own files in the folder the podcast platform gates (DESIGN.md D59, Section 6.17):
@@ -726,8 +741,8 @@ prepare_release_repo() { # $1 = dest
 }
 
 # The files media's own update must deliver to a project made before 0.5.0: the data-root map and
-# the two family scripts (template-owned, D80) and, for the kind, each moded family skill's
-# MEDIA-<KIND>.md (D7).
+# the two family scripts (template-owned, D80), media's own user guide under how-to/*/syntek-media/
+# (D84) and, for the kind, each moded family skill's MEDIA-<KIND>.md (D7).
 # AGENT_CLIENTS as an answers file records it: 'absent' where the key is not there, otherwise the
 # list, sorted, as [a, b] ([] for none), so two records compare whatever order each was written in.
 rel_clients_of() { # $1 = answers file
@@ -794,9 +809,59 @@ print("\n".join(out))
 PYSET
 }
 
+# Check 24, where the update crosses v0.6.0: the crossing report and the update report (D81, D84).
+# The first update's output must hold media's crossing report exactly once, naming where the
+# guide starts, and after it the vendored update script's report (a line that opens with its
+# head, never _message_after_update's quotation of it); the second update's output
+# must hold no crossing report. ANSI colour is removed first. Prints one problem per line.
+rel_report_problems() { # $1 = the crossing update's output, $2 = the second update's output
+  python3 -I - "$1" "$2" "$SM_HOWTO_MARK" "$SM_GUIDE_START" "$SM_UPDATE_REPORT_HEAD" <<'PYREP'
+import re, sys
+def lines(p):
+    try:
+        text = open(p, encoding="utf-8", errors="replace").read()
+    except OSError:
+        text = ""
+    return re.sub(r"\x1b\[[0-9;]*m", "", text).splitlines()
+first, again, mark, start, head = lines(sys.argv[1]), lines(sys.argv[2]), *sys.argv[3:6]
+out = []
+at = [i for i, l in enumerate(first) if mark in l]
+if len(at) != 1:
+    out.append(f"the crossing update printed the crossing report ('{mark}') {len(at)} time(s), not once")
+else:
+    end = next((i for i in range(at[0] + 1, len(first)) if "This script changed nothing" in first[i]), len(first))
+    if not any(l.strip() == start for l in first[at[0]:end]):
+        out.append(f"the crossing report does not name where the guide starts, {start}, on a line of its own")
+# A line that opens with the head: _message_after_update quotes it mid-line, which never counts.
+heads = [i for i, l in enumerate(first) if l.lstrip().startswith(head)]
+if not heads:
+    out.append(f"the crossing update printed no update report ('{head}'): family-update.py did not run after the crossing report")
+elif len(at) == 1 and heads[-1] < at[0]:
+    out.append(f"the update report ('{head}') came before the crossing report: the 'update' block must run last")
+n = sum(1 for l in again if mark in l)
+if n:
+    out.append(f"the second update printed the crossing report again ({n} time(s)): it runs only on the update that crosses 0.6.0")
+print("\n".join(out))
+PYREP
+}
+
 release_own_files() {
   local s g m
   printf '%s\n' .claude/syntek-media-dataroot.json .claude/syntek-media-dataroot.py .claude/syntek-media-permissions.py
+  # Since 0.6.0, media's own user guide (D84): every file of the catalogue under its three
+  # syntek-media/ folders, which ship in every render, and every file in each procedure folder
+  # the catalogue lists only as a directory (the folder itself where the source lacks it).
+  local d
+  {
+    awk '$1 == "always" && $2 == "f" && $3 ~ /^how-to\/(docs|src\/TEMPLATE-GUIDE|workflows)\/syntek-media\// { print $3 }' <<< "$SM_PATHS"
+    while read -r d; do
+      if [[ -d "$SM_ROOT/template/$d" ]]; then
+        (cd "$SM_ROOT/template" && find "$d" -type f)
+      else
+        printf '%s\n' "$d"
+      fi
+    done < <(awk '$1 == "always" && $2 == "d" && $3 ~ /^how-to\/workflows\/syntek-media\/[0-9]/ { print $3 }' <<< "$SM_PATHS")
+  } | LC_ALL=C sort -u
   while read -r s g m; do
     [[ -n "$s" && "$m" != - ]] && printf '.claude/skills/%s/%s\n' "$s" "$(mode_for_kind "$KIND" MEDIA-)"
   done <<< "$SM_FAMILY_SKILLS_CAT"
@@ -810,6 +875,7 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
   REL_LOG["$v"]="$log"; REL_COPY["$v"]=0; REL_UPD["$v"]=0; REL_CONF["$v"]=""; REL_CLIENTS["$v"]=""
   REL_STORE["$v"]=""; REL_WANT["$v"]=repo; REL_NEW["$v"]=""; REL_MISS["$v"]=""; REL_TOUCHED["$v"]=""
   REL_AGAIN["$v"]=0; REL_DIRTY["$v"]=""; REL_WANT_CLIENTS["$v"]="[]"; REL_HOWTO["$v"]=""; REL_SETTINGS["$v"]=""
+  REL_REPORT["$v"]=""
   : > "$log"
   REL_VARIANTS+="$v "
   author_files="$w/rel-$v.author"; : > "$author_files"
@@ -837,7 +903,8 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
   for f in $SM_REFRESH_PATHS; do
     if [[ -e "$p/$f" ]]; then printf '%s\t%s\n' "$f" "$(path_fingerprint "$p/$f")"; fi
   done > "$w/rel-$v.howto"
-  SM_VCS_REF="$REL_TO" sm_update "$p" >>"$log" 2>&1 || REL_UPD["$v"]=$?
+  SM_VCS_REF="$REL_TO" sm_update "$p" >"$w/rel-$v.update.log" 2>&1 || REL_UPD["$v"]=$?
+  cat "$w/rel-$v.update.log" >>"$log"
   REL_CONF["$v"]="$(conflicts_in "$p" | paste -sd' ' -)"
   REL_CLIENTS["$v"]="$(rel_clients_of "$p/$SM_ANSWERS_FILE")"
   REL_STORE["$v"]="$(answer_value DATA_STORE "$p/$SM_ANSWERS_FILE")"
@@ -872,8 +939,12 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
   done < <(release_own_files)
   REL_MISS["$v"]="${REL_MISS[$v]% }"
   sm_commit_all "$p" "syntek-media $REL_TO"
-  SM_VCS_REF="$REL_TO" sm_update "$p" >>"$log" 2>&1 || REL_AGAIN["$v"]=$?
+  SM_VCS_REF="$REL_TO" sm_update "$p" >"$w/rel-$v.again.log" 2>&1 || REL_AGAIN["$v"]=$?
+  cat "$w/rel-$v.again.log" >>"$log"
   REL_DIRTY["$v"]="$(git -C "$p" status --porcelain 2>/dev/null)"
+  if $REL_CROSS; then
+    REL_REPORT["$v"]="$(rel_report_problems "$w/rel-$v.update.log" "$w/rel-$v.again.log")"
+  fi
 }
 
 # The touched list without .claude/settings.json where it differs from before only by the
@@ -894,11 +965,16 @@ run_release_flow() { # $1 = work dir — needs REL_REPO (and REL_AUTHOR for the 
   REL_VARIANTS=""
   REL_COPY=(); REL_UPD=(); REL_LOG=(); REL_CONF=(); REL_CLIENTS=(); REL_STORE=(); REL_WANT=()
   REL_NEW=(); REL_MISS=(); REL_TOUCHED=(); REL_AGAIN=(); REL_DIRTY=(); REL_WANT_CLIENTS=()
-  REL_HOWTO=(); REL_SETTINGS=()
+  REL_HOWTO=(); REL_SETTINGS=(); REL_REPORT=()
   [[ -n "$REL_REPO" ]] || return 0
-  # The crossing assertions (D81, D84) hold once the update crosses v0.6.0 (conflict C7).
+  # The crossing assertions (D81, D84) hold only on the update that crosses v0.6.0 (conflict
+  # C7): the earlier tag below it and the target at or past it. From v0.6.0 or later Copier runs
+  # no 'version: v0.6.0' entry, and the guide is already in place.
   REL_CROSS=false
-  [[ "$(printf '%s\n' "${REL_TO#v}" 0.6.0 | sort -V | head -1)" == 0.6.0 ]] && REL_CROSS=true
+  if [[ "$(printf '%s\n' "${REL_TO#v}" 0.6.0 | sort -V | head -1)" == 0.6.0 \
+        && "$(printf '%s\n' "${REL_TAG#v}" 0.6.0 | sort -V | head -1)" != 0.6.0 ]]; then
+    REL_CROSS=true
+  fi
   release_variant "$1" "$1/rel-standalone" standalone
   [[ -n "$REL_AUTHOR" ]] && release_variant "$1" "$1/rel-over-author" over-author
   return 0
@@ -1153,6 +1229,9 @@ run_checks() {
     while IFS= read -r f; do
       [[ -n "$f" ]] && finding "check 24 — $R in .claude/settings.json: $f (DESIGN.md D13, D81, D84)"
     done <<< "${REL_SETTINGS[$v]:-}"
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && finding "check 24 — $R $f (DESIGN.md D84, D81) — see ${REL_LOG[$v]}"
+    done <<< "${REL_REPORT[$v]:-}"
     grep -qF "$REL_MSG_MARK" "${REL_LOG[$v]}" 2>/dev/null \
       || finding "check 24 — $R the update printed no _message_after_update ('$REL_MSG_MARK')"
     if [[ "${REL_AGAIN[$v]}" -ne 0 || -n "${REL_DIRTY[$v]}" ]]; then
@@ -1307,10 +1386,10 @@ self_test() {
   local v
   REL_TAG=v0.4.6; REL_TO=v0.5.0; REL_VARIANTS="standalone over-author "
   for v in standalone over-author; do
-    printf '  %s the skills, hooks and handoffs/\n' "$REL_MSG_MARK" > "$tmp/rel-$v.log"
+    printf '  %s: git push leaves them behind, but\n' "$REL_MSG_MARK" > "$tmp/rel-$v.log"
     REL_COPY[$v]=0; REL_UPD[$v]=0; REL_LOG[$v]="$tmp/rel-$v.log"; REL_CONF[$v]=""; REL_CLIENTS[$v]="[]"; REL_WANT_CLIENTS[$v]="[]"
     REL_STORE[$v]=repo; REL_WANT[$v]=repo; REL_NEW[$v]=""; REL_MISS[$v]=""; REL_TOUCHED[$v]=""
-    REL_AGAIN[$v]=0; REL_DIRTY[$v]=""; REL_HOWTO[$v]=""; REL_SETTINGS[$v]=""
+    REL_AGAIN[$v]=0; REL_DIRTY[$v]=""; REL_HOWTO[$v]=""; REL_SETTINGS[$v]=""; REL_REPORT[$v]=""
   done
   probe_clean "check 24 is quiet on a seeded clean update from the newest earlier release"
   REL_COPY[standalone]=1; probe "check 24 fires when the copy at the earlier release fails" "check 24 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the copy at v0.4.6 failed"; REL_COPY[standalone]=0
@@ -1321,6 +1400,8 @@ self_test() {
   REL_STORE[over-author]=repo; REL_WANT[over-author]=external; probe "check 24 fires when the store differs from syntek-author's record" "check 24 — [author-nonfiction] (over-author, v0.4.6 to v0.5.0) the update recorded DATA_STORE 'repo', not 'external'"; REL_WANT[over-author]=repo
   REL_NEW[standalone]="handoffs/CONTEXT.md"; probe "check 24 fires when the update creates a copy-only family path" "created the copy-only family path(s) handoffs/CONTEXT.md"; REL_NEW[standalone]=""
   REL_MISS[standalone]=".claude/syntek-media-dataroot.py"; probe "check 24 fires when media's own file is not delivered" "did not deliver media's own .claude/syntek-media-dataroot.py"; REL_MISS[standalone]=""
+  REL_MISS[standalone]="$(KIND=author-nonfiction release_own_files | grep -xF "$SM_GUIDE_START" || true)"
+  probe "check 24 fires when media's own guide is not delivered (D84)" "did not deliver media's own $SM_GUIDE_START"; REL_MISS[standalone]=""
   REL_TOUCHED[over-author]=".claude/settings.json"; probe "check 24 fires when the update changes syntek-author's file" "changed what syntek-author's copy wrote: .claude/settings.json"; REL_TOUCHED[over-author]=""
   : > "$tmp/rel-standalone.log"; probe "check 24 fires when _message_after_update is not printed" "check 24 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the update printed no _message_after_update"
   printf '  %s\n' "$REL_MSG_MARK" > "$tmp/rel-standalone.log"
@@ -1372,6 +1453,28 @@ self_test() {
   REL_TOUCHED[over-author]="$(rel_untouch_settings "$rprj" "$sb" ".claude/settings.json")"
   probe "check 24 fires when media's update changes syntek-author's settings beyond an offered entry (D81)" "changed what syntek-author's copy wrote: .claude/settings.json"
   REL_TOUCHED[over-author]=""; REL_REPO="$rr"
+  # The crossing report and the update report (D84, D81), on update logs written here.
+  local ru="$tmp/rel-update.log" ra="$tmp/rel-again.log" rgood
+  rgood="$(printf '\n%s — the user guide\n  This release adds the user guide. Start at\n    %s\n  This script changed nothing. To run it again from the project root:\n%s, 0.5.0 → 0.6.0\n' \
+    "$SM_HOWTO_MARK" "$SM_GUIDE_START" "$SM_UPDATE_REPORT_HEAD")"
+  rrep() { printf '%s\n' "$1" > "$ru"; printf '%s\n' "${2:-}" > "$ra"; REL_REPORT[standalone]="$(rel_report_problems "$ru" "$ra")"; }
+  rrep "$rgood"
+  probe_clean "check 24's report assertions are quiet on one crossing report naming the guide, then the update report"
+  rrep "$(printf '%s\n' "$rgood" | grep -vF "$SM_HOWTO_MARK")"
+  probe "check 24 fires when the crossing update prints no crossing report (D84)" "check 24 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the crossing update printed the crossing report ('$SM_HOWTO_MARK') 0 time(s), not once"
+  rrep "$rgood"$'\n'"$SM_HOWTO_MARK"
+  probe "check 24 fires when the crossing report is printed twice (D84)" "printed the crossing report ('$SM_HOWTO_MARK') 2 time(s), not once"
+  rrep "$(printf '%s\n' "$rgood" | grep -vxF "    $SM_GUIDE_START")"
+  probe "check 24 fires when the crossing report does not name where the guide starts (D84)" "the crossing report does not name where the guide starts, $SM_GUIDE_START"
+  rrep "$(printf '%s\n' "$rgood" | grep -vF "$SM_UPDATE_REPORT_HEAD")"
+  probe "check 24 fires when no update report follows the crossing report (D81)" "the crossing update printed no update report ('$SM_UPDATE_REPORT_HEAD')"
+  rrep "$(printf '%s\n' "$rgood" | grep -vF "$SM_UPDATE_REPORT_HEAD")"$'\n'"If no '$SM_UPDATE_REPORT_HEAD' line appears above, Copier ran no migration"
+  probe "check 24 fires when only _message_after_update's quotation of the report head stands (D81)" "the crossing update printed no update report ('$SM_UPDATE_REPORT_HEAD')"
+  rrep "$SM_UPDATE_REPORT_HEAD, 0.5.0 → 0.6.0"$'\n'"$(printf '%s\n' "$rgood" | grep -vF "$SM_UPDATE_REPORT_HEAD")"
+  probe "check 24 fires when the update report comes before the crossing report (D81)" "came before the crossing report"
+  rrep "$rgood" "$SM_HOWTO_MARK — again"
+  probe "check 24 fires when the second update prints the crossing report again (D84)" "the second update printed the crossing report again (1 time(s))"
+  REL_REPORT[standalone]=""; unset -f rrep
   probe_clean "the fixture's updates keep every promise again once every mutation is undone"
   st_finish "an update that keeps its promises from one that breaks them"
 }

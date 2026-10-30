@@ -66,15 +66,21 @@
 #                        render carries every _message_after_copy line of _common.sh's lists
 #                        (DESIGN.md D13, D73, D76, D80): every shared path a copy writes (the
 #                        eighteen of D11, the seventeen of D80 and, since 0.6.0, the fourteen of
-#                        D84) and the skip rule, the four allows, nine ElevenLabs asks, the two
-#                        voice remix run asks (D82) and the Edit denies (the guide's among them,
-#                        D84), the seed's idleCompaction value and hooks object, the permissions
-#                        script's --write line (D80), the ELEVENLABS_MCP_BASE_PATH line,
+#                        D84) and the skip rule; item (2) as D81 words it: the six allows by
+#                        hand, which no lane offers, then the rest only where family-update did
+#                        NOT run or the copy took --skip-tasks (nine ElevenLabs asks, the two
+#                        voice remix run asks of D82, the Edit denies with the guide's, D84, the
+#                        seed's idleCompaction value, the family's asks and deny, the hooks
+#                        object's SessionStart entry and the guide guard's PreToolUse entry), the
+#                        data-root guard that no lane offers, and the permissions script's
+#                        --write line (D80); the ELEVENLABS_MCP_BASE_PATH line,
 #                        filter.lfs.required, the setup check, and the update command with -a,
-#                        run as uvx --python '>=3.14' copier (D81);
-#                        and, from Section 8, that 'conflict' then 'skip' is expected, the
-#                        optional line in .claude/CLAUDE.md, and nothing to add to .gitignore
-#                        or .mcp.json.
+#                        run as uvx --python '>=3.14' copier (D81); item (7), where the user
+#                        guide starts (how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md),
+#                        that everything under how-to/ is read-only, and the update procedure
+#                        (D84); and, from Section 8, that 'conflict' then 'skip' is expected,
+#                        the optional line in .claude/CLAUDE.md, and nothing to add to
+#                        .gitignore or .mcp.json.
 #
 #                   Numbers are stable identifiers. Append, never renumber.
 #
@@ -427,6 +433,10 @@ self_test() {
   sed -i '/ELEVENLABS_MCP_BASE_PATH/d' "$SM_ROOT/copier.yml"
   ONLY="business--defaults"; select_renders; generate 2>/dev/null
   probe "check 4 fires when _message_after_copy loses a line" "check 4 — the copy output of business--defaults does not carry 'ELEVENLABS_MCP_BASE_PATH='"
+  git -C "$SM_ROOT" checkout -q -- copier.yml
+  sed -i '/The user guide starts at/d' "$SM_ROOT/copier.yml"
+  ONLY="business--defaults"; select_renders; generate 2>/dev/null
+  probe "check 4 fires when _message_after_copy loses item (7)'s guide line (D84)" "check 4 — the copy output of business--defaults does not carry 'The user guide starts at $SM_GUIDE_START'"
   git -C "$SM_ROOT" checkout -q -- copier.yml
 
   SM_ROOT="$real_root"; OUT="$real_out"; ONLY="$real_only"; SM_AUTHOR_NAMES_FILE="$real_names"

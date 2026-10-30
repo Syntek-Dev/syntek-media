@@ -25,7 +25,7 @@
 #                    hold the files, the four blocks and the renders to that record (since
 #                    0.6.0 forty-three files from syntek-author's v0.8.0, D81, D84).
 #
-#                    Thirty-one checks:
+#                    Thirty-two checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
 #                         _skip_if_exists.
 #                      2. Every _skip_if_exists entry names a file under template/.
@@ -216,8 +216,17 @@
 #                         A listed entry D81 lists that the seed lacks is check 12's finding,
 #                         never this one's. A one-way door: an entry 0.6.0 lists reaches every
 #                         project and cannot be withdrawn.
+#                     32. copier.yml's _migrations does not declare 'version: v0.6.0' exactly
+#                         once, running '"<% _copier_python %>"
+#                         "<% _copier_conf.src_path %>/migrations/v0.6.0-how-to.py"' at _stage
+#                         'after', after the v0.4.2 entry and before the family 'update' block's
+#                         BEGIN marker (D84: media's report-only crossing script, on the Python
+#                         that runs Copier, as D85 amends it; the update script after it must see
+#                         what the report saw). Quiet on the order where check 20 already reports
+#                         the update entry out of place, and on v0.4.2's side where that entry is
+#                         missing (check 19's); a missing script is check 19's too.
 #
-#                    Checks 1–4, 8, 16–26, 30 and 31 read copier.yml, template/, migrations/,
+#                    Checks 1–4, 8, 16–26 and 30–32 read copier.yml, template/, migrations/,
 #                    rules 06 and family-shared.json (static, once; checks 21 and 25 also read Git's
 #                    index). Checks 5–7, 9, 11–15 and 28 read every tree given — template/ by
 #                    default, or renders — and skip a seed the tree does not ship; checks 10,
@@ -477,7 +486,8 @@ static_checks() {
 
   # ── 20. D76's outside-link pair opens _migrations, D81's update entry closes it, and every
   #        entry between them is versioned ──
-  local pair_ok=false
+  local pair_ok=false upd_ok=true
+  local -a howto_findings=()
   if [[ -n "$mig" ]]; then
     local -a ver=() cmd=() whn=()
     local n=0 i v c w
@@ -505,6 +515,7 @@ static_checks() {
       [[ "${cmd[$i]}" == *"/$SM_FAMILY_UPDATE_SCRIPT\" update "* ]] && upd_at=$i
     done
     if [[ "$n" -lt 3 || "$upd_at" -ne "$last" || "${ver[$last]}" != - || "${whn[$last]}" != *"_stage == 'after'"* ]]; then
+      upd_ok=false
       finding "check 20 — _migrations does not close with the family 'update' block's one entry, unversioned, running $SM_FAMILY_UPDATE_SCRIPT update at _stage 'after' $( [[ "$upd_at" -ge 0 && "$upd_at" -ne "$last" ]] && printf '(it is entry %d of %d)' "$((upd_at + 1))" "$n" || printf '(none is last)'): it must run last, after every versioned entry, so it sees what each left (DESIGN.md D81, D11)"
     fi
     for ((i = 2; i < last; i++)); do
@@ -512,6 +523,24 @@ static_checks() {
       [[ "$i" -eq "$upd_at" ]] && continue
       finding "check 20 — an unversioned _migrations entry runs $(grep -oE 'migrations/[^" ]+' <<< "${cmd[$i]}" || printf '%s' "${cmd[$i]}"): only D76's outside-link pair, first, and D81's family update entry, last, are keyed to no release (DESIGN.md D76, D81; .claude/CLAUDE.md Section 7.7)"
     done
+    # 32's reading, reported after 30 and 31: D84's crossing entry, where it stands.
+    local h=-1 d76=-1 hn=0
+    for ((i = 0; i < n; i++)); do
+      [[ "${ver[$i]}" == "$SM_D76_VERSION" ]] && d76=$i
+      if [[ "${ver[$i]}" == "$SM_HOWTO_VERSION" ]]; then h=$i; hn=$((hn + 1)); fi
+    done
+    if [[ "$hn" -ne 1 ]]; then
+      howto_findings+=("check 32 — _migrations declares 'version: $SM_HOWTO_VERSION' $hn time(s), not once: D84's report-only crossing script, $SM_HOWTO_MIGRATION, runs once, on the update that crosses 0.6.0 (DESIGN.md D84)")
+    else
+      [[ "${cmd[$h]}" == "'\"<% _copier_python %>\" \"<% _copier_conf.src_path %>/$SM_HOWTO_MIGRATION\"'" \
+          && "${whn[$h]}" == *"_stage == 'after'"* ]] \
+        || howto_findings+=("check 32 — the $SM_HOWTO_VERSION entry does not run '\"<% _copier_python %>\" \"<% _copier_conf.src_path %>/$SM_HOWTO_MIGRATION\"' at _stage 'after': the crossing script runs on the Python that runs Copier, as the family entries do, after the render (DESIGN.md D84, D85)")
+      # Its place: after v0.4.2's entry (whose absence is check 19's) and before the 'update'
+      # block (whose misplacement is check 20's, which then claims the fault).
+      if [[ "$d76" -ge 0 && "$h" -lt "$d76" ]] || { $upd_ok && [[ "$h" -gt "$upd_at" ]]; }; then
+        howto_findings+=("check 32 — the $SM_HOWTO_VERSION entry is _migrations entry $((h + 1)) of $n, not after the $SM_D76_VERSION entry and before the family 'update' block: releases run in order, and the update script must see what the crossing report saw (DESIGN.md D84, D81)")
+      fi
+    fi
   fi
 
   # ── 23–26 first: the manifest, read once; it also gives checks 21 and 22 their values ──
@@ -577,6 +606,9 @@ static_checks() {
 
   # ── 30 and 31. D81's offers: the baseline task last, and the refresh data ──
   offers_checks
+
+  # ── 32. D84's crossing entry: v0.6.0, through _copier_python, after v0.4.2, before 'update' ──
+  for line in "${howto_findings[@]}"; do finding "$line"; done
 }
 
 # 30. _tasks: media's three, then D84's copy-time warning, then syntek-author's baseline task,
@@ -1023,6 +1055,9 @@ write_fixture() { # $1 = repo root
     printf '_migrations:\n'
     sm_family_migrations_block
     printf '  - version: %s\n    command: python3 "<%% _copier_conf.src_path %%>/%s"\n    when: "<%% _stage == %safter%s %%>"\n' "$SM_D76_VERSION" "$SM_D76_MIGRATION" "$q" "$q"
+    # D84's crossing entry (check 32), after v0.4.2's and before the family update block.
+    printf '  - version: %s\n    command: %s"<%% _copier_python %%>" "<%% _copier_conf.src_path %%>/%s"%s\n    when: "<%% _stage == %safter%s %%>"\n' \
+      "$SM_HOWTO_VERSION" "$q" "$SM_HOWTO_MIGRATION" "$q" "$q" "$q"
     # The family update block (D81), byte for byte the tag's, closing _migrations.
     sm_family_update_block
     # _tasks (D81, D84): stand-ins for media's three, D84's copy-time warning, then the
@@ -1057,6 +1092,7 @@ PYFIX
   ln -s "$SM_AGENTS_SKILLS_LINK" "$t/.agents/skills"
   mkdir -p "$r/migrations"; printf 'print("fixture migration")\n' > "$r/$SM_D76_MIGRATION"
   printf 'print("fixture outside-link migration")\n' > "$r/$SM_OUTSIDE_MIGRATION"
+  printf 'print("fixture crossing report")\n' > "$r/$SM_HOWTO_MIGRATION"
   chmod 755 "$r/$SM_OUTSIDE_MIGRATION"
   # The permissions script's stand-in is a stub check 29 can drive (STUB_PERM_* below): by
   # default it finds two of media's own seed rules missing until --write has run.
@@ -1389,6 +1425,26 @@ self_test() {
   rr 'd["settings"]["model"] = "opus"';                    probe "check 31 fires when the refresh data lists the model (D81)" "check 31 — $SM_REFRESH_DATA lists the top-level value model"; cp "$tmp/refresh.held" "$f"
   unset -f rr
   probe_clean "the baseline task last and the refresh data in shape"
+
+  # 32: D84's crossing entry, one fault each; misplaced after the update block, it is check 20's.
+  cp "$COPIER" "$tmp/c"
+  local he
+  he="$(printf '  - version: %s\n    command: %s"<%% _copier_python %%>" "<%% _copier_conf.src_path %%>/%s"%s\n    when: "<%% _stage == %safter%s %%>"' \
+    "$SM_HOWTO_VERSION" "'" "$SM_HOWTO_MIGRATION" "'" "'" "'")"
+  hmove() { # $1 = the line the entry goes before (an exact match)
+    awk -v v="  - version: $SM_HOWTO_VERSION" -v at="$1" -v e="$he" \
+      '$0 == v { skip = 3 } skip { skip--; next } $0 == at { print e } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  }
+  hmove "  - version: $SM_D76_VERSION"
+  probe "check 32 fires when the v0.6.0 entry comes before v0.4.2's (D84)" "check 32 — the $SM_HOWTO_VERSION entry is _migrations entry 3 of 5, not after the $SM_D76_VERSION entry"
+  hmove "_tasks:"
+  probe "check 32 stays quiet, and check 20 claims it, when the v0.6.0 entry follows the update block" "check 20 — _migrations does not close with the family 'update' block's one entry"
+  sed "s#^    command: '\"<% _copier_python %>\" \"<% _copier_conf.src_path %>/$SM_HOWTO_MIGRATION\"'\$#    command: python3 \"<% _copier_conf.src_path %>/$SM_HOWTO_MIGRATION\"#" "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 32 fires when the v0.6.0 entry runs python3, not _copier_python (D84, D85)" "check 32 — the $SM_HOWTO_VERSION entry does not run"
+  hmove "no such line"
+  probe "check 32 fires when the v0.6.0 entry is not declared (D84)" "check 32 — _migrations declares 'version: $SM_HOWTO_VERSION' 0 time(s)"
+  cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""; unset -f hmove
+  probe_clean "the v0.6.0 crossing entry after v0.4.2's and before the update block"
 
   # 10 and 27: a render of the fixture, whose family files must keep the recorded bytes.
   local rt="$tmp/render"; cp -a "$t" "$rt"; TREE="$rt"; load_owned "$TREE"
