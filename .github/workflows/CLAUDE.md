@@ -43,6 +43,9 @@ Keep `audit-template.yml` a thin, honest runner of `.github/scripts/`: every che
   at the end, so one broken gate never hides the next.
 - **Self-test before real run, always.** A green real run means nothing from a detector nobody
   has seen fail.
+- **Python 3.14 everywhere, named twice.** Every job's `setup-python` installs 3.14 and the
+  workflow's `env` keeps `UV_PYTHON` on it; a job without either runs Copier, and the family
+  scripts inside it, on whatever Python uv finds (D81).
 - **Never give the workflow an ElevenLabs key.** No test calls the service, and a key in CI is a
   key that can spend.
 

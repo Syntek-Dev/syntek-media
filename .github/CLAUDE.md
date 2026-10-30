@@ -24,14 +24,17 @@ show a contributor the way in (the issue forms, the pull-request template, the c
   re-running audits and reading their output.
 - **Concrete steps:**
   1. Run everything locally: `bash .github/scripts/run-all.sh --author ../syntek-author` (add
-     `--no-self-test` while iterating; never in CI).
+     `--no-self-test` while iterating; never in CI). `--author` must name a clean clone of
+     syntek-author at `SYNTEK_AUTHOR_TAG`, the tag media vendors from, or `coexist-test.sh`
+     checks 20 and 22 fail on drift rather than on a fault of media's.
   2. Read a failure by its check number and path — each script's header says what the number
      means and why the rule exists.
   3. Fix the template (or `copier.yml`), then re-run the one script that failed, then
      `run-all.sh`.
   4. Changing an audit: run its `--self-test` before and after the change.
-- **Definition of done:** `run-all.sh` exits 0 locally with no SKIP, and every job of
-  `audit-template.yml` is green on the branch.
+- **Definition of done:** `run-all.sh`, with `--author` naming that clean clone, exits 0
+  locally and its summary counts no SKIP from `coexist-test.sh` (D27), and every job of `audit-template.yml` is green on the
+  branch.
 
 ## Guardrails
 

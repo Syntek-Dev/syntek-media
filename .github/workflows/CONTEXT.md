@@ -26,16 +26,21 @@ project (DESIGN.md D11).
     personal data, development isolation, the community files at the root (D83), seeds, skills;
     then, in the same step, the vendored `migrations/agents-outside-link.py --self-test` (D85)
     and, with `SYNTEK_DATA_ROOT` unset, the vendored data-root resolver's and permissions
-    script's, `template/.claude/syntek-media-dataroot.py` and `syntek-media-permissions.py` (D80).
+    script's, `template/.claude/syntek-media-dataroot.py` and `syntek-media-permissions.py` (D80),
+    and, since 0.6.0, the vendored update script's, `migrations/family-update.py --self-test` (D81).
   - **[2/3] Renders** — installs uv and ffmpeg, renders every brand kind and profile once (and
     each kind over syntek-author where it could be fetched), and runs the per-render audits over
     all of them, the toolkit smoke test under `--require-ffmpeg`. Playwright's Chromium is not
     installed, so the thumbnail and card renders are named as skipped, never passed.
   - **[3/3] Update and coexistence** — a real `copier update` in its own scratch project, and
     media applied over a real syntek-author project and the other way round.
+- **Python 3.14 in every job** (D81): each job's `setup-python` step installs 3.14 and the
+  workflow's `env` sets `UV_PYTHON` to it, because `setup-python` alone does not choose the
+  Python `uvx` runs Copier on, and below 3.14 the vendored scripts' self-tests fail and the
+  outside-link stages do nothing. `_common.sh` refuses an older one with exit 2.
 - Jobs 2 and 3 first clone syntek-author, at the tag in the workflow's `SYNTEK_AUTHOR_TAG` (the
-  release media vendors from, D85), into the runner's temporary folder with a plain shell step and
-  export `SYNTEK_AUTHOR_DIR`; when the clone fails they print a warning, and the scripts that need
+  release media vendors from, now `v0.8.0`, D85), into the runner's temporary folder with a
+  plain shell step and export `SYNTEK_AUTHOR_DIR`; when the clone fails they print a warning, and the scripts that need
   it report a named SKIP (DESIGN.md D27).
 - **syntek-author main (advisory)** runs `coexist-test.sh` against syntek-author's default
   branch and prints what it finds as warnings; it always exits 0 and is not a required check, so a

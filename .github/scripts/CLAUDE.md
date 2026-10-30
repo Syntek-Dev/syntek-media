@@ -23,7 +23,10 @@ Run, read and maintain the audits that prove the template keeps every promise `D
      (`--no-self-test`, `--skip-integration` and `--skip-thumbnails` shorten a local loop;
      `--keep --out DIR` keeps the renders to inspect; `SM_RENDER_JOBS=1` in the environment
      renders one tree at a time, for a machine that is already loaded). Invoke every script with `bash` and pass
-     each argument as its own word: an interactive zsh does not split a quoted pair.
+     each argument as its own word: an interactive zsh does not split a quoted pair. `--author`
+     should name a clean clone at the tag media vendors from (CI's `SYNTEK_AUTHOR_TAG`): a
+     syntek-author that has moved past it fails `coexist-test.sh` checks 20 and 22 on drift. The
+     audits run on Python 3.14; `_common.sh` refuses an older one with exit 2.
   2. One audit on the source: `bash .github/scripts/<script>.sh`. One audit on renders:
      `bash .github/scripts/generate-all.sh DIR > trees.txt`, then
      `bash .github/scripts/<script>.sh $(cat trees.txt)`.
@@ -33,10 +36,16 @@ Run, read and maintain the audits that prove the template keeps every promise `D
   4. When syntek-author has moved: `bash .github/scripts/coexist-test.sh --refresh-names --author
      DIR`, re-check every new name against media's paths, and record the new baseline in
      `CHANGELOG.md`. When media adopts a new syntek-author tag (DESIGN.md D85: one tag for every
-     family file): re-vendor every file and block of `_common.sh`'s `SM_FAMILY_SHARED` from a
-     clean clone at that tag, move `SM_FAMILY_RELEASE` and CI's `SYNTEK_AUTHOR_TAG` together,
-     run `bash .github/scripts/shipped-seeds.sh --write-manifest`, then
-     `bash .github/scripts/coexist-test.sh --author <the clone>`: its check 22 must report nothing.
+     family file): re-vendor every file of `_common.sh`'s `SM_FAMILY_SHARED` and every block of
+     its `SM_FAMILY_BLOCKS` from a clean clone at that tag; transcribe the tag's `baseline` task
+     into `SM_BASELINE_TASK` and its family refresh lists (paths, restore, family hooks, asks,
+     denies, top-level values and the mcp lane) into `_common.sh`'s `SM_REFRESH_*` and
+     `migrations/family-refresh.json`, beside media's own entries there; move
+     `SM_FAMILY_RELEASE` and CI's `SYNTEK_AUTHOR_TAG` together; expect `coexist-test.sh` check
+     20 to report drift, and run `--refresh-names` in the same commit; run
+     `bash .github/scripts/shipped-seeds.sh --write-manifest`, and again after any change to
+     `VERSION`; then `bash .github/scripts/coexist-test.sh --author <the clone>`: its
+     checks 20 and 22 must report nothing.
   5. The integration tests on one brand kind while iterating:
      `bash .github/scripts/update-test.sh --brand-kind author-fiction` and
      `bash .github/scripts/coexist-test.sh --brand-kind author-fiction --author DIR`. The toolkit
