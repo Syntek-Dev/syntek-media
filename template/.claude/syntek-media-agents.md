@@ -142,9 +142,9 @@ and the rules ship always.
   Chromium that Scrapling drives, without administrator rights:
 
   ```bash
-  uvx --from 'scrapling[ai]==0.4.15' --with 'playwright==1.63.0' --with 'patchright==1.63.0' scrapling --version
+  uvx --from 'scrapling[ai]==0.4.15' --with 'playwright==1.64.0' --with 'patchright==1.64.3' scrapling --version
   uvx code-review-graph==2.3.9 --version
-  uvx --from 'playwright==1.63.0' playwright install chromium
+  uvx --from 'playwright==1.64.0' playwright install chromium
   ```
 
   Where that Chromium then fails to start for missing system libraries, Playwright's
@@ -260,10 +260,10 @@ is held aside and restored by every update, as Client setup says; it is never co
    with the owner's agreement remove that link (never its target) and do the same. Do not
    replace a real folder or another link.
 4. Compare the fresh project's `.claude/settings.json` with the real one and, with the owner's
-   agreement, add by hand only the six allows and, where the file lacks it, the data-root
-   guard. The asks, the denies, the compaction values, the four handoff-hook entries and the
-   guide guard come from the copy or the update script; add them by hand only where it did not
-   run. Never remove or weaken an entry the owner has.
+   agreement, add by hand only the six allows and, where the file lacks it, the data-root guard.
+   The asks, the denies, the compaction values, the output style, the four handoff-hook entries
+   and the guide guard come from the copy or the update script; add them by hand only where it
+   did not run. Never remove or weaken an entry the owner has.
 5. Add an agreed pointer to this bridge in an existing AGENTS.md or GEMINI.md, telling the
    client to read every `.claude/syntek-*-agents.md` present. Review any existing Codex
    configuration before adding the CLAUDE.md fallback. Then run

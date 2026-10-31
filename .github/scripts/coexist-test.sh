@@ -98,13 +98,13 @@
 #                        none deferred since 0.6.0 (D81: SM_FAMILY_DEFERRED is empty), so a
 #                        family file added in a later tag fails until it is adopted; and
 #                        _common.sh's family asks, denies (the guide's Edit(/how-to/**) among
-#                        them, D84), top-level values (autoCompactEnabled, idleCompaction) and
-#                        hooks equal the --author tree's own settings seed (its gates removed),
-#                        which media's seed copies (D13 as D80, D81 and D84 amend it). Since
-#                        0.6.0 it also holds the family lists of media's
+#                        them, D84), top-level values (autoCompactEnabled, idleCompaction,
+#                        outputStyle) and hooks equal the --author tree's own settings seed (its
+#                        gates removed), which media's seed copies (D13 as D80, D81 and D84
+#                        amend it). Since 0.6.0 it also holds the family lists of media's
 #                        migrations/family-refresh.json (its refresh paths and restore, its
 #                        hooks, the AskUserQuestion deny, syntek-author D54's asks and deny,
-#                        the guide's deny, the two top-level values and the mcp lane) to the
+#                        the guide's deny, the three top-level values and the mcp lane) to the
 #                        --author tree's own, and _common.sh's SM_BASELINE_TASK to the
 #                        --author tree's last _tasks entry (D81).
 #                        Together with shipped-seeds.sh checks 21–27, which hold
@@ -945,6 +945,10 @@ STUB
   python3 -I -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p)); d["refresh"].append("how-to/new-shared.md"); json.dump(d, open(p, "w"), indent=2)' "$ar"
   FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
   probe "check 22 fires when the two templates' refresh lists drift (D81)" "check 22 — media's migrations/family-refresh.json lists refresh"
+  cp "$tmp/refresh.held" "$ar"
+  python3 -I -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p)); d["settings"]["newTopValue"]=True; json.dump(d, open(p, "w"), indent=2)' "$ar"
+  FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"
+  probe "check 22 fires on a top-level value syntek-author's refresh data adds, which media's lacks (D13)" "check 22 — media's migrations/family-refresh.json lists newTopValue \"absent\", the --author tree's true"
   cp "$tmp/refresh.held" "$ar"
   sed -i 's/ baseline --src / baseline --quiet --src /' "$ac"
   FAMILY_DRIFT="$(sm_family_py compare "$MEDIA_SRC" "$AUTHOR_SRC")"

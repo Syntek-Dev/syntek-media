@@ -44,15 +44,16 @@ marks which is which.
   project would add its own folder beside it.
 - `MEMORY.md` — the durable memory every session reads second. Template files name its six
   headings. It splits into `memory/<topic>.md` files once it passes 300 lines.
-- `settings.json` — `"model": "opus"`, `"autoCompactEnabled": false` and
-  `"idleCompaction": false`, an allow list for the toolkit, ffmpeg and ffprobe, an ask list that
-  makes every credit-spending ElevenLabs tool and the shipped MCP servers' browser and writing
-  tools prompt, a deny list that keeps hand edits out of generated and renders folders and out
-  of the user guide (`Edit(/how-to/**)`), and the hooks: the `UserPromptSubmit` window hook, the
-  `PreCompact` hook, the `SessionStart` `compact` entry, and, under `PreToolUse`, the data-root
-  guard and the guide guard. To a `settings.json` the project already had, the copy and every
-  update add the listed entries once each. It is committed and shared; personal overrides (such
-  as `CLAUDE_CONTEXT_WINDOW` under `"env"`, for a larger window) belong in `settings.local.json`.
+- `settings.json` — `"model": "opus"`, `"autoCompactEnabled": false`, `"idleCompaction": false`
+  and `"outputStyle": "Concise"` (Claude Code's built-in Concise style), an allow list for the
+  toolkit, ffmpeg and ffprobe, an ask list that makes every credit-spending ElevenLabs tool and
+  the shipped MCP servers' browser and writing tools prompt, a deny list that keeps hand edits
+  out of generated and renders folders and out of the user guide (`Edit(/how-to/**)`), and the
+  hooks: the `UserPromptSubmit` window hook, the `PreCompact` hook, the `SessionStart` `compact`
+  entry, and, under `PreToolUse`, the data-root guard and the guide guard. To a `settings.json`
+  the project already had, the copy and every update add the listed entries once each. It is
+  committed and shared; personal overrides (such as `CLAUDE_CONTEXT_WINDOW` under `"env"`, for a
+  larger window) belong in `settings.local.json`.
 - `hooks/` and `skills/` — see each folder's own `CONTEXT.md`.
 - `syntek-media-agents.md` — how the other coding agents reach this folder: the read order they
   follow by hand, the model tiers, each client's setup and how to add a client later.

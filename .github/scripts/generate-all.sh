@@ -70,10 +70,11 @@
 #                        hand, which no lane offers, then the rest only where family-update did
 #                        NOT run or the copy took --skip-tasks (nine ElevenLabs asks, the two
 #                        voice remix run asks of D82, the Edit denies with the guide's, D84, the
-#                        seed's idleCompaction value, the family's asks and deny, the hooks
-#                        object's SessionStart entry and the guide guard's PreToolUse entry), the
-#                        data-root guard that no lane offers, and the permissions script's
-#                        --write line (D80); the ELEVENLABS_MCP_BASE_PATH line,
+#                        seed's idleCompaction and outputStyle values, the family's asks and
+#                        deny, the hooks object's SessionStart entry and the guide guard's
+#                        PreToolUse entry), the data-root guard that no lane offers, and the
+#                        permissions script's --write line (D80); the ELEVENLABS_MCP_BASE_PATH
+#                        line,
 #                        filter.lfs.required, the setup check, and the update command with -a,
 #                        run as uvx --python '>=3.14' copier (D81); item (7), where the user
 #                        guide starts (how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md),
@@ -184,7 +185,7 @@ sorted_csv() { tr ' ,' '\n\n' <<< "$1" | { grep -v '^$' || true; } | LC_ALL=C so
 # What DESIGN.md Section 2 says the render should record: the kind's defaults, then the
 # profile's answers on top. Lists are expected as their values sorted and joined by commas,
 # as shipped-brands.sh reads them (the order Copier keeps is not a promise). The family-shared
-# questions (D80, at syntek-author's v0.8.0 since 0.6.0, D81): a fresh copy, with no record,
+# questions (D80, at syntek-author's v0.9.1 since 0.7.0, D81): a fresh copy, with no record,
 # ticks all four clients, and stores binaries on the data root (external) unless syntek-author's
 # record says otherwise; over a fresh syntek-author render its record ticks all four and
 # stores externally too, so the client and store defaults that take it agree. AGENT_CLIENTS is

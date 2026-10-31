@@ -2,6 +2,7 @@
   "model": "opus",
   "autoCompactEnabled": false,
   "idleCompaction": false,
+  "outputStyle": "Concise",
   "permissions": {
     "allow": [
       "Bash(python3 toolkit/*.py *)",

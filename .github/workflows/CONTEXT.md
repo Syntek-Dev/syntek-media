@@ -39,7 +39,7 @@ project (DESIGN.md D11).
   Python `uvx` runs Copier on, and below 3.14 the vendored scripts' self-tests fail and the
   outside-link stages do nothing. `_common.sh` refuses an older one with exit 2.
 - Jobs 2 and 3 first clone syntek-author, at the tag in the workflow's `SYNTEK_AUTHOR_TAG` (the
-  release media vendors from, now `v0.8.0`, D85), into the runner's temporary folder with a
+  release media vendors from, now `v0.9.1`, D85), into the runner's temporary folder with a
   plain shell step and export `SYNTEK_AUTHOR_DIR`; when the clone fails they print a warning, and the scripts that need
   it report a named SKIP (DESIGN.md D27).
 - **syntek-author main (advisory)** runs `coexist-test.sh` against syntek-author's default

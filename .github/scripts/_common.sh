@@ -887,7 +887,7 @@ SM_CRASH_VERSION="v0.4.3"
 # coexist-test.sh check 22 can tell one from a family file media has never heard of. Since
 # D81 (0.6.0) it is empty: media vendors every file and block the tag lists, so a family file
 # a later tag adds fails check 22 until it is adopted.
-SM_FAMILY_RELEASE="v0.8.0"
+SM_FAMILY_RELEASE="v0.9.1"
 SM_FAMILY_MANIFEST="family-shared.json"
 SM_FAMILY_OWNER="syntek-media"
 # destination path · source in this repository · scope (blank: project, under template/). The
@@ -955,7 +955,7 @@ rules-web-tools|template/.claude/rules/syntek-media/06-global-rules.md|.claude/r
 EOF
 )
 # syntek-author's entries media takes later: file paths, then `block:<name>`. Empty since D81
-# (0.6.0), which vendors every entry of v0.8.0's manifest; kept, so a later adoption can defer.
+# (0.6.0), which vendors every entry of its tag's manifest; kept, so a later adoption can defer.
 SM_FAMILY_DEFERRED=""
 # The family files that are template-owned in every family template (syntek-author D49, D50):
 # updated by every update, so they take no _skip_if_exists or update-gated line. Every other
@@ -1034,8 +1034,9 @@ SM_SETTINGS_ASK=(
 )
 SM_SETTINGS_BANNED_KEYS="effortLevel ultracode enabledPlugins"   # and every disable* key
 # The seed's top-level values (DESIGN.md D13, D35; syntek-author D29): key=JSON value, each the
-# same in syntek-author's seed. idleCompaction joined autoCompactEnabled in 0.6.0 (D81).
-SM_SETTINGS_TOP=("autoCompactEnabled=false" "idleCompaction=false")
+# same in syntek-author's seed. idleCompaction joined autoCompactEnabled in 0.6.0 (D81), and
+# outputStyle, the family's Concise (syntek-author D60), in 0.7.0 (D13).
+SM_SETTINGS_TOP=("autoCompactEnabled=false" "idleCompaction=false" 'outputStyle="Concise"')
 # The family's rules in the same seed (DESIGN.md D13 as D80 amends it; syntek-author D54), after
 # media's own: the eight MCP asks in the family's order (Scrapling's six browser tools, then
 # code-review-graph's two that write), and the deny on embed_graph_tool, which --tools already
@@ -1053,7 +1054,7 @@ SM_SETTINGS_FAMILY_ASK=(
 )
 SM_SETTINGS_FAMILY_DENY=("mcp__code-review-graph__embed_graph_tool")
 # The seed's hooks key: syntek-author's seed's hooks object, byte for byte as JSON, at
-# SM_FAMILY_RELEASE (D80; since 0.6.0 its v0.8.0, D81, D84): four handoff-hook entries in the
+# SM_FAMILY_RELEASE (D80; since 0.7.0 its v0.9.1, D81, D84): four handoff-hook entries in the
 # silent `|| exit 0` form, the context-threshold handoff on UserPromptSubmit, the pre-compact
 # handoff on PreCompact (auto and manual) and on SessionStart (compact, `compacted`); then two
 # PreToolUse entries, the data-root guard and the guide guard (how-to-read-only.sh). Each finds
@@ -1090,14 +1091,14 @@ SM_UPDATE_REPORT_HEAD="▸ syntek-media update report"
 # filter.lfs.required and `git lfs install`; (5) the setup check; (6) the update command with
 # -a, run as `uvx --python '>=3.14' copier` since 0.6.0 (D3, D81), with Git's housekeeping off
 # (DESIGN.md Section 10); (7), since 0.6.0 (D84), where the user guide starts, that everything
-# under how-to/ is read-only, and media's update procedure, by its full folder path. Since
-# 0.5.0 (D13, D80) item 2 also gives the family's eight asks and its deny, from the same
-# lists shipped-seeds.sh check 12 holds the seed to, and the seed's
-# "hooks" object with its PreToolUse data-root guard, for a settings.json that syntek-author
-# did not seed; since 0.6.0 also "idleCompaction": false and the SessionStart entry. Item 1's
-# 0.5.0 sentence on coding-agent answers went with D81: the family questions block now takes
-# syntek-author's recorded clients itself. Since 0.6.0 (D81) item 2 gives the six allows by
-# hand, which no lane offers, the refresh data's entries only where the baseline task says
+# under how-to/ is read-only, and media's update procedure, by its full folder path. Since 0.5.0
+# (D13, D80) item 2 also gives the family's eight asks and its deny, from the same lists
+# shipped-seeds.sh check 12 holds the seed to, and the seed's "hooks" object with its PreToolUse
+# data-root guard, for a settings.json that syntek-author did not seed; since 0.6.0 also
+# "idleCompaction": false and the SessionStart entry, and since 0.7.0 "outputStyle": "Concise".
+# Item 1's 0.5.0 sentence on coding-agent answers went with D81: the family questions block now
+# takes syntek-author's recorded clients itself. Since 0.6.0 (D81) item 2 gives the six allows
+# by hand, which no lane offers, the refresh data's entries only where the baseline task says
 # family-update did NOT run (or the copy took --skip-tasks), and the data-root guard, which no
 # lane offers, for a settings file that lacks it.
 # Each entry is a fragment the copy output must carry, matched with whitespace collapsed and
@@ -1110,7 +1111,7 @@ SM_AFTER_COPY_LINES+=("${SM_SETTINGS_ALLOW[@]}")
 SM_AFTER_COPY_LINES+=("did NOT run" "--skip-tasks")
 SM_AFTER_COPY_LINES+=("${SM_SETTINGS_ASK[@]}")
 for _sm_x in "${SM_SETTINGS_DENY[@]}"; do [[ "$_sm_x" == Edit\(* ]] && SM_AFTER_COPY_LINES+=("$_sm_x"); done
-SM_AFTER_COPY_LINES+=('"idleCompaction": false')
+SM_AFTER_COPY_LINES+=('"idleCompaction": false' '"outputStyle": "Concise"')
 SM_AFTER_COPY_LINES+=("${SM_SETTINGS_FAMILY_ASK[@]}" "${SM_SETTINGS_FAMILY_DENY[@]}" '"hooks" object' "SessionStart" "PreToolUse"
                       "guide guard" "data-root guard" "no lane offers")
 SM_AFTER_COPY_LINES+=("python3 .claude/syntek-media-permissions.py --write")
@@ -1145,7 +1146,7 @@ SM_AUTHOR_GUIDE_WARNING="so this syntek-author is older than v0.6.0, which a com
 # syntek-author's, verbatim (the thirteen working-practice files and D84's fourteen); the hooks
 # are its refresh data's hooks object, verbatim (the four handoff-hook entries and the guide
 # guard, never the data-root guard, which names no script under .claude/hooks/); the denies and
-# asks are the seed's, the six allows apart (D13); the top-level values are the seed's two; the
+# asks are the seed's, the six allows apart (D13); the top-level values are the seed's three; the
 # mcp lane is syntek-author's, verbatim: two servers, five files at their keys, never
 # .claude/mcp_config.json (D76). "model" is never listed.
 SM_REFRESH_DATA="migrations/family-refresh.json"
@@ -2147,7 +2148,9 @@ if mode == "compare":
         if st(mr).get("hooks") != st(ar).get("hooks"):
             say(f"media's {rd} hooks are not the --author tree's, as parsed JSON: the hook entries both templates offer are the family's, "
                 "verbatim (DESIGN.md D81)")
-        for k in ("autoCompactEnabled", "idleCompaction"):
+        # Every top-level value either template's refresh data lists, so a value a later tag adds
+        # (outputStyle in v0.9.1, syntek-author D60) is caught, not only the ones media knew of.
+        for k in sorted({k for d in (st(mr), st(ar)) for k in d if k not in ("hooks", "permissions")}):
             if st(mr).get(k, "absent") != st(ar).get(k, "absent"):
                 say(f"media's {rd} lists {k} {json.dumps(st(mr).get(k, 'absent'))}, the --author tree's {json.dumps(st(ar).get(k, 'absent'))} (DESIGN.md D81)")
         own_ask = [a for a in E["SMF_MEDIA_ASK"].splitlines() if a]
@@ -2288,7 +2291,7 @@ EOF
     for p in "${SM_SETTINGS_ASK[@]}"; do printf '    ask: %s\n' "$p"; done
     for p in "${SM_SETTINGS_DENY[@]}"; do [[ "$p" == Edit\(* ]] && printf '    deny: %s\n' "$p"; done
     printf '  Where syntek-author v0.7.0 or later did not seed it, the family entries too:\n'
-    printf '    top level: "idleCompaction": false\n'
+    printf '    top level: "idleCompaction": false, "outputStyle": "Concise"\n'
     for p in "${SM_SETTINGS_FAMILY_ASK[@]}"; do printf '    ask: %s\n' "$p"; done
     for p in "${SM_SETTINGS_FAMILY_DENY[@]}"; do printf '    deny: %s\n' "$p"; done
     printf '    and the seed%ss "hooks" object, its SessionStart entry and the guide guard%ss PreToolUse entry.\n' "$q" "$q"
