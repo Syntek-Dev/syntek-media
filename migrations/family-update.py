@@ -272,8 +272,12 @@ SAFE = re.compile(r'[A-Za-z0-9._/@+-]+')
 HOOK_SCRIPT = re.compile(r'\.claude/hooks/([A-Za-z0-9._-]+)')
 SETTINGS = '.claude/settings.json'
 REFRESH_DATA = 'migrations/family-refresh.json'
-# Who relies on a top-level value, for the line that reports an owner's other value.
-SETTING_USERS = {'autoCompactEnabled': 'the handoff hooks', 'idleCompaction': 'the handoff hooks'}
+# Who relies on a top-level value, for the line that reports an owner's other value: the
+# subject, its verb and the pronoun that ends the line ('... to use them').
+SETTING_USERS = {'autoCompactEnabled': ('the handoff hooks', 'assume', 'them'),
+                 'idleCompaction': ('the handoff hooks', 'assume', 'them'),
+                 'outputStyle': ("the template's output style", 'is', 'it')}
+SETTING_USERS_DEFAULT = ('the shared files', 'assume', 'them')
 # An MCP rule of .claude/settings.json, as the permissions script reads one: mcp__<server>__<tool>.
 MCP_RULE = re.compile(r'mcp__([A-Za-z0-9_-]+?)__([A-Za-z0-9_-]+)')
 MCP_NAME = re.compile(r'[A-Za-z0-9_-]+')
@@ -1418,9 +1422,10 @@ def settings_merge(data, N, offered, skip):
 
 def kept_line(item, value):
     """The one line for an owner's top-level value other than the one offered."""
-    return '▸ kept your %s in %s: %s assume %s; set it to %s in %s to use them.' % (
-        describe((item[0], item[1], value)), SETTINGS, SETTING_USERS.get(item[1], 'the shared files'),
-        json.dumps(item[2]), json.dumps(item[2]), SETTINGS)
+    who, verb, them = SETTING_USERS.get(item[1], SETTING_USERS_DEFAULT)
+    offered = json.dumps(item[2], ensure_ascii=False)
+    return '▸ kept your %s in %s: %s %s %s; set it to %s in %s to use %s.' % (
+        describe((item[0], item[1], value)), SETTINGS, who, verb, offered, offered, SETTINGS, them)
 
 
 HELD_WHY = 'because a committed version of the file held it (you removed it)'
@@ -3023,6 +3028,44 @@ def setting_probe(base, check):
               'top-level idle-true: an owner\'s idleCompaction true is kept and the line names the handoff hooks (%r)' % lines)
         again, _ = settings_merge({'settings': {'idleCompaction': False}}, N, seen, set())
         check(not again, 'top-level idle-true: reported once, never again (%r)' % again)
+        os.chdir(old)
+        # A string value (outputStyle): added where absent, an owner's other string kept and
+        # reported once in its own words, never added back once removed.
+        style = {'settings': {'outputStyle': 'Concise'}}
+        sline = ("the template's output style is \"Concise\"; set it to \"Concise\" in .claude/settings.json "
+                 'to use it.')
+        N, _ = case('style-add', '{\n  "model": "opus"\n}\n', {'model': 'opus', 'outputStyle': 'Concise'})
+        lines, seen = settings_merge(style, N, None, set())
+        want = '{\n  "model": "opus",\n  "outputStyle": "Concise"\n}\n'
+        check(open(SETTINGS).read() == want and len(lines) == 1 and '"outputStyle": "Concise"' in lines[0]
+              and seen == {'setting outputStyle'},
+              'top-level style-add: a string value is added where the key is absent (%r)' % lines)
+        with open(SETTINGS, 'w', encoding='utf-8', newline='') as f:
+            f.write('{\n  "model": "opus"\n}\n')
+        again, _ = settings_merge(style, N, seen, set())
+        check(not again and 'outputStyle' not in open(SETTINGS).read(),
+              'top-level style-add: a string value the owner removed is never added back (%r)' % again)
+        os.chdir(old)
+        N, mtime = case('style-other', '{\n  "outputStyle": "Explanatory"\n}\n', {'outputStyle': 'Concise'})
+        lines, seen = settings_merge(style, N, None, set())
+        check(lines == ['▸ kept your "outputStyle": "Explanatory" in %s: %s' % (SETTINGS, sline)]
+              and seen == {'setting outputStyle'} and os.stat(SETTINGS).st_mtime_ns == mtime,
+              'top-level style-other: an owner\'s other style is kept and named in its own words (%r)' % lines)
+        again, _ = settings_merge(style, N, seen, set())
+        check(not again, 'top-level style-other: reported once, never again (%r)' % again)
+        os.chdir(old)
+        N, _ = case('style-history', '{\n  "model": "opus"\n}\n', {'outputStyle': 'Concise'},
+                    history=('{\n  "outputStyle": "Concise"\n}\n',))
+        lines, seen = settings_merge(style, N, None, set())
+        check(lines == ['▸ not added to %s, %s: the key "outputStyle"' % (SETTINGS, HELD_WHY)]
+              and 'outputStyle' not in open(SETTINGS).read() and 'setting outputStyle' in seen,
+              'top-level style-history: a style a committed settings.json held is not re-added (%r)' % lines)
+        os.chdir(old)
+        N, mtime = case('style-jsonc', '{\n  // mine\n  "outputStyle": "Learning"\n}\n', {'outputStyle': 'Concise'})
+        lines, seen = settings_merge(style, N, None, set())
+        check(len(lines) == 1 and lines[0].startswith('▸ kept your "outputStyle": "Learning"') and lines[0].endswith(sline)
+              and os.stat(SETTINGS).st_mtime_ns == mtime,
+              'top-level style-jsonc: a string the text holds is read and reported once (%r)' % lines)
         os.chdir(old)
         # No record: a committed settings.json that held the key means the owner removed it.
         N, _ = case('history', '{\n  "model": "opus"\n}\n', history=('{\n  "autoCompactEnabled": false\n}\n',))

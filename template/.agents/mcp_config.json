@@ -23,9 +23,9 @@
         "--from",
         "scrapling[ai]==0.4.15",
         "--with",
-        "playwright==1.63.0",
+        "playwright==1.64.0",
         "--with",
-        "patchright==1.63.0",
+        "patchright==1.64.3",
         "scrapling",
         "mcp"
       ]

@@ -126,8 +126,20 @@ Subcommands (exit 0 done, 1 a check failed, 2 it cannot act):
                        repo, only where the root and the repository contain one another or a
                        marker sits above it), and the root never makes it exit 2
   pull [GLOB]          copy listed files into the work tree, verifying each; never replaces
-  plan [--copy]        tracked binaries, their destinations, roles and conflicts; --copy files
-                       them (a copy: never a move, never an untrack)
+  plan [--copy] [--issue-statuses "S ..."]
+                       tracked binaries, their destinations, roles and conflicts; --copy files
+                       those with a role (a copy: never a move, never an untrack). The role
+                       comes from whole words of the name (signed, countersigned, executed:
+                       signed; receipt, remittance, statement but not 'statement of work',
+                       received: received, never for a copy the house build made) or a
+                       reading note beside it (ingested); beside a
+                       same-stem .tex or .md, only from evidence: issued for a .pdf the house
+                       build made (producer xdvipdfmx or XeTeX) from a source at an issuing
+                       status (--issue-statuses, default final), with no digital signature
+                       (which makes it signed) and, where Git holds both, first committed no
+                       earlier than its source. A row it cannot prove shows role ? and why, is
+                       never filed, and makes plan exit 1, as a conflict does. A file with no
+                       source beside it is proposed as asset (photos) or archive
   check-names [PATH...]   Windows-safe names (and OneDrive's, under that provider)
   guard                the PreToolUse hook (below)
   --self-test, --help
@@ -2317,20 +2329,236 @@ def cmd_pull(ctx, args):
     return 2 if left else 0
 
 
-def guess_role(ctx, rel, kind):
-    """The role plan proposes: from the file's own name and its neighbours, never its folder."""
+# Whole words of a file's name that propose a role: the name split on '-', '_', '.' and spaces,
+# any case, so 'designer-brief' matches nothing. 'statement' before 'of work' is the house's
+# statement of work, never a received statement.
+SIGNED_WORDS = ("signed", "countersigned", "executed")
+RECEIVED_WORDS = ("receipt", "remittance", "statement", "received")
+ISSUE_STATUSES = ("final",)
+# What the house build writes as a PDF's producer: XeLaTeX hands its output to xdvipdfmx, on
+# both routes (a .tex through xelatex, a .md through Pandoc with pdf-engine xelatex).
+PDF_STRING_MAX = 4096  # a PDF string longer than this is not a producer name
+HOUSE_PRODUCERS = ("xdvipdfmx", "xetex")
+PDF_WINDOW = 256 * 1024
+NOT_SHOWN = "a Word copy beside its source cannot be shown to be the issued one"
+
+
+def name_role(base):
+    """signed or received from whole words of a file's name, else None."""
+    words = [w for w in re.split(r"[-_.\s]+", base.casefold()) if w]
+    if any(w in SIGNED_WORDS for w in words):
+        return "signed"
+    for i, w in enumerate(words):
+        if w in RECEIVED_WORDS and not (w == "statement" and words[i + 1:i + 3] == ["of", "work"]):
+            return "received"
+    return None
+
+
+def source_status(path):
+    """A source's status as make reads it: a .tex's '% status:' line in its leading block of %
+    lines; a .md's top-level status key in its frontmatter (quotes and a trailing comment dropped)."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            lines = [line.rstrip("\n").removesuffix("\r") for line in f]
+    except OSError:
+        return ""
+    if path.endswith(".tex"):
+        for line in lines:
+            if not line.startswith("%"):
+                return ""
+            m = re.match(r"%[ \t]*status:[ \t]*(.*)$", line)
+            if m:
+                return m.group(1).rstrip()
+        return ""
+    if not lines or not re.fullmatch(r"---[ \t]*", lines[0]):
+        return ""
+    for line in lines[1:]:
+        if re.fullmatch(r"(---|\.\.\.)[ \t]*", line):
+            return ""
+        if line.startswith("status:"):
+            v = re.sub(r"[ \t]+#.*$", "", line[len("status:"):].lstrip(" \t"))
+            return v.replace('"', "").replace("'", "").rstrip()
+    return ""
+
+
+def pdf_text(raw):
+    """A PDF text string's bytes as text: UTF-16 after its byte-order mark, else PDFDocEncoding
+    (read as Latin-1, which agrees for every name a producer uses)."""
+    if raw.startswith(b"\xfe\xff"):
+        return raw[2:].decode("utf-16-be", "replace")
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw[3:].decode("utf-8", "replace")
+    return raw.decode("latin-1")
+
+
+def pdf_string(data, i):
+    """The literal (...) or hex <...> string starting at data[i], as text, or None."""
+    limit = min(len(data), i + PDF_STRING_MAX)
+    if data[i:i + 1] == b"<":
+        end = data.find(b">", i, limit)
+        hexed = re.sub(rb"\s", b"", data[i + 1:end]) if end > 0 else b"!"
+        if not re.fullmatch(rb"[0-9A-Fa-f]*", hexed):
+            return None
+        return pdf_text(bytes.fromhex((hexed + b"0" * (len(hexed) % 2)).decode("ascii")))
+    if data[i:i + 1] != b"(":
+        return None
+    out, depth, j = bytearray(), 1, i + 1
+    escapes = {ord("n"): b"\n", ord("r"): b"\r", ord("t"): b"\t", ord("b"): b"\b", ord("f"): b"\f"}
+    while j < limit:
+        c = data[j]
+        if c == 0x5C:  # a backslash
+            j += 1
+            if j >= limit:
+                break
+            e = data[j]
+            if e in escapes:
+                out += escapes[e]
+            elif 0x30 <= e <= 0x37:
+                k = j
+                while k < limit and k < j + 3 and 0x30 <= data[k] <= 0x37:
+                    k += 1
+                out.append(int(data[j:k], 8) & 0xFF)
+                j = k
+                continue
+            elif e in (0x0A, 0x0D):
+                if e == 0x0D and data[j + 1:j + 2] == b"\n":
+                    j += 1
+            else:
+                out.append(e)
+        elif c == 0x28:
+            depth += 1
+            out.append(c)
+        elif c == 0x29:
+            depth -= 1
+            if not depth:
+                return pdf_text(bytes(out))
+            out.append(c)
+        else:
+            out.append(c)
+        j += 1
+    return None
+
+
+def producers_in(data):
+    found = []
+    for m in re.finditer(rb"/Producer\s*", data):
+        value = pdf_string(data, m.end())
+        if value is not None:
+            found.append(value)
+    for m in re.finditer(rb"<pdf:Producer>([^<]*)</pdf:Producer>|pdf:Producer\s*=\s*\"([^\"]*)\"", data):
+        found.append((m.group(1) or m.group(2) or b"").decode("utf-8", "replace"))
+    return found
+
+
+def object_streams(data):
+    """The decompressed bytes of each Flate object stream that starts and ends inside data."""
+    try:
+        import zlib
+    except ImportError:  # a Python built without zlib reads only uncompressed objects
+        return
+    for m in re.finditer(rb"/Type\s*/ObjStm(?![A-Za-z0-9])", data):
+        head = data.rfind(b"obj", 0, m.start())
+        s = data.find(b"stream", m.end())
+        if head < 0 or s < 0:
+            continue
+        dictionary = data[head:s]
+        if b"/FlateDecode" not in dictionary or b"/DecodeParms" in dictionary:
+            continue
+        start = s + 6
+        start += 2 if data[start:start + 2] == b"\r\n" else 1 if data[start:start + 1] in (b"\n", b"\r") else 0
+        end = data.find(b"endstream", start)
+        if end < 0:
+            continue
+        try:
+            yield zlib.decompressobj().decompress(data[start:end], 4 * 1024 * 1024)
+        except zlib.error:
+            continue
+
+
+def pdf_evidence(path):
+    """(producers, signed): the producers a PDF names in its first and last PDF_WINDOW bytes
+    (Info dictionary, compressed object streams and XMP), and whether it carries a digital
+    signature (a /ByteRange array or a /FT /Sig field; /Type is optional there)."""
+    try:
+        size = os.path.getsize(path)
+        with open(path, "rb") as f:
+            if size <= 2 * PDF_WINDOW:
+                blobs = [f.read()]
+            else:
+                head = f.read(PDF_WINDOW)
+                f.seek(size - PDF_WINDOW)
+                blobs = [head, f.read()]
+    except OSError:
+        return [], False
+    producers, signed = [], False
+    for blob in blobs:
+        producers += producers_in(blob)
+        for inner in object_streams(blob):
+            producers += producers_in(inner)
+        # /Type is optional in a signature dictionary; its /ByteRange array, or a /FT /Sig field, is not.
+        if re.search(rb"/ByteRange\s*\[", blob) or re.search(rb"/FT\s*/Sig(?![A-Za-z0-9])", blob):
+            signed = True
+    return producers, signed
+
+
+def first_added(ctx, rel):
+    """When Git first holds rel (the committer time of its earliest adding commit), or None."""
+    out = git_ok(ctx, "log", "--diff-filter=A", "--format=%ct", "--", ":(literal)" + rel)
+    times = [int(t) for t in (out or b"").split() if t.isdigit()]
+    return min(times) if times else None
+
+
+def issued_proof(ctx, rel, source, statuses):
+    """(role, reason, house): house says the producer is the house build. issued only on evidence: a .pdf whose producer is the house build, with no
+    digital signature, beside a same-stem source at an issuing status, and (where Git holds both)
+    first committed no earlier than that source. A signature makes it signed."""
+    if not rel.lower().endswith(".pdf"):
+        return None, NOT_SHOWN, False
+    producers, signed = pdf_evidence(str(ctx.project / rel))
+    if signed:
+        return "signed", "", False
+    house = any(h in p.casefold() for p in producers for h in HOUSE_PRODUCERS)
+    status = source_status(str(ctx.project / source))
+    if status not in statuses:
+        return None, (f"its source is at status '{status or 'none'}', and only {' '.join(statuses)} issues"), house
+    if not house:
+        named = next((p.strip() for p in producers if p.strip()), "")
+        return None, (f"its producer is '{named}', not the house build (XeLaTeX through xdvipdfmx)" if named
+                      else "it names no producer, so the house build cannot be shown"), house
+    made, wrote = first_added(ctx, rel), first_added(ctx, source)
+    if made is not None and wrote is not None and made < wrote:
+        return None, "Git held it before its source, so it was not built from it", house
+    return "issued", "", house
+
+
+def guess_role(ctx, rel, kind, statuses=ISSUE_STATUSES):
+    """(role, source, reason): the role plan proposes, from the file's own name, its neighbours and
+    its own bytes, never its folder. Beside a same-stem source a role is proposed only on evidence:
+    None, with the reason, where it cannot be shown."""
     stem, ext = os.path.splitext(rel)
     base = os.path.basename(stem)
     near = (ctx.project / rel).parent
-    if base.endswith("-signed"):
-        return "signed", ""
+    by_name = name_role(base)
+    if by_name == "signed":
+        return "signed", "", ""
     if (near / (os.path.basename(rel) + ".reading.md")).is_file() or (near / (base + ".reading.md")).is_file():
-        return "ingested", ""
+        return "ingested", "", ""
     if ext.lower() in (".pdf", ".docx"):
         for origin in (".tex", ".md"):
             if (near / (base + origin)).is_file():
-                return "issued", stem + origin
-    return ("asset" if kind == "photos" else "archive"), ""
+                role, reason, house = issued_proof(ctx, rel, stem + origin, statuses)
+                if role == "issued":
+                    return role, stem + origin, ""
+                if role:
+                    return role, "", ""
+                # A word of the name never outweighs the house build: a house copy that fails the
+                # proof (a receipt at draft) is the author's to name, never received.
+                if by_name and not house:
+                    return by_name, "", ""
+                return None, stem + origin, reason
+    if by_name:
+        return by_name, "", ""
+    return ("asset" if kind == "photos" else "archive"), "", ""
 
 
 def cmd_plan(ctx, args):
@@ -2348,7 +2576,8 @@ def cmd_plan(ctx, args):
     modified = set(git_files(ctx, paths, "--modified") or []) if paths else set()
     current = {r.path: r for r in rows if r.state == "current"}
     planned = []
-    conflicts = done = 0
+    conflicts = done = unknown = 0
+    statuses = tuple((args.issue_statuses or "").split()) or ISSUE_STATUSES
     for rel in sorted(p for p in tracked if is_binary(p) and ctx.judged(p, refused)):
         src = os.path.join(str(ctx.project), *rel.split("/"))
         if not os.path.isfile(src):
@@ -2376,9 +2605,14 @@ def cmd_plan(ctx, args):
             say(f"conflict: {rel}: {dest} already exists " + ("with the same bytes but no row: compare, then file it by hand"
                                                               if same else "with other bytes"))
         else:
-            role, source = guess_role(ctx, rel, kind)
-            extra = f", source {source}" if source else ""
+            role, source, reason = guess_role(ctx, rel, kind, statuses)
             note = " (it has uncommitted changes: the copy is of the work-tree file)" if rel in modified else ""
+            if role is None:
+                say(f"plan: {rel} -> {dest} (role ?, beside {source}: {reason}, {human(os.path.getsize(src))}){note}; "
+                    "choose its role and file it with add --role: plan never files a row without one")
+                unknown += 1
+                continue
+            extra = f", source {source}" if source else ""
             say(f"plan: {rel} -> {dest} (role {role}{extra}, {human(os.path.getsize(src))}){note}")
             planned.append((src, rel, folder, role, source))
             continue
@@ -2390,11 +2624,11 @@ def cmd_plan(ctx, args):
                 failed += 1
             else:
                 copied += 1
-    say(f"plan: {len(planned)} to file, {done} filed already, {conflicts} conflicts"
+    say(f"plan: {len(planned)} to file, {unknown} need a role, {done} filed already, {conflicts} conflicts"
         + (f"; copied {copied}, {failed} failed" if args.copy else "; run plan --copy to file them")
         + ". Nothing is moved or untracked: verify the data root on every machine before you untrack anything"
         + (f" (folders left alone {len(left)})" if left else ""))
-    if conflicts or failed:
+    if conflicts or failed or unknown:
         return 1
     return 2 if left else 0
 
@@ -2499,6 +2733,7 @@ def build_parser():
     q.add_argument("glob", nargs="?")
     q = sub.add_parser("plan")
     q.add_argument("--copy", action="store_true")
+    q.add_argument("--issue-statuses", default=None)
     q = sub.add_parser("check-names")
     q.add_argument("paths", nargs="*")
     return p
@@ -3469,19 +3704,108 @@ def self_test_projects(check, base, json, tomllib):
         code, out, _ = run(["plan"], pp, env)
         check("plan: lists each tracked binary with its destination and proposed role",
               "plan: notes/src/deed-signed.pdf -> " in out and "(role signed," in out
-              and "(role issued, source notes/src/memo.md," in out and "(role ingested," in out
-              and "(role asset," in out and "(role archive," in out)
+              and "(role ingested," in out and "(role asset," in out and "(role archive," in out)
+        check("plan: a PDF beside a source with no proof of the house build is role ?, with why and what to do",
+              "plan: notes/src/memo.pdf -> " in out and "(role ?, beside notes/src/memo.md: its source is at status 'none'" in out
+              and "choose its role and file it with add --role" in out and "role issued" not in out)
         check("plan: an existing target with other bytes is a conflict (exit 1)",
               code == 1 and "conflict: notes/src/clash.pdf" in out and "with other bytes" in out)
         taken.unlink()
         code, out, _ = run(["plan", "--copy"], pp, env)
         prow = tomllib.loads((pp / "notes/src" / MANIFEST).read_text(encoding="utf-8"))["file"]
         listed_now = subprocess.run(["git", "ls-files"], cwd=pp, capture_output=True, text=True, check=False).stdout
-        check("plan --copy: files every one (exit 0), copy only", code == 0 and len(prow) == 6
-              and (root / "business/photos/demo-project/notes/src/photo.png").is_file())
+        check("plan --copy: files every one with a role, copy only, and never a role ? row (exit 1)",
+              code == 1 and len(prow) == 5 and "notes/src/memo.pdf" not in [r["path"] for r in prow]
+              and "plan: 5 to file, 1 need a role," in out
+              and (root / "business/photos/demo-project/notes/src/photo.png").is_file()
+              and not (root / "business/docs/demo-project/notes/src/memo.pdf").exists())
         check("plan --copy: nothing is untracked or moved", "notes/src/memo.pdf" in listed_now and (pp / "notes/src/memo.pdf").is_file())
         code, out, _ = run(["plan"], pp, env)
-        check("plan: a second run finds them filed", code == 0 and "6 filed already" in out)
+        check("plan: a second run finds them filed, and still names the one that needs a role",
+              code == 1 and "5 filed already" in out and "1 need a role" in out)
+
+        # plan proposes issued only on evidence (the house producer, an issuing status, no
+        # signature, not committed before its source), and signed or received from whole words.
+        def pdf(producer=b"", extra=b"", objstm=False):
+            info = b"<< /Producer " + producer + b" >>" if producer else b"<< >>"
+            if objstm:
+                import zlib
+                packed = zlib.compress(b"2 0 " + info)
+                body = (b"5 0 obj\n<< /Type /ObjStm /N 1 /First 4 /Filter /FlateDecode /Length "
+                        + str(len(packed)).encode() + b" >>\nstream\n" + packed + b"\nendstream\nendobj\n")
+            else:
+                body = b"2 0 obj\n" + info + b"\nendobj\n"
+            return b"%PDF-1.7\n" + body + extra + b"%%EOF\n"
+        house = b"(xdvipdfmx \\(2025\\))"
+        final_md, final_tex = "---\ntitle: x\nstatus: final # issued\n---\nbody\n", "% status: final\n\\begin{document}\n"
+        root, env = own_root("root-plan-proof")
+        pq = project({ONE: EXTERNAL})
+        cases = {
+            "house.pdf": (pdf(house), "house.md", final_md),
+            "packed.pdf": (pdf(house, objstm=True), "packed.tex", final_tex),
+            "wide.pdf": (pdf(b"<FEFF" + "xdvipdfmx".encode("utf-16-be").hex().encode() + b">"), "wide.tex", final_tex),
+            "scanner.pdf": (pdf(b"(Canon iR-ADV C5535)"), "scanner.md", final_md),
+            "drafted.pdf": (pdf(house), "drafted.md", "---\nstatus: 'draft'\n---\n"),
+            "approved.pdf": (pdf(house), "approved.tex", "% status: approved\n"),
+            "sealed.pdf": (pdf(house, b"7 0 obj\n<< /Type /Sig /Filter /Adobe.PPKLite /ByteRange [0 10 20 30] >>\nendobj\n"),
+                           "sealed.md", final_md),
+            "contract-countersigned.pdf": (pdf(), "contract-countersigned.md", final_md),
+            "acme-receipt-2026-03.pdf": (pdf(), "acme-receipt-2026-03.md", final_md),
+            "receipt-2026-001.pdf": (pdf(house), "receipt-2026-001.tex", final_tex),
+            "receipt-2026-002.pdf": (pdf(house), "receipt-2026-002.tex", "% status: draft\n"),
+            "seal-untyped.pdf": (pdf(house, b"7 0 obj\n<< /Filter /Adobe.PPKLite /SubFilter /adbe.pkcs7.detached "
+                                       b"/ByteRange [0 10 20 30] /Contents <00> >>\nendobj\n"), "seal-untyped.md", final_md),
+            "unclosed.pdf": (pdf(b"(" + b"x" * 64) + b"/Producer (" * 4000, "unclosed.md", final_md),
+            "statement-of-work-acme.pdf": (pdf(), "statement-of-work-acme.md", final_md),
+            "designer-brief.pdf": (pdf(), "designer-brief.md", final_md),
+            "letter.docx": (b"PK docx", "letter.md", final_md),
+            "signed-nda.pdf": (pdf(), None, None),
+        }
+        for name, (data, source, text) in cases.items():
+            (pq / "notes/src" / name).write_bytes(data)
+            if source:
+                (pq / "notes/src" / source).write_text(text, encoding="utf-8")
+        git(pq, "add", "-A")
+
+        def role_of(out, name):
+            line = next((x for x in out.splitlines() if x.startswith(f"plan: notes/src/{name} -> ")), "")
+            m = re.search(r"\(role (\S+?)[,)]", line)
+            return m.group(1) if m else None
+        code, out, _ = run(["plan"], pq, env)
+        want = {"house.pdf": "issued", "packed.pdf": "issued", "wide.pdf": "issued", "scanner.pdf": "?",
+                "drafted.pdf": "?", "approved.pdf": "?", "sealed.pdf": "signed", "contract-countersigned.pdf": "signed",
+                "acme-receipt-2026-03.pdf": "received", "receipt-2026-001.pdf": "issued", "receipt-2026-002.pdf": "?",
+                "seal-untyped.pdf": "signed", "unclosed.pdf": "?",
+                "statement-of-work-acme.pdf": "?", "designer-brief.pdf": "?", "letter.docx": "?", "signed-nda.pdf": "signed"}
+        got = {name: role_of(out, name) for name in want}
+        check("plan: issued only for the house build at an issuing status; a signature or a whole word of the "
+              "name makes it signed or received; the rest are role ? (exit 1)",
+              code == 1 and got == want and "(role issued, source notes/src/house.md," in out
+              and "its producer is 'Canon iR-ADV C5535', not the house build" in out
+              and "its source is at status 'draft', and only final issues" in out
+              and "beside notes/src/letter.md: a Word copy beside its source cannot be shown" in out
+              and "plan: 9 to file, 8 need a role," in out)
+        code, out, _ = run(["plan", "--issue-statuses", "final approved"], pq, env)
+        check("plan --issue-statuses: a source at another issuing status proves the house build issued",
+              role_of(out, "approved.pdf") == "issued" and role_of(out, "drafted.pdf") == "?")
+        code, out, _ = run(["plan", "--copy"], pq, env)
+        qrow = {r["path"]: r["role"] for r in tomllib.loads((pq / "notes/src" / MANIFEST).read_text(encoding="utf-8"))["file"]}
+        check("plan --copy: files the rows with a role and none without, reports them and exits 1",
+              code == 1 and len(qrow) == 9 and qrow["notes/src/house.pdf"] == "issued"
+              and qrow["notes/src/sealed.pdf"] == "signed" and "notes/src/scanner.pdf" not in qrow
+              and "plan: 9 to file, 8 need a role," in out and "copied 9, 0 failed" in out)
+        pr = project({ONE: EXTERNAL})
+        (pr / "notes/src/early.pdf").write_bytes(pdf(house))
+        git(pr, "add", "-A")
+        dated = dict(os.environ, GIT_AUTHOR_DATE="2026-01-01T00:00:00Z", GIT_COMMITTER_DATE="2026-01-01T00:00:00Z")
+        subprocess.run(["git", "-c", "user.name=Self Test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "pdf"],
+                       cwd=pr, check=True, capture_output=True, env=dated)
+        (pr / "notes/src/early.md").write_text(final_md, encoding="utf-8")
+        git(pr, "add", "-A")
+        git(pr, "-c", "user.name=Self Test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "source")
+        code, out, _ = run(["plan"], pr, env)
+        check("plan: a house-built PDF Git held before its source is role ?",
+              code == 1 and role_of(out, "early.pdf") == "?" and "Git held it before its source" in out)
 
         # ── The guard as the seed's hook command runs it ──
         if shutil.which("bash"):

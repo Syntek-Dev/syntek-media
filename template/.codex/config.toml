@@ -34,7 +34,7 @@ approval_mode = "prompt"
 
 [mcp_servers.scrapling]
 command = 'uvx'
-args = ['--from', 'scrapling[ai]==0.4.15', '--with', 'playwright==1.63.0', '--with', 'patchright==1.63.0', 'scrapling', 'mcp']
+args = ['--from', 'scrapling[ai]==0.4.15', '--with', 'playwright==1.64.0', '--with', 'patchright==1.64.3', 'scrapling', 'mcp']
 
 [mcp_servers.scrapling.tools.stealthy_fetch]
 approval_mode = "prompt"

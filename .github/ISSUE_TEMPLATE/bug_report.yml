@@ -119,7 +119,7 @@ body:
     attributes:
       label: syntek-author version
       description: "`_commit` in `.copier-answers.syntek-author.yml`, where the project has one."
-      placeholder: v0.8.0
+      placeholder: v0.9.1
     validations:
       required: false
 

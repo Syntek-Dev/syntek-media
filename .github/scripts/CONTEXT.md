@@ -60,7 +60,7 @@ Grouped by what each script reads:
   the link's target, each block's markers, bytes and sha256, and `rules-web-tools`'s
   `destination`), so that syntek-author's `family-shared.sh --sibling` can read it too.
   Today the set is 43 files and four blocks ('questions', 'migrations', 'update' and
-  'rules-web-tools') from syntek-author's `v0.8.0` tag (`SM_FAMILY_RELEASE`).
+  'rules-web-tools') from syntek-author's `v0.9.1` tag (`SM_FAMILY_RELEASE`).
   `shipped-seeds.sh --write-manifest` alone writes it, after a re-vendor; `shipped-seeds.sh`
   checks 21–27 hold the vendored files, the four blocks and the renders to it, and
   `coexist-test.sh` check 22 holds it, entry by entry, to the `--author` tree's own manifest (in

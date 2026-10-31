@@ -23,7 +23,7 @@
 #                    templates holds one set of bytes whichever comes first. The root
 #                    family-shared.json records them in the family's format, and checks 21–27
 #                    hold the files, the four blocks and the renders to that record (since
-#                    0.6.0 forty-three files from syntek-author's v0.8.0, D81, D84).
+#                    0.6.0 forty-three files, since 0.7.0 from syntek-author's v0.9.1, D81, D84).
 #
 #                    Thirty-two checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
@@ -64,12 +64,13 @@
 #                         production/src/scenes/ (D64): a piece's words, mouth cues, cue index or
 #                         scene code left there would ship.
 #                     12. .claude/settings.json breaks DESIGN.md D13: model opus,
-#                         autoCompactEnabled false and, since 0.6.0, idleCompaction false (D81);
+#                         autoCompactEnabled false, since 0.6.0 idleCompaction false (D81) and,
+#                         since 0.7.0, outputStyle Concise (syntek-author D60);
 #                         exactly the three denies, the guide's Edit(/how-to/**) (D84) and the
 #                         family's embed_graph_tool deny, in that order, the six allows, the nine
 #                         ElevenLabs asks, the two voice remix run asks (D82) and the family's
 #                         eight MCP asks, those eight in the family's order (D80); a hooks key
-#                         equal, as parsed JSON, to syntek-author's v0.8.0 seed's hooks object
+#                         equal, as parsed JSON, to syntek-author's v0.9.1 seed's hooks object
 #                         (the four handoff-hook entries, SessionStart compact among them, then
 #                         the data-root guard and the guide guard: D80, D81, D84); and no
 #                         owner-specific key (effortLevel, ultracode, enabledPlugins, disable*).
@@ -755,7 +756,7 @@ for kind, env in (("deny", "SR_DENY"), ("ask", "SR_ASK")):
     # holds the seed to, so a fault in the seed itself stays check 12's alone.
     if set(have) == set(want) and have != want:
         say(f"lists its {kind} rules out of D13's order, or one twice: they are listed once each, in the seed's order (DESIGN.md D13, D81)")
-# Top-level values: exactly the seed's two, never "model".
+# Top-level values: exactly the seed's three, never "model".
 want_top = {}
 for kv in [t for t in E["SR_TOP"].splitlines() if t]:
     k, v = kv.split("=", 1)
@@ -764,7 +765,7 @@ for k in sorted(settings):
     if k in ("hooks", "permissions"):
         continue
     if k not in want_top:
-        why = "the model is the owner's to choose" if k == "model" else "only the two compaction values are listed"
+        why = "the model is the owner's to choose" if k == "model" else "only the two compaction values and the output style are listed"
         say(f"lists the top-level value {k}, which D81 never offers ({why}; DESIGN.md D81)")
     elif settings[k] != want_top[k]:
         say(f"lists {k} as {json.dumps(settings[k])}, not {json.dumps(want_top[k])}, the value the seed holds (DESIGN.md D13, D81)")
@@ -825,9 +826,10 @@ if data.get("model") != "opus":
 for kv in [t for t in os.environ["SM_TOP"].split("\n") if t]:
     key, val = kv.split("=", 1)
     if data.get(key, "absent") != json.loads(val):
-        print(f"{key} is not {val} — hand off, never compact (DESIGN.md D13, D35, D81)")
+        why = "the family's output style (DESIGN.md D13; syntek-author D60)" if key == "outputStyle" else "hand off, never compact (DESIGN.md D13, D35, D81)"
+        print(f"{key} is not {val} — {why}")
 if data.get("hooks") != json.loads(os.environ["SM_HOOKS"]):
-    print("hooks are not exactly syntek-author's v0.8.0 seed's hooks object — the four handoff-hook entries (UserPromptSubmit, "
+    print("hooks are not exactly syntek-author's v0.9.1 seed's hooks object — the four handoff-hook entries (UserPromptSubmit, "
           "PreCompact auto and manual, SessionStart compact), then the data-root guard and the guide guard — as parsed JSON "
           "(DESIGN.md D13, D35, D80, D81, D84)")
 for k in data:
@@ -1152,7 +1154,7 @@ PYSTUB
     for s in "${SM_MEMORY_H2S[@]}"; do printf '## %s\n\n_No entries yet._\n\n' "$s"; done; } > "$t/.claude/MEMORY.md"
   printf '{"mcpServers": {}}\n' > "$t/.mcp.json"
   {
-    printf '{\n  "model": "opus",\n  "autoCompactEnabled": false,\n  "idleCompaction": false,\n  "permissions": {\n'
+    printf '{\n  "model": "opus",\n  "autoCompactEnabled": false,\n  "idleCompaction": false,\n  "outputStyle": "Concise",\n  "permissions": {\n'
     printf '    "deny": [%s],\n' "$(for s in "${SM_SETTINGS_DENY[@]}" "${SM_SETTINGS_FAMILY_DENY[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
     printf '    "allow": [%s],\n' "$(for s in "${SM_SETTINGS_ALLOW[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
     printf '    "ask": [%s]\n' "$(for s in "${SM_SETTINGS_ASK[@]}" "${SM_SETTINGS_FAMILY_ASK[@]}"; do printf '"%s", ' "$s"; done | sed 's/, $//')"
@@ -1260,8 +1262,9 @@ self_test() {
   sed -i 's/"autoCompactEnabled": false/"autoCompactEnabled": true/' "$t/.claude/settings.json"; probe "check 12 fires when compaction is switched on" "check 12 — .claude/settings.json autoCompactEnabled"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/, "mcp__elevenlabs__voice_clone"//' "$t/.claude/settings.json"; probe "check 12 fires when a credit-spending tool is not asked" "check 12 — .claude/settings.json does not ask mcp__elevenlabs__voice_clone"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"ask": \[/"ask": ["mcp__elevenlabs__list_models", /' "$t/.claude/settings.json"; probe "check 12 fires on an ask D13 does not list" "check 12 — .claude/settings.json asks mcp__elevenlabs__list_models"; cp "$tmp/h" "$t/.claude/settings.json"
-  sed -i 's/"timeout":10}]}],"PreToolUse"/"timeout":30}]}],"PreToolUse"/' "$t/.claude/settings.json"; probe "check 12 fires when a family hook registration drifts (D80)" "check 12 — .claude/settings.json hooks are not exactly syntek-author's v0.8.0 seed's hooks object"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/"timeout":10}]}],"PreToolUse"/"timeout":30}]}],"PreToolUse"/' "$t/.claude/settings.json"; probe "check 12 fires when a family hook registration drifts (D80)" "check 12 — .claude/settings.json hooks are not exactly syntek-author's v0.9.1 seed's hooks object"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"idleCompaction": false/"idleCompaction": true/' "$t/.claude/settings.json"; probe "check 12 fires when idle compaction is switched on (D81)" "check 12 — .claude/settings.json idleCompaction is not false"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/"outputStyle": "Concise"/"outputStyle": "Explanatory"/' "$t/.claude/settings.json"; probe "check 12 fires when the output style is not the family's Concise (D13)" "check 12 — .claude/settings.json outputStyle is not \"Concise\" — the family's output style"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's#"Edit(/how-to/\*\*)", ##' "$t/.claude/settings.json"; probe "check 12 fires when the guide's deny is lost (D84)" "check 12 — .claude/settings.json does not deny Edit(/how-to/**)"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's#"Edit(/how-to/\*\*)", "mcp__code-review-graph__embed_graph_tool"#"mcp__code-review-graph__embed_graph_tool", "Edit(/how-to/**)"#' "$t/.claude/settings.json"
   probe "check 12 fires when the guide's deny leaves D13's order (D84)" "check 12 — .claude/settings.json denies its rules out of D13's order"; cp "$tmp/h" "$t/.claude/settings.json"
