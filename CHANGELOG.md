@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Changed
+
+- **`family-shared.json` records `unreleased` again** after the `v0.6.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9), as `shipped-seeds.sh --write-manifest` writes it on the first commit after a release tag, so check 23 holds on every commit until the next release. Development only, nothing ships.
+
 ## [0.6.0] - 30/10/2026
 
 Re-vendors every family-shared file and block from syntek-author's `v0.8.0` tag, byte for byte (D81, D85): forty-three files and four blocks, where 0.5.0 held twenty-eight and three, syntek-author's update script, `migrations/family-update.py`, and its 'update' block among them. That script now ends every update: it reports each file the new version changed but did not deliver, refreshes the listed family-shared files the owner never changed, offers the listed settings entries, top-level values and MCP servers once each, and puts back the read-only user guide. That lifts 0.5.0's known limitation, but for the Gemini CLI and OpenCode files, which an update never writes (D81). Python 3.14 becomes media's base, for Copier, the update script, the outside-link pair and the toolkit, `transcribe.py` the one exception (D20, D81). `how-to/` becomes the user guide (D84): the family's fourteen files, its read-only guard among them, and media's own thirteen chapters, five guides and six procedures under its three `syntek-media/` folders. Media's own toolkit moves to Playwright 1.64.0 (D20, D71). The update asks no new question.
