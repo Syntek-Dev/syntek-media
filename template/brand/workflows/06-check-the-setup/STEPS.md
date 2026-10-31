@@ -23,7 +23,7 @@ checked by running the report again) and tick `CHECKLIST.md` as you go.
 
 Run `python3 toolkit/media.py check --setup` from the repository root. It changes nothing. Exit 0
 means every line is clean; exit 1 means findings; exit 2 means it could not run, and the tool it
-names is the first finding. If `python3` itself is missing or older than 3.11, nothing in the
+names is the first finding. If `python3` itself is missing or older than 3.14, nothing in the
 toolkit runs: say so, and stop. _Mechanical._
 
 ## 2. Read each finding with its fix
@@ -35,12 +35,12 @@ Explain each finding to the author: what is missing, what it blocks, and the fix
 | Finding | Blocks until fixed |
 |---|---|
 | ffmpeg or ffprobe missing, or built without libass, x264 or mp3lame | every render, caption burn-in and audio master |
-| Python older than 3.11 | the whole toolkit |
+| Python older than 3.14 | the whole toolkit |
 | uv missing | `card.py`: thumbnails, cards, and any master that holds a card |
 | the pinned Playwright's Chromium missing | `card.py render` and `card.py check` |
-| a plain uv interpreter mislinked across Python versions | the script it names; fix UV_PYTHON at user scope |
+| a plain uv interpreter mislinked across Python versions, or a UV_PYTHON outside a script's range (`media.py` never uses one for that script) | the script it names; fix UV_PYTHON at user scope |
 | WhisperX absent, or fetched files missing (optional note) | `transcribe`; the author runs `python3 toolkit/media.py transcribe fetch` once |
-| configured WhisperX interpreter broken or not version 3.8.6 | `transcribe`; fix MEDIA_TRANSCRIBE_PYTHON at user scope |
+| configured WhisperX interpreter broken or not version 3.8.6, or its Python outside 3.10 to 3.13 | `transcribe`; fix MEDIA_TRANSCRIBE_PYTHON at user scope, an interpreter's path |
 | git-lfs or its filter missing while `brand/src/exports/large/` holds files | adding a large export |
 | an allow entry missing from `.claude/settings.json` | nothing, but every toolkit call asks for permission |
 | an ask entry missing from `.claude/settings.json` | every credit-spending ElevenLabs call, `voice remix run` included, which would not prompt |

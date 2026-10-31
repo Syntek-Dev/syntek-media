@@ -155,6 +155,8 @@ deliverable is one line and a failed render says exactly what failed.
   WAV, prints the words check and writes ignored working timing; `-o` accepts words/check into
   `production/src/timing/`, both committed and unchanged before replacement. Cross-check is on
   by default; `--no-cross-check` records its omission. Only the author runs `transcribe fetch`.
+  It runs `MEDIA_TRANSCRIBE_PYTHON`'s interpreter by path where it is set, otherwise offline uv,
+  never on a `UV_PYTHON` outside `transcribe.py`'s range.
 - **Captions from words:** `captions from-words WORDS --deliverable KEY [--offset TC] [-o SRT]`
   preserves first/last word boundaries, reports short gaps and checks the existing house limits.
 - **Cue index:** `cues PIECE [-o FILE]` matches tracked words to beats, boards and lines,

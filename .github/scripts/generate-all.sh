@@ -65,14 +65,22 @@
 #                     4. The copy output (stderr, without --quiet) of each <kind>--defaults
 #                        render carries every _message_after_copy line of _common.sh's lists
 #                        (DESIGN.md D13, D73, D76, D80): every shared path a copy writes (the
-#                        eighteen of D11 and the seventeen of D80) and the skip rule, the four
-#                        allows, nine ElevenLabs asks, the two voice remix run asks (D82) and two
-#                        Edit denies, the permissions script's --write line (D80), the
-#                        ELEVENLABS_MCP_BASE_PATH line,
-#                        filter.lfs.required, the setup check, and the update command with -a;
-#                        and, from Section 8, that 'conflict' then 'skip' is expected, the
-#                        optional line in .claude/CLAUDE.md, and nothing to add to .gitignore
-#                        or .mcp.json.
+#                        eighteen of D11, the seventeen of D80 and, since 0.6.0, the fourteen of
+#                        D84) and the skip rule; item (2) as D81 words it: the six allows by
+#                        hand, which no lane offers, then the rest only where family-update did
+#                        NOT run or the copy took --skip-tasks (nine ElevenLabs asks, the two
+#                        voice remix run asks of D82, the Edit denies with the guide's, D84, the
+#                        seed's idleCompaction value, the family's asks and deny, the hooks
+#                        object's SessionStart entry and the guide guard's PreToolUse entry), the
+#                        data-root guard that no lane offers, and the permissions script's
+#                        --write line (D80); the ELEVENLABS_MCP_BASE_PATH line,
+#                        filter.lfs.required, the setup check, and the update command with -a,
+#                        run as uvx --python '>=3.14' copier (D81); item (7), where the user
+#                        guide starts (how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md),
+#                        that everything under how-to/ is read-only, and the update procedure
+#                        (D84); and, from Section 8, that 'conflict' then 'skip' is expected,
+#                        the optional line in .claude/CLAUDE.md, and nothing to add to
+#                        .gitignore or .mcp.json.
 #
 #                   Numbers are stable identifiers. Append, never renumber.
 #
@@ -176,10 +184,11 @@ sorted_csv() { tr ' ,' '\n\n' <<< "$1" | { grep -v '^$' || true; } | LC_ALL=C so
 # What DESIGN.md Section 2 says the render should record: the kind's defaults, then the
 # profile's answers on top. Lists are expected as their values sorted and joined by commas,
 # as shipped-brands.sh reads them (the order Copier keeps is not a promise). The family-shared
-# questions (D80): a fresh copy, with no record, ticks all four clients, and stores binaries
-# on the data root (external) unless syntek-author's record says otherwise, which over a fresh
-# syntek-author render it never does. AGENT_CLIENTS is written even when empty, so a profile
-# that ticks none is held to that too.
+# questions (D80, at syntek-author's v0.8.0 since 0.6.0, D81): a fresh copy, with no record,
+# ticks all four clients, and stores binaries on the data root (external) unless syntek-author's
+# record says otherwise; over a fresh syntek-author render its record ticks all four and
+# stores externally too, so the client and store defaults that take it agree. AGENT_CLIENTS is
+# written even when empty, so a profile that ticks none is held to that too.
 expect_for() { # $1 = name → KEY=value lines
   local name="$1" kind kv k v
   kind="$(kind_of "$1")"
@@ -376,6 +385,8 @@ self_test() {
   [[ -f "$OUT/business--defaults/UNCOMMITTED.md" ]] || {
     printf '\033[31m  ✗ an uncommitted file did not reach the render — the snapshot is not the working tree\033[0m\n' >&2; exit 2; }
   log "  ✓ an uncommitted file reached the render — the snapshot is the working tree"
+  # .owned lists the files media's copy ADDED: .claude/settings.json, which the copy's baseline
+  # task may give the entries its refresh data lists (D81), is syntek-author's and never in it.
   if ! grep -qx "$SM_ANSWERS_FILE" "$OUT/business--over-author.owned" \
      || grep -qxE 'README\.md|\.claude/settings\.json|Makefile' "$OUT/business--over-author.owned"; then
     printf '\033[31m  ✗ the over-author scope is wrong — .owned must name media'"'"'s files and no shared or syntek-author file\033[0m\n' >&2; exit 2
@@ -422,6 +433,10 @@ self_test() {
   sed -i '/ELEVENLABS_MCP_BASE_PATH/d' "$SM_ROOT/copier.yml"
   ONLY="business--defaults"; select_renders; generate 2>/dev/null
   probe "check 4 fires when _message_after_copy loses a line" "check 4 — the copy output of business--defaults does not carry 'ELEVENLABS_MCP_BASE_PATH='"
+  git -C "$SM_ROOT" checkout -q -- copier.yml
+  sed -i '/The user guide starts at/d' "$SM_ROOT/copier.yml"
+  ONLY="business--defaults"; select_renders; generate 2>/dev/null
+  probe "check 4 fires when _message_after_copy loses item (7)'s guide line (D84)" "check 4 — the copy output of business--defaults does not carry 'The user guide starts at $SM_GUIDE_START'"
   git -C "$SM_ROOT" checkout -q -- copier.yml
 
   SM_ROOT="$real_root"; OUT="$real_out"; ONLY="$real_only"; SM_AUTHOR_NAMES_FILE="$real_names"

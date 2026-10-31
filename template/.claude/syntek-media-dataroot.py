@@ -132,7 +132,8 @@ Subcommands (exit 0 done, 1 a check failed, 2 it cannot act):
   guard                the PreToolUse hook (below)
   --self-test, --help
 GLOB is matched against each row's path with fnmatch ('*' crosses '/'). REL, FILE, --as and
---source are taken from the project's top. Warnings and refusals go to stderr, one line each.
+--source are taken from the project's top. Warnings and refusals go to stderr, one line each
+(the framed message of an older Python apart, below).
 verify, status, pull and plan act on every folder they can read; a folder they cannot (its map
 or manifest unreadable, or two maps claiming it) is refused alone, and they then exit 2 unless
 a check of the others failed (exit 1).
@@ -143,7 +144,17 @@ any folder above it holding the marker) exits 2 with one line naming the rules; 
 also judged by the folder an absolute pattern names, where the client searches; anything else,
 and any error of its own, exits 0. Read is never blocked. On macOS, Linux and WSL Claude Code
 searches through Bash, which the guard does not read, so there the rules alone keep searches
-out of the root. The guard runs on Python 3.8 or later; everything else needs 3.11 or later.
+out of the root.
+
+Python 3.14 or later (PYTHON_MIN, below), for every subcommand, the guard included. On an older
+Python nothing runs: a subcommand prints a framed message on stderr saying it did NOT run, the
+Python it found and the one it needs, and exits 2. The guard instead lets the call through
+(exit 0, for a guard that cannot run must never block an edit) and prints on stdout the JSON
+that has Claude Code warn the person (systemMessage) and the session (additionalContext) that
+it did not check the call and that Python needs upgrading; it makes no permission decision,
+so the usual permission rules still apply. --help prints this text on any Python. The check
+runs before any other import, and the file parses as Python 3.8, so an old Python reaches the
+message instead of a SyntaxError.
 
 Never: a network connection, a sync, a provider's configuration, a deletion or overwrite of a
 filed copy, a rename of a conflict copy. Python's own modules only.
@@ -156,7 +167,43 @@ from __future__ import annotations
 
 import sys
 
-# ── The guard: reached before any other import, and on any Python 3.8 or later ─────────────
+# ── The Python minimum and the guard: reached before any other import, on Python 3.8 ──────
+
+# The one place the minimum is set: the move to a newer Python changes this line and the text
+# above, nothing else.
+PYTHON_MIN = (3, 14)
+RULE = "=" * 78
+
+
+def too_old_text(command, version):
+    """The framed message a subcommand prints on stderr, in place of running, on an older Python."""
+    need, have = "%d.%d" % tuple(PYTHON_MIN), "%d.%d" % tuple(version[:2])
+    return "\n".join([
+        RULE,
+        "ERROR: the data-root tool did NOT run %s, because this is Python %s and it needs Python %s "
+        "or later." % (repr(command) if command else "its command", have, need),
+        "Nothing was read, checked, filed, copied or changed.",
+        "Upgrade to Python %s or later, then run the command again." % need,
+        RULE]) + "\n"
+
+
+def too_old_hook(version):
+    """The JSON the guard prints on stdout on an older Python: no permission decision, so the call
+    goes ahead under the usual rules, and Claude Code shows the person the systemMessage and adds
+    the additionalContext to the session."""
+    import json
+    need, have = "%d.%d" % tuple(PYTHON_MIN), "%d.%d" % tuple(version[:2])
+    person = ("WARNING: the data-root guard did NOT work: python3 here is Python %s, and the guard needs "
+              "Python %s or later. It let this call through unchecked, leaving the rules alone to keep "
+              "file tools out of the data root. Upgrade to Python %s or later." % (have, need, need))
+    session = ("The project's data-root guard did not run for this call: python3 here is Python %s, and "
+               "the guard needs Python %s or later, so it let the call through unchecked and will do so for "
+               "every call until Python is upgraded. The person has to upgrade to Python %s or later for "
+               "the guard to work, and needs to hear this from the session. Until then the project's rules "
+               "alone keep the session's file tools out of the data root." % (have, need, need))
+    return json.dumps({"systemMessage": person,
+                       "hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": session}})
+
 
 MARKER = ".syntek-data-root"
 ROOT_ENV = "SYNTEK_DATA_ROOT"
@@ -266,8 +313,22 @@ def guard_one(target, data, environ, project, cwd):
     return 2, GUARD_BLOCK
 
 
-def guard_main():
-    """The hook's entry: exit 2 with one stderr line on a block; 0 on anything else at all."""
+def guard_main(version=None):
+    """The hook's entry: exit 2 with one stderr line on a block; 0 on anything else at all. On a
+    Python older than PYTHON_MIN it judges nothing: it reads the call, prints the warning JSON
+    on stdout and returns 0."""
+    if (version or sys.version_info) < PYTHON_MIN:
+        try:
+            stream = getattr(sys.stdin, "buffer", None)
+            (stream or sys.stdin).read()   # the whole call, so the client never writes to a closed pipe
+        except BaseException:
+            pass
+        try:
+            sys.stdout.write(too_old_hook(version or sys.version_info) + "\n")
+            sys.stdout.flush()
+        except BaseException:
+            pass
+        return 0
     try:
         import os
         stream = getattr(sys.stdin, "buffer", None)
@@ -286,12 +347,16 @@ def guard_main():
 if __name__ == "__main__" and sys.argv[1:2] == ["guard"]:
     sys.exit(guard_main())
 
-NEED_PYTHON = "refused: this tool needs Python 3.11 or later (tomllib)"
-if __name__ == "__main__" and sys.version_info < (3, 11) and sys.argv[1:2] not in (["-h"], ["--help"]):
-    sys.stderr.write(NEED_PYTHON + "\n")
+if __name__ == "__main__" and sys.version_info < PYTHON_MIN and sys.argv[1:2] not in (["-h"], ["--help"]):
+    sys.stderr.write(too_old_text(sys.argv[1] if len(sys.argv) > 1 else "", sys.version_info))
+    sys.stderr.flush()
     sys.exit(2)
 
-# ── Everything else: Python 3.11 or later ────────────────────────────────────────────────
+# A Python that passed the check but lacks tomllib (a stripped build): one line, never a traceback.
+NEED_PYTHON = ("refused: this Python has no tomllib, which this tool needs: upgrade to Python %d.%d or later"
+               % PYTHON_MIN)
+
+# ── Everything else: Python 3.14 or later (PYTHON_MIN) ───────────────────────────────────
 
 import argparse  # noqa: E402
 import contextlib  # noqa: E402
@@ -2445,9 +2510,9 @@ def main(argv=None, cwd=None, environ=None, version=None):
         print(__doc__)
         return 0
     if argv[:1] == ["guard"]:
-        return guard_main()
-    if (version or sys.version_info) < (3, 11):
-        print(NEED_PYTHON, file=sys.stderr)
+        return guard_main(version)
+    if (version or sys.version_info) < PYTHON_MIN:
+        sys.stderr.write(too_old_text(argv[0] if argv else "", version or sys.version_info))
         return 2
     try:
         import tomllib  # noqa: F401  (every subcommand but guard needs it)
@@ -2542,7 +2607,7 @@ def self_test_units(check):
         parses = True
     except SyntaxError:
         parses = False
-    check("the file parses as Python 3.8, so an old python3 reaches the guard", parses)
+    check("the file parses as Python 3.8, so an old python3 reaches the guard and the version check", parses)
     first = ast.parse(source).body[1]
     check("it opens with 'from __future__ import annotations' after its docstring",
           isinstance(first, ast.ImportFrom) and first.module == "__future__"
@@ -2557,6 +2622,11 @@ def self_test_units(check):
           not re.search(r"(^|[^0-9A-Za-z_.:-])[0-9]{7,}([^0-9A-Za-z_]|$)", source, re.MULTILINE))
     check("the guard runs before any other import",
           source.index("sys.exit(guard_main())") < source.index("import argparse"))
+    check("the version check runs before any other import",
+          source.index("sys.version_info < PYTHON_MIN and sys.argv[1:2]") < source.index("import argparse"))
+    need = "%d.%d" % PYTHON_MIN
+    check("the docstring states the minimum PYTHON_MIN sets",
+          f"Python {need} or later (PYTHON_MIN, below)" in " ".join(__doc__.split()))
 
     # The answers reader, on the corpus a rendered answers file was probed to write.
     for raw, want in (("Client Work", "Client Work"), ("Geschäft", "Geschäft"), (".hidden", ".hidden"),
@@ -2713,12 +2783,41 @@ def self_test_units(check):
     check("root: two providers print both checklists",
           provider_text(["none", "nas"], "external")[3:] == list(CHECKLISTS["none"]) + list(CHECKLISTS["nas"]))
 
-    # Python versions.
-    buf = io.StringIO()
-    with contextlib.redirect_stderr(buf):
-        code = main(["root"], version=(3, 10))
-    check("Python older than 3.11: a data command exits 2 with one line",
-          code == 2 and buf.getvalue() == NEED_PYTHON + "\n")
+    # Python versions: read from PYTHON_MIN, never typed.
+    import json
+    need = "%d.%d" % PYTHON_MIN
+    for older in ((PYTHON_MIN[0], PYTHON_MIN[1] - 1), (3, 8)):
+        have = "%d.%d" % older
+        buf = io.StringIO()
+        with contextlib.redirect_stderr(buf):
+            code = main(["root"], version=older)
+        lines = buf.getvalue().splitlines()
+        check(f"Python {have}: a data command exits 2 with the framed ERROR message",
+              code == 2 and buf.getvalue() == too_old_text("root", older) and lines[0] == lines[-1] == RULE
+              and lines[1] == (f"ERROR: the data-root tool did NOT run 'root', because this is Python {have} "
+                               f"and it needs Python {need} or later.")
+              and lines[3] == f"Upgrade to Python {need} or later, then run the command again.")
+        held, out, err = sys.stdin, io.StringIO(), io.StringIO()
+        sys.stdin = io.TextIOWrapper(io.BytesIO(b'{"tool_name": "Write", "tool_input": {"file_path": "/x/a.pdf"}}'))
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = main(["guard"], version=older)
+        finally:
+            sys.stdin = held
+        try:
+            said = json.loads(out.getvalue())
+        except ValueError:
+            said = {}
+        spec = said.get("hookSpecificOutput") if isinstance(said, dict) else None
+        check(f"Python {have}: the guard lets the call through (0) and warns the person and the session",
+              code == 0 and err.getvalue() == "" and out.getvalue().count("\n") == 1
+              and sorted(said) == ["hookSpecificOutput", "systemMessage"]
+              and isinstance(spec, dict) and sorted(spec) == ["additionalContext", "hookEventName"]
+              and spec["hookEventName"] == "PreToolUse"
+              and said["systemMessage"].startswith("WARNING: the data-root guard did NOT work: python3 here is "
+                                                   f"Python {have}, and the guard needs Python {need} or later.")
+              and f"Upgrade to Python {need} or later." in said["systemMessage"]
+              and f"upgrade to Python {need} or later" in spec["additionalContext"])
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         code = main(["--help"], version=(3, 8))
@@ -3466,7 +3565,26 @@ def self_test_projects(check, base, json, tomllib):
         sys.stdin = stdin
     check("guard: an error of its own fails open -> 0", failed_open)
 
-    # The guard and the data commands on an interpreter without tomllib (as Python 3.8-3.10 has).
+    # The guard and the data commands on an older Python, run as the hook and a person run them.
+    older = (PYTHON_MIN[0], PYTHON_MIN[1] - 1)
+
+    def older_python(argv, text, cwd):
+        code = ("import runpy, sys; sys.version_info = %r; sys.argv = [%r] + %r; "
+                "runpy.run_path(sys.argv[0], run_name='__main__')" % (older + (0, "final", 0), str(Path(__file__)), argv))
+        return subprocess.run([sys.executable, "-I", "-c", code], input=text, capture_output=True, text=True, check=False,
+                              cwd=str(cwd), env=dict(os.environ, **{ROOT_ENV: str(root)}))
+    r = older_python(["guard"], json.dumps({"tool_name": "Write", "tool_input": {"file_path": str(root / "a.pdf")}}), p)
+    check("older Python: the guard lets a write under the root through (0) with the warning JSON on stdout",
+          r.returncode == 0 and r.stderr == "" and r.stdout == too_old_hook(older) + "\n")
+    for argv in (["root"], ["--self-test"], []):
+        r = older_python(argv, "", p)
+        check(f"older Python: {' '.join(argv) or 'no subcommand'} exits 2 with the framed message alone, on stderr",
+              r.returncode == 2 and r.stdout == "" and r.stderr == too_old_text(argv[0] if argv else "", older))
+    r = older_python(["--help"], "", p)
+    check("older Python: --help still prints the docstring", r.returncode == 0 and "PYTHON_MIN" in r.stdout and r.stderr == "")
+
+    # The guard and the data commands on an interpreter without tomllib (a stripped build: every
+    # Python the version check lets through ships it).
     def blocked_tomllib(argv, text, cwd):
         code = ("import runpy, sys; sys.modules['tomllib'] = None; "
                 f"sys.argv = [{str(Path(__file__))!r}] + {argv!r}; runpy.run_path(sys.argv[0], run_name='__main__')")

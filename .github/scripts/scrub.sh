@@ -34,7 +34,8 @@
 #                 brands' names, handles and project names live THERE, outside every
 #                 repository, because listing them here would publish the very data the list
 #                 exists to keep out. CI has no deny-list, so check 9 runs on the maintainer's
-#                 machine.
+#                 machine. Where no deny-list is found, the run prints a named SKIP for check
+#                 9, so run-all.sh lists it: a SKIP is never a pass (DESIGN.md D27).
 #             10. A secret: an ElevenLabs-shaped key (sk_ and twenty or more characters), or an
 #                 api_key / xi-api-key given a literal value. A value that is a shell variable
 #                 reference — "$VAR", $VAR or ${VAR} — is the instruction, not the key
@@ -56,7 +57,9 @@
 # SELF-TEST. --self-test writes a clean fixture at runtime (words that merely contain the
 #            patterns, reserved example addresses, a bare currency sign, a key passed as a
 #            variable, an empty voice ID), proves it clean, then adds one line per check and
-#            asserts exactly one finding each.
+#            asserts exactly one finding each. It then runs the scrub itself on the clean
+#            fixture with no deny-list to be found and asserts the named SKIP for check 9, and
+#            with one, asserts there is none.
 #
 # Requirements: bash 4+, grep. No network.
 #
@@ -227,6 +230,24 @@ EOF
   probe "check 1 fires on a file NAME carrying identity" "check 1 — the path"
   rm -rf "$DIR/brand"
   DENYLIST="${SCRUB_DENYLIST:-}"
+  local out rc
+  mkdir -p "$tmp/config"
+  ST_PROBES=$((ST_PROBES + 1)); rc=0
+  out="$(env -u SCRUB_DENYLIST XDG_CONFIG_HOME="$tmp/config" bash "${BASH_SOURCE[0]}" "$tmp/template" 2>&1)" || rc=$?
+  if [[ "$rc" -eq 0 && "$out" == *"SKIP — check 9, the deny-list — "* ]]; then
+    log "  ✓ a run with no deny-list to be found prints a named SKIP for check 9"
+  else
+    ST_FAILS=$((ST_FAILS + 1))
+    printf '\033[31m  ✗ a run with no deny-list gave exit %s and no named SKIP for check 9:\033[0m\n%s\n' "$rc" "$out"
+  fi
+  ST_PROBES=$((ST_PROBES + 1)); rc=0
+  out="$(SCRUB_DENYLIST="$denylist" bash "${BASH_SOURCE[0]}" "$tmp/template" 2>&1)" || rc=$?
+  if [[ "$rc" -eq 0 && "$out" != *"SKIP"* && "$out" == *"(deny-list applied)"* ]]; then
+    log "  ✓ a run with a deny-list applies it and prints no SKIP"
+  else
+    ST_FAILS=$((ST_FAILS + 1))
+    printf '\033[31m  ✗ a run with a deny-list gave exit %s, or a SKIP, or did not apply it:\033[0m\n%s\n' "$rc" "$out"
+  fi
   st_finish "clean template text from personal data"
 }
 
@@ -248,6 +269,8 @@ if [[ ${#TARGETS[@]} -eq 0 ]]; then
 fi
 
 bold "▸ $SCRIPT_NAME"
+[[ -n "$DENYLIST" ]] || skip_named "check 9, the deny-list" \
+  "no SCRUB_DENYLIST, and none at \${XDG_CONFIG_HOME:-~/.config}/syntek-media/scrub-denylist or .../syntek-author/scrub-denylist; the real names it holds live only on the maintainer's machine"
 STATUS=0
 for target in "${TARGETS[@]}"; do
   [[ -d "$target" ]] || die "not a directory: $target"

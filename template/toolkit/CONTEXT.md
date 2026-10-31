@@ -29,7 +29,7 @@ toolkit/
 ├── media_voice.py      ← voice remix: offline plan, one approved ElevenLabs call into a voice trial
 ├── media_scene.py     ← deterministic frame timing, native mouth sampling and safe zones
 ├── media_feed.py       ← feed: a self-hosted podcast's register, RSS feed, chapters and file tags
-├── card.py             ← HTML and CSS to PNG in headless Chromium (uv run; Playwright 1.63.0, pinned)
+├── card.py             ← HTML and CSS to PNG in headless Chromium (uv run; Playwright 1.64.0, pinned)
 ├── scene.py            ← deterministic scenes to stills and native masters (pinned Playwright)
 ├── transcribe.py       ← offline known-word alignment; WhisperX 3.8.6, Python >=3.10,<3.14
 ├── data/               ← dated delivery specs and the versioned Jev editorial rubric
@@ -68,8 +68,9 @@ toolkit/
   preview. **A script with a dependency**, declared inline (PEP 723) and pinned, so
   `uv run toolkit/card.py` fetches Playwright for itself and installs nothing globally.
 - `transcribe.py` — WhisperX 3.8.6 aligns approved segment words on the joined voice; the heard-word
-  cross-check runs by default. `media.py transcribe` uses `MEDIA_TRANSCRIBE_PYTHON` where set,
-  otherwise offline uv. Only the author runs `transcribe fetch` once; the worker's self-test
+  cross-check runs by default. `media.py transcribe` runs `MEDIA_TRANSCRIBE_PYTHON`'s interpreter
+  by path where it is set, otherwise offline uv, never on a `UV_PYTHON` outside `transcribe.py`'s
+  range. Only the author runs `transcribe fetch` once; the worker's self-test
   needs no dependency. Working words/check files land in the piece's ignored timing folder;
   accepted tracked copies are written together through `-o`, both Git-clean for replacement.
 - **Lip sync:** `media.py lipsync <piece>` runs CPU Rhubarb on the joined voice with plain

@@ -48,7 +48,7 @@ running time: it compares every beat with its own target, sums the beat targets 
 and judges the total against the brief's target_seconds (within 10%) and every deliverable's
 max_seconds. The pace is --wpm, else the brief's words_per_minute, else 150.
 
-Standard library only; Python 3.11+.
+Standard library only; Python 3.14+.
 """
 from __future__ import annotations
 

@@ -30,10 +30,16 @@
 #                       6. A backticked syntek-author path: standards/, manuscript/, library/,
 #                          planning/, research/, proposal/, typeset/, world/, tooling/,
 #                          learning/, assets/, Makefile, .claude/rules/syntek-author/,
-#                          00-project.md — named in prose instead, "where present". A folder
-#                          name counts only as the FIRST segment of the path: `assets/…` is
-#                          syntek-author's, `production/src/assets/` is media's. handoffs/ is
-#                          a family path since D80, and media ships its pair.
+#                          00-project.md, and since 0.6.0 syntek-author's guide folders under
+#                          how-to/ (how-to/docs/syntek-author/,
+#                          how-to/src/TEMPLATE-GUIDE/syntek-author/,
+#                          how-to/workflows/syntek-author/; _common.sh's SM_AUTHOR_PATH_GLOBS,
+#                          D84) and everything under them — named in prose instead, "where
+#                          present". A folder name counts only as the FIRST segment of the
+#                          path: `assets/…` is syntek-author's, `production/src/assets/` is
+#                          media's. handoffs/ and how-to/ are family paths (D80, D84), and
+#                          media ships them; only syntek-author's own folders under how-to/
+#                          are its.
 #
 #                     Checks 5 and 6 do not read a family-shared file (_common.sh's
 #                     SM_FAMILY_SHARED; DESIGN.md D80): its text is syntek-author's, byte for
@@ -60,7 +66,8 @@
 #                     generic folder name (`generated/`, `renders/`, `raw/`, `docs/project/`,
 #                     `workflows/local/`, `reference/`) names a class of folder, not a place,
 #                     and is not a finding; one led by a top-level entry (`publishing/…`,
-#                     `toolkit/…`) always is. A bare mode-file name (`BUSINESS.md`,
+#                     `toolkit/…`, and since 0.6.0 the user guide's `how-to/…`, D84) always
+#                     is. A bare mode-file name (`BUSINESS.md`,
 #                     `FICTION.md`, `NONFICTION.md`) is never a missing path: the mode paragraph
 #                     names all three and exactly one ships. An example path is never check
 #                     1's: a seed-once example may have been deleted, or never rendered
@@ -219,7 +226,7 @@ is_pathlike() { # sets P to the testable path, or returns 1
 # to catch. Any other path is relative to the citing file; unresolved, it is a dead end —
 # unless it is led by a generic folder name, in which case it names a CLASS of folder ("each
 # `generated/`", "every `docs/project/`"), not a place.
-TOPLEVEL=" .claude .github brand scripts production publishing toolkit README.md CONTEXT.md .gitignore .mcp.json $SM_ANSWERS_FILE "
+TOPLEVEL=" .claude .github brand scripts production publishing toolkit how-to README.md CONTEXT.md .gitignore .mcp.json $SM_ANSWERS_FILE "
 GENERIC=" docs src workflows local reference project generated renders raw pieces templates data "
 
 is_class_name() { # $1 = unresolved path
@@ -249,10 +256,14 @@ is_placeholder() { # $1 = token
 # A syntek-author path (check 6): its two named files; its rules folder; or a path whose FIRST
 # segment is one of its top-level folders (`assets/…`, never `production/src/assets/`). A
 # placeholder is exempt (`handoffs/HANDOFF-<DESCRIPTOR>-DD-MM-YYYY.md` names a file's shape).
+# Since D84, also syntek-author's guide folders under how-to/ and everything under them
+# (SM_AUTHOR_PATH_GLOBS, a pattern matched unquoted); how-to/ itself is the family's.
 author_path() { # $1 = token
   local t="$1" p
   is_placeholder "$t" && return 1
   t="${t%/}"
+  # shellcheck disable=SC2053
+  [[ "$t" == $SM_AUTHOR_PATH_GLOBS || "$t" == $SM_AUTHOR_PATH_GLOBS/* ]] && return 0
   [[ " $SM_AUTHOR_FILE_NAMES " == *" ${t##*/} "* && "$t" =~ ^[A-Za-z0-9._/-]+$ ]] && return 0
   for p in $SM_AUTHOR_PATH_PREFIXES; do [[ "$t" == "$p" || "$t" == "$p"/* ]] && return 0; done
   is_pathlike "$1" || return 1
@@ -422,6 +433,10 @@ EOF
   probe "check 1 fires on a path that does not exist" "check 1"
   sed -i '$d' "$g"
 
+  printf 'The guide is `how-to/docs/syntek-media/missing.md`.\n' >> "$g"
+  probe "check 1 fires on an unresolved path in the user guide (D84)" "check 1 — production/docs/reference/elevenlabs.md:23 cites \`how-to/docs/syntek-media/missing.md\`"
+  sed -i '$d' "$g"
+
   printf 'Narration lives in `production/src/audiobook/`.\n' >> "$g"
   probe "check 1 fires on a gated folder this tree does not ship" "check 1 — production/docs/reference/elevenlabs.md"
   sed -i '$d' "$g"
@@ -460,6 +475,9 @@ EOF
   sed -i '$d' "$g"
   printf 'Project settings live in `00-project.md`.\n' >> "$g"
   probe "check 6 fires on syntek-author's project settings file" "check 6"
+  sed -i '$d' "$g"
+  printf 'Its guide starts at `how-to/src/TEMPLATE-GUIDE/syntek-author/01-overview.md`.\n' >> "$g"
+  probe "check 6 fires on a backticked syntek-author guide path under how-to/, never check 1 (D84)" "check 6 — production/docs/reference/elevenlabs.md:23 backticks the syntek-author path \`how-to/src/TEMPLATE-GUIDE/syntek-author/01-overview.md\`"
   sed -i '$d' "$g"
   printf 'Small stills live in `assets/`, beside this file.\n' >> "$t/production/src/CONTEXT.md"
   probe "check 6 fires on a syntek-author folder as the first segment, even where it resolves below the root" "check 6 — production/src/CONTEXT.md:4 backticks the syntek-author path \`assets/\`"

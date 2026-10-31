@@ -122,6 +122,11 @@
     },
     {
       "action": "edit",
+      "resource": "how-to/*",
+      "effect": "deny"
+    },
+    {
+      "action": "edit",
       "resource": "typeset/src/units/.base/*",
       "effect": "deny"
     },

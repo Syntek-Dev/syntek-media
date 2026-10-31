@@ -17,17 +17,23 @@
 #              file at .agents, with the printed hand fix run step by step under sh), and the
 #              data-root resolver and the permissions script under media's names,
 #              template/.claude/syntek-media-dataroot.py and syntek-media-permissions.py, which
-#              ship in every project. Those three run with SYNTEK_DATA_ROOT unset (env -u), so
-#              no self-test ever reaches a maintainer's real data root.
+#              ship in every project, and since 0.6.0 the update script, migrations/family-update.py
+#              (D81). Those four run with SYNTEK_DATA_ROOT unset (env -u), so no self-test ever
+#              reaches a maintainer's real data root, and on Python 3.14, which _common.sh pins:
+#              below it each exits 1 or 2.
 #
 #              Discipline, from SB: every script's --self-test runs FIRST, because a detector
 #              nobody has seen fail is a detector nobody knows works (rule 38); failures
 #              ACCUMULATE rather than stopping the run, so one broken gate never hides
 #              another (rule 43); and a script that could not run is an error, never a pass
-#              (rule 49). A step that could not look for want of syntek-author prints a named
-#              SKIP; the summary lists every one as SKIP, apart from PASS, FINDINGS and ERROR,
-#              and a step that skipped anything is never recorded as PASS (DESIGN.md D27: no
-#              release is tagged on a SKIP).
+#              (rule 49). A step that could not look, for want of syntek-author or of anything
+#              else it needs (a deny-list, Chromium, WhisperX), prints a named SKIP; the summary
+#              lists every one as SKIP, apart from PASS, FINDINGS and ERROR, and a step that
+#              skipped anything is never recorded as PASS. The step keeps its own row ('SKIP (n
+#              named below)') and each named SKIP its own row beneath it, and the summary's SKIP
+#              count counts every one of those rows, so none is hidden. A SKIP is never a pass;
+#              DESIGN.md D27 tags no release while the syntek-author renders or coexist-test.sh
+#              SKIP, and the release run reads those rows by name.
 #
 #              Three checks, on the run itself:
 #                1. An audit or test reported findings (exit 1).
@@ -41,10 +47,13 @@
 #              of theirs go unrun or unread.
 #
 # SELF-TEST. --self-test points the runner at stub scripts written at runtime (a stub for each
-#            vendored script among them), proves an all-green run is green, then breaks one stub
-#            per check and asserts exactly one finding naming it — and that a stub which SKIPs is
-#            listed as SKIP, not PASS, and is not a finding, and that no vendored script's
-#            self-test sees a SYNTEK_DATA_ROOT the runner itself holds.
+#            of the four vendored scripts among them), proves an all-green run is green, then
+#            breaks one stub per check and asserts exactly one finding naming it — and that a
+#            stub which SKIPs is listed as SKIP, not PASS, and is not a finding, that the
+#            summary counts the step's row and the named row and lists the named one, that no
+#            vendored script's self-test sees a SYNTEK_DATA_ROOT the runner itself holds, and
+#            that _common.sh's pin stops a run (exit 2, before anything runs) when python3 or
+#            UV_PYTHON is older than Python 3.14.
 #
 # Requirements: those of the scripts it runs (bash, git, rsync, uvx, python3, ffmpeg; uv and
 #               Playwright's Chromium optional).
@@ -63,6 +72,7 @@ SCRIPT_NAME="run-all.sh"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 
 SCRIPTS="$SM_SCRIPTS_DIR"
+SM_COMMON="$SM_SCRIPTS_DIR/_common.sh"
 OUT=""
 KEEP=false
 SELF_TESTS=true
@@ -120,9 +130,11 @@ INTEGRATED=(update-test coexist-test)
 ALL_SCRIPTS=(check-template-tokens gen-mode-excludes generate-all shipped-brands byte-identity docs-pairing
              doc-references shipped-seeds skill-conformance line-cap update-test coexist-test
              toolkit-smoke scrub dev-isolation community-files)
-# The vendored family-shared scripts (DESIGN.md D80, D85): each one's own --self-test runs with
-# the others, the outside-link migration at the root and the two that ship under template/.
+# The vendored family-shared scripts (DESIGN.md D80, D81, D85): each one's own --self-test runs
+# with the others, the outside-link migration and the update script at the root and the two that
+# ship under template/.
 OUTSIDE_PY="$SM_ROOT/$SM_OUTSIDE_MIGRATION"
+FAMILY_UPDATE_PY="$SM_ROOT/migrations/family-update.py"
 DATAROOT_PY="$SM_ROOT/template/.claude/syntek-media-dataroot.py"
 PERMISSIONS_PY="$SM_ROOT/template/.claude/syntek-media-permissions.py"
 
@@ -134,16 +146,18 @@ emit() { if [[ -n "$STEP_SINK" ]]; then printf '%s\n' "$*" >> "$STEP_SINK"; else
 section() { if [[ -n "$STEP_SINK" ]]; then emit "━━ $1"; else bold "━━ $1"; fi; }
 
 # Every "SKIP — <what> — <why>" line in a step's output becomes its own SKIP row (skip_named in
-# _common.sh prints that shape). Prints how many it found.
+# _common.sh prints that shape), and SKIPS_FOUND says how many. It runs in the runner's own
+# shell, never inside $(…): a subshell's RESULTS+= rows are lost with it.
+SKIPS_FOUND=0
 record_skips() { # $1 = output
-  local line what n=0
+  local line what
+  SKIPS_FOUND=0
   while IFS= read -r line; do
     line="${line#"${line%%[![:space:]]*}"}"
     what="${line#SKIP — }"; what="${what%% — *}"
     RESULTS+=("  · $what"$'\t'"SKIP")
-    n=$((n + 1))
+    SKIPS_FOUND=$((SKIPS_FOUND + 1))
   done < <(grep -E '^[[:space:]]*SKIP — ' <<< "$1" || true)
-  printf '%s' "$n"
 }
 
 step() { # $1 = label, then the command — runs it, records it, never stops the run
@@ -152,7 +166,7 @@ step() { # $1 = label, then the command — runs it, records it, never stops the
   out="$("$@" 2>&1)" || s=$?
   at=${#RESULTS[@]}
   RESULTS+=("$label"$'\t'"")
-  skips="$(record_skips "$out")"
+  record_skips "$out"; skips="$SKIPS_FOUND"
   if [[ "$s" -eq 0 ]]; then
     if [[ "$skips" -gt 0 ]]; then
       emit "$out" ""
@@ -180,6 +194,7 @@ run_checks() {
     section "Self-tests"
     for s in "${ALL_SCRIPTS[@]}"; do step "$s --self-test" bash "$SCRIPTS/$s.sh" --self-test; done
     step "agents-outside-link.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$OUTSIDE_PY" --self-test
+    step "family-update.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$FAMILY_UPDATE_PY" --self-test
     step "syntek-media-dataroot.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$DATAROOT_PY" --self-test
     step "syntek-media-permissions.py --self-test" env -u SYNTEK_DATA_ROOT python3 "$PERMISSIONS_PY" --self-test
   fi
@@ -204,7 +219,7 @@ run_checks() {
   err="$(cat "$out.gen-err" 2>/dev/null || true)"
   at=${#RESULTS[@]}
   RESULTS+=("generate-all"$'\t'"")
-  skips="$(record_skips "$err")"
+  record_skips "$err"; skips="$SKIPS_FOUND"
   case "$gen" in
     0) if [[ "$skips" -gt 0 ]]; then emit "$err"; RESULTS[at]="generate-all"$'\t'"SKIP ($skips named below)"
        else RESULTS[at]="generate-all"$'\t'"PASS"; fi ;;
@@ -253,7 +268,7 @@ summary() {
       PASS) pass=$((pass + 1)) ;;
       FINDINGS) found=$((found + 1)) ;;
       ERROR*) error=$((error + 1)) ;;
-      SKIP) skip=$((skip + 1)) ;;
+      SKIP*) skip=$((skip + 1)) ;;
     esac
   done
   printf '  %s PASS · %s FINDINGS · %s ERROR · %s SKIP — a SKIP is never a pass\n' "$pass" "$found" "$error" "$skip"
@@ -278,10 +293,42 @@ fi
 exit 0
 EOF
   done
-  for s in agents-outside-link syntek-media-dataroot syntek-media-permissions; do
+  for s in agents-outside-link family-update syntek-media-dataroot syntek-media-permissions; do
     printf 'import os, sys\nif "SYNTEK_DATA_ROOT" in os.environ:\n    print("%s: saw SYNTEK_DATA_ROOT"); sys.exit(2)\nsys.exit(1 if os.environ.get("STUB_FAIL") == "%s:self:1" else 0)\n' \
       "$s" "$s" > "$d/$s.py"
   done
+}
+
+probe_summary() { # $1 = label, $2 = the named row's text, $3 = the SKIP count the summary must give
+  local out
+  ST_PROBES=$((ST_PROBES + 1))
+  run_checks
+  out="$(summary)"
+  if [[ ${#FINDINGS[@]} -eq 0 ]] && grep -qF "· $3 SKIP —" <<< "$out" \
+     && grep -qE "^    · $2 +SKIP\$" <<< "$out"; then
+    log "  ✓ $1"
+  else
+    ST_FAILS=$((ST_FAILS + 1))
+    printf '\033[31m  ✗ %s: the summary did not count %s SKIP(s) and list "%s":\033[0m\n%s\n' "$1" "$3" "$2" "$out"
+  fi
+}
+
+# The pin in _common.sh, sourced in a child shell exactly as every audit sources it: $2 is the
+# environment, and the child must exit 2 before it prints anything of its own (or, for a clean
+# environment, $3 = 0, source it and go on).
+probe_pin() { # $1 = label, $2 = a space-separated VAR=value list for env, $3 = the exit wanted,
+              # $4 = the text the refusal must carry (a pin that refused for another reason fails)
+  local s=0 out
+  ST_PROBES=$((ST_PROBES + 1))
+  # shellcheck disable=SC2086
+  out="$(env -u SM_PYTHON_PINNED -u UV_PYTHON $2 bash -c 'set -euo pipefail; SCRIPT_NAME=pin-probe; source "$1"; echo "ran past the pin"' _ "$SM_COMMON" 2>&1)" || s=$?
+  if [[ "$s" -eq "$3" ]] && { [[ "$3" -eq 0 ]] && [[ "$out" == *"ran past the pin"* ]] \
+       || [[ "$3" -ne 0 && "$out" != *"ran past the pin"* && "$out" == *"$4"* ]]; }; then
+    log "  ✓ $1"
+  else
+    ST_FAILS=$((ST_FAILS + 1))
+    printf '\033[31m  ✗ %s: exit %s, wanted %s:\033[0m\n%s\n' "$1" "$s" "$3" "$out"
+  fi
 }
 
 probe_skip() { # $1 = label, $2 = the step label that must read SKIP
@@ -296,7 +343,7 @@ probe_skip() { # $1 = label, $2 = the step label that must read SKIP
 }
 
 self_test() {
-  local tmp real_scripts="$SCRIPTS" real_ol="$OUTSIDE_PY" real_dr="$DATAROOT_PY" real_pm="$PERMISSIONS_PY"
+  local tmp real_scripts="$SCRIPTS" real_ol="$OUTSIDE_PY" real_dr="$DATAROOT_PY" real_pm="$PERMISSIONS_PY" real_fu="$FAMILY_UPDATE_PY"
   bold "▸ $SCRIPT_NAME --self-test"; log ""
   tmp="$(sm_mktemp)"
   # shellcheck disable=SC2064
@@ -304,6 +351,7 @@ self_test() {
   write_stubs "$tmp/stubs"
   SCRIPTS="$tmp/stubs"; OUTSIDE_PY="$tmp/stubs/agents-outside-link.py"; OUT="$tmp/out"; STEP_SINK="$tmp/sink"
   DATAROOT_PY="$tmp/stubs/syntek-media-dataroot.py"; PERMISSIONS_PY="$tmp/stubs/syntek-media-permissions.py"
+  FAMILY_UPDATE_PY="$tmp/stubs/family-update.py"
   export STUB_FAIL="" STUB_SKIP=""
   st_baseline "a run of stubs that all pass"
   STUB_FAIL="scrub:run:1";         probe "check 1 fires when an audit reports findings" "check 1 — scrub reported findings"
@@ -311,6 +359,8 @@ self_test() {
   STUB_FAIL="line-cap:self:1";     probe "check 3 fires when a self-test stops separating" "check 3 — line-cap --self-test"
   STUB_FAIL="agents-outside-link:self:1"
   probe "check 3 fires when the vendored outside-link script's self-test fails" "check 3 — agents-outside-link.py --self-test"
+  STUB_FAIL="family-update:self:1"
+  probe "check 3 fires when the vendored update script's self-test fails (D81)" "check 3 — family-update.py --self-test"
   STUB_FAIL="syntek-media-dataroot:self:1"
   probe "check 3 fires when the vendored data-root resolver's self-test fails" "check 3 — syntek-media-dataroot.py --self-test"
   STUB_FAIL="syntek-media-permissions:self:1"
@@ -319,11 +369,19 @@ self_test() {
   STUB_FAIL=""
   STUB_SKIP="coexist-test:run";    probe_skip "a test that SKIPs is listed as SKIP, never PASS, and is not a finding" "coexist-test"
   STUB_SKIP="generate-all:run";    probe_skip "a render that SKIPs is listed as SKIP, never PASS" "generate-all"
+  STUB_SKIP="coexist-test:run"
+  probe_summary "the summary counts a SKIP's step row and its named row (2 SKIP), and lists the named one" "coexist-test probe" 2
   STUB_SKIP=""
+  mkdir -p "$tmp/py312"
+  printf '#!/bin/sh\necho 3.12\n' > "$tmp/py312/python3"; chmod +x "$tmp/py312/python3"
+  probe_pin "the pin lets a run go on, on this machine's Python" "" 0
+  probe_pin "the pin stops a run (exit 2) when python3 first on PATH is Python 3.12" "PATH=$tmp/py312:$PATH" 2 \
+    "python3 is Python 3.12"
+  probe_pin "the pin stops a run (exit 2) when UV_PYTHON is 3.12" "UV_PYTHON=3.12" 2 "UV_PYTHON is '3.12' (Python 3.12)"
   export SYNTEK_DATA_ROOT="$tmp/decoy"
   probe_clean "no vendored script's self-test sees a SYNTEK_DATA_ROOT the runner itself holds"
   unset SYNTEK_DATA_ROOT
-  SCRIPTS="$real_scripts"; OUTSIDE_PY="$real_ol"; DATAROOT_PY="$real_dr"; PERMISSIONS_PY="$real_pm"; OUT=""; STEP_SINK=""
+  SCRIPTS="$real_scripts"; OUTSIDE_PY="$real_ol"; DATAROOT_PY="$real_dr"; PERMISSIONS_PY="$real_pm"; FAMILY_UPDATE_PY="$real_fu"; OUT=""; STEP_SINK=""
   st_finish "a run that reports every failure from one that hides them"
 }
 

@@ -22,6 +22,11 @@ the project's alias for it (the Workflow aliases of syntek-author's 00-project.m
 or the same-named procedure in `workflows/local/` instead, where one exists. Where work benefits
 from a separate context, the skill runs itself as a forked subagent (`context: fork`).
 
+A template job (finishing a copy, changing the answers, updating, recovering from a stopped
+update, enabling a coding-agent client, reporting a template problem) belongs to no skill and
+not to `run-media-workflow`: its procedure under `how-to/workflows/syntek-media/` is run as its
+folder says (`.claude/rules/syntek-media/01-layout-and-routing.md` Section 3).
+
 **The skills in Section 3 are template-owned by syntek-media**, even where
 `.claude/skills/CONTEXT.md`, written by whichever template was applied first, calls any skill
 outside its own roster the author's own. A media skill that is not listed here does not ship in
@@ -98,13 +103,17 @@ byte for byte, so a project with two templates keeps one copy.
 | `wait-what` | Re-pitches a reply that did not land, conclusion first, in the project's own words | none |
 
 **How they are kept.** Each family-shared `SKILL.md` is copy-only shared, like the hooks in
-`.claude/hooks/` and the `handoffs/` pair: a copy writes it where it is absent and skips it where
-it stands, and media's `copier update` never renders, changes or recreates it. A project updated
-from a media release before 0.5.0 therefore has none of them until it takes them by hand, as
-`.claude/syntek-media-agents.md` says, unless syntek-author's copy or update has written them;
-every media file that names one says what to do where it is missing. Never edit one, and never
-write one from memory: tailor the work in a project rule instead. The `MEDIA-` mode files beside
-them are template-owned and updated like the media skills.
+`.claude/hooks/` with their pair, the `handoffs/` pair and the shared files of `how-to/`: a copy
+writes it where it is absent and skips it where it stands, and Copier's update never renders it.
+Since 0.6.0 each is in the refresh data, so every update that runs the family update script in
+full (Copier on Python 3.14 or later) replaces one the author never changed, writes one the
+project never had, and keeps and reports one the author edited or one holding another
+template's version; one the author deleted stays deleted. A project updated from a media
+release before 0.5.0 receives them on its first full update into 0.6.0; until then, or where
+the author deleted one, it lacks them, unless syntek-author's copy or update has written them,
+and every media file that names one says what to do where it is missing. Never edit one, and
+never write one from memory: tailor the work in a project rule instead. The `MEDIA-` mode files
+beside them are template-owned and updated like the media skills.
 
 A family-shared `SKILL.md` names no path that only one template ships: it names a **role**, and
 this table gives each role its path for media work. syntek-author's rules give the same roles

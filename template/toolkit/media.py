@@ -90,7 +90,7 @@ register, feed, chapters and file tags), media_score.py (Jev option scoring) and
 (voice remix into a voice trial). card.py renders HTML and CSS to PNG and runs through uv:
 uv run toolkit/card.py --help.
 
-Standard library only; Python 3.11+; ffmpeg and ffprobe for every command that touches media,
+Standard library only; Python 3.14+; ffmpeg and ffprobe for every command that touches media,
 run from argument lists, never a shell string. Network access is limited to the author-run
 transcribe fetch, uv package setup, explicitly approved Jev scoring (DESIGN D74) and explicitly
 approved voice remix (D82), the one ElevenLabs call made here: every other ElevenLabs call,
@@ -593,8 +593,7 @@ def build_parser() -> argparse.ArgumentParser:
                       description="Writes publishing/src/podcast/<SHOW>.toml from the register's skeleton, with the "
                       "feed URL, the site and the show's podcast:guid (the UUIDv5 of the feed URL without its scheme "
                       "and trailing slashes, written once), and flags owner_email for the author. Refuses a show that "
-                      "exists, and a project without the podcast folder (exit 2: copier update -a "
-                      ".copier-answers.syntek-media.yml adds it). --rekey rewrites the feed URL, the podcast:guid and "
+                      "exists, and a project without the podcast folder (exit 2, naming the update that adds it). --rekey rewrites the feed URL, the podcast:guid and "
                       "every episode's guid of an existing show, only while no row is published and no tracked feed "
                       "exists.")
     q.add_argument("show", metavar="SHOW", help="the show's kebab slug, frozen")
@@ -1409,15 +1408,41 @@ def test_uv(verdict, skip, cli, root: Path) -> None:
                 and all(f["downloads"] == "never" and f["offline"] == "1" for f in finds) and len(run) == 1
                 and run[0]["run"] == ["--quiet", "--python", "/fixture/system/python3", str(script.resolve()),
                                       "--self-test"], log.read_text(encoding="utf-8") if log.is_file() else proc)
-        proc, _ = uv_run(script, UV_PYTHON="/fixture/named/python3")
-        run = calls("run")
-        verdict("UV_PYTHON, where it is set, is the interpreter, and nothing is looked up (D20)",
-                getattr(proc, "returncode", None) == 0 and not calls("find") and len(run) == 1
-                and run[0]["run"][:3] == ["--quiet", "--python", "/fixture/named/python3"], run or proc)
+        inside = fake_python(work / "named" / "python3", [3, 12, 3], "", False)
+        proc, _ = uv_run(script, UV_PYTHON=str(inside))
+        run, finds = calls("run"), calls("find")
+        verdict("a UV_PYTHON inside the script's range is the interpreter, resolved offline, and no --system "
+                "lookup is made (D20)",
+                getattr(proc, "returncode", None) == 0 and [f["find"] for f in finds] == [[str(inside)]]
+                and all(f["downloads"] == "never" and f["offline"] == "1" for f in finds) and len(run) == 1
+                and run[0]["run"][:3] == ["--quiet", "--python", str(inside)], (finds, run or proc))
+        worker = write(work / "transcribe-fixture" / "transcribe.py",
+                       UV_SCRIPT.replace(">=3.11,<3.99", ">=3.10,<3.14"))
+        newest = fake_python(work / "named" / "python3.14", [3, 14, 8], "", False)
+        proc, _ = uv_run(worker, UV_PYTHON=str(newest))
+        run, finds = calls("run"), calls("find")
+        verdict("a UV_PYTHON naming 3.14 is never passed to uv run for a >=3.10,<3.14 script: the --system lookup "
+                "for its range is used instead (D20, D67, D81)",
+                getattr(proc, "returncode", None) == 0 and ["--system", ">=3.10,<3.14"] in [f["find"] for f in finds]
+                and len(run) == 1 and run[0]["run"][:3] == ["--quiet", "--python", "/fixture/system/python3"]
+                and str(newest) not in run[0]["run"], (finds, run or proc))
+        err, _ = uv_run(worker, UV_PYTHON=str(newest), FAKE_UV_SYSTEM="")
+        verdict("with no Python in transcribe.py's range, the error names MEDIA_TRANSCRIBE_PYTHON and the "
+                "UV_PYTHON left unused, and nothing runs (D67, D81)",
+                isinstance(err, C.Fatal) and "MEDIA_TRANSCRIBE_PYTHON" in str(err) and ">=3.10,<3.14" in str(err)
+                and "outside that range" in str(err) and "uv python install 3.13" in str(err)
+                and not calls("run"), err)
+        verdict("the range reader takes comma-joined specifiers on release numbers, an empty range takes every "
+                "version, and an install example comes from the range",
+                C.meets_range([3, 12, 3], ">=3.10,<3.14") and not C.meets_range([3, 14, 0], ">=3.10,<3.14")
+                and C.meets_range([3, 14, 8], ">=3.14") and not C.meets_range([3, 13, 9], ">=3.14")
+                and C.meets_range([3, 9], "") and C.meets_range([3, 12], "!=3.11, >3.11") and not C.meets_range([3, 12], "==3.11")
+                and not C.meets_range([3, 12], "~=3.12") and C.install_example(">=3.10,<3.14") == "3.13"
+                and C.install_example(">=3.14") == "3.14", "")
         err, _ = uv_run(script, FAKE_UV_SYSTEM="")
         verdict("no Python outside a virtual environment in the script's range is exit 2, naming the fix",
                 isinstance(err, C.Fatal) and ">=3.11,<3.99" in str(err) and "UV_PYTHON" in str(err)
-                and not calls("run"), err)
+                and "uv python install 3.14" in str(err) and "3.12" not in str(err) and not calls("run"), err)
         began = time.monotonic()
         err, _ = uv_run(script, timeout=1, FAKE_UV_SLEEP="6")
         verdict("a uv script that outlives its timeout is stopped, with every process it started (exit 2)",
@@ -1532,15 +1557,20 @@ def test_uv(verdict, skip, cli, root: Path) -> None:
             seen = R.playwright_cache()
         verdict("a PLAYWRIGHT_BROWSERS_PATH already set is the browsers' folder, and uv is not asked",
                 seen == bundle and not calls("run"), seen)
-        with held_env(drop=plain, **dict(env, UV_PYTHON=str(base_py))):
+        with held_env(drop=plain, **dict(env, UV_PYTHON=str(own_py))):
             named = R.uv_interpreter_rows(root)
+        with held_env(drop=plain, **dict(env, UV_PYTHON=str(base_py))):
+            older = R.uv_interpreter_rows(root)
         fake_python(venv / "bin" / "python3", [3, 14, 8], str(own_py), True)
         with held_env(drop=plain, **dict(env, FAKE_UV_SYSTEM=str(base_py))):
             own = R.uv_interpreter_rows(root)
-        verdict("check --setup passes UV_PYTHON naming an interpreter outside a virtual environment, and a virtual "
-                "environment on a base of its own version",
+        verdict("check --setup passes UV_PYTHON naming an interpreter in the range outside a virtual environment, "
+                "and a virtual environment on a base of its own version",
                 named and named[0][0] is True and "UV_PYTHON names" in named[0][1]
                 and own and own[0][0] is True and "same version" in own[0][1], (named, own))
+        verdict("check --setup fails a UV_PYTHON outside card.py and scene.py's >=3.14, naming the fix (D20, D81)",
+                older and older[0][0] is False and "Python 3.12.3, outside the range" in older[0][1]
+                and "Python 3.14 or later" in older[0][2] and "unset it" in older[0][2], older)
     finally:
         C.UV_LOCKS = saved_locks
 

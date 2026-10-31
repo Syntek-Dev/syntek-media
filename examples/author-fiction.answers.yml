@@ -34,9 +34,11 @@ DATE: 03/10/2026
 # family-shared questions (DESIGN.md D80), answered here as the matching syntek-author example
 # answers them, so a combined render tells one story. A key a `when:` hides (GEMINI_MODEL
 # without gemini-cli, say) is never recorded: its line is here because every example answers
-# every question. Over a syntek-author project, set AGENT_CLIENTS and the model lines to what
-# .copier-answers.syntek-author.yml records: media never reads them from it, and the copy writes
-# the files of every client listed here that the project lacks.
+# every question. Over a syntek-author project, delete AGENT_CLIENTS, CODEX_MODEL,
+# GEMINI_MODEL and the OPENCODE_* lines, as the DATA_* lines are deleted: their defaults then
+# take the clients and models syntek-author's answers record (the OpenCode address, model and
+# context only from a record with the same provider), so the copy writes no client file
+# syntek-author's answers leave out. An answer given in a data file always wins.
 AGENT_CLIENTS:
   - codex
   - opencode

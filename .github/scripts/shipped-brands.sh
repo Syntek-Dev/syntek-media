@@ -20,7 +20,7 @@
 #                     Sections 3–5 transcribed), evaluated against the answers the render
 #                     recorded in .copier-answers.syntek-media.yml.
 #
-#                     Fifteen checks:
+#                     Sixteen checks:
 #                       1. The answers file records BRAND_KIND, PLATFORMS and MEDIA_KINDS.
 #                       2. Every skill the gates open is present, with its SKILL.md: Section
 #                          5.1's and the seven family skills (DESIGN.md D80).
@@ -44,7 +44,10 @@
 #                          .agents/ for any client, .codex/, .gemini/, .agents/mcp_config.json
 #                          and opencode.json for their own client).
 #                       7. No numbered workflow folder in a media layer that DESIGN.md Section
-#                          4.3 does not number.
+#                          4.3 does not number, and since 0.6.0 no numbered procedure under
+#                          how-to/workflows/syntek-media/ that Section 4.4 does not number
+#                          (D84: numbered from 01, frozen and append-only, D32), each known from
+#                          its catalogue row. The layers' own glob never reached that folder.
 #                       8. No template-only or never-ship path (copier.yml, DESIGN.md, examples/,
 #                          .github/, .claude/agents/, .claude/commands/, a root CLAUDE.md or
 #                          .gitattributes …).
@@ -56,7 +59,9 @@
 #                          syntek-author-names.txt (DESIGN.md D27). The shared paths, the
 #                          family-shared set's paths and the entries they pass through (.gemini,
 #                          handoffs, opencode.json, .claude/hooks, the seven family skill folders;
-#                          D27 as D80 amends it), and the folders that hold them or the
+#                          D27 as D80 amends it; since 0.6.0 how-to, the user guide's family
+#                          folder, D84, a family entry through SM_FAMILY_SHARED alone), and the
+#                          folders that hold them or the
 #                          per-template rules folders (.claude, .claude/rules, .claude/skills,
 #                          .codex, .agents), are shared by design. A path check 5 already reported is not reported
 #                          again. The file is read on every run: a missing one is exit 2, never
@@ -87,19 +92,30 @@
 #                          workspace file is .agents/mcp_config.json, and the old path keeps its
 #                          copier.yml lines but ships no more (D76). Over syntek-author, a copy
 #                          syntek-author wrote is its own and not reported.
+#                      16. A path media ships under how-to/ is neither one of the thirteen family
+#                          paths there (SM_FAMILY_SHARED) nor under one of media's three folders,
+#                          how-to/docs/syntek-media/, how-to/src/TEMPLATE-GUIDE/syntek-media/ and
+#                          how-to/workflows/syntek-media/ (DESIGN.md D84; syntek-author D56, whose
+#                          own audit sees a sibling's placement only with --sibling, which no CI
+#                          passes). A stray file is one finding; a folder that is neither a family
+#                          container nor one of media's three (a folder named for another
+#                          template, say) is one finding, and nothing under it is reported again.
 #
 #                     Numbers are stable identifiers. Append, never renumber.
 #
 #                     Over-author scope (DESIGN.md Section 7): on a <kind>--over-author tree,
 #                     whose <tree>.owned lists the files media's copy added, checks 5 and 8 are
 #                     skipped (syntek-author's paths are there by design; coexist-test.sh check 6
-#                     proves ownership), and checks 3, 7, 9, 11, 12, 13, 14 and 15 read
+#                     proves ownership), and checks 3, 7, 9, 11, 12, 13, 14, 15 and 16 read
 #                     media-owned paths only.
 #
 #                     What it CANNOT check: a file's CONTENT — a gated row inside an index file
 #                     that names an absent path is doc-references.sh's, and a shared file that
 #                     differs between renders is byte-identity.sh's. Nor a path DESIGN.md never
-#                     named; check 7 covers workflows, the one family whose numbering is frozen.
+#                     named; check 7 covers workflows and media's procedures under how-to/, the
+#                     two families whose numbering is frozen. Nor whether a catalogued
+#                     procedure's number matches Section 4.4's table: the catalogue transcribes
+#                     it, and a row typed wrong is read as right.
 #
 # SELF-TEST. --self-test builds a business tree from the catalogue at runtime, with a fixture
 #            names file, proves it clean, then applies one mutation per check and asserts
@@ -254,7 +270,7 @@ run_checks() {
 
   # ── 7. Workflow folders DESIGN.md does not number ───────────────────────────
   while read -r gate kind path; do
-    [[ "$path" == */workflows/[0-9][0-9]-* ]] && wf_known["$path"]=1
+    [[ "$path" == */workflows/[0-9][0-9]-* || "$path" == how-to/workflows/syntek-media/[0-9][0-9]-* ]] && wf_known["$path"]=1
   done <<< "$SM_PATHS"
   for l in $SM_LAYERS; do
     [[ -d "$TREE/$l/workflows" ]] || continue
@@ -264,6 +280,15 @@ run_checks() {
       finding "check 7 — $rel/ is a workflow DESIGN.md Section 4.3 does not number (author procedures belong in workflows/local/)"
     done < <(cd "$TREE" && find "./$l/workflows" -mindepth 1 -maxdepth 1 -type d -name '[0-9][0-9]-*' | sed 's#^\./##' | sort)
   done
+  # Media's procedures under how-to/ (D84, Section 4.4). Over syntek-author, only the folders
+  # media's copy added are read: syntek-author's procedures are under its own folder.
+  if [[ -d "$TREE/how-to/workflows/syntek-media" ]]; then
+    while IFS= read -r rel; do
+      [[ -n "${wf_known[$rel]:-}" ]] && continue
+      is_owned_dir "$rel" || continue
+      finding "check 7 — $rel/ is a procedure DESIGN.md Section 4.4 does not number (media's procedures are numbered from 01, frozen and append-only; D84, D32)"
+    done < <(cd "$TREE" && find ./how-to/workflows/syntek-media -mindepth 1 -maxdepth 1 -type d -name '[0-9][0-9]-*' | sed 's#^\./##' | sort)
+  fi
 
   # ── 8. Template-only and never-ship paths ───────────────────────────────────
   if ! $SM_OWNED_MODE; then
@@ -399,6 +424,34 @@ PYCLIENT
     finding "check 15 — .claude/mcp_config.json shipped; since 0.4.2 Antigravity's workspace file is .agents/mcp_config.json (D76)"
   fi
 
+  # ── 16. Media's placement under how-to/ (D84) ───────────────────────────────
+  # The family's thirteen paths, the folders that hold them, and media's three syntek-media/
+  # folders; anything else is reported once, at its outermost unexpected folder.
+  local -A howto_dirs=() reported16=()
+  local hp hd top16 seg
+  for hp in $SM_FAMILY_PATHS; do
+    [[ "$hp" == how-to/* ]] || continue
+    hd="${hp%/*}"
+    while [[ "$hd" == how-to* ]]; do howto_dirs["$hd"]=1; [[ "$hd" == */* ]] || break; hd="${hd%/*}"; done
+  done
+  if [[ -d "$TREE/how-to" ]]; then
+    while IFS= read -r rel; do
+      [[ -z "$rel" ]] && continue
+      is_owned_file "$rel" || continue
+      is_family_path "$rel" && continue
+      case "$rel" in how-to/docs/syntek-media/*|how-to/src/TEMPLATE-GUIDE/syntek-media/*|how-to/workflows/syntek-media/*) continue ;; esac
+      # The outermost folder on the path that is neither a family container nor media's.
+      top16=""; hd="how-to"; seg="${rel#how-to/}"
+      while [[ "$seg" == */* ]]; do
+        hd="$hd/${seg%%/*}"; seg="${seg#*/}"
+        if [[ -z "${howto_dirs[$hd]:-}" ]]; then top16="$hd/"; break; fi
+      done
+      [[ -n "$top16" ]] || top16="$rel"
+      [[ -n "${reported16[$top16]:-}" ]] && continue
+      reported16["$top16"]=1
+      finding "check 16 — $top16 ships under how-to/, where media ships only the thirteen family paths and its own files under how-to/docs/syntek-media/, how-to/src/TEMPLATE-GUIDE/syntek-media/ and how-to/workflows/syntek-media/ (DESIGN.md D84; syntek-author D56)"
+    done < <(cd "$TREE" && find how-to \( -type f -o -type l \) -print | LC_ALL=C sort)
+  fi
 }
 
 # ── Self-test ────────────────────────────────────────────────────────────────
@@ -450,6 +503,7 @@ top scenes
 top .gemini
 top AGENTS.md
 top handoffs
+top how-to
 top opencode.json
 claude CLAUDE.md
 claude hooks
@@ -463,9 +517,30 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   require_author_names
   A_KIND=business; A_PLATFORMS="youtube linkedin instagram"; A_KINDS="short-video long-video voiceover"; A_SEED=true
   A_CLIENTS="$SM_CLIENTS"
+  # Check 7 knows a procedure only from its catalogue row. Where the catalogue numbers none yet,
+  # the fixture catalogues one, so the placement probes below have a known procedure to hold.
+  local real_paths="$SM_PATHS"
+  grep -Eq '^always +d +how-to/workflows/syntek-media/[0-9][0-9]-[^/ ]+$' <<< "$SM_PATHS" \
+    || SM_PATHS="$SM_PATHS"$'\n''always        d  how-to/workflows/syntek-media/01-finish-a-copy'
   TREE="$tmp/gen"; EXPECT=""; load_owned "$TREE"
   build_tree "$TREE"
-  st_baseline "a business tree built from the catalogue, with every client and the family's skills, hooks and handoffs pair (syntek-author names by design, D80)"
+  st_baseline "a business tree built from the catalogue, with every client and the family's skills, hooks, handoffs pair and how-to files (syntek-author names by design, D80, D84)"
+  probe_clean "how-to, a syntek-author name, is the family's folder: no check 11 finding (D84)"
+
+  # 16: media's placement under how-to/ (D84). The how-to/ the catalogue built is held and put
+  # back, so the probes never take away a catalogued path (check 6's).
+  cp -a "$TREE/how-to" "$tmp/howto-held"
+  mkdir -p "$TREE/how-to/docs/syntek-media" "$TREE/how-to/src/TEMPLATE-GUIDE/syntek-media" "$TREE/how-to/workflows/syntek-media/01-finish-a-copy"
+  printf 'x\n' > "$TREE/how-to/docs/syntek-media/updating-the-template.md"
+  printf 'x\n' > "$TREE/how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md"
+  printf 'x\n' > "$TREE/how-to/workflows/syntek-media/01-finish-a-copy/STEPS.md"
+  probe_clean "media's own files under its three syntek-media/ folders are placed as D84 says"
+  printf 'x\n' > "$TREE/how-to/notes.md"
+  probe "check 16 fires on a stray file in how-to/" "check 16 — how-to/notes.md ships under how-to/"
+  rm -f "$TREE/how-to/notes.md"
+  mkdir -p "$TREE/how-to/docs/syntek-author"; printf 'x\n' > "$TREE/how-to/docs/syntek-author/x.md"; printf 'x\n' > "$TREE/how-to/docs/syntek-author/y.md"
+  probe "check 16 fires once on a folder named for another template, not on each file in it" "check 16 — how-to/docs/syntek-author/ ships under how-to/"
+  rm -rf "$TREE/how-to"; cp -a "$tmp/howto-held" "$TREE/how-to"
 
   # The client gates (D80): a file ships only for a ticked client.
   cp "$TREE/$SM_ANSWERS_FILE" "$tmp/answers-held"
@@ -548,6 +623,9 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   mkdir -p "$TREE/publishing/workflows/99-invent-a-step"
   probe "check 7 fires on an unnumbered workflow" "check 7"
   rmdir "$TREE/publishing/workflows/99-invent-a-step"
+  mkdir -p "$TREE/how-to/workflows/syntek-media/07-invent-a-step"
+  probe "check 7 fires on a procedure under how-to/ that Section 4.4 does not number (D84)" "check 7 — how-to/workflows/syntek-media/07-invent-a-step/ is a procedure"
+  rmdir "$TREE/how-to/workflows/syntek-media/07-invent-a-step"
 
   printf 'x\n' > "$TREE/copier.yml"
   probe "check 8 fires when copier.yml leaks" "check 8 — copier.yml"
@@ -615,9 +693,14 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   mkdir -p "$f/standards"; printf 'x\n' > "$f/standards/notes.md"; printf 'standards/notes.md\n' >> "$f.owned"
   printf 'top standards\n' >> "$SM_AUTHOR_NAMES_FILE"; require_author_names; load_owned "$TREE"
   probe "check 11 fires on a media-owned path syntek-author also names, over syntek-author" "check 11 — the top-level path standards"
+  rm -rf "$f/standards"; sed -i '/^standards\/notes.md$/d' "$f.owned"; load_owned "$TREE"
+  mkdir -p "$f/how-to/src/TEMPLATE-GUIDE/syntek-author"; printf 'x\n' > "$f/how-to/src/TEMPLATE-GUIDE/syntek-author/01-overview.md"
+  probe_clean "syntek-author's own guide folder under how-to/ is not media's, over syntek-author"
+  printf 'x\n' > "$f/how-to/stray.md"; printf 'how-to/stray.md\n' >> "$f.owned"; load_owned "$TREE"
+  probe "check 16 fires on a media-owned stray under how-to/, over syntek-author" "check 16 — how-to/stray.md ships under how-to/"
   SM_OWNED_MODE=false; SM_OWNED=()
 
-  SM_AUTHOR_NAMES_FILE="$real_names"
+  SM_AUTHOR_NAMES_FILE="$real_names"; SM_PATHS="$real_paths"
   st_finish "a correctly gated render from a leaking or incomplete one"
 }
 

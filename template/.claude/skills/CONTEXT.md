@@ -28,7 +28,9 @@ and which carry a mode file) lives in one place only, that template's
 - **Family-shared skills** — seven of them (`grill-me`, `grill-with-docs`, `grilling`, `handoff`,
   `wait-what`, `wayfinder`, `to-questionnaire`) have a `SKILL.md` that every Syntek template ships
   byte for byte, so a project with two templates keeps one copy. A copy writes each one where it
-  is absent; an update never changes or recreates it. Each names folders by role, and
+  is absent, and every update that runs the family update script replaces one you never
+  changed, writes one the project never had, and keeps and reports one you edited; one you
+  delete stays deleted. Each names folders by role, and
   `.claude/rules/syntek-media/02-skills.md` Section 4 gives each role its media path. All seven
   carry the neutral Mode paragraph.
 - **Mode files** — a moded skill's `SKILL.md` is the same in every kind of project; the domain

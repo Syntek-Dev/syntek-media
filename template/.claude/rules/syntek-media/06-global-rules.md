@@ -52,8 +52,17 @@ that gets read: a platform limit restated in seven files is wrong in six after i
 author's explicit instruction. When a rule looks wrong, report it with a proposed wording, and keep
 working under the rule as written until the author decides.
 
+**The user guide is read-only.** Never edit, write, move or delete a file under `how-to/`, even
+when asked, except through a template's update, its recovery and the commands an update report
+prints for a file there (taking the template's version, `git add`, removing a `.rej` file):
+`.claude/settings.json` denies it, the guide guard (`.claude/hooks/how-to-read-only.sh`)
+refuses it, and every full update puts the guide's files back. A departure is recorded where
+`.claude/rules/syntek-media/01-layout-and-routing.md` Section 10 says
+(`how-to/src/TEMPLATE-GUIDE/syntek-media/10-customising.md`).
+
 **Why this rule exists.** A system that edits its own rules to fit the task in hand will, sooner or
-later, edit away the rule that protected the work.
+later, edit away the rule that protected the work. The guide explains the template version the
+project runs: an edited copy misleads the next session, and the next update puts it back.
 
 ---
 
@@ -75,8 +84,10 @@ an overwritten one is gone.
 
 **Requirement.** Prose in `src/` artefacts keeps one sentence per line, and a script or transcript
 one spoken sentence per line. Apply it only to a paragraph you are already editing; never reflow a
-whole file. Governance and instructional files keep their hard wrap. Where syntek-author is
-applied, its lint reads media's `src/` Markdown too.
+whole file. Governance and instructional files keep their hard wrap, except the template's
+guide chapters in `how-to/src/`, which are written one sentence per line by the template. Where
+syntek-author is applied, its lint reads media's `src/` Markdown, and the chapters of
+`how-to/src/` only under `SCOPE=how-to/src`.
 
 **Why this rule exists.** A diff, a review or a caption check then points at one sentence, and a
 spoken line is timed, voiced and captioned as one unit.
@@ -88,7 +99,7 @@ spoken line is timed, voiced and captioned as one unit.
 **Requirement.** Every instructional Markdown file (guides, workflows, every `CONTEXT.md` and
 `CLAUDE.md`, skills, mode files, everything under `.claude/`) stays within 300 lines, splitting
 into `SCREAMING-SNAKE-CASE.md` sub-documents behind a thin index. `src/` artefacts and `README.md`
-are exempt.
+are exempt; the guide's chapters in `how-to/src/` are not.
 
 **Why this rule exists.** A long instruction file is read selectively, and the rule that gets
 skipped is the one near the end.
@@ -156,8 +167,16 @@ and Section 1 of `.claude/rules/syntek-media/01-layout-and-routing.md` follows o
 
 ```bash
 GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false \
-  uvx copier update --trust -a .copier-answers.syntek-media.yml
+  uvx --python '>=3.14' copier update --trust -a .copier-answers.syntek-media.yml
 ```
+
+`--python '>=3.14'` runs Copier on Python 3.14, which the update report needs; keep the quotes,
+or the shell reads `>` as a redirection. Where no update report appears, or a framed message says
+the update script did NOT run, run the update again on Python 3.14. The steps:
+`how-to/workflows/syntek-media/02-change-the-answers/`,
+`how-to/workflows/syntek-media/04-update-the-template/` and, for an update that stopped,
+`how-to/workflows/syntek-media/05-recover-a-stopped-update/`. In a combined project,
+syntek-author must be v0.6.0 or later, and is updated first.
 
 - **`BRAND_KIND` never changes**: the update refuses it. A different brand kind is a new project.
 - **Removing a platform or a media kind deletes every file it generated**, filled seeds included,
@@ -166,9 +185,11 @@ GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_
 - **After such a change**, the shared files that describe the options (`README.md`, `CONTEXT.md`
   and `.claude/CLAUDE.md`, where media wrote them) and any rows for a removed platform in
   `brand/src/platforms/overrides.toml` are edited by hand.
-- **A coding client ticked on an update** adds its row to the model table
-  (`.claude/rules/syntek-media/05-model-allocation.md` Section 4) and nothing else: its files
-  arrive only through the steps in `.claude/syntek-media-agents.md`.
+- **A coding client ticked on an update** brings only its row of the model table
+  (`.claude/rules/syntek-media/05-model-allocation.md` Section 4), never its files, and the update
+  script offers the two MCP servers once to those of its files that already exist; its files
+  arrive only through `how-to/workflows/syntek-media/06-enable-a-coding-agent-client/`, beside
+  the steps in `.claude/syntek-media-agents.md`.
 
 **Why this rule exists.** A hand edit in a rendered file and a stale answer diverge silently, and
 a platform removed without warning takes the author's filled-in profile with it.
@@ -195,7 +216,7 @@ repository that holds a `.syntek-data-root` marker; this machine's is the one `S
 names. Never search, list, edit or write anything under one, by any tool or shell command. Media
 files nothing there: its map, `.claude/syntek-media-dataroot.json`, names no folder, so footage
 stays listed in `production/src/footage/manifest.toml` and the resolver's `add` refuses a media
-file. The resolver, `python3 .claude/syntek-media-dataroot.py` (Python 3.11 or later), ships for
+file. The resolver, `python3 .claude/syntek-media-dataroot.py` (Python 3.14 or later), ships for
 the family's shared records: `store` prints the store each template's answers record, and `root`
 the root and its layout; where syntek-author is applied, its own data-root rules say when its
 files are filed. The data-root answers are kept in step with every other template's: while two

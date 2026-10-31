@@ -14,8 +14,11 @@
 #               mode files, MEMORY.md), every CONTEXT.md and CLAUDE.md, guides. Exempt
 #               (DESIGN.md D31): README.md, and artefacts under any src/ folder — scripts,
 #               transcripts, briefs, plans, registers — except the CONTEXT.md and CLAUDE.md
-#               pair inside src/, which instructs. Pruned: generated/, renders/ and raw/
-#               (README only, the rest ignored by Git), .git/, build/, node_modules/.
+#               pair inside src/, which instructs, and since 0.6.0 every .md under how-to/src/:
+#               the user guide's chapters are read as instructions, not kept as artefacts
+#               (D84 as it amends D31; syntek-author D56), the three shared chapters among
+#               them. Pruned: generated/, renders/ and raw/ (README only, the rest ignored by
+#               Git), .git/, build/, node_modules/.
 #
 #               One check:
 #                 1. An instructional .md file is longer than 300 lines.
@@ -31,8 +34,9 @@
 #               skill-conformance.sh's check 17.
 #
 # SELF-TEST. --self-test writes a fixture at runtime — a 300-line file, a long README, a long
-#            src/ artefact, a long file in a renders/ folder — proves it clean, then lengthens
-#            one file per probe and asserts exactly one finding.
+#            src/ artefact, a long file in a renders/ folder, a 300-line chapter of how-to/src/
+#            — proves it clean, then lengthens one file per probe and asserts exactly one
+#            finding.
 #
 # Requirements: bash, find, wc. No network.
 #
@@ -88,6 +92,8 @@ instructional() { # tree-relative path
   local b="${1##*/}"
   [[ "$1" == *.md ]] || return 1
   [[ "$b" == README.md ]] && return 1
+  # The user guide's chapters instruct (D84): checked before the src/ artefact exemption.
+  [[ "$1" == how-to/src/* ]] && return 0
   if [[ "/$1" == */src/* ]]; then
     [[ "$b" == CONTEXT.md || "$b" == CLAUDE.md ]] || return 1
   fi
@@ -123,6 +129,8 @@ self_test() {
   seq 1 900 > "$t/production/src/renders/notes.md"
   seq 1 10  > "$t/scripts/src/CONTEXT.md"
   seq 1 10  > "$t/.claude/skills/captions/SKILL.md"
+  mkdir -p "$t/how-to/src/TEMPLATE-GUIDE/syntek-media"
+  seq 1 300 > "$t/how-to/src/TEMPLATE-GUIDE/syntek-media/02-x.md"
   st_baseline "a fixture at the cap, with exempt long files"
 
   seq 1 301 > "$t/scripts/CLAUDE.md";                 probe "check 1 fires on a CLAUDE.md one line over" "check 1 — scripts/CLAUDE.md"
@@ -131,6 +139,9 @@ self_test() {
   seq 1 10  > "$t/scripts/src/CONTEXT.md"
   seq 1 400 > "$t/.claude/skills/captions/SKILL.md";  probe "check 1 fires on a long SKILL.md" "check 1 — .claude/skills/captions/SKILL.md"
   seq 1 10  > "$t/.claude/skills/captions/SKILL.md"
+  seq 1 301 > "$t/how-to/src/TEMPLATE-GUIDE/syntek-media/02-x.md"
+  probe "check 1 fires on a chapter of how-to/src/ one line over, while the long scripts/src/ artefact stays exempt (D84)" "check 1 — how-to/src/TEMPLATE-GUIDE/syntek-media/02-x.md"
+  seq 1 300 > "$t/how-to/src/TEMPLATE-GUIDE/syntek-media/02-x.md"
 
   mkdir -p "$t/.claude/rules/syntek-author"; seq 1 400 > "$t/.claude/rules/syntek-author/01-layout-and-routing.md"
   tree_files "$t" | grep -v '^\.claude/rules/syntek-author/' > "$t.owned"; load_owned "$t"

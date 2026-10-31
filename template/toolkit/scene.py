@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.11"
-# dependencies = ["playwright==1.63.0"]
+# requires-python = ">=3.14"
+# dependencies = ["playwright==1.64.0"]
 # ///
 """scene.py: local, deterministic stills and native scene masters (D70–D72).
 

@@ -41,7 +41,7 @@ naming its size. A GIF has no sound; it is written, as every deliverable is, to 
 publishing/src/renders/<piece>/ unless -o names a path. gif_facts reads a GIF's size, frames,
 delays and loop count from its own blocks, which is how its play time is verified.
 
-Standard library only; Python 3.11+.
+Standard library only; Python 3.14+.
 """
 from __future__ import annotations
 

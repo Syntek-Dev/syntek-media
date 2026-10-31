@@ -23,8 +23,8 @@
 #                   nowhere; a guide without its Governing standard section restates a rule it
 #                   should cite.
 #
-#                   Nineteen checks — syntek-author's seventeen, unchanged in meaning and number,
-#                   then media's two:
+#                   Twenty checks — syntek-author's seventeen, unchanged in meaning and number,
+#                   then media's three:
 #                     1. A directory has no CONTEXT.md.
 #                     2. A directory has no CLAUDE.md (the root excepted).
 #                     3. A CLAUDE.md does not open with @./CONTEXT.md.
@@ -40,8 +40,9 @@
 #                    10. .claude/rules/ carries a CONTEXT.md or CLAUDE.md.
 #                    11. A drafts/ folder lacks README.md, or carries a pair (media ships none;
 #                        the check stands so one never arrives unnoticed).
-#                    12. A workflow folder (layer/workflows/NN-name/) lacks STEPS.md or
-#                        CHECKLIST.md.
+#                    12. A workflow folder (layer/workflows/NN-name/, or since 0.6.0 one of
+#                        media's procedures, how-to/workflows/syntek-media/NN-name/, D84) lacks
+#                        STEPS.md or CHECKLIST.md. Checks 13–15 and 17 read both kinds.
 #                    13. STEPS.md or CHECKLIST.md routing frontmatter is wrong: `workflow:` is
 #                        not the folder name, `phase:` is not one of plan · research · produce ·
 #                        review · publish · convert · author, `skills:` or `model:` is missing,
@@ -50,10 +51,11 @@
 #                    15. A STEPS.md step (## N.) does not open with `> **Skill:**`, or does not
 #                        carry _Substantive._ or _Mechanical._ (a parenthetical before the full
 #                        stop is allowed, and may wrap: _Substantive (the author's call)._).
-#                    16. A guide (docs/reference/*.md) breaks the house format: frontmatter
-#                        `type: guide`, `skills:`, `model:`; `**What it is.**`; the H2s How we
-#                        apply it here, Who implements it, and Governing standard (last); 54–82
-#                        lines (DESIGN.md D33).
+#                    16. A guide (docs/reference/*.md, or since 0.6.0 one of media's guides,
+#                        how-to/docs/syntek-media/*.md, the pair apart, D84) breaks the house
+#                        format: frontmatter `type: guide`, `skills:`, `model:`; `**What it
+#                        is.**`; the H2s How we apply it here, Who implements it, and Governing
+#                        standard (last); 54–82 lines (DESIGN.md D33).
 #                    17. A STEPS.md, CHECKLIST.md or guide lacks the metadata header
 #                        (**Last Updated** … **Version** … **Maintained By** …, then
 #                        **Language**: British English (en_GB)). Media has no standards folder.
@@ -61,6 +63,28 @@
 #                        the brief is where the piece's status and gates live (DESIGN.md D17).
 #                    19. A generated/, renders/ or raw/ folder lacks README.md, or carries a pair
 #                        (DESIGN.md D42).
+#                    20. A shown Copier copy, update or recopy command (`uvx … copier copy`, in
+#                        any text file of the tree, and, run on the template source, in every
+#                        file of the repository outside template/ that Git holds or would add)
+#                        runs Copier otherwise than as `uvx --python '>=X.Y' copier`, X.Y being
+#                        _common.sh's SM_PYTHON_MIN, quoted (since 0.6.0: DESIGN.md D3, D81 and
+#                        Section 7; .claude/CLAUDE.md Section 9), ported from syntek-author's
+#                        docs-pairing.sh check 21. Left to itself uvx may run Copier on an older
+#                        Python it already has, where the family scripts do nothing; and the
+#                        shell reads an unquoted > as a redirection, writing a file named
+#                        '=X.Y'. Three forms pass besides the house form itself: a script that
+#                        prints the command through a placeholder (--python %s) where the same
+#                        line holds the quoted '>=X.Y' it fills in; one that fills in the quoted
+#                        '>=%s' in a file that sets PYTHON_MIN = (X, Y), as the vendored update
+#                        and outside-link scripts do; and, media's allowance from
+#                        .claude/CLAUDE.md Section 9, the bare `uvx copier` on a comment line (a
+#                        # comment outside Markdown, or a line opening an HTML comment), or on a
+#                        line that points to a section giving the full form: a pointer word
+#                        ('see', 'gives' or 'shows') and the section ('Section N', a link to a
+#                        heading, or a file named with a quoted section title). Not read: CHANGELOG.md, the record of past
+#                        releases, and .github/scripts/, whose audits run Copier on the pinned
+#                        UV_PYTHON and show no command. Over syntek-author, media-owned files
+#                        only.
 #
 #                   Numbers are stable identifiers. Append, never renumber.
 #
@@ -68,19 +92,38 @@
 #                   an index file is judged as the row it renders to; headings inside fenced
 #                   code (an entry template quoted in a CLAUDE.md) are not read as headings.
 #
+#                   The user guide (D84, Section 4.4): its shared family pairs under how-to/
+#                   are read as any pair is (checks 1–9), and checks 12–17 reach media's
+#                   procedures and guides there, as syntek-author's audit reads its own.
+#                   Checks 12–17 read media's own folders there only: a procedure or guide in
+#                   a folder named for another template is shipped-brands.sh check 16's
+#                   finding, never this audit's.
+#
 #                   Over-author scope (DESIGN.md Section 7): on a tree with a <tree>.owned
 #                   beside it, only media-owned folders and files are checked — syntek-author's
 #                   own folders are its audit's business, and its exempt_dir does not know
 #                   media's README-only folders.
 #
 #                   What it CANNOT check: whether a paragraph says anything. A script proves a
-#                   heading and a tree exist; only a reader can tell whether they orient.
+#                   heading and a tree exist; only a reader can tell whether they orient. Nor
+#                   the shape of a chapter under how-to/src/TEMPLATE-GUIDE/syntek-media/
+#                   (DESIGN.md Section 6.18): it has no frontmatter to read, and syntek-author's
+#                   make lint and make flags read it (coexist-test.sh check 24). Nor, for check
+#                   20, a command wrapped across two lines, prose that names uvx with no Copier
+#                   command after it, a pointer on the line above the command rather than on
+#                   it, whether a line citing 'Section N' points to a section that gives the
+#                   full form or merely cites one (the allowance reads any such line), or the
+#                   -a and housekeeping half of the rule, which is each instruction's author's
+#                   to keep (.claude/CLAUDE.md Section 9).
 #
-# SELF-TEST. --self-test builds a conformant tree at runtime — pairs, a skill, the rules folder,
-#            a workflow, a guide, a piece folder, a generated/ folder — proves it clean, then
-#            applies one mutation per check and asserts exactly one finding each.
+# SELF-TEST. --self-test builds a conformant tree at runtime, as a scratch repository's
+#            template/ — pairs, a skill, the rules folder, a workflow, a guide, a how-to
+#            procedure and guide (its update step in the house form), a piece folder, a
+#            generated/ folder, and at the repository root a README.md and a CHANGELOG.md —
+#            proves it clean, then applies one mutation per check and asserts exactly one
+#            finding each.
 #
-# Requirements: bash 4+, grep, awk, sed, find. No network.
+# Requirements: bash 4+, grep, awk, sed, find; git for check 20's repository files. No network.
 #
 # Usage: docs-pairing.sh [--root DIR] [--quiet] [--self-test] [--help] [<tree>...]
 #        With no tree, checks template/ in the repository.
@@ -147,8 +190,13 @@ fm_value() { # $1 = key, stdin = frontmatter
 }
 
 is_guide() { # tree-relative path
-  [[ "$1" == */docs/reference/*.md || "$1" == docs/reference/*.md ]] || return 1
   local b="${1##*/}"
+  # Media's guides under how-to/ (D84): how-to/docs/syntek-media/*.md, the pair apart.
+  if [[ "$1" == how-to/docs/syntek-media/*.md && "$1" != how-to/docs/syntek-media/*/* ]]; then
+    [[ "$b" == CONTEXT.md || "$b" == CLAUDE.md ]] && return 1
+    return 0
+  fi
+  [[ "$1" == */docs/reference/*.md || "$1" == docs/reference/*.md ]] || return 1
   [[ "$b" == CONTEXT.md || "$b" == CLAUDE.md ]] && return 1
   [[ "$b" =~ ^[A-Z0-9-]+\.md$ ]] && return 1     # SCREAMING-CASE sub-docs behind an index
   [[ "$1" == */docs/reference/*/* ]] && return 1
@@ -250,6 +298,84 @@ check_guide() { # $1 = rel
   has_header "$f" || finding "check 17 — $1 has no metadata header"
 }
 
+# The lines of a file that show a Copier copy, update or recopy command run otherwise than in the
+# house form (check 20, ported from syntek-author's docs-pairing.sh check 21), one "N: line" each.
+# A command is uvx, its options, then copier (or copier@… or copier==…) and one of the three
+# subcommands; in the house form the text from uvx to copier is exactly "uvx --python '>=X.Y' ",
+# or "uvx --python %s " on a line that holds the quoted '>=X.Y' a printf fills in, or
+# "uvx --python '>=%s' " in a file that sets PYTHON_MIN = (X, Y), which fills it in. Media's
+# allowance (.claude/CLAUDE.md Section 9): the bare "uvx copier" on a comment line (# outside
+# Markdown, or a line opening an HTML comment), or a line that points to a section giving the full
+# form, with a pointer word ('see', 'gives', 'shows') and the section itself. Prose that names uvx without a Copier command is not
+# read.
+copier_form() { # $1 = file
+  local filled=0 md=0
+  grep -qE "^[[:space:]]*PYTHON_MIN = \(${SM_PYTHON_MIN%%.*}, ${SM_PYTHON_MIN#*.}\)[[:space:]]*$" "$1" 2>/dev/null && filled=1
+  [[ "$1" == *.md ]] && md=1
+  awk -v want="uvx --python '>=$SM_PYTHON_MIN' " -v quoted="'>=$SM_PYTHON_MIN'" -v filled="$filled" \
+      -v md="$md" -v q="'" '
+    BEGIN {
+      n = split("--python -p --from --with -w --with-editable --with-requirements --index --index-url --default-index --extra-index-url --python-preference --cache-dir --directory --project --config-file", v, " ")
+      for (i = 1; i <= n; i++) takes[v[i]] = 1
+      titled = "\\.(md|yml|yaml)`? " q "[A-Z][^" q "]*" q
+    }
+    index($0, "uvx") {
+      line = $0; rest = line; bad = 0
+      lead = line; sub(/^[ \t]+/, "", lead)
+      allowed = (!md && substr(lead, 1, 1) == "#") || substr(lead, 1, 4) == "<!--" \
+        || ((line ~ /Section [0-9]/ || line ~ /\]\([^)]*#[^)]+\)/ || line ~ titled) \
+            && line ~ /([Ss]ee |[^A-Za-z](gives|shows)[^A-Za-z])/)
+      while (!bad && (p = index(rest, "uvx")) > 0) {
+        pre = (p > 1) ? substr(rest, p - 1, 1) : ""
+        after = substr(rest, p + 3); rest = after
+        if (pre ~ /[A-Za-z0-9_.-]/ || after !~ /^[ \t]/) continue
+        n = split(after, tok, /[ \t]+/); cmd = 0; expect = 0
+        for (i = 1; i <= n; i++) {
+          t = tok[i]
+          if (t == "") continue
+          if (expect) { expect = 0; continue }
+          if (t ~ /^copier((@|==)[^ \t`"'\'']+)?$/) {
+            if (i < n && tok[i + 1] ~ /^(copy|update|recopy)([^A-Za-z0-9_-]|$)/) cmd = 1
+            break
+          }
+          if (t ~ /^-/) { if (index(t, "=") == 0 && (t in takes)) expect = 1; continue }
+          break
+        }
+        if (!cmd) continue
+        seg = "uvx" substr(after, 1, index(after, "copier") - 1)
+        if (seg == want) continue
+        if (seg == "uvx --python %s " && index(line, quoted)) continue
+        if (seg == "uvx --python '\''>=%s'\'' " && filled) continue
+        if (seg == "uvx " && allowed) continue
+        bad = 1
+      }
+      if (bad) { print NR ": " line }
+    }' "$1"
+}
+
+# Check 20 on the repository's own files, read only on the template source: every file Git holds
+# or would add outside template/, but CHANGELOG.md and these audits. NUL-separated, from SM_ROOT.
+root_copier_files() {
+  local f
+  if git -C "$SM_ROOT" rev-parse --show-toplevel >/dev/null 2>&1; then
+    { git -C "$SM_ROOT" ls-files -z --cached; git -C "$SM_ROOT" ls-files -z --others --exclude-standard; } | sort -zu
+  else
+    (cd "$SM_ROOT" && find . \( -name .git -o -name handoffs \) -prune -o -type f -print0 | sed -z 's#^\./##' | sort -z)
+  fi | while IFS= read -r -d '' f; do
+    case "$f" in template/*|.github/scripts/*|CHANGELOG.md) continue ;; esac
+    [[ -f "$SM_ROOT/$f" && ! -L "$SM_ROOT/$f" ]] && grep -qI -e uvx -- "$SM_ROOT/$f" 2>/dev/null && printf '%s\0' "$f"
+  done
+  return 0
+}
+
+copier_form_findings() { # $1 = base folder, $2 = path under it, $3 = how the path is named
+  local hit text
+  while IFS= read -r hit; do
+    text="${hit#*: }"; text="${text#"${text%%[![:space:]]*}"}"
+    finding "check 20 — $3:${hit%%: *} shows a Copier command not run as $SM_UVX_COPIER (D3): ${text:0:160}"
+  done < <(copier_form "$1/$2")
+}
+
 run_checks() {
   FINDINGS=()
   DIRS_CHECKED=0; FILES_CHECKED=0
@@ -265,7 +391,7 @@ run_checks() {
     if [[ -n "$d" && ! -f "$TREE/$d/CLAUDE.md" ]]; then finding "check 2 — $d/ has no CLAUDE.md"; fi
     [[ -f "$TREE/${d:+$d/}CLAUDE.md" && -n "$d" ]] && check_claude "$d/CLAUDE.md"
     [[ -f "$TREE/${d:+$d/}CONTEXT.md" ]] && check_context "${d:+$d/}CONTEXT.md"
-    if [[ "$d" =~ ^[^/]+/workflows/[0-9][0-9]-[^/]+$ ]]; then check_workflow "$d"; fi
+    if [[ "$d" =~ ^[^/]+/workflows/[0-9][0-9]-[^/]+$ || "$d" =~ ^how-to/workflows/syntek-media/[0-9][0-9]-[^/]+$ ]]; then check_workflow "$d"; fi
   done < <(cd "$TREE" && find . \( -name .git -o -name build -o -name audio -o -name __pycache__ -o -name node_modules \) -prune -o -type d -print0 | sort -z)
 
   # ── 10. Nothing in .claude/rules/ that would load as a rule ─────────────────
@@ -290,7 +416,7 @@ run_checks() {
     f="${f#./}"
     is_owned_file "$f" || continue
     if is_guide "$f"; then check_guide "$f"; fi
-  done < <(cd "$TREE" && find . -name .git -prune -o -path '*/docs/reference/*' -name '*.md' -print0 | sort -z)
+  done < <(cd "$TREE" && find . -name .git -prune -o \( -path '*/docs/reference/*' -o -path './how-to/docs/syntek-media/*' \) -name '*.md' -print0 | sort -z)
 
   # ── 18. A piece folder carries its brief ────────────────────────────────────
   if [[ -d "$TREE/scripts/src/pieces" ]]; then
@@ -309,6 +435,18 @@ run_checks() {
     [[ -f "$TREE/$d/README.md" ]] || finding "check 19 — $d/ has no README.md — a $b/ folder says what lands in it and that Git ignores it"
     if [[ -f "$TREE/$d/CONTEXT.md" || -f "$TREE/$d/CLAUDE.md" ]]; then finding "check 19 — $d/ carries a pair; a $b/ folder carries README.md only (DESIGN.md D42)"; fi
   done < <(cd "$TREE" && find . -name .git -prune -o -type d \( -name generated -o -name renders -o -name raw \) -print | sort)
+
+  # ── 20. Every shown Copier command in the house form (D3, D81) ──────────────
+  while IFS= read -r -d '' f; do
+    f="${f#./}"
+    is_owned_file "$f" || continue
+    copier_form_findings "$TREE" "$f" "$f"
+  done < <(cd "$TREE" && grep -rlIZ --exclude-dir=.git --exclude-dir=build --exclude-dir=node_modules -e uvx . 2>/dev/null | sort -z || true)
+  if [[ -d "$SM_ROOT/template" && "$TREE" == "$(cd "$SM_ROOT/template" && pwd)" ]]; then
+    while IFS= read -r -d '' f; do
+      copier_form_findings "$SM_ROOT" "$f" "$f (the repository)"
+    done < <(root_copier_files)
+  fi
 }
 
 # ── Self-test ────────────────────────────────────────────────────────────────
@@ -353,17 +491,39 @@ write_fixture() { # $1 = tree
     for i in $(seq 1 34); do printf 'Line %d of the topic.\n' "$i"; done
     printf '\n## How we apply it here\n\nOne sentence or beat per segment.\n\n## Who implements it\n\nThe voiceover skill.\n\n## Governing standard\n\nThe rules own the rule; this guide owns the explanation.\n'
   } > "$t/production/docs/reference/voiceover.md"
+  # The user guide (D84): the family's container pairs, media's folders, a procedure and a guide.
+  local hp="how-to/workflows/syntek-media/04-update-the-template" hg="how-to/docs/syntek-media/updating-the-template.md"
+  for d in how-to how-to/docs how-to/docs/syntek-media how-to/workflows how-to/workflows/syntek-media "$hp"; do
+    write_pair "$t" "$d"
+  done
+  for f in STEPS CHECKLIST; do
+    printf -- '---\nworkflow: 04-update-the-template\nphase: review\nskills: []\nmodel: sonnet\n---\n\n# %s.md — update the template\n\n%s\n\n' "$f" "$HEADER" > "$t/$hp/$f.md"
+  done
+  printf '## 1. Check the tree\n\n> **Skill:** none · **Guide:** `%s`\n\nConfirm the working tree is clean. _Mechanical._\n' "$hg" >> "$t/$hp/STEPS.md"
+  # A shown update command in the house form (check 20), housekeeping off, as the procedures give it.
+  printf '\n## 2. Update\n\n> **Skill:** none · **Guide:** `%s`\n\n```bash\nGIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false \\\n  %s update --trust -a .copier-answers.syntek-media.yml\n```\n\n_Mechanical._\n' "$hg" "$SM_UVX_COPIER" >> "$t/$hp/STEPS.md"
+  printf '## Pre-Conditions\n\n- [ ] The tree is clean. · _sonnet_\n\n## Done When\n\n- [ ] **The update finished.** · _sonnet_\n' >> "$t/$hp/CHECKLIST.md"
+  {
+    printf -- '---\ntype: guide\nskills: []\nmodel: sonnet\n---\n\n# Updating the template — one release at a time\n\n%s\n\n**What it is.** An update takes the project to a later release.\n\n## Releases\n\n' "$HEADER"
+    for i in $(seq 1 34); do printf 'Line %d of the topic.\n' "$i"; done
+    printf '\n## How we apply it here\n\nThe procedure runs it.\n\n## Who implements it\n\nThe owner, step by step.\n\n## Governing standard\n\nThe rules own the rule; this guide owns the explanation.\n'
+  } > "$t/$hg"
 }
 
 self_test() {
   local tmp t wf="production/workflows/02-make-a-voiceover" g="production/docs/reference/voiceover.md" f
-  local piece="scripts/src/pieces/003-why-the-ferry-runs-late"
+  local piece="scripts/src/pieces/003-why-the-ferry-runs-late" real_root="$SM_ROOT"
   bold "▸ $SCRIPT_NAME --self-test"; log ""
   tmp="$(sm_mktemp)"
   # shellcheck disable=SC2064
-  trap "rm -rf '$tmp'" RETURN
-  t="$tmp/gen"; TREE="$t"; load_owned "$TREE"
+  trap "rm -rf '$tmp'; SM_ROOT='$real_root'" RETURN
+  # The tree is a scratch repository's template/, so check 20 also reads the repository's own
+  # files: a README.md showing the house form, and a CHANGELOG.md, which it never reads.
+  SM_ROOT="$tmp/repo"; t="$SM_ROOT/template"; TREE="$t"; load_owned "$TREE"
   write_fixture "$t"
+  sm_git "$SM_ROOT" init -q
+  printf '# Probe template\n\n```bash\n%s copy --trust gh:Example/probe my-channel\n```\n' "$SM_UVX_COPIER" > "$SM_ROOT/README.md"
+  printf '# Changelog\n\n- v0.1.0: run `uvx copier update --trust -a .copier-answers.syntek-media.yml`.\n' > "$SM_ROOT/CHANGELOG.md"
   st_baseline "a conformant tree"
 
   write_pair "$t" handoffs; printf '# A handoff\n' > "$t/handoffs/HANDOFF-PROBE-01-01-2027.md"
@@ -403,16 +563,68 @@ self_test() {
   sed -i 's/^## Who implements it/## Who does it/' "$t/$g";   probe "check 16 fires on a guide missing a section" "check 16"; cp "$tmp/h" "$t/$g"
   sed -i '/^Line [0-9]* of the topic\./d' "$t/$g";            probe "check 16 fires on a guide that is too short" "check 16 — $g is"; cp "$tmp/h" "$t/$g"
   sed -i '/^\*\*Language\*\*/d' "$t/$g";                      probe "check 17 fires on a guide with no header" "check 17"; cp "$tmp/h" "$t/$g"
+  local hp="how-to/workflows/syntek-media/04-update-the-template" hg="how-to/docs/syntek-media/updating-the-template.md"
+  mv "$t/$hp/CHECKLIST.md" "$tmp/h";                          probe "check 12 fires on a procedure under how-to/ with no CHECKLIST.md (D84)" "check 12 — $hp/ has no CHECKLIST.md"; mv "$tmp/h" "$t/$hp/CHECKLIST.md"
+  cp "$t/$hp/STEPS.md" "$tmp/h"
+  sed -i 's/^workflow: .*/workflow: 04-update-a-template/' "$t/$hp/STEPS.md"; probe "check 13 fires on a procedure whose workflow key is not its folder (D84)" "check 13 — $hp/STEPS.md says workflow: '04-update-a-template'"; cp "$tmp/h" "$t/$hp/STEPS.md"
+  cp "$t/$hg" "$tmp/h"
+  awk -v k="$(( $(wc -l < "$t/$hg") - 40 ))" '/^Line [0-9]+ of the topic\./ && k > 0 { k--; next } { print }' "$tmp/h" > "$t/$hg"
+  probe "check 16 fires on a guide under how-to/ of 40 lines (D84)" "check 16 — $hg is 40 lines"; cp "$tmp/h" "$t/$hg"
   mv "$t/$piece/brief.md" "$tmp/h";                           probe "check 18 fires on a piece folder with no brief" "check 18 — $piece/"; mv "$tmp/h" "$t/$piece/brief.md"
   mv "$t/production/src/renders/README.md" "$tmp/h";          probe "check 19 fires on a renders/ with no README.md" "check 19 — production/src/renders/ has no README.md"; mv "$tmp/h" "$t/production/src/renders/README.md"
   printf '# x\n' > "$t/production/src/voiceover/generated/CONTEXT.md"
   probe "check 19 fires on a generated/ that carries a pair" "check 19 — production/src/voiceover/generated/ carries a pair"
   rm -f "$t/production/src/voiceover/generated/CONTEXT.md"
+  # Check 20: a shown Copier command run otherwise than as uvx --python '>=X.Y' copier.
+  cp "$t/$hp/STEPS.md" "$tmp/h2"; cp "$SM_ROOT/README.md" "$tmp/h3"
+  printf '\nOr run `uvx copier update --trust -a .copier-answers.syntek-media.yml` by hand.\n' >> "$t/$hp/STEPS.md"
+  probe "check 20 fires on a bare uvx copier update in a procedure" "check 20 — $hp/STEPS.md:"; cp "$tmp/h2" "$t/$hp/STEPS.md"
+  sed -i "s/copier update --trust/copier recopy --trust/; s/--python '>=$SM_PYTHON_MIN'/--python \">=$SM_PYTHON_MIN\"/" "$t/$hp/STEPS.md"
+  probe "check 20 fires on the minimum in double quotes" "check 20 — $hp/STEPS.md:"; cp "$tmp/h2" "$t/$hp/STEPS.md"
+  sed -i "s/--python '>=$SM_PYTHON_MIN'/--python >=$SM_PYTHON_MIN/" "$SM_ROOT/README.md"
+  probe "check 20 fires on an unquoted minimum in the repository's own README.md" "check 20 — README.md (the repository):4 shows a Copier command"
+  cp "$tmp/h3" "$SM_ROOT/README.md"; sed -i "s/--python '>=$SM_PYTHON_MIN'/--python '>=3.0'/" "$SM_ROOT/README.md"
+  probe "check 20 fires on another minimum" "check 20 — README.md (the repository):4"; cp "$tmp/h3" "$SM_ROOT/README.md"
+  printf 'uvx copier@9.18.0 copy --trust gh:Example/probe .\n' > "$t/production/notes.txt"
+  probe "check 20 reads every text file of the tree, a pinned Copier too" "check 20 — production/notes.txt:1"; rm -f "$t/production/notes.txt"
+  mkdir -p "$SM_ROOT/migrations"
+  printf '%s\n' '#!/bin/sh' "printf '  uvx --python %s copier update --trust -a x\\n' \"'>=$SM_PYTHON_MIN'\"" > "$SM_ROOT/migrations/v9.9.9-probe.sh"
+  printf '%s\n' "PYTHON_MIN = (${SM_PYTHON_MIN%%.*}, ${SM_PYTHON_MIN#*.})" "rerun = \"uvx --python '>=%s' copier update\" % '%d.%d' % PYTHON_MIN" > "$SM_ROOT/migrations/probe.py"
+  printf '%s\n' '# then run uvx copier update --trust -a .copier-answers.syntek-media.yml' > "$t/production/update.sh"
+  printf '%s\n' '<!-- uvx copier update --trust -a .copier-answers.syntek-media.yml, protected as the guide shows -->' >> "$t/production/CONTEXT.md"
+  printf '%s\n' 'Run `uvx copier update --trust -a .copier-answers.syntek-media.yml` as [Updating a project](#updating-a-project) gives it, with its five settings.' >> "$SM_ROOT/README.md"
+  printf '%s\n' "Run it again with \`uvx --python '>=$SM_PYTHON_MIN'\` in place of \`uvx\`; uvx may choose a Python." >> "$SM_ROOT/README.md"
+  printf '%s\n' "Run \`uvx copier update --trust -a .copier-answers.syntek-media.yml\` as README.md 'Updating a project' gives it." >> "$SM_ROOT/README.md"
+  probe_clean "a printf filling in the quoted minimum, the PYTHON_MIN form, comment, pointer and titled-file lines, prose naming uvx, and CHANGELOG.md pass check 20"
+  printf '%s\n' 'body:' '  - type: input' '    attributes:' '      placeholder: uvx copier update --trust -a .copier-answers.syntek-media.yml' > "$t/production/form.yml"
+  probe "check 20 fires on a bare command in an issue form's placeholder:" "check 20 — production/form.yml:4"; rm -f "$t/production/form.yml"
+  printf '%s\n' 'Run `uvx copier update --trust -a .copier-answers.syntek-media.yml` (Section 3).' >> "$SM_ROOT/README.md"
+  probe "check 20 fires on a bare line that names a section without pointing to it" "check 20 — README.md (the repository):"; sed -i '$d' "$SM_ROOT/README.md"
+  sed -i "s/as README.md 'Updating a project' gives it/as README.md gives it/" "$SM_ROOT/README.md"
+  probe "check 20 fires on the same bare line once the file names no quoted section title" "check 20 — README.md (the repository):"
+  sed -i '$d' "$SM_ROOT/README.md"
+  sed -i "s/\"'>=$SM_PYTHON_MIN'\"/\"'>=3.0'\"/" "$SM_ROOT/migrations/v9.9.9-probe.sh"
+  probe "check 20 fires on a printf that fills in another minimum" "check 20 — migrations/v9.9.9-probe.sh (the repository):2"
+  rm -f "$SM_ROOT/migrations/v9.9.9-probe.sh"; sed -i '1d' "$SM_ROOT/migrations/probe.py"
+  probe "check 20 fires on '>=%s' in a file that sets no PYTHON_MIN" "check 20 — migrations/probe.py (the repository):1 shows a Copier command"
+  rm -rf "$SM_ROOT/migrations"
+  printf '%s\n' '# uvx copier update --trust -a .copier-answers.syntek-media.yml' > "$t/production/update.md"
+  probe "check 20 reads a # line in Markdown as a heading, never a comment" "check 20 — production/update.md:1"; rm -f "$t/production/update.md"
+  cp "$tmp/h3" "$SM_ROOT/README.md"
+  printf '%s\n' 'Run `uvx copier update --trust -a .copier-answers.syntek-media.yml` by hand.' >> "$SM_ROOT/README.md"
+  probe "check 20 fires on the same bare line once its pointer is gone" "check 20 — README.md (the repository):"
+  rm -f "$t/production/update.sh"; cp "$tmp/h3" "$SM_ROOT/README.md"
+  sed -i '$d' "$t/production/CONTEXT.md"
 
   # Over syntek-author: its folders are its own audit's; media's are checked as ever.
-  mkdir -p "$t/manuscript/src"; printf '# The ford\n' > "$t/manuscript/src/01-the-ford.md"
+  mkdir -p "$t/manuscript/src"
+  printf '# The ford\n\nRun `uvx copier update --trust -a .copier-answers.syntek-author.yml` by hand.\n' > "$t/manuscript/src/01-the-ford.md"
   tree_files "$t" | grep -v '^manuscript/' | grep -v '^CONTEXT.md$' > "$t.owned"; load_owned "$t"
-  probe_clean "over syntek-author, a syntek-author folder without a pair is not media's to report"
+  probe_clean "over syntek-author, a syntek-author folder without a pair, or a bare Copier command in its file, is not media's to report"
+  printf '%s\n' 'Run `uvx copier update --trust -a .copier-answers.syntek-media.yml` by hand.' > "$t/production/notes.txt"
+  printf 'production/notes.txt\n' >> "$t.owned"; load_owned "$t"
+  probe "over syntek-author, a bare Copier command in a media-owned file is still reported" "check 20 — production/notes.txt:1"
+  rm -f "$t/production/notes.txt"; sed -i '\#^production/notes.txt$#d' "$t.owned"; load_owned "$t"
   mv "$t/scripts/src/CLAUDE.md" "$tmp/h"; sed -i '\#^scripts/src/CLAUDE.md$#d' "$t.owned"; load_owned "$t"
   probe "over syntek-author, a media-owned folder without its pair is still reported" "check 2 — scripts/src/"
   rm -f "$t.owned"; SM_OWNED_MODE=false; SM_OWNED=()
@@ -451,5 +663,6 @@ if [[ "$STATUS" -eq 0 ]]; then
   exit 0
 fi
 log "  House shapes: .claude/rules/syntek-media/01-layout-and-routing.md Section 6 (the pair),"
-log "  DESIGN.md Sections 4.3 (workflows and guides) and D42 (the exceptions)."
+log "  DESIGN.md Sections 4.3 (workflows and guides) and D42 (the exceptions); the shown Copier"
+log "  command, $SM_UVX_COPIER: D3, D81 and .claude/CLAUDE.md Section 9."
 exit 1

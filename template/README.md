@@ -38,7 +38,9 @@ brand section of `.claude/rules/syntek-media/01-layout-and-routing.md`, and the 
 | `publishing/` | production | Cut-down plans, captions, thumbnails, post packages, the schedule and the publish log |
 | `toolkit/` | supporting | The command line every render runs through, the platform data and the fallback layouts |
 | `.claude/` | config | Claude Code's manual, rules, memory, settings and skills |
+| `how-to/` | reference | The user guide: chapters, guides and step-by-step procedures (updating, recovering a stopped update, adding a coding-agent client); read-only, put back by every update |
 
+The guide starts at `how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md`.
 Each production layer has `docs/` (guides), `src/` (the work) and `workflows/` (step-by-step
 procedures). Every folder carries a `CONTEXT.md` (what is here) and a `CLAUDE.md` (how to work
 here). The full map is `CONTEXT.md`.
@@ -97,14 +99,17 @@ directly: `python3 toolkit/media.py voice remix run`, which designs a character'
 own cloned voice (`production/workflows/11-design-character-voices/`), reads the same key from
 your shell and asks before it runs.
 
-**Requirements:** `git`; Python 3.11 or later; `ffmpeg` and `ffprobe` built with libass, x264
-and mp3lame; `uv`, for Copier and for `toolkit/card.py`, with Playwright's Chromium
-(`uv run --with playwright==1.63.0 playwright install chromium`, or a system browser bundle at the same revision, as on NixOS); `git-lfs`, if you keep large
+**Requirements:** `git` 2.31 or later; Python 3.14 or later (the toolkit, the hooks and every
+update need it); `ffmpeg` and `ffprobe` built with libass, x264 and mp3lame; `uv`, for Copier on
+3.14 (`uvx --python '>=3.14' copier`) and for `toolkit/card.py`, with Playwright's Chromium
+(`uv run --with playwright==1.64.0 playwright install chromium`, or a system browser bundle at the same revision, as on NixOS); `git-lfs`, if you keep large
 design exports; and `espeak-ng` (optional, for a scratch voice track). `check --setup` reports
 each one. Optional lip sync needs Rhubarb Lip Sync 1.14.0, unzipped with its resources at user
 scope and linked onto PATH; `lipsync` checks its dictionary beside the real executable.
-Optional word alignment uses WhisperX 3.8.6 in `toolkit/transcribe.py`, under
-`MEDIA_TRANSCRIBE_PYTHON` at user scope or offline uv. Run `python3 toolkit/media.py transcribe
+Optional word alignment uses WhisperX 3.8.6 in `toolkit/transcribe.py`, which needs a Python
+from 3.10 to 3.13 kept beside 3.14: name its interpreter's path with `MEDIA_TRANSCRIBE_PYTHON`
+at user scope, or let offline uv find one; never activate its environment where Claude Code
+runs. Run `python3 toolkit/media.py transcribe
 fetch` once yourself for its English weights, tokenizer data and cross-check model; skills never
 fetch models. Author-edited data stays TOML; tool-written timing is finite JSON.
 
@@ -126,6 +131,9 @@ fetch models. Author-edited data stays TOML; tool-written timing is finite JSON.
 - When a session grows long, Claude writes a handoff and stops, rather than compacting: the
   session hooks in `.claude/hooks/` warn as the window fills and block automatic compaction.
   Run `/clear` and continue from the handoff in `handoffs/`.
+- The user guide in `how-to/` is read-only: Claude reads it and never edits it, and every update
+  puts it back. Start at `how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md`; a procedure
+  there, such as updating, is run step by step with its checklist open.
 - Two MCP servers ship with the project, keyless: `scrapling` fetches web pages, and asks
   before each of its browser tools; `code-review-graph` maps the repository's code. The rules
   say how each is used (`.claude/rules/syntek-media/06-global-rules.md` Section 13).
@@ -149,15 +157,18 @@ The template improves over time. To take its changes, commit or stash your own w
 
 ```sh
 GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0 GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false \
-  uvx copier update --trust -a .copier-answers.syntek-media.yml
+  uvx --python '>=3.14' copier update --trust -a .copier-answers.syntek-media.yml
 git diff                  # review every change before committing
 ```
 
-The five `GIT_CONFIG_*` variables (bash, zsh and other POSIX shells) turn Git's background
-housekeeping off for that one command, which can otherwise stop an update with
-`OSError: [Errno 39] Directory not empty`; give them to every update command below too. Never
-commit what such an update left: syntek-media's own `README.md`, 'Updating a project', gives the
-recovery.
+`--python '>=3.14'` runs Copier on Python 3.14 or later, which the update report needs: left to
+itself, `uvx` may run Copier on an older Python it already has. Keep the quotes, or the shell
+reads `>` as a redirection. The five `GIT_CONFIG_*` variables (bash, zsh and other POSIX shells)
+turn Git's background housekeeping off for that one command, which can otherwise stop an update
+with `OSError: [Errno 39] Directory not empty`; give them to every update command below too.
+Never commit what such an update left: `how-to/workflows/syntek-media/05-recover-a-stopped-update/`
+gives the recovery, as does syntek-media's own `README.md`, 'Updating a project'. The steps,
+with every command: `how-to/workflows/syntek-media/04-update-the-template/`.
 
 Copier may print a `MissingFileWarning` about `.copier-answers.syntek-media.yml`. It is expected
 and harmless: the template reads your previous answers so it can refuse a changed `BRAND_KIND`.
@@ -166,18 +177,24 @@ file: harmless too, because the template reads that file only to keep the two te
 data-root answers in step.
 
 - **What updates:** the template's own files: the rules in `.claude/rules/syntek-media/`, the
-  skills, the reference guides, the template workflows, the toolkit and its platform data.
+  skills, the reference guides, the template workflows, the toolkit and its platform data, and
+  media's part of the user guide, put back where it differs.
 - **What never changes:** your work, and the files seeded for you once: the registers and logs,
   the footage manifest, the design tokens and preview cards, the voice file and the platform
   profiles. If you delete one of those seeds, the update brings back an empty one.
-- **The shared files are written once and never again:** this README, `CONTEXT.md`, `.gitignore`,
-  `.mcp.json`, `.claude/CLAUDE.md`, `.claude/CONTEXT.md`, `.claude/MEMORY.md`,
-  `.claude/settings.json`, the `.claude/skills/` pair, each coding client's files, the seven
-  family-shared skills, the session hooks in `.claude/hooks/` and the `handoffs/` pair. An
-  update never touches them, and one you delete stays deleted. If you delete the worked
-  example, it stays deleted too.
-- **A shared file new in a later release does not reach this project on its own**, nor does a
-  new entry of the seeded `.claude/settings.json`: take it by hand from a fresh copy, as
+- **Some shared files are written once and never again:** this README, `CONTEXT.md`,
+  `.gitignore`, `.claude/CLAUDE.md`, `.claude/CONTEXT.md`, `.claude/MEMORY.md`, the
+  `.claude/skills/` pair, and each coding client's entrypoint and settings (apart from the two
+  MCP servers below). An update never touches them otherwise, and one you delete stays
+  deleted. If you delete the worked example, it stays deleted too.
+- **The family-shared files** (the seven family-shared skills, the hooks in `.claude/hooks/`,
+  the `handoffs/` pair and the shared files of `how-to/`) are replaced by an update while you
+  have not changed them, written where the project never had them, and kept and reported where
+  you edited them, except under `how-to/`, which every full update puts back.
+  `.claude/settings.json`, `.mcp.json` and the recorded clients' MCP files gain
+  the listed entries and the two MCP servers once each, never one you removed.
+- **Anything else new in a later release** (another shared file, or a settings entry not in the
+  list) does not reach this project on its own: take it by hand from a fresh copy, as
   `.claude/syntek-media-agents.md` ('Enabling an existing project') says.
 - **Never edit the rules in `.claude/rules/syntek-media/`**, or any other file the template owns:
   the next update overwrites the edit or turns it into a conflict. Put your own rules under
@@ -187,7 +204,7 @@ data-root answers in step.
   update; the brand section of the rules follows it on its own:
 
   ```sh
-  uvx copier update --trust -a .copier-answers.syntek-media.yml --data AUDIENCE_TEST='…'
+  uvx --python '>=3.14' copier update --trust -a .copier-answers.syntek-media.yml --data AUDIENCE_TEST='…'
   ```
 
 - **`BRAND_KIND` never changes.** An update refuses a different brand kind and touches nothing; a
@@ -263,6 +280,8 @@ OpenCode. The same production rules, work tiers and spending approval apply in e
 and a client's permission is never your approval.
 
 The entrypoints and client settings are copy-only shared paths. Updates preserve edits and
-deletions and never add new copy-only files. For an existing project, follow the bridge's
-temporary-generation setup and copy only missing files. Preserve existing settings,
+deletions and never add a client file, but they add the two MCP servers once to a recorded
+client's existing MCP file (OpenCode's and Gemini CLI's after `--write`). To add a client, follow
+`how-to/workflows/syntek-media/06-enable-a-coding-agent-client/` beside the bridge's
+temporary-generation setup, and copy only missing files. Preserve existing settings,
 entrypoints, real directories and differently targeted links; agree integration with the owner.

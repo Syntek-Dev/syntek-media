@@ -24,17 +24,18 @@ named subfolder of it (cards/, timing/, takes/), and keeps a name with no piece 
 file's extract, a show's cover) at the output folder's top. Tracked files never sit in a
 per-piece folder: timing/ and scenes/ stay flat under their <piece>. names.
 
-uv_script is the one way the toolkit starts a PEP 723 script (DESIGN D20): 'uv run --python'
-with the interpreter UV_PYTHON names, or else the one 'uv python find --system' returns for the
-script's requires-python, so an active virtual environment, its bin on PATH or a .venv in the
-working folder never mislinks the script's environment; within a timeout, after which the run
+uv_script is the one way the toolkit starts a PEP 723 script (DESIGN D20, D81): 'uv run --python'
+with the interpreter UV_PYTHON names where it meets the script's requires-python, or else the one
+'uv python find --system' returns for that range, so an active virtual environment, its bin on
+PATH or a .venv in the working folder never mislinks the script's environment, and a UV_PYTHON
+outside a script's range is never used for it; within a timeout, after which the run
 and everything it started are stopped; and under a first-run lock at user scope, never in the
 project, so no run starts while another run of the same script is building its environment.
 The lock is fcntl's flock (msvcrt's byte lock on Windows), held on every run so a deleted uv
 environment is rebuilt safely too. Where the lock cannot be taken, the command exits 2 with
 the fix rather than start an environment build unlocked.
 
-Standard library only; Python 3.11+ (tomllib).
+Standard library only; Python 3.14+.
 """
 from __future__ import annotations
 
@@ -54,8 +55,8 @@ import time
 import tempfile
 from pathlib import Path
 
-if sys.version_info < (3, 11):
-    sys.exit("error: the media toolkit needs Python 3.11 or later (it reads TOML with tomllib)")
+if sys.version_info < (3, 14):
+    sys.exit("error: the media toolkit needs Python 3.14 or later, the family's one minimum (DESIGN D20, D81)")
 import tomllib  # noqa: E402
 
 TOOLKIT = Path(__file__).resolve().parent
@@ -137,7 +138,9 @@ INSTALL = {
     'rhubarb': 'optional: unzip the Rhubarb Lip Sync 1.14.0 release at user scope, keeping its '
                'res/ folder beside the executable; link rhubarb onto PATH, never copy the binary alone',
     'whisperx': 'optional: run python3 toolkit/media.py transcribe fetch once yourself; or set '
-                'MEDIA_TRANSCRIBE_PYTHON at user scope to an environment with whisperx==3.8.6',
+                'MEDIA_TRANSCRIBE_PYTHON at user scope to the path of a Python 3.10 to 3.13 interpreter '
+                'whose environment holds whisperx==3.8.6, kept beside 3.14 and never activated where '
+                'Claude Code or media.py runs',
 }
 
 X264_PRESET = "medium"   # the self-test lowers it to "ultrafast" for speed
@@ -979,23 +982,86 @@ def uv_find(uv: str, request: str = "", system: bool = False, cwd=None) -> str:
     return lines[-1].strip() if proc.returncode == 0 and lines else ""
 
 
+PYTHON_PROBE = ("import json, sys; print(json.dumps({'version': list(sys.version_info[:3]), "
+                "'base': getattr(sys, '_base_executable', '') or '', 'venv': sys.prefix != sys.base_prefix}))")
+SPEC_RE = re.compile(r"(>=|<=|==|!=|>|<)\s*(\d+(?:\.\d+)*)")
+
+
+def python_info(python: str):
+    """{version, base, venv} from an interpreter's own answer to -c (its base being the interpreter
+    uv would link a new environment to), or None where it cannot be run. Nothing is installed."""
+    try:
+        proc = subprocess.run([python, "-I", "-c", PYTHON_PROBE], capture_output=True, text=True, timeout=30)
+        said = proc.stdout.strip().splitlines() if proc.returncode == 0 else []
+        info = json.loads(said[-1]) if said else None
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        return None
+    ok = isinstance(info, dict) and isinstance(info.get("version"), list) and len(info["version"]) >= 2
+    return info if ok else None
+
+
+def meets_range(version, want: str) -> bool:
+    """Whether a release number (a list or tuple of ints) meets a requires-python range: comma-joined
+    >=, >, <=, <, == and != on release numbers, padded with zeros; an empty range matches every
+    version, and a specifier this reader does not know matches none, so uv's own lookup decides."""
+    have = [int(n) for n in version]
+    for part in (p.strip() for p in str(want or "").split(",")):
+        if not part:
+            continue
+        m = SPEC_RE.fullmatch(part)
+        if not m:
+            return False
+        op, bound = m.group(1), [int(n) for n in m.group(2).split(".")]
+        width = max(len(have), len(bound))
+        a, b = have + [0] * (width - len(have)), bound + [0] * (width - len(bound))
+        if not {">=": a >= b, ">": a > b, "<=": a <= b, "<": a < b, "==": a == b, "!=": a != b}[op]:
+            return False
+    return True
+
+
+def install_example(want: str) -> str:
+    """A Python to name in an install example for a range: 3.14, media's base, where the range takes
+    it, else the newest 3.x release the range takes; '' where none does."""
+    takes = [minor for minor in range(30, 7, -1) if meets_range((3, minor), want)]
+    if not takes:
+        return ""
+    return f"3.{14 if 14 in takes else takes[0]}"
+
+
 def uv_python(uv: str, script) -> tuple:
-    """(interpreter, how it was chosen) for a uv script (DESIGN D20): the one UV_PYTHON names where
-    it is set, else the one 'uv python find --system' returns for the script's requires-python.
-    A virtual environment's interpreter is never taken unasked: one made with --copies reports
-    another Python as its base, and uv then records one version and links the other, so the
-    script's packages do not import. Nothing meeting the range is exit 2, naming the fix."""
-    named = os.environ.get("UV_PYTHON", "").strip()
-    if named:
-        return named, "UV_PYTHON"
+    """(interpreter, how it was chosen) for a uv script (DESIGN D20, D67, D81): the one UV_PYTHON
+    names where it meets the script's requires-python, else the one 'uv python find --system' returns
+    for that range. A UV_PYTHON is resolved with 'uv python find' (no download, offline) and asked its
+    version with -I -c; one outside the range is never used for the script, because 'uv run --quiet'
+    would hide the mismatch. A virtual environment's interpreter is never taken unasked: one made with
+    --copies reports another Python as its base, and uv then records one version and links the other,
+    so the script's packages do not import. It builds nothing and fetches nothing. Nothing meeting the
+    range is exit 2, naming the fix: for transcribe.py, MEDIA_TRANSCRIBE_PYTHON."""
     want = str(script_metadata(script).get("requires-python", "") or "").strip()
+    named = os.environ.get("UV_PYTHON", "").strip()
+    outside = ""
+    if named:
+        found = uv_find(uv, named)
+        info = python_info(found) if found else None
+        if info is not None and meets_range(info["version"][:3], want):
+            return named, "UV_PYTHON"
+        version = ".".join(str(n) for n in info["version"][:3]) if info else ""
+        outside = (f"UV_PYTHON names {named}" + (f" (Python {version}), outside that range, so it is not used "
+                                                  "for it" if version else ", which uv cannot find or run"))
     found = uv_find(uv, want, system=True)
-    if not found:
-        raise Fatal(f"no Python outside a virtual environment meets {Path(script).name}'s requires-python "
-                    f"{want or '(any)'}, so uv cannot build its environment: install one in that range (for "
-                    "example 'uv python install 3.12', or your system's package), or set UV_PYTHON at user "
-                    "scope to an interpreter in that range")
-    return found, "uv python find --system"
+    if found:
+        return found, "uv python find --system"
+    name = Path(script).name
+    head = (f"no Python outside a virtual environment meets {name}'s requires-python {want or '(any)'}"
+            + (f", and {outside}" if outside else "") + ", so uv cannot build its environment: ")
+    example = install_example(want)
+    example = f"'uv python install {example}'" if example else "a Python in that range"
+    if name == "transcribe.py":
+        raise Fatal(head + "set MEDIA_TRANSCRIBE_PYTHON at user scope to the path of a Python 3.10 to 3.13 "
+                    "interpreter whose environment holds whisperx==3.8.6, never an environment you activate, "
+                    f"or install a Python in that range for uv to find (for example {example})")
+    raise Fatal(head + f"install one in that range (for example {example}, or your system's package), or set "
+                "UV_PYTHON at user scope to an interpreter in that range")
 
 
 def lock_folder() -> Path:

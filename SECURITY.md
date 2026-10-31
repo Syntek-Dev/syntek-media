@@ -58,19 +58,28 @@ rotate it first.
 Code and configuration from this template that runs on the owner's machine or in their
 repository:
 
-- **`copier.yml`'s `_tasks` and `_migrations`**, which run under `--trust`: the copy-only
-  `git init`, `chmod +x` of the session hooks and Git LFS tripwire, and the migrations on
-  update. Anything that runs other than as documented, or that an answer can turn into a command.
+- **`copier.yml`'s `_tasks` and `_migrations`**, which run under `--trust`. The five tasks run on
+  a copy only: `git init`, `chmod +x` of the session hooks, the Git LFS tripwire, the warning
+  about a syntek-author older than v0.6.0, which has no user guide, and, last, the `baseline` task, which runs
+  `migrations/family-update.py` (D81). The migrations run on update. Anything that runs other
+  than as documented, or that an answer can turn into a command.
 - **The migration scripts in `migrations/`**, which run in the owner's project on update: the
   `.agents` handling of D76 (the 0.4.2 replacement of an `.agents -> .claude` link, and the hold
   and restore of an `.agents` link that leaves the project) touching anything but the link it
-  names, or that link's target.
+  names, or that link's target; the report-only `v0.6.0-how-to.py`, which must write nothing;
+  and `family-update.py`, run last on every update and by the `baseline` task (D81, D84), which
+  records each render under `refs/syntek-media/` inside `.git`, refreshes the family files
+  `migrations/family-refresh.json` lists, adds that file's settings entries to
+  `.claude/settings.json` and its two MCP servers to the MCP files, once each, and puts back
+  the read-only `how-to/` guide. Any of them touching more than it says.
 - **The standalone `.claude/settings.json` seed** (D13): an allow, ask or deny rule that lets a
   credit-spending ElevenLabs tool, `media.py voice remix run` or a Scrapling or code-review-graph
   tool it asks before go ahead without the promised prompt, or that allows more than the
-  documentation says; and the three hooks it registers (D80).
-- **The session hooks and the two family scripts** (D80): `.claude/hooks/*.sh`, which Claude Code
-  runs in the owner's sessions, the data-root guard, and `.claude/syntek-media-dataroot.py` and
+  documentation says; its `Edit(/how-to/**)` deny that keeps the guide read-only (D84); and the
+  hooks it registers: four handoff entries, the data-root guard and the guide guard (D80, D84).
+- **The session hooks and the two family scripts** (D80): the three `.claude/hooks/*.sh`, which
+  Claude Code runs in the owner's sessions, the guide guard `how-to-read-only.sh` among them
+  (D84), the data-root guard, and `.claude/syntek-media-dataroot.py` and
   `.claude/syntek-media-permissions.py`, whose `--write` edits the coding agents' files. Their
   bytes are syntek-author's, vendored unchanged: a fix lands in syntek-author first and reaches
   this template with syntek-author's next release, so a report may go to either project.
@@ -129,10 +138,13 @@ keep the details private until the advisory is published.
 ## How a fix reaches a project
 
 - **Template-owned files** (the rules, the skills, the toolkit, the guides and the workflows)
-  arrive with the update, on a branch, run with Git's housekeeping off as the README's
-  [Updating a project](README.md#updating-a-project) shows:
-  `uvx copier update --trust -a .copier-answers.syntek-media.yml`.
-- **Copy-only shared files and seeds never change on update** (D11), and `.claude/settings.json`
-  is one of them. When a fix lands in one, the advisory and `CHANGELOG.md` give the hand edit, and
-  where it can, `python3 toolkit/media.py check --setup` reports the missing line. Release 0.4.4
-  did this for its two `voice remix run` ask rules.
+  arrive with the update, on a branch, run with Git's housekeeping off (add the five
+  `GIT_CONFIG_*` variables the README's [Updating a project](README.md#updating-a-project) gives):
+  `uvx --python '>=3.14' copier update --trust -a .copier-answers.syntek-media.yml`.
+- **Copier never renders copy-only shared files and seeds on update** (D11), and
+  `.claude/settings.json` is one of them. Since 0.6.0 the update script, on Python 3.14 or later,
+  refreshes the family files `migrations/family-refresh.json` lists where the owner never changed
+  them, and adds the settings entries and MCP servers it lists, once each, never one the owner
+  removed after it was committed (D81). Anything else still needs a hand edit: the advisory and
+  `CHANGELOG.md` give it, and where it can, `python3 toolkit/media.py check --setup` reports the
+  missing line. Release 0.4.4 did this for its two `voice remix run` ask rules.

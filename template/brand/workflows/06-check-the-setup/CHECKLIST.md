@@ -15,7 +15,7 @@ model: opus
 ## Pre-Conditions
 
 - [ ] Read `.claude/CLAUDE.md` and `.claude/MEMORY.md`, then this folder's `CONTEXT.md` and `CLAUDE.md`. · _sonnet_
-- [ ] Working from the repository root, with `python3` 3.11 or later available, or its absence reported. · _sonnet_
+- [ ] Working from the repository root, with `python3` 3.14 or later available, or its absence reported. · _sonnet_
 
 ## Execution Checklist
 
@@ -24,7 +24,7 @@ model: opus
 - [ ] `python3 toolkit/media.py check --setup` run; its exit code read (0 clean, 1 findings, 2 could not run). · _sonnet_
 - [ ] Nothing from the user's Claude Code configuration printed or copied beyond what the report prints. · _sonnet_
 - [ ] Each finding explained to the author with what it blocks and its fix. · _opus_
-- [ ] The uv mislink row read; WhisperX interpreter, exact version and three cache items read, missing optional items distinguished from a broken configured tool. · _sonnet_
+- [ ] The uv mislink row read; WhisperX interpreter, its Python, exact version and three cache items read, missing optional items distinguished from a broken configured tool. · _sonnet_
 
 **The fixes**
 

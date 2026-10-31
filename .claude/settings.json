@@ -1,8 +1,5 @@
 {
-  "claudeMdExcludes": [
-    "**/template/**/CLAUDE.md",
-    "**/template/.claude/**"
-  ],
+  "claudeMdExcludes": ["**/template/**/CLAUDE.md", "**/template/.claude/**"],
   "permissions": {
     "allow": [
       "Bash(ls:*)",
@@ -172,7 +169,7 @@
   },
   "model": "opus",
   "outputStyle": "Concise",
-  "effortLevel": "xhigh",
+  "effortLevel": "medium",
   "ultracode": true,
   "enableWorkflows": true,
   "skipWorkflowUsageWarning": true,

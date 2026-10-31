@@ -66,7 +66,10 @@ This skill runs procedures; it never replaces one, and it never paraphrases one 
    sentence: 'caption cut c02 of the ferry explainer for Shorts', 'storyboard the next trailer'.
    If the request could be two different jobs, ask one question with your recommended reading and
    its reason, and wait. If the job is writing work, or a social media plan, a content calendar or
-   bios, say which skill owns it (the boundaries in this skill's description) and stop.
+   bios, say which skill owns it (the boundaries in this skill's description) and stop. A
+   template job (updating, recovering a stopped update, changing the answers, enabling a coding
+   client) is not routed here either: its procedure under `how-to/workflows/syntek-media/` is
+   run as its folder says, step by step with its `CHECKLIST.md` open; say so and stop.
    *Complete when:* the job is one sentence the author has not contradicted, and any newer
    handoff has been read.
 
@@ -198,6 +201,7 @@ This skill runs procedures; it never replaces one, and it never paraphrases one 
 - Answering 'what's next?' from the renders and generated audio on disk instead of from the
   handoff, the briefs and memory, or leaving a resumed handoff unpruned once its work has landed.
 - Routing writing work, a social media plan or a content calendar through a media procedure.
+- Routing a how-to procedure, or treating the user guide in `how-to/` as a layer.
 
 ## Cross-references
 
@@ -211,5 +215,7 @@ This skill runs procedures; it never replaces one, and it never paraphrases one 
 - `.claude/MEMORY.md` — the `Status` heading, which 'what's next?' reads first.
 - The `grill-with-docs` skill, where present — the interview that opens
   `scripts/workflows/01-brief-a-piece/` and the brand procedures.
+- `how-to/workflows/syntek-media/` — the template jobs' procedures, which this skill never
+  routes (`.claude/rules/syntek-media/01-layout-and-routing.md` Section 3).
 - The `handoff` skill, where present — when a procedure has to stop mid-way at a
   session boundary (`.claude/rules/syntek-media/07-session-boundaries.md`).

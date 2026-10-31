@@ -6,11 +6,12 @@
 > **Template-owned.** Shipped by syntek-media and replaced by every `copier update`: never edit it here. Where syntek-author's project settings file (00-project.md) is present, it outranks this file and says where project rules go; otherwise they go in `.claude/CLAUDE.md`, under the heading 'Project-specific rules'.
 
 The two session hooks, `.claude/hooks/context-threshold-handoff.sh` (`UserPromptSubmit`) and
-`.claude/hooks/pre-compact-handoff.sh` (`PreCompact`), cite the project's session-boundaries
-rule; for media work, this file is that rule. The hooks, the `handoff` skill and the `handoffs/`
-pair are family-shared: media ships the same files as syntek-author, a copy writes each one where
-it is absent, and media's update never touches them (`.claude/rules/syntek-media/02-skills.md`
-Section 4).
+`.claude/hooks/pre-compact-handoff.sh` (`PreCompact`, and `SessionStart` after a `/compact`),
+cite the project's session-boundaries rule; for media work, this file is that rule. The hooks,
+the `handoff` skill and the `handoffs/` pair are family-shared: media ships the same files as
+syntek-author, a copy writes each one where it is absent, and every update that runs the family
+update script replaces one the author never changed and keeps and reports one they edited
+(`.claude/rules/syntek-media/02-skills.md` Section 4).
 
 ---
 
@@ -36,11 +37,12 @@ drops the reasons; a handoff carries the live thread into a fresh, full window.
    with the filename the Paths of syntek-author's 00-project.md give, where present, else
    `handoffs/HANDOFF-<DESCRIPTOR>-DD-MM-YYYY.md`, creating the folder on first use. The
    descriptor names the work. **Never write the handoffs folder's pair by hand**: it is
-   family-shared, and the copy of a template that ships it writes it where it is absent
-   (`.claude/rules/syntek-media/01-layout-and-routing.md` Section 6). **A media handoff's next
-   action names `run-media-workflow` and the procedure by its full folder name** (for example
-   `run-media-workflow` → `production/workflows/02-make-a-voiceover/`), because the writing
-   router of syntek-author, where present, reads only its own layers and finds no media procedure.
+   family-shared, and a template's copy, or its update script, writes it where the project
+   never had it (`.claude/rules/syntek-media/01-layout-and-routing.md` Section 6). **A media
+   handoff's next action names `run-media-workflow` and the procedure by its full folder
+   name** (for example `run-media-workflow` → `production/workflows/02-make-a-voiceover/`),
+   because the writing router of syntek-author, where present, reads only its own layers and
+   finds no media procedure.
 3. **Print the handoff's path and stop the turn**: a handoff followed by more work is stale.
 4. <%OWNER_FIRST_NAME%> runs `/clear` and resumes in a fresh window from the handoff file.
    A handoff whose next action is a media procedure resumes through `run-media-workflow`,
@@ -67,15 +69,18 @@ The `handoff` skill's media mode file carries this list as the part its step 5 a
 
 ## 4. How it is enforced
 
-- `.claude/settings.json` sets `"autoCompactEnabled": false`, so compaction never starts on its
-  own. The seed sets it; a settings file the project already had is the author's, and where it
-  lacks the key, the author adds it by hand.
-- Where `.claude/settings.json` registers them, as the seed does, the `UserPromptSubmit` hook
-  measures the context window before every prompt: at **50%** it advises, once a session, to plan
-  the stopping point; at **75%** it insists, on every prompt, on a handoff now. It assumes a
-  window of 200,000 tokens; for a larger one, set `CLAUDE_CONTEXT_WINDOW` under `"env"` in
-  `.claude/settings.local.json`. The `PreCompact` hook **blocks** automatic compaction and warns
-  on a deliberate `/compact`.
+- `.claude/settings.json` sets `"autoCompactEnabled": false` and `"idleCompaction": false`, so
+  compaction starts neither as the window fills nor while a session sits idle. The seed
+  registers the family's two hooks in four entries. To a settings file the project already had,
+  the copy and every update add each key and entry once where it is absent, keep a value the
+  author set, and never add back one counted as offered.
+- The `UserPromptSubmit` hook measures the context window before every prompt: at **50%** it
+  advises, once a session, to plan the stopping point; at **75%** it insists, on every prompt, on
+  a handoff now. Below Python 3.14 it measures nothing and warns. It assumes a window of 200,000
+  tokens; for a larger one, set `CLAUDE_CONTEXT_WINDOW` under `"env"` in
+  `.claude/settings.local.json`.
+- The `PreCompact` hook **blocks** automatic compaction and lets a deliberate `/compact` through;
+  after one, the `SessionStart` `compact` entry says that a handoff gives a cleaner break.
 - A hook cannot write a handoff or end a turn; only the model can. **At the 75% warning, the
   handoff is the next thing written.** Other coding agents run no hook: there the session watches
   its own window and follows the same thresholds (`.claude/syntek-media-agents.md`).

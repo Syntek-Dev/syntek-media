@@ -38,14 +38,15 @@ The written voice and brand guide stay syntek-author's, where present, cited and
 
 | Layer | Kind | Purpose |
 |---|---|---|
-| `.claude/` | config | The manual, these rules in `.claude/rules/syntek-media/`, `MEMORY.md`, settings and the session hooks, media's skills and the family-shared skills beside any other template's, the bridge for other coding agents, and the data-root and permissions scripts |
+| `.claude/` | config | The manual, these rules in `.claude/rules/syntek-media/`, `MEMORY.md`, settings, the session hooks and the guide guard, media's skills and the family-shared skills beside any other template's, the bridge for other coding agents, and the data-root and permissions scripts |
 | `brand/` | production | Design tokens and preview cards (the thumbnail and card layouts among them), design exports and their register, the spoken voice, one profile per platform |
 | `scripts/` | production | One folder per piece: brief, script or transcript, storyboard, shot list; the piece register |
 | `production/` | production | Source media and its manifest, voiceover segments, edit decision lists, cards, a piece's timing (`production/src/timing/`) and a scene piece's files (`production/src/scenes/`), rights and credits<: if 'audiobook' in MEDIA_KINDS :>, audiobook chapter registers<: endif :> |
 | `publishing/` | production | Cut-down plans, captions and published transcripts, thumbnails and other images, post packages, the schedule and the publish log<: if 'podcast' in PLATFORMS :>, and the show registers and feeds of a self-hosted podcast (`publishing/src/podcast/`)<: endif :> |
 | `toolkit/` | supporting | `media.py` and `card.py`, the platform data and the fallback layouts; every render runs through it |
 
-`run-media-workflow` reads the workflow indexes of these four production layers and no others.
+`run-media-workflow` reads the workflow indexes of these four production layers and no others,
+and never the procedures under `how-to/` (Section 3).
 The writing router of syntek-author, where present, reads only the layers its own rules list.
 
 ---
@@ -59,6 +60,15 @@ The writing router of syntek-author, where present, reads only the layers its ow
 - **Generated output** (each renders and generated folder in `production/src/` and
   `publishing/src/`) is git-ignored by the nested `.gitignore` files, never hand-edited, and can
   be made again, except an approved take or audiobook master, which is archived as source media.
+- **The shared reference folder**, `how-to/`, is the user guide: read, never produced in, and
+  read-only (`.claude/rules/syntek-media/06-global-rules.md` Section 3). Media's own files lie
+  only under `how-to/docs/syntek-media/`, `how-to/src/TEMPLATE-GUIDE/syntek-media/` and
+  `how-to/workflows/syntek-media/`, beside the family's shared pairs and chapters; it has no
+  seed, no `docs/project/` and no `workflows/local/`. A procedure there is run as its folder
+  says, step by step with its `CHECKLIST.md` open, stopping for the author at every step that
+  changes the template's files or a settings file; `run-media-workflow` never routes one. The
+  author's own guides, procedures and notes go in a layer's `docs/project/` or
+  `workflows/local/`, or in the project rules (Section 10).
 - **Media has no working folders of its own.** The `handoffs/` folder is family-shared: media
   ships only its pair, as syntek-author does. The learning and assets folders at the root are
   syntek-author's, where it is applied; media's binaries live in its own layers.
@@ -71,7 +81,7 @@ The writing router of syntek-author, where present, reads only the layers its ow
 |---|---|---|
 | `docs/reference/` | Guides shipped by the template, replaced by `copier update` | how this kind of work is done |
 | `docs/project/` | The author's own guides; a same-named file here overrides the reference guide | how this project departs |
-| `src/` | The artefact: the prose, the plans, the evidence | the work itself |
+| `src/` | The artefact: the prose, the plans, the evidence (never `how-to/src/`, the template's guide) | the work itself |
 | `workflows/NN-name/` | Template procedures: `CONTEXT.md` + `CLAUDE.md` + `STEPS.md` + `CHECKLIST.md` | the steps to follow |
 | `workflows/local/NN-name/` | The author's procedures, in their own numbering; a same-slug folder overrides the template's | the author's steps |
 
@@ -148,6 +158,8 @@ H1. **Read it first and obey it.**
 | `STEPS.md` and `CHECKLIST.md` | `workflow:` · `phase:` · `skills: [..]` · `model:` |
 | `CONTEXT.md` and `CLAUDE.md` | none: the pair is navigation, not routing |
 
+A chapter in `how-to/src/TEMPLATE-GUIDE/` carries no frontmatter: the guide is read, never routed.
+
 The phase is one of plan, research, produce, review, publish, convert or author. The template's
 files carry no `agent:` key: the template uses skills only. A `skills:` list names media skills
 only. A family-shared skill is named on a step, backticked, as '`grill-with-docs`, where
@@ -161,9 +173,9 @@ files and registers carry no `model:` key (`.claude/rules/syntek-media/05-model-
 
 | Class | What `copier update` does | Files |
 |---|---|---|
-| **Template-owned** | merges the template's changes in | `.claude/rules/syntek-media/**`, the media skills' folders, the `MEDIA-` mode files beside the family-shared skills, the bridge and the data-root and permissions scripts and map in `.claude/` (each named `syntek-media-…`), every `docs/reference/` and `workflows/NN-name/`, the governance pairs (except the seeded ones), `toolkit/**`, every nested `.gitignore` and `.gitattributes`, the READMEs of the generated, renders and raw folders, and Copier's `.copier-answers.syntek-media.yml` |
+| **Template-owned** | merges the template's changes in | `.claude/rules/syntek-media/**`, the media skills' folders, the `MEDIA-` mode files beside the family-shared skills, the bridge and the data-root and permissions scripts and map in `.claude/` (each named `syntek-media-…`), every `docs/reference/` and `workflows/NN-name/`, the governance pairs (except the seeded ones), `toolkit/**`, every nested `.gitignore` and `.gitattributes`, the READMEs of the generated, renders and raw folders, Copier's `.copier-answers.syntek-media.yml`, and media's guides, chapters and procedures under the three folders of `how-to/` named syntek-media, which every full update also puts back where they differ, a deletion included |
 | **Seed-if-missing** | creates the file only if it is absent, then never touches it | the seeds below |
-| **Copy-only shared** | written by a copy only where absent; never touched by an update, even to recreate it | the shared files below |
+| **Copy-only shared** | written by a copy only where absent and never rendered by an update; after the render, the family update script (Python 3.14 or later) acts on the family-shared ones, `settings.json` and the MCP files | the shared files below |
 | **Seed-once example** | ships at generation only; once deleted, stays deleted | the worked example piece, when one was generated |
 | **Author-owned** | never touches | everything you write: pieces, register rows, `docs/project/` guides, `workflows/local/` procedures, edit lists, cards, plans and packages |
 
@@ -176,13 +188,25 @@ platform): the design register, `tokens.css` and the preview cards of `brand/src
 and `workflows/local/` pair.
 
 **The shared files** (`README.md`, `CONTEXT.md`, `.gitignore`, `.mcp.json`, in `.claude/`
-`CLAUDE.md`, `CONTEXT.md`, `MEMORY.md`, `settings.json` and the `skills/` pair, each coding
+`CLAUDE.md`, `CONTEXT.md`, `MEMORY.md`, `settings.json` and the `skills/` pair, and each coding
 client's entrypoint, settings and pair, written only for the clients chosen when the project was
-generated, and the family-shared files: the seven family-shared skills, the `.claude/hooks/`
-scripts and pair, and the `handoffs/` pair) are written by whichever template is applied first;
-nothing media needs lives only in them, and media never edits one, except once: updating across
-0.4.2 replaces an .agents link to `.claude` with the real folder. An update never adds one a
-project lacks: `.claude/syntek-media-agents.md` says how to take a missing one by hand.
+generated) are written by whichever template is applied first; nothing media needs lives only in
+them. **The family-shared files** among them are told apart: the seven family-shared skills'
+`SKILL.md`, the three hooks with the `.claude/hooks/` pair, the `handoffs/` pair, and the five
+pairs and three shared chapters of `how-to/`. An update replaces a listed family-shared file the
+author never changed, writes one the project never had, and keeps and reports one the author
+edited or one holding another template's version; one the author deleted stays deleted, except
+under `how-to/`. It never refreshes the client files. To `.claude/settings.json`, `.mcp.json`
+and the MCP files of the clients the answers record, the copy and every update add the listed
+entries, values and the two servers once each, never one counted as offered, and never the
+data-root guard. Every file under `how-to/` is read-only, and every full update puts it back
+where it differs, another template's version of a shared one excepted.
+
+**The stated exceptions:** updating across 0.4.2 replaces an .agents link to `.claude` with the
+real folder; every update holds an .agents link to a folder outside the project aside and puts
+it back; and the family update script does what the paragraph above says. A client file never
+arrives by update: the bridge's 'Enabling an existing project' and
+`how-to/workflows/syntek-media/06-enable-a-coding-agent-client/` say how to take one by hand.
 
 **Never edit a template-owned file.** Override instead: a same-named guide in `docs/project/`, a
 same-slug workflow in `workflows/local/`, an entry in the Workflow aliases or Overrides of
@@ -211,6 +235,12 @@ its Memory headings map the headings of `.claude/MEMORY.md`; its Workflow aliase
 media workflow by full folder path, checked first; its Overrides may name a media rules file and
 section, or a media skill and step. Where it is absent, project rules go in `.claude/CLAUDE.md`,
 under the heading 'Project-specific rules'.
+
+**A departure from the user guide** is recorded in the same places, never in `how-to/`: a
+departure from a guide or chapter there in the Overrides of syntek-author's 00-project.md, where
+present (a redirect included), and one from a procedure there in its Workflow aliases, by full
+folder path; otherwise it is a project rule in `.claude/CLAUDE.md`, under the heading
+'Project-specific rules'. The guide explains; where it and these rules differ, the rules decide.
 
 **Precedence**, highest first: (1) syntek-author's 00-project.md, where present; (2) the project
 rules; (3) these rules files, beside syntek-author's own, where present; (4) a folder's

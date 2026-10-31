@@ -51,8 +51,9 @@ are syntek-author's.
 ## Why the audits exist
 
 Every promise `DESIGN.md` makes about a generated project — this brand kind gets these mode files
-and not those, a removed platform takes its two files and nothing else, a shared file is never
-touched by an update, a seed ships empty, nothing media ships collides with syntek-author — rests
+and not those, a removed platform takes its two files and nothing else, Copier never renders a
+shared file on update and the update script changes only the ones its data lists (`DESIGN.md`
+Section 3.6), a seed ships empty, nothing media ships collides with syntek-author — rests
 on one line of `copier.yml` or one file under `template/`, and none of them fails loudly when that
 line is wrong. Copier renders successfully either way, and a collision with syntek-author shows up
 only as conflict markers inside its files on some later update. These scripts are the only place

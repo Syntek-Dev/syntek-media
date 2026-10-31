@@ -25,6 +25,7 @@ import tempfile
 import unicodedata
 
 VERSION = '3.8.6'
+PYTHON_RANGE = '>=3.10,<3.14'   # this script's requires-python, below media's base (D67, D81)
 WEIGHTS = 'wav2vec2_fairseq_base_ls960_asr_ls960.pth'
 MODEL = 'large-v3-turbo'
 REPO = 'models--mobiuslabsgmbh--faster-whisper-large-v3-turbo'
@@ -89,11 +90,12 @@ def installed_version() -> str:
 
 def require_version() -> None:
     if not (3, 10) <= sys.version_info[:2] < (3, 14):
-        raise CannotRun('transcribe needs Python >=3.10,<3.14; use a supported interpreter at user scope')
+        raise CannotRun(f'transcribe needs Python {PYTHON_RANGE}; name such an interpreter with '
+                        'MEDIA_TRANSCRIBE_PYTHON')
     version = installed_version()
     if version != VERSION:
         raise CannotRun(f'WhisperX {VERSION} is required; found {version or "none"}. '
-                        'Use MEDIA_TRANSCRIBE_PYTHON naming that environment, or transcribe fetch')
+                        "Use MEDIA_TRANSCRIBE_PYTHON naming that interpreter's path, or transcribe fetch")
 
 
 def parts(text: str) -> list:
