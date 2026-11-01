@@ -23,7 +23,7 @@ model: opus
 **Before the update**
 
 - [ ] The project is its own repository, `git status` reports nothing to commit (untracked files included), and the work is on the branch `update-syntek-media`. · _sonnet_
-- [ ] Where `.copier-answers.syntek-author.yml` stands, syntek-author updated first, at v0.6.0 or later, by its own procedure, and committed. · _opus_
+- [ ] Where `.copier-answers.syntek-author.yml` stands, syntek-author updated first, at v0.6.0 or later (v0.8.0 or later where lessons come from both templates), by its own procedure, and committed. · _opus_
 - [ ] `ls -ld .agents .agents.syntek-held how-to` read: no held link, and `how-to` a real folder or absent. · _sonnet_
 - [ ] Every changed answer agreed with the author, each list given whole and `BRAND_KIND` unchanged; for a platform or media kind going, every file it deletes that the author needs copied out and committed. · _opus_
 

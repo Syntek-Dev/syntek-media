@@ -85,6 +85,11 @@ Renders are generated: never edit one by hand; change the source and render agai
 deliverables and generated audio are ignored by Git, and source footage lives in external
 storage, listed in `production/src/footage/manifest.toml`. An approved voiceover take cannot be
 made again, so archive it when you approve it.
+Where the project keeps its binary files under a data root (`DATA_STORE` `external`), that
+storage is the machine's data root: `python3 toolkit/media.py footage verify` warns of each
+logged file not yet filed there, and Claude files it, when you say so, with the `add` of
+`.claude/syntek-media-dataroot.py`, as footage or an approved take only. Under `repo` nothing
+is filed, and footage still never enters Git.
 Each piece's output has its own ignored folder in `production/src/renders/`,
 `production/src/voiceover/generated/` (takes in its takes subfolder) and
 `publishing/src/renders/`. Tracked timing and scene files stay flat under the piece's name in
@@ -102,9 +107,12 @@ your shell and asks before it runs.
 **Requirements:** `git` 2.31 or later; Python 3.14 or later (the toolkit, the hooks and every
 update need it); `ffmpeg` and `ffprobe` built with libass, x264 and mp3lame; `uv`, for Copier on
 3.14 (`uvx --python '>=3.14' copier`) and for `toolkit/card.py`, with Playwright's Chromium
-(`uv run --with playwright==1.64.0 playwright install chromium`, or a system browser bundle at the same revision, as on NixOS); `git-lfs`, if you keep large
-design exports; and `espeak-ng` (optional, for a scratch voice track). `check --setup` reports
-each one. Optional lip sync needs Rhubarb Lip Sync 1.14.0, unzipped with its resources at user
+(`uv run --with playwright==1.64.0 playwright install chromium`, or a system browser bundle at
+the same revision, as on NixOS); `git-lfs`, if you keep large design exports; and `espeak-ng`
+(optional, for a scratch voice track). `check --setup` reports each one. To draw cards and
+scenes with another Chromium-based browser, name it with `MEDIA_CHROMIUM` at user scope, as an
+absolute path or a command on PATH: `check --setup` says which browser they will use, a run on
+it says so, and Playwright's own Chromium stays the reference. Optional lip sync needs Rhubarb Lip Sync 1.14.0, unzipped with its resources at user
 scope and linked onto PATH; `lipsync` checks its dictionary beside the real executable.
 Optional word alignment uses WhisperX 3.8.6 in `toolkit/transcribe.py`, which needs a Python
 from 3.10 to 3.13 kept beside 3.14: name its interpreter's path with `MEDIA_TRANSCRIBE_PYTHON`
@@ -123,6 +131,13 @@ fetch models. Author-edited data stays TOML; tool-written timing is finite JSON.
   for every platform', 'caption the talk') and the skill for that job runs; a request no skill
   matches, or 'what's next?', goes to the `run-media-workflow` skill, which finds the procedure.
   Skills can also be called by name, such as `/write-script`.
+- Three skills are for the craft around the pieces: `media-research` reads about making and
+  publishing media at the primary source, `media-tone` reviews the tone of what a piece says or
+  shows and changes only what you accept, and `media-teach` gives lessons in a media craft, tool
+  or platform. They run beside the research, tone and teach skills (syntek-author), where
+  present. Lessons are text only, kept in a learning folder at the project root (in its
+  syntek-media folder where another template stands beside this one); practice clips and
+  renders stay outside the repository.
 - Claude never spends credits unasked: it states the characters, the calls and the estimated
   credits, waits for your yes, and the settings make every credit-spending tool ask again.
 - Claude never posts. It prepares each post and its schedule row; you post.

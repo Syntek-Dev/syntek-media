@@ -26,15 +26,20 @@ Check that `grill-with-docs` has its `SKILL.md` in `.claude/skills/`; where it
 does not, say so, and ask the same questions in rounds yourself, each with a recommended answer
 (`.claude/rules/syntek-media/06-global-rules.md` Section 8). First read the written voice, where
 syntek-author's voice notes or brand voice are present. Then settle the pace in words a minute,
-the register, how the brand's name is said, the words never said aloud, which uses need a
-narrator, and whether any narrator will be a cloned voice, and whose. _Substantive._
+the register, and, for each type of content the project makes that should sound different (a
+Short, a long video, a podcast episode, a trailer), its own register; how the brand's name is
+said, the words never said aloud, which uses need a narrator, and whether any narrator will be a
+cloned voice, and whose. A tone `media-tone` hands over from a tone pass is put to the author here
+as a proposal, never taken as settled. _Substantive._
 
 ## 2. Write the spoken style
 
 > **Skill:** none · **Guide:** `brand/docs/reference/the-spoken-voice.md`
 
-Write the decisions under `## Spoken style` in `brand/src/voice/voice.md`, one sentence per line,
-and add the brand's name to `## Pronunciations` with its respelling. Remove the section's flag.
+Write the decisions under `## Spoken style` in `brand/src/voice/voice.md`, one sentence per line:
+the register on its Register line, and each type of content's own register as one sub-bullet
+under it, named for the type. Add the brand's name to `## Pronunciations` with its respelling.
+Remove the section's flag.
 _Mechanical (writing); the decisions are the author's._
 
 ## 3. Check the server

@@ -16,8 +16,8 @@ override, so no render or package trusts a limit that has changed.
 **Follow `STEPS.md` in order and tick `CHECKLIST.md` as you go.** The model tags in the checklist
 are authoritative: `opus` items are judgement; `sonnet` items belong to the mechanical tier.
 
-- **Routing:** no media skill; this is a review, done by hand against the platforms' own pages,
-  with the research skill (syntek-author), where present, for the reading. Guide:
+- **Routing:** skill `media-research` for the reading at the platforms' own pages (step 3); every
+  other step is a review done by hand, with the toolkit. Guide:
   `publishing/docs/reference/platform-specs.md`. Tools: `python3 toolkit/media.py presets` and
   web fetches of each table's `source`.
 - **Model:** **Opus** for reading a platform's page and judging whether it changes a value; the

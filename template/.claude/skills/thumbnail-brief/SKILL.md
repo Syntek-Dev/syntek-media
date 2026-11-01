@@ -134,8 +134,8 @@ it never puts on one.
    name in `publishing/src/renders/<piece>/` (a cut's brief too, never a folder of its own),
    `<html-stem>.<platform>-<format>.png`. A deliverable whose table has no `width` and `height`
    renders with `--size` at a size the author agrees, flagged `VERIFY`. If `card.py` exits 2 (no
-   uv, or no Chromium), report the install line it prints and stop: never report a thumbnail as
-   rendered when it could not run. Then make every other file through the toolkit, never ffmpeg
+   uv, no Chromium, or a `MEDIA_CHROMIUM` it names), report the line it prints, an install command
+   or a `MEDIA_CHROMIUM` fix, and stop: never report a thumbnail as rendered when it could not run. Then make every other file through the toolkit, never ffmpeg
    by hand: each format a table lists beyond PNG with
    `python3 toolkit/media.py image <png> --deliverable KEY [--format FMT]`; each poster with
    `media.py image <video render> --deliverable KEY --at TC`, no layout needed; the GIF preview by

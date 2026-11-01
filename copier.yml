@@ -488,6 +488,15 @@ _exclude:
   - "<: if BRAND_KIND != 'business' :>/.claude/skills/handoff/MEDIA-BUSINESS.md<: endif :>"
   - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/handoff/MEDIA-FICTION.md<: endif :>"
   - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/handoff/MEDIA-NONFICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'business' :>/.claude/skills/media-research/BUSINESS.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/media-research/FICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/media-research/NONFICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'business' :>/.claude/skills/media-teach/BUSINESS.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/media-teach/FICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/media-teach/NONFICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'business' :>/.claude/skills/media-tone/BUSINESS.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/media-tone/FICTION.md<: endif :>"
+  - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/media-tone/NONFICTION.md<: endif :>"
   - "<: if BRAND_KIND != 'business' :>/.claude/skills/narrate-audiobook/BUSINESS.md<: endif :>"
   - "<: if BRAND_KIND != 'author-fiction' :>/.claude/skills/narrate-audiobook/FICTION.md<: endif :>"
   - "<: if BRAND_KIND != 'author-nonfiction' :>/.claude/skills/narrate-audiobook/NONFICTION.md<: endif :>"
@@ -991,13 +1000,16 @@ DATE:
 # What the answers do here. AGENT_CLIENTS gates each client's files (the coding-agent block of
 # _exclude, which acts on a copy only) and the rows of the model table in
 # .claude/rules/syntek-media/05-model-allocation.md; a model answer is written into its
-# client's own file on a copy only. The data-root answers place nothing yet: media's map,
-# .claude/syntek-media-dataroot.json, names no folder (D80), so footage stays where
-# production/src/footage/manifest.toml lists it. They keep the family's records in agreement,
-# which the data-root resolver requires of every answers file in the project, and
-# _message_after_update reports a difference from syntek-author's. Every gate, `when:` and
-# content block that reads one of these answers repeats its question's `when:` test, and tests
-# DATA_STORE by equality with a value, never `!=` (syntek-author D50).
+# client's own file on a copy only. The data-root answers keep the family's records in
+# agreement, which the data-root resolver requires of every answers file in the project, and
+# _message_after_update reports a difference from syntek-author's. Since 0.7.0 they also say
+# where footage goes: media's map, .claude/syntek-media-dataroot.json, claims the footage
+# folder, production/src/footage, with the evidence roles footage and approved-take (D86,
+# amending D80), so under DATA_STORE external the resolver's add files a copy there, run by the
+# session on the author's word or by the author, with media's two roles only, while
+# production/src/footage/manifest.toml stays the editorial record media's tools read. Every
+# gate, `when:` and content block that reads one of these answers repeats its question's
+# `when:` test, and tests DATA_STORE by equality with a value, never `!=` (syntek-author D50).
 #
 # Existing projects need no migration (D80, D81): the update that first asks these writes no
 # client's files, and records syntek-author's AGENT_CLIENTS where its record holds a list (an
@@ -1429,6 +1441,21 @@ _migrations:
   - version: v0.6.0
     command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/v0.6.0-how-to.py"'
     when: "<% _stage == 'after' %>"
+  # v0.7.0 (D86) adds three skills of media's own and a data-root map that claims the footage
+  # folder, and moves nothing: no author file moves and no seed's required content changes, so
+  # no migration is required (D11). Media's own report-only crossing check carries the update
+  # message once, on the update that crosses 0.7.0: update syntek-author, where the project
+  # holds one, to v0.9.1 or later, now and before media from then on, and to v0.8.0 or later
+  # where lessons come from both templates (syntek-author D57); under DATA_STORE external,
+  # footage verify warns of each logged file not yet filed and the resolver's status exits 1
+  # until it is filed, which a session does with the resolver's add on the author's word, as
+  # footage or approved-take only; and where the three skills are. It reads only the
+  # _src_path line of media's own answers file (D14), writes nothing and always exits 0.
+  # It runs through _copier_python and parses and exits 0 on Python 3.10. shipped-seeds.sh
+  # check 36 holds it here: after v0.6.0's entry and before the 'update' block's BEGIN marker.
+  - version: v0.7.0
+    command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/v0.7.0-report.py"'
+    when: "<% _stage == 'after' %>"
   # D81 (0.6.0): syntek-author's family-shared 'update' block, byte for byte from its v0.9.1
   # tag; the marker lines are syntek-author's too, so their D48 is syntek-author's decision,
   # never media's D48. Its one entry runs migrations/family-update.py, vendored from the same
@@ -1725,9 +1752,10 @@ _message_after_copy: |
 # and its provider. A later difference is allowed, and refused only by the data-root
 # resolver's data commands, so this is where the author first hears of it. syntek-author's
 # own message reports the same difference only after ITS updates, which is why media's says it
-# too. Media files nothing under a data root in 0.5.0 (its map names no folder), so there are
-# no store or area lines of its own (D80), and the commands are shown as
-# `python3 .claude/syntek-media-dataroot.py …`, because media has no Makefile (D20).
+# too. There are no store or area lines of media's own (D80): since 0.7.0 media's map claims
+# its footage folder, and the v0.7.0 crossing report, not this message, says so once (D86).
+# The commands are shown as `python3 .claude/syntek-media-dataroot.py …`, because media has no
+# Makefile (D20).
 #
 # Copier renders this message after the update has written the new answers, in the real
 # project, so the peer read is safe here (syntek-author's probe on 9.17.1 and 9.18.2; media's

@@ -26,7 +26,7 @@ model: opus
 **Sources**
 
 - [ ] Every shot in the shot list (or every beat of the transcript) has a source. · _opus_
-- [ ] `footage verify` passes for every footage ID the edit uses. · _sonnet_
+- [ ] `footage verify` passes for every footage ID the edit uses (exit 0; any data-root warning reported to the author). · _sonnet_
 - [ ] Every voiceover segment the edit uses is `approved` and archived. · _sonnet_
 - [ ] Every licensed or identifiable item has its rights row. · _sonnet_
 

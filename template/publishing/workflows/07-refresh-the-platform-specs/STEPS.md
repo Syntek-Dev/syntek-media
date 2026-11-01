@@ -1,7 +1,7 @@
 ---
 workflow: 07-refresh-the-platform-specs
 phase: review
-skills: []
+skills: [media-research]
 model: opus
 ---
 
@@ -15,8 +15,8 @@ changed. Each step names the guide it uses, and any toolkit command. **Run in or
 ordering is load-bearing — and tick `CHECKLIST.md` as you go.
 
 > Read the read-order files first (this folder's `CONTEXT.md` and `CLAUDE.md`), then
-> `publishing/docs/reference/platform-specs.md`. No media skill runs this procedure; the research
-> skill (syntek-author), where present, helps with the reading.
+> `publishing/docs/reference/platform-specs.md`. `media-research` does the reading in step 3, as a
+> background agent; every other step is done here, by hand and with the toolkit.
 
 ## 1. List the stale tables
 
@@ -37,10 +37,11 @@ _Mechanical._
 
 ## 3. Re-read each source
 
-> **Skill:** research (syntek-author), where present · **Guide:** `publishing/docs/reference/platform-specs.md`
+> **Skill:** `media-research` · **Guide:** `publishing/docs/reference/platform-specs.md`
 
-For each table on the list, open its `source` and `extra_sources` on the platform's own help,
-developer or ads pages, and note what each value says today, and the date it was read. A value the
+Hand `media-research` the list. For each table it opens the `source` and `extra_sources` on the
+platform's own help, developer or ads pages, and notes what each value says today, and the date it
+was read; it proposes, and writes nothing. A value the
 platform's own page does not state stays in `verify`; a press report or a third party may point to
 a change, never confirm one. _Substantive._
 

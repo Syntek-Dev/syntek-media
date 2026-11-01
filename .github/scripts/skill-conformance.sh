@@ -18,7 +18,7 @@
 #                        without an absolute output_directory scatters paid-for audio on the
 #                        desktop (D21).
 #
-#                        Twenty-one checks:
+#                        Twenty-three checks:
 #                          1. The skill folder has a SKILL.md.
 #                          2. Frontmatter opens on line 1 with --- and is closed.
 #                          3. `name` equals the folder name.
@@ -51,8 +51,8 @@
 #                             carries one of those, nor a family skill a prefix-free one.
 #                         17. SKILL.md plus its longest mode file stays within 300 lines.
 #                         18. No .claude/agents/ or .claude/commands/ folder exists.
-#                         19. The skill is one DESIGN.md Section 5 names: Section 5.1's ten, or
-#                             the seven family skills of its own table (D80).
+#                         19. The skill is one DESIGN.md Section 5 names: Section 5.1's thirteen,
+#                             or the seven family skills of its own table (D80).
 #                         20. No media skill shares a name with a `skill` line of
 #                             syntek-author-names.txt (DESIGN.md D27): a skill folder in the tree,
 #                             and, in template/, every name the catalogue gives. The seven family
@@ -68,6 +68,18 @@
 #                             skill." A skill naming an mcp__ tool also carries the strings
 #                             `output_directory` and `git rev-parse --show-toplevel` (Section 5);
 #                             the remix run writes its own folder and passes neither.
+#                         22. media-teach's SKILL.md carries D86's placement rules: the strings
+#                             .copier-answers.syntek-media.yml and .copier-answers.*.yml, both
+#                             placeholders learning/<topic>/ and learning/syntek-media/<topic>/,
+#                             the line `Template: syntek-media` in backticks, and the words
+#                             'never move', 'ask once' and 'never infer' (DESIGN.md D86; the
+#                             placement is syntek-author D57's, made at run time).
+#                         23. No media skill but media-teach, and none of media's mode files
+#                             (the MEDIA-<KIND>.md files beside a family skill among them, and
+#                             media-teach's own), names a path under learning/, backticked, as a
+#                             placeholder or not, fenced or not: the lessons are media-teach's
+#                             alone. The vendored family SKILL.md files, syntek-author's text, are
+#                             not read (D80, D86).
 #
 #                        Run on template/ (the default) the H1 and locale line must carry the
 #                        literal BRAND_NAME and TIMEZONE tokens; on a render, any value.
@@ -86,7 +98,8 @@
 # SELF-TEST. --self-test writes a conformant moded skill, an unmoded one and an ElevenLabs one at
 #            runtime, with a fixture names file, proves them clean, then applies one mutation per
 #            check and asserts exactly one finding (check 21 for an mcp__ tool and for voice remix
-#            run, which needs the guard only); then proves the over-author scope.
+#            run, which needs the guard only; checks 22 and 23 on a media-teach written at
+#            runtime); then proves the over-author scope.
 #
 # Requirements: bash 4+, awk, grep, sed. No network.
 #
@@ -214,6 +227,16 @@ spending_tools_named() { # $1 = skill dir → one tool per line
   return 0
 }
 
+# D86's placement words in media-teach's SKILL.md (check 22): each a fixed string, the three
+# words matched in any case, on the file read as one line.
+TEACH_STRINGS=('.copier-answers.syntek-media.yml' '.copier-answers.*.yml' 'learning/<topic>/' 'learning/syntek-media/<topic>/' '`Template: syntek-media`')
+TEACH_WORDS=('never move' 'ask once' 'never infer')
+
+# Check 23: a path under the top-level learning/ (_common.sh's SM_LEARNING_PATH_RE).
+learning_line() { # $1 = file → the first line number naming a path under learning/, or nothing
+  grep -nE -m1 -- "$SM_LEARNING_PATH_RE" "$1" | cut -d: -f1 || true
+}
+
 check_skill() { # $1 = folder name
   local s="$1" dir="$TREE/.claude/skills/$1" f fm desc k v n h2 last mode modes have want first_step para total longest text tools mcp family=false prefix
   f="$dir/SKILL.md"
@@ -307,6 +330,29 @@ check_skill() { # $1 = folder name
   total=$(( $(wc -l < "$f") + longest ))
   [[ "$total" -le 300 ]] || finding "check 17 — $s/SKILL.md plus its longest mode file is $total lines; the cap is 300"
 
+  # ── 22. media-teach's placement rules (D86) ─────────────────────────────────
+  if [[ "$s" == media-teach ]]; then
+    text="$(flat "$f")"
+    for k in "${TEACH_STRINGS[@]}"; do
+      [[ "$text" == *"$k"* ]] || finding "check 22 — media-teach/SKILL.md never says $k — D86's placement rules (syntek-author D57) live in this file alone"
+    done
+    for k in "${TEACH_WORDS[@]}"; do
+      grep -qiF -- "$k" <<< "$text" || finding "check 22 — media-teach/SKILL.md never says '$k' — D86's placement rules (syntek-author D57) live in this file alone"
+    done
+  fi
+
+  # ── 23. Only media-teach names learning/ (D86) ──────────────────────────────
+  # A family SKILL.md is syntek-author's bytes and is not read; its MEDIA- mode files, and
+  # every media mode file, are, fenced lines included.
+  local lfile lhit
+  for lfile in SKILL.md $SM_MODE_FILES $SM_FAMILY_MODE_FILES; do
+    [[ -f "$dir/$lfile" ]] || continue
+    if [[ "$lfile" == SKILL.md ]] && { $family || [[ "$s" == media-teach ]]; }; then continue; fi
+    is_owned_file ".claude/skills/$s/$lfile" || continue
+    lhit="$(learning_line "$dir/$lfile")"
+    [[ -z "$lhit" ]] || finding "check 23 — $s/$lfile names a path under learning/ (line $lhit) — only media-teach's SKILL.md places lessons, at run time (DESIGN.md D86)"
+  done
+
   # ── 21. The ElevenLabs guard ────────────────────────────────────────────────
   tools="$(spending_tools_named "$dir")"
   if [[ -n "$tools" ]]; then
@@ -349,6 +395,21 @@ run_checks() {
     fi
     check_skill "$d"
   done < <(find "$TREE/.claude/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | LC_ALL=C sort)
+  # Over syntek-author, a family skill folder syntek-author's render wrote is not media's, but
+  # the MEDIA- mode files media's copy added to it are: check 23 reads those (D80, D86).
+  if $SM_OWNED_MODE; then
+    local mf hit
+    while IFS= read -r d; do
+      is_owned_dir ".claude/skills/$d" && continue
+      is_family_skill "$d" || continue
+      for mf in $SM_FAMILY_MODE_FILES; do
+        [[ -f "$TREE/.claude/skills/$d/$mf" ]] || continue
+        is_owned_file ".claude/skills/$d/$mf" || continue
+        hit="$(learning_line "$TREE/.claude/skills/$d/$mf")"
+        [[ -z "$hit" ]] || finding "check 23 — $d/$mf names a path under learning/ (line $hit) — only media-teach's SKILL.md places lessons, at run time (DESIGN.md D86)"
+      done
+    done < <(find "$TREE/.claude/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | LC_ALL=C sort)
+  fi
 }
 
 # ── Self-test ────────────────────────────────────────────────────────────────
@@ -405,7 +466,7 @@ write_family_skill() { # $1 = dir, $2 = name
 }
 
 self_test() {
-  local tmp sk ws ca vo gr real_names="$SM_AUTHOR_NAMES_FILE"
+  local tmp sk ws ca vo gr mt real_names="$SM_AUTHOR_NAMES_FILE"
   bold "▸ $SCRIPT_NAME --self-test"; log ""
   tmp="$(sm_mktemp)"
   # shellcheck disable=SC2064
@@ -419,6 +480,14 @@ self_test() {
   write_skill "$ca" captions false false
   write_skill "$vo" voiceover true true
   write_family_skill "$gr" grilling
+  mt="$sk/media-teach"; write_skill "$mt" media-teach true false
+  {
+    printf -- '- Read `.copier-answers.syntek-media.yml` and every `.copier-answers.*.yml` beside it.\n'
+    printf -- '- Place a lesson at `learning/<topic>/`, or at `learning/syntek-media/<topic>/` where a\n'
+    printf '  sibling is present; mark it with the line `Template: syntek-media`.\n'
+    printf -- '- Never move a lesson; ask once where it is unmarked; never infer the owner.\n'
+  } > "$tmp/teach-rules"
+  sed -i "/^## Anti-patterns/r $tmp/teach-rules" "$mt/SKILL.md"
   st_baseline "a moded skill, an unmoded one, an ElevenLabs one and a family skill (the family's H1, locale line and Mode paragraph, a syntek-author name by design, D80), all conformant"
 
   # Shapes the checks must not flag: a block description read once (not twice, which doubled
@@ -483,16 +552,50 @@ self_test() {
   printf -- '- %s\n' "$GUARD" >> "$ca/SKILL.md"
   probe_clean "a skill naming voice remix run with the guard needs no output_directory or git rev-parse"; cp "$tmp/h" "$ca/SKILL.md"
 
+  # 22: media-teach's placement words (D86).
+  cp "$mt/SKILL.md" "$tmp/h"
+  sed -i 's#`learning/syntek-media/<topic>/`#a sub-folder#' "$mt/SKILL.md"
+  probe "check 22 fires when media-teach loses the sibling placeholder" "check 22 — media-teach/SKILL.md never says learning/syntek-media/<topic>/"; cp "$tmp/h" "$mt/SKILL.md"
+  sed -i 's/the line `Template: syntek-media`/the line Template: syntek-media/' "$mt/SKILL.md"
+  probe "check 22 fires when the Template: line is not backticked" 'check 22 — media-teach/SKILL.md never says `Template: syntek-media`'; cp "$tmp/h" "$mt/SKILL.md"
+  sed -i 's/ask once where/ask where/' "$mt/SKILL.md"
+  probe "check 22 fires when 'ask once' is dropped" "check 22 — media-teach/SKILL.md never says 'ask once'"; cp "$tmp/h" "$mt/SKILL.md"
+  sed -i 's/Never move a lesson/NEVER MOVE a lesson/' "$mt/SKILL.md"
+  probe_clean "check 22 reads the three words in any case"; cp "$tmp/h" "$mt/SKILL.md"
+  # 23: only media-teach's SKILL.md names learning/ (D86).
+  cp "$mt/BUSINESS.md" "$tmp/h"
+  printf '\nKeep notes in learning/syntek-media/briefs/.\n' >> "$mt/BUSINESS.md"
+  probe "check 23 fires on media-teach's own mode file naming learning/" "check 23 — media-teach/BUSINESS.md names a path under learning/"; cp "$tmp/h" "$mt/BUSINESS.md"
+  cp "$ca/SKILL.md" "$tmp/h"
+  sed -i 's#^- Rewriting what was not asked for\.$#&\n- Recording a lesson in `learning/<topic>/PROGRESS.md`.#' "$ca/SKILL.md"
+  probe "check 23 fires on another media skill naming a learning/ placeholder" "check 23 — captions/SKILL.md names a path under learning/"; cp "$tmp/h" "$ca/SKILL.md"
+  cp "$gr/MEDIA-BUSINESS.md" "$tmp/h"
+  printf '\n```text\n/learning/tides/\n```\n' >> "$gr/MEDIA-BUSINESS.md"
+  probe "check 23 fires on a family skill's MEDIA- mode file naming /learning in a fence" "check 23 — grilling/MEDIA-BUSINESS.md names a path under learning/"; cp "$tmp/h" "$gr/MEDIA-BUSINESS.md"
+  cp "$gr/SKILL.md" "$tmp/h"
+  sed -i 's#^- Asking two things at once\.$#&\n- Forgetting the lessons in `learning/<topic>/`.#' "$gr/SKILL.md"
+  probe_clean "a family SKILL.md naming learning/ is syntek-author's text and is not read"; cp "$tmp/h" "$gr/SKILL.md"
+  cp "$ca/SKILL.md" "$tmp/h"
+  sed -i 's#^- Rewriting what was not asked for\.$#&\n- Calling machine learning a fix; `production/src/learning/` is no lesson path.#' "$ca/SKILL.md"
+  probe_clean "the tail of a longer path is not the top-level learning/"; cp "$tmp/h" "$ca/SKILL.md"
+
   # The over-author scope: syntek-author's skills beside media's, and .owned listing media's.
   SOURCE=false
-  sed -i 's/(<%BRAND_NAME%>)$/(Probe Studio)/; s/<%TIMEZONE%>/Europe\/London/' "$ws/SKILL.md" "$ca/SKILL.md" "$vo/SKILL.md"
-  rm -f "$ws/FICTION.md" "$ws/NONFICTION.md" "$vo/FICTION.md" "$vo/NONFICTION.md" "$gr/MEDIA-FICTION.md" "$gr/MEDIA-NONFICTION.md"
+  sed -i 's/(<%BRAND_NAME%>)$/(Probe Studio)/; s/<%TIMEZONE%>/Europe\/London/' "$ws/SKILL.md" "$ca/SKILL.md" "$vo/SKILL.md" "$mt/SKILL.md"
+  rm -f "$ws/FICTION.md" "$ws/NONFICTION.md" "$vo/FICTION.md" "$vo/NONFICTION.md" "$mt/FICTION.md" "$mt/NONFICTION.md" "$gr/MEDIA-FICTION.md" "$gr/MEDIA-NONFICTION.md"
   mkdir -p "$sk/spelling" "$sk/run-workflow"; printf '# not a media skill\n' > "$sk/spelling/SKILL.md"; printf -- '---\nname: x\n---\n' > "$sk/run-workflow/SKILL.md"
   (cd "$TREE" && find .claude/skills -type f | grep -vE '^\.claude/skills/(spelling|run-workflow)/' | LC_ALL=C sort) > "$TREE.owned"
   load_owned "$TREE"
   st_baseline "an over-author tree: syntek-author's skills beside media's rendered ones"
   printf '\n## Notes\n\nA trailing section.\n' >> "$ca/SKILL.md"
   probe "check 13 still fires on a media skill, over syntek-author" "check 13 — captions/SKILL.md"
+  # A family skill syntek-author's render wrote, with the MEDIA- mode file media's copy added.
+  cp "$ca/SKILL.md" "$tmp/notes-held"; sed -i '/^## Notes$/,$d' "$ca/SKILL.md"; sed -i '$d' "$ca/SKILL.md"
+  write_family_skill "$sk/handoff" handoff; rm -f "$sk/handoff/MEDIA-FICTION.md" "$sk/handoff/MEDIA-NONFICTION.md"
+  printf '.claude/skills/handoff/MEDIA-BUSINESS.md\n' >> "$TREE.owned"; load_owned "$TREE"
+  probe_clean "a family skill folder syntek-author wrote is skipped, over syntek-author, and media's MEDIA- file in it is clean"
+  printf '\nSee learning/syntek-media/x/.\n' >> "$sk/handoff/MEDIA-BUSINESS.md"
+  probe "check 23 fires on media's MEDIA- mode file in syntek-author's family skill folder, over syntek-author" "check 23 — handoff/MEDIA-BUSINESS.md names a path under learning/"
   rm -f "$TREE.owned"; SM_OWNED_MODE=false; SM_OWNED=()
 
   SM_AUTHOR_NAMES_FILE="$real_names"

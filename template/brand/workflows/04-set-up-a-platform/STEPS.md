@@ -69,8 +69,9 @@ relies on it. _Substantive._
 Only where no written-side document sets them: offer options with a recommendation for how often and
 when the brand posts here (times in the project's time zone, <%TIMEZONE%>), how its voice shifts
 here, and what a viewer or listener is asked to do. Keep the tone consistent with
-`brand/src/voice/voice.md` and the written voice. Write what the author decides, and remove each
-flag. _Substantive._
+`brand/src/voice/voice.md` and the written voice. A platform's tone `media-tone` hands over from a
+tone pass is one of the options, put to the author with the others, never written as settled.
+Write what the author decides, and remove each flag. _Substantive._
 
 ## 6. Write the hashtag sets
 

@@ -42,18 +42,32 @@ check   The layout contract of DESIGN Section 6.11: <!doctype html> and <html la
 A missing browser is exit 2 with the command that installs it:
     uv run --with playwright==1.64.0 playwright install chromium
 
+MEDIA_CHROMIUM (DESIGN D20, D86), a user-scope environment variable a session never sets, may
+name another Chromium-based browser: an absolute path (a leading ~ expanded) or a bare command
+name looked up on PATH, never a relative path. Both scripts read it each time they open a
+browser and pass the file to Playwright as executable_path, with no other launch option; unset
+or empty, Playwright's own Chromium runs. A run on it prints one note on stderr naming the path,
+because the pinned Chromium (revision 1248) stays the reference. A value that does not resolve
+to an executable file is exit 2 before any launch, and a browser it names that will not start,
+or that fails later in the run, is exit 2: each names the variable, the value and both fixes,
+never the install command above, and never falls back to Playwright's own Chromium.
+
 Exit codes: 0 = done (or clean); 1 = a finding (a request over the network, a missing token,
 font or image, a PNG of the wrong size or over max_size, a contract breach); 2 = could not run (bad arguments, a missing
 file, Playwright or its browser missing).
 --self-test: 0 = every case ran and passed; 1 = a case failed (whatever else was skipped); 2 = a
 part could not run (Playwright, its Chromium or fc-match missing): each part is named on a SKIP
-line with why, and the last line says the self-test is incomplete. A skip is never a pass.
+line with why, and the last line says the self-test is incomplete. A skip is never a pass. The
+self-test honours MEDIA_CHROMIUM, so it proves the browser the variable names; a MEDIA_CHROMIUM
+error is a FAIL there, never a SKIP, because a misconfigured variable is not a missing browser.
 """
 from __future__ import annotations
 
 import argparse
 from html import escape
+import os
 import re
+import shutil
 import struct
 import sys
 import tempfile
@@ -64,6 +78,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import media_common as C  # noqa: E402
 
 INSTALL_BROWSER = "uv run --with playwright==1.64.0 playwright install chromium"
+CHROMIUM_VAR = "MEDIA_CHROMIUM"
+CHROMIUM_FIX = ("correct MEDIA_CHROMIUM at user scope to the absolute path or command name of a "
+                "Chromium-based browser, or unset it to use Playwright's own Chromium")
+REFERENCE = "Playwright 1.64.0's own Chromium (revision 1248), the reference"
+_NOTED = set()   # the browsers this process has already named on stderr (one note per run)
 DSCARD_RE = re.compile(r'^<!--\s*@dsCard\s+group="(Colors|Type|Spacing|Brand|Components)"\s*-->')
 SET_VARS = """(vars) => {
   const root = document.documentElement;
@@ -156,24 +175,93 @@ def playwright():
     return sync_playwright, Error
 
 
+class ChromiumSetting(C.Fatal):
+    """MEDIA_CHROMIUM does not resolve, or the browser it names will not start or fails in the run
+    (DESIGN D20, D86): exit 2 naming the variable, never reported as a missing Playwright Chromium,
+    and in card.py's and scene.py's self-tests a FAIL, never the SKIP an absent browser is."""
+
+
+def chromium_override() -> Path | None:
+    """The browser MEDIA_CHROMIUM names, as an absolute path, or None where it is unset or empty.
+
+    Read each time a browser opens, before Playwright is imported. An absolute path (a leading ~
+    expanded) must be an executable file; a bare command name is looked up on PATH here, so
+    Playwright is always given a path; a relative path is refused, because Playwright would
+    resolve it against a working folder that differs between media.py and a typed uv run.
+    Whether the browser is Chromium-based is not checked: a wrapper script is a valid browser,
+    and the launch is the test. check --setup reports through this same function (D49)."""
+    value = os.environ.get(CHROMIUM_VAR, "").strip()
+    if not value:
+        return None
+    named = f"{CHROMIUM_VAR} names '{value}'"
+    p = Path(value).expanduser()
+    if not p.is_absolute():
+        if os.sep in value or (os.altsep and os.altsep in value):
+            raise ChromiumSetting(f"{named}, a relative path: give an absolute path or a command name "
+                                  f"on PATH; {CHROMIUM_FIX}")
+        found = shutil.which(value)
+        if not found:
+            raise ChromiumSetting(f"{named}, which is not a command on PATH: {CHROMIUM_FIX}")
+        return Path(found).absolute()
+    if not p.exists():
+        raise ChromiumSetting(f"{named}, which does not exist: {CHROMIUM_FIX}")
+    if not p.is_file() or not os.access(p, os.X_OK):
+        bundle = (": name the program inside the .app bundle, under Contents/MacOS/"
+                  if p.is_dir() and p.suffix == ".app" else "")
+        raise ChromiumSetting(f"{named} ({p}), which is not an executable file{bundle}: {CHROMIUM_FIX}")
+    return p
+
+
 class Browser:
-    """One headless Chromium whose pages abort every http(s) request and record it."""
+    """One headless Chromium whose pages abort every http(s) request and record it: Playwright's
+    own, or the browser MEDIA_CHROMIUM names (DESIGN D20, D86)."""
+
+    override = None   # the browser MEDIA_CHROMIUM names, once __enter__ has read it
 
     def __enter__(self):
+        self.override = chromium_override()   # before Playwright is imported, so a bad value is named
         sync_playwright, self.Error = playwright()
         self.pw = sync_playwright().start()
         try:
-            self.browser = self.pw.chromium.launch()
-        except self.Error as err:
+            if self.override is None:
+                self.browser = self.pw.chromium.launch()
+            else:
+                self.browser = self.pw.chromium.launch(executable_path=str(self.override))
+        except Exception as err:
+            if self.override is None and not isinstance(err, self.Error):
+                raise
             self.pw.stop()
+            if self.override is not None:   # never read as a missing Playwright Chromium, never a fallback
+                raise ChromiumSetting(self.named("would not start under Playwright 1.64.0", err)) from None
             if "Executable doesn't exist" in str(err) or "playwright install" in str(err):
                 raise C.Fatal(f"Chromium for Playwright 1.64.0 is not installed: {INSTALL_BROWSER}") from None
             raise C.Fatal(f"Chromium would not start: {str(err).splitlines()[0]}") from None
+        if self.override is not None and str(self.override) not in _NOTED:
+            _NOTED.add(str(self.override))
+            print(f"note: browser: {CHROMIUM_VAR} ({self.override}), not {REFERENCE}", file=sys.stderr)
         return self
 
-    def __exit__(self, *exc):
-        self.browser.close()
-        self.pw.stop()
+    def named(self, what: str, err) -> str:
+        """A browser error under MEDIA_CHROMIUM, naming the variable, its value, the browser and
+        both fixes."""
+        first = (str(err).strip().splitlines() or [type(err).__name__])[0]
+        value = os.environ.get(CHROMIUM_VAR, "").strip()
+        return (f"the browser {CHROMIUM_VAR} names ('{value}', {self.override}) {what}: {first}: it "
+                f"must be a Chromium-based browser Playwright can drive; {CHROMIUM_FIX}")
+
+    def __exit__(self, kind, err, tb):
+        failure = err
+        try:
+            self.browser.close()
+            self.pw.stop()
+        except Exception as closing:
+            if self.override is None or not isinstance(closing, self.Error):
+                raise
+            failure = failure or closing
+        if self.override is not None and isinstance(failure, self.Error):
+            # Every browser error raised while the variable is set names it (D20).
+            raise ChromiumSetting(self.named("failed during the run", failure)) from None
+        return False
 
     def capture(self, page, **options):
         """Capture the same page; retry only Chromium's transient capture failure twice."""
@@ -184,6 +272,8 @@ class Browser:
                 message = str(err)
                 transient = 'Page.captureScreenshot' in message and 'Unable to capture screenshot' in message
                 if not transient or attempt == 2:
+                    if self.override is not None:
+                        raise ChromiumSetting(self.named('could not capture the page', err)) from None
                     raise C.Fatal('Chromium could not capture the page: ' + message.splitlines()[0]) from None
                 print(f'note: retrying Chromium capture on the same page ({attempt + 1}/2)', file=sys.stderr)
 
@@ -527,11 +617,19 @@ def self_test(nested: bool = False) -> int:
                 with Browser():
                     pass
                 have_browser, why = True, ""
+            except ChromiumSetting as err:   # a misconfigured variable is a FAIL, never a SKIP (D20)
+                have_browser, why = False, ""
+                verdict(f"the browser {CHROMIUM_VAR} names starts under Playwright 1.64.0 "
+                        "(the browser cases need it)", False, err)
             except C.Fatal as err:
                 have_browser, why = False, str(err)
             if not have_browser:
-                skip("every browser case (render, transparency, the network guard, check)", why)
+                if why:
+                    skip("every browser case (render, transparency, the network guard, check)", why)
             else:
+                if chromium_override() is not None:
+                    print(f"  note: browser cases run on {CHROMIUM_VAR} ({chromium_override()}), "
+                          "not the reference")
                 if not font:
                     skip("the brand-font probe (a @font-face that loads, then one that does not)",
                          "fc-match is not installed to find a font file" if shutil.which("fc-match") is None
@@ -689,10 +787,12 @@ window.firstFrameVars = ['--frame-width','--safe-left'].map(key =>
             finally:
                 playwright = held
 
-        run("without Playwright, the browser cases are named SKIP with why, and the self-test exits 2, "
-            "never 'passed'", no_playwright, "Playwright is not available")
-        run("without Playwright's Chromium, the SKIP names the command that installs it, and the self-test "
-            "exits 2", no_chromium, INSTALL_BROWSER)
+        with held_env(**{CHROMIUM_VAR: ""}):   # these two prove the SKIPs, whatever the shell holds
+            run("without Playwright, the browser cases are named SKIP with why, and the self-test exits 2, "
+                "never 'passed'", no_playwright, "Playwright is not available")
+            run("without Playwright's Chromium, the SKIP names the command that installs it, and the "
+                "self-test exits 2", no_chromium, INSTALL_BROWSER)
+        test_chromium_variable(verdict, cli)
         said = io.StringIO()
         with contextlib.redirect_stdout(said):
             codes = (outcome(["a case"], ["another"], ["a part"]), outcome([], ["a case"], ["a part"]),
@@ -700,6 +800,177 @@ window.firstFrameVars = ['--frame-width','--safe-left'].map(key =>
         verdict("a FAIL outranks a SKIP (exit 1), a SKIP alone is exit 2, and only every case run and "
                 "passed is exit 0", codes == (1, 2, 0), f"{codes} {said.getvalue()}")
     return outcome(failures, passes, skips)
+
+
+class held_env:
+    """os.environ with the given variables set (an empty value counts as unset for MEDIA_CHROMIUM),
+    every one restored after, so a case runs the same whatever the caller's shell holds."""
+
+    def __init__(self, **values):
+        self.values = values
+
+    def __enter__(self):
+        self.saved = {k: os.environ.get(k) for k in self.values}
+        os.environ.update(self.values)
+        return self
+
+    def __exit__(self, *exc):
+        for k, v in self.saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        return False
+
+
+class stub_playwright:
+    """Playwright stood in for, with no browser: launch(**options) records each call's options and
+    runs the given behaviour; the stand-in's Error class is Gone."""
+
+    class Gone(Exception):
+        pass
+
+    def __init__(self, behaviour):
+        self.calls, self.behaviour = [], behaviour
+
+    def __enter__(self):
+        global playwright
+        stub = self
+
+        def launch(**options):
+            stub.calls.append(options)
+            return stub.behaviour(options)
+        pw = types_namespace(stop=lambda: None, chromium=types_namespace(launch=launch))
+        pw.start = lambda: pw
+        self.held, playwright = playwright, lambda: (lambda: pw, stub.Gone)
+        return self
+
+    def __exit__(self, *exc):
+        global playwright
+        playwright = self.held
+        return False
+
+
+def types_namespace(**values):
+    import types
+    return types.SimpleNamespace(**values)
+
+
+def test_chromium_variable(verdict, cli) -> None:
+    """MEDIA_CHROMIUM (DESIGN D20, D86), with no browser and no Playwright: every bad value is exit
+    2 naming the variable and the value, before any launch and never as a missing Playwright
+    Chromium; empty is unset; a path, a ~ path and a command name each reach Playwright as the
+    resolved file; a launch or later browser error under it names it; and the self-test reports
+    such an error as a FAIL, never a SKIP."""
+    import contextlib
+    import io
+    missing_words = ("playwright install", "is not installed")
+    with tempfile.TemporaryDirectory(prefix="card-chromium-") as tmp:
+        root = Path(tmp)
+        saved_root, C.ROOT = C.ROOT, root
+        try:
+            layout = root / "layout.html"
+            layout.write_text(FIXTURE_CARD.replace("EXTRA", ""), encoding="utf-8")
+            stand_in = root / "bin" / "stand-in-browser"
+            stand_in.parent.mkdir()
+            stand_in.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+            stand_in.chmod(0o755)
+            plain = root / "not-executable"
+            plain.write_text("not a browser\n", encoding="utf-8")
+            plain.chmod(0o644)
+            empty_path = root / "empty-path"
+            empty_path.mkdir()
+            for label, value, words in (
+                    ("a missing absolute path", str(root / "no-such-browser"), "does not exist"),
+                    ("a directory", str(root / "bin"), "not an executable file"),
+                    ("a file that is not executable", str(plain), "not an executable file"),
+                    ("a relative path", "bin/stand-in-browser", "a relative path"),
+                    ("a bare name absent from PATH", "no-such-browser-here", "not a command on PATH")):
+                out = root / "renders" / "bad.png"
+                with held_env(**{CHROMIUM_VAR: value, "PATH": str(empty_path)}):
+                    try:
+                        chromium_override()
+                        said = ""
+                    except ChromiumSetting as err:
+                        said = str(err)
+                    code, text = cli("render", layout, "--size", "64x64", "-o", out)
+                verdict(f"{CHROMIUM_VAR} set to {label} is exit 2 naming the variable and the value, "
+                        "writes no PNG and never reads as a missing Playwright Chromium",
+                        code == 2 and CHROMIUM_VAR in said and value in said and words in said
+                        and CHROMIUM_VAR in text and value in text and not out.exists()
+                        and not any(w in text for w in missing_words), f"exit {code}: {said} | {text}")
+            got = []
+            for value in ("", "   "):
+                with held_env(**{CHROMIUM_VAR: value}):
+                    got.append(chromium_override())
+            verdict(f"an empty or blank {CHROMIUM_VAR} counts as unset", got == [None, None], got)
+            resolved = []
+            for value, env in ((str(stand_in), {}), ("~/bin/stand-in-browser", {"HOME": str(root)}),
+                               ("stand-in-browser", {"PATH": str(stand_in.parent)})):
+                with held_env(**{CHROMIUM_VAR: value}, **env):
+                    resolved.append(chromium_override())
+            verdict(f"{CHROMIUM_VAR} takes an absolute path, a ~ path and a command name on PATH, each "
+                    "resolved to the file", resolved == [stand_in] * 3, resolved)
+
+            def opened(options):
+                return types_namespace(close=lambda: None)
+            for value, want in (("", {}), (str(stand_in), {"executable_path": str(stand_in)})):
+                said = io.StringIO()
+                _NOTED.clear()
+                with held_env(**{CHROMIUM_VAR: value}), stub_playwright(opened) as pw, \
+                        contextlib.redirect_stderr(said):
+                    with Browser():
+                        pass
+                note = said.getvalue()
+                verdict(f"set, {CHROMIUM_VAR} reaches Playwright as executable_path alone, and one note on "
+                        "stderr names the browser" if value else
+                        "unset, Playwright launches its own Chromium with no option and no note",
+                        pw.calls == [want] and ((CHROMIUM_VAR in note and str(stand_in) in note
+                                                 and "reference" in note) if value else not note),
+                        f"{pw.calls} {note}")
+
+            def refused(options):
+                raise stub_playwright.Gone("BrowserType.launch: Executable doesn't exist at …/chrome")
+            with held_env(**{CHROMIUM_VAR: str(stand_in)}), stub_playwright(refused):
+                try:
+                    with Browser():
+                        pass
+                    said, kind = "", None
+                except C.Fatal as err:
+                    said, kind = str(err), type(err)
+            verdict(f"a browser {CHROMIUM_VAR} names that will not start is the variable's error "
+                    "('would not start under Playwright 1.64.0'), never 'is not installed'",
+                    kind is ChromiumSetting and "would not start under Playwright 1.64.0" in said
+                    and str(stand_in) in said and not any(w in said for w in missing_words), said)
+            said, kind, shot, shot_kind = "", None, "", None
+            with held_env(**{CHROMIUM_VAR: str(stand_in)}), stub_playwright(opened), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                try:
+                    with Browser():
+                        raise stub_playwright.Gone("Page.evaluate: Target crashed")
+                except C.Fatal as err:
+                    said, kind = str(err), type(err)
+                try:
+                    with Browser() as b:
+                        page = types_namespace(screenshot=lambda **o: (_ for _ in ()).throw(
+                            stub_playwright.Gone("Page.screenshot: Target closed")))
+                        b.capture(page, type="png")
+                except C.Fatal as err:
+                    shot, shot_kind = str(err), type(err)
+            verdict(f"a browser error later in the run, and a failed capture, name {CHROMIUM_VAR}",
+                    kind is ChromiumSetting and "Target crashed" in said and CHROMIUM_VAR in said
+                    and shot_kind is ChromiumSetting and CHROMIUM_VAR in shot, f"{said} | {shot}")
+            said = io.StringIO()
+            with held_env(**{CHROMIUM_VAR: str(stand_in)}), stub_playwright(refused), \
+                    contextlib.redirect_stdout(said), contextlib.redirect_stderr(said):
+                code = self_test(nested=True)
+            text = said.getvalue()
+            verdict(f"in the self-test a {CHROMIUM_VAR} that will not start is a FAIL (exit 1), never "
+                    "the SKIP an absent browser is", code == 1 and "self-test FAILED" in text
+                    and CHROMIUM_VAR in text and "SKIP every browser case" not in text, f"exit {code}: {text}")
+        finally:
+            C.ROOT = saved_root
+            _NOTED.clear()
 
 
 def outcome(failures: list, passes: list, skips: list) -> int:

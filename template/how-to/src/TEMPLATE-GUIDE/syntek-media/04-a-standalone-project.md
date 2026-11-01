@@ -23,7 +23,8 @@ Copier asks each question in turn, and `BRAND_KIND` has no default, so that a br
 - The coding agents' files: a fresh copy ticks all four clients by default, and you can untick any you will not use.
 - The data-root answers: a fresh copy records `DATA_STORE` as external by default, so that binary files would live outside the repository.
 
-syntek-media itself files nothing under a data root, whatever `DATA_STORE` records.
+Under `external`, syntek-media's one filing folder is its footage folder, and nothing is filed there until you file it, as `how-to/src/TEMPLATE-GUIDE/syntek-media/07-a-tour-of-the-project.md` explains.
+Under `repo`, syntek-media files nothing under a data root.
 After writing the files, the copy runs its tasks.
 It makes the folder a Git repository, makes the session hooks executable, and sets a Git LFS safeguard, so that a large design export cannot be committed whole by mistake.
 Its last task records the version just copied, on Python 3.14 or later, as `how-to/src/TEMPLATE-GUIDE/syntek-media/03-applying-over-syntek-author.md` explains.

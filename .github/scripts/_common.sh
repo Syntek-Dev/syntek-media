@@ -433,6 +433,9 @@ voiceover           always       BFN
 narrate-audiobook   k:audiobook  BFN
 captions            always       -
 cut-for-platform    always       -
+media-research      always       BFN
+media-tone          always       BFN
+media-teach         always       BFN
 EOF
 )
 
@@ -1012,7 +1015,7 @@ SM_COPIER_VARS="_copier_operation _copier_answers _copier_conf"
 # syntek-author's skills media names in prose and never ships (DESIGN.md D10, Section 5.2).
 # grilling, grill-with-docs, handoff and wayfinder left the list with D80: they ship in media
 # as family skills (SM_FAMILY_SKILLS), so a media file names them as skills of its own.
-SM_COMPANIONS="spelling grammar comprehension flow fact-check improve-section adapt-section research social-media-documents run-workflow pronounce character-voice"
+SM_COMPANIONS="spelling grammar comprehension flow fact-check improve-section adapt-section research social-media-documents run-workflow pronounce character-voice tone teach"
 
 # The standalone settings seed (DESIGN.md D13). Arrays: the entries carry spaces. The deny list
 # ends, since 0.6.0, with the guide's one anchored Edit rule (D84; syntek-author D56), after
@@ -1079,6 +1082,23 @@ SM_GUIDE_START="how-to/src/TEMPLATE-GUIDE/syntek-media/01-overview.md"
 SM_GUIDE_PROCEDURE="how-to/workflows/syntek-media/04-update-the-template/"
 SM_HOWTO_MARK="▸ v0.6.0 migration (syntek-media)"
 SM_UPDATE_REPORT_HEAD="▸ syntek-media update report"
+
+# D86's crossing migration: media's own report-only script, run by the update that crosses
+# v0.7.0 (shipped-seeds.sh check 36 holds its _migrations entry: after v0.6.0's, before the
+# 'update' block, through _copier_python). Its heading, the syntek-author line update-test.sh
+# check 26 reads in the crossing update's log, and the v0.8.0 lesson floor; each copied from
+# the script's final text.
+SM_REPORT_MIGRATION="migrations/v0.7.0-report.py"
+SM_REPORT_VERSION="v0.7.0"
+SM_REPORT_MARK="▸ v0.7.0 migration (syntek-media)"
+SM_REPORT_AUTHOR_LINE="v0.9.1 or later (the release media 0.7.0 vendors; a later media release names its own)"
+SM_REPORT_LESSON_FLOOR="be v0.8.0 or later where lessons come from both templates"
+SM_REPORT_STATUS_LINE="exits 1 until the footage is filed"
+
+# The lessons' folder (D86; syntek-author D57): media ships nothing there and names it only by
+# placeholder. A path at or under the top-level learning/, backticked or not, with or without
+# Copier's leading slash, but never the tail of a longer path (production/src/learning/).
+SM_LEARNING_PATH_RE='(^|[^A-Za-z0-9_./-])(/learning([/"'"'"'<[:space:]*]|$)|learning/)'
 
 # What _message_after_copy must say, in DESIGN.md D13's order: (1) every shipped shared path
 # (the eighteen of D11, the seventeen of D80 and, since 0.6.0, the fourteen of D84) and the

@@ -11,7 +11,7 @@ This chapter lists them, says what each one is for, and shows how to check which
 | Python 3.14 or later | `toolkit/media.py`, the scripts in `.claude/` and the update script that ends every update | Yes |
 | uv | Running Copier, the thumbnail and card renderer, and the two MCP servers | Yes |
 | git 2.31 or later | Recording every version of the project; every update relies on it, and the update script reads the Git history of the files it updates | Yes |
-| Playwright's Chromium | Rendering thumbnails, cards and scenes to images | Yes, for any card or thumbnail |
+| Playwright's Chromium, or another Chromium-based browser that `MEDIA_CHROMIUM` names | Rendering thumbnails, cards and scenes to images | Yes, for any card or thumbnail |
 | git-lfs | Large design exports in `brand/src/exports/large/`, and nothing else | Only for large design exports |
 | espeak-ng | A rough offline voice for timing a script, labelled approximate | Optional |
 | Rhubarb Lip Sync | Mouth shapes for an animated scene, from a voice track | Optional |
@@ -27,6 +27,11 @@ uv run --with playwright==1.64.0 playwright install chromium
 ```
 
 Where your system supplies its own browser bundle instead, as NixOS does, it must be the same revision.
+To render with a Chromium-based browser you already have instead, set `MEDIA_CHROMIUM` at user scope, such as in your shell's start-up file, and never in a project file.
+Give it the browser's full path, or a command name your shell finds on its own, and never a relative path.
+Cards and scenes then use that browser, say so in one line each time, and change nothing else about how they render.
+Playwright's own Chromium stays the reference the template's checks are made on, so a picture from another browser may differ from it by a few pixels.
+A value that does not lead to a browser stops the render, and the message names `MEDIA_CHROMIUM` and both fixes: correct it, or unset it to use Playwright's own Chromium.
 
 ## Python 3.14, and the older Python transcription needs
 
@@ -94,6 +99,7 @@ python3 toolkit/media.py check --setup
 
 It also checks the permission entries in `.claude/settings.json` that the toolkit relies on, whether the ElevenLabs key is set in your shell, and whether the server's base path contains the project.
 It checks the word-timing interpreter's own Python against the range WhisperX needs.
+It names the browser cards and scenes will use, without starting it.
 Exit code 0 means every line is clean, 1 means it found something to fix, and 2 means it could not run.
 A missing optional tool is a note naming the commands it blocks, and a broken tool is a finding with its fix.
 `brand/workflows/06-check-the-setup/` walks through each finding with you, one at a time.

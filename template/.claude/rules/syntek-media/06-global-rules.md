@@ -213,17 +213,19 @@ never list the folder to find it.
 
 **The data root is off-limits too, whatever the store.** A data root is a folder outside every
 repository that holds a `.syntek-data-root` marker; this machine's is the one `SYNTEK_DATA_ROOT`
-names. Never search, list, edit or write anything under one, by any tool or shell command. Media
-files nothing there: its map, `.claude/syntek-media-dataroot.json`, names no folder, so footage
-stays listed in `production/src/footage/manifest.toml` and the resolver's `add` refuses a media
-file. The resolver, `python3 .claude/syntek-media-dataroot.py` (Python 3.14 or later), ships for
-the family's shared records: `store` prints the store each template's answers record, and `root`
-the root and its layout; where syntek-author is applied, its own data-root rules say when its
-files are filed. The data-root answers are kept in step with every other template's: while two
-disagree, every data command refuses (exit 2) until they agree, and the update that leaves them
-apart says so. Change them through an update (Section 11), never by hand. The guard hook in
-`.claude/settings.json` stops edits and writes under a root, and searches only where the client
-offers `Grep` and `Glob`; elsewhere this rule alone keeps a search out of the root.
+names. Never search, list, edit or write anything under one, by any tool or shell command, but
+through the resolver commands below, and never list the footage mirror. Media's map,
+`.claude/syntek-media-dataroot.json`, claims one folder, `production/src/footage`, whose
+`manifest.toml` stays the editorial record. The resolver, `python3 .claude/syntek-media-dataroot.py`
+(Python 3.14 or later), is the family's: `store` prints the store, `root` the root and its layout.
+Over the footage folder a session may run its `status` and `verify`, reading only the names,
+sizes, hashes and states they print, and, on the author's word, its `add` with `--role footage` or
+`--role approved-take` only, telling the author media files footage under those two roles alone;
+the resolver writes the root, the session never does. Never run its `pull`, and never work round
+a refusal. While two templates' data-root answers disagree, every data command refuses (exit 2):
+change them through an update (Section 11), never by hand.
+The guard hook in `.claude/settings.json` stops edits and writes under a root, and searches only
+where the client offers `Grep` and `Glob`; elsewhere this rule alone keeps a search out of the root.
 
 **Why this rule exists.** Ignored files hold credentials, local settings and private recordings. A
 search that reads them prints them into the session, and from there into a handoff or a commit.

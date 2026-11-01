@@ -29,7 +29,7 @@
 #                       author's project would, in the folder that platform gates;
 #                    8. assert.
 #
-#                  Twenty-four checks per brand kind:
+#                  Twenty-six checks per brand kind:
 #                    1. The project renders.
 #                    2. `copier update` succeeds.
 #                    3. The author's MEMORY.md entry survives.
@@ -176,6 +176,30 @@
 #                       migrations, on Python 3.14 (_common.sh's pin). Without a release tag
 #                       older than VERSION (a shallow clone) it SKIPs, named; without a
 #                       syntek-author tree, so does its over-author half.
+#                   25. Since 0.7.0 (DESIGN.md D86; syntek-author D57), in check 24's two
+#                       projects, standalone and over syntek-author: lessons planted after the
+#                       copy at the earlier release and committed (a topic at
+#                       learning/<topic>/ holding `Template: syntek-media`, one without the
+#                       line, and a learning/syntek-media/<topic>/ left from a removed
+#                       sibling) keep every byte under learning/, syntek-author's pair
+#                       included, through the update and a second update: the update writes,
+#                       deletes and reports nothing there (no line of either update's output
+#                       names a path under learning/). Invented topics, written at run time.
+#                   26. The update from the newest earlier release that crosses 0.7.0 (the
+#                       earlier tag below v0.7.0, VERSION 0.7.0 or later; otherwise these are
+#                       gated off, and quiet, as check 24's are), standalone and over
+#                       syntek-author: its output holds the v0.7.0 report
+#                       ('▸ v0.7.0 migration (syntek-media)', migrations/v0.7.0-report.py)
+#                       exactly once, with the syntek-author line '`v0.9.1` or later (the
+#                       release media 0.7.0 vendors; a later media release names its own)' on
+#                       a line of its own, the v0.8.0 lesson floor, and the data-root line that
+#                       `status` exits 1 until the footage is filed (read with the report's
+#                       lines joined, since it wraps); the second update's output holds no
+#                       v0.7.0 report; and production/src/footage/manifest.toml, every file the
+#                       footage folder's mirror holds (a clip planted in raw/ before the
+#                       update) and the absence of a storage manifest
+#                       (production/src/footage/external.toml) are as they were (DESIGN.md
+#                       D86).
 #
 #                  Copier prints a MissingFileWarning on a fresh copy and on every update (the
 #                  previous answers are read through _external_data, D14). It is expected and
@@ -206,14 +230,17 @@
 #                  existing MCP file already declares the family's servers: a copy over one
 #                  that lacks them gains them, by design (D81), which this check does not
 #                  exercise. Check 24's crossing assertions read only the release its
-#                  scratch repository crosses, so they say nothing until VERSION reads 0.6.0.
+#                  scratch repository crosses, so they say nothing until VERSION reads 0.6.0,
+#                  and check 26's say nothing until it reads 0.7.0. Check 25 proves that an
+#                  update leaves lessons alone, not that media-teach places them right:
+#                  skill-conformance.sh check 22 holds its words, and a reviewer its steps.
 #
 # SELF-TEST. --self-test runs the whole flow against the fixture media template of _common.sh,
 #            as an author-nonfiction project, so the platform taken away is podcast and the
 #            fixture show register and saved feed are written; proves the result clean, then
 #            mutates the result once per check and asserts exactly one finding each — the
 #            register deleted by the removal among them. The fixture has no release history,
-#            so check 24's state is seeded clean, then mutated the same way.
+#            so the state of checks 24–26 is seeded clean, then mutated the same way.
 #
 # Requirements: bash 4.3+, git, rsync, uvx (or COPIER_CMD), python3 3.14 or later (_common.sh's
 #               pin: the family scripts every copy and update run need it). Network on the first
@@ -312,6 +339,17 @@ declare -A REL_HOWTO=() REL_SETTINGS=()
 # the crossing report and the update report, one problem per line.
 declare -A REL_REPORT=()
 REL_CROSS=false
+# Since 0.7.0 (D86): what the two updates did under learning/ (check 25) and, where the update
+# crosses v0.7.0, what they got wrong about the v0.7.0 report and the footage folder (check 26),
+# one problem per line.
+declare -A REL_LEARN=() REL_REPORT7=()
+REL_CROSS7=false
+# Invented topics, written at run time (check 25): one marked as media's, one unmarked with a
+# progress file only beside its mission, and one in media's folder left from a removed sibling.
+REL_LESSONS="learning/tide-tables/MISSION.md learning/tide-tables/PROGRESS.md learning/knots/MISSION.md learning/knots/PROGRESS.md learning/syntek-media/ferry-sound/MISSION.md"
+# The clip check 26 plants in the footage folder's mirror (text bytes, never a real clip).
+REL_CLIP="production/src/footage/raw/F0001-harbour-wall.mov"
+REL_STORAGE="production/src/footage/external.toml"
 # A line only media's _message_after_update holds (D81): syntek-author's own names
 # refs/syntek-author/, so an over-author log cannot stand in for it.
 REL_MSG_MARK="Its records live in .git under refs/syntek-media/"
@@ -845,6 +883,79 @@ print("\n".join(out))
 PYREP
 }
 
+# Check 25: plant the lessons (invented), and fingerprint everything under learning/.
+rel_plant_lessons() { # $1 = project
+  local f
+  for f in $REL_LESSONS; do
+    mkdir -p "$(dirname "$1/$f")"
+    case "$f" in
+      learning/tide-tables/MISSION.md) printf '# Tide tables\n\nTemplate: syntek-media\n\nRead a tide table for a shoot at the harbour wall.\n' > "$1/$f" ;;
+      */MISSION.md) printf '# %s\n\nA practice topic, invented for the update test.\n' "$(basename "$(dirname "$f")")" > "$1/$f" ;;
+      *) printf '# Progress\n\n| Lesson | Reviewed |\n|---|---|\n| 1 | 01/11/2026 |\n' > "$1/$f" ;;
+    esac
+  done
+}
+rel_learning_sums() { # $1 = project → path<TAB>fingerprint for everything under learning/
+  [[ -d "$1/learning" ]] || return 0
+  (cd "$1" && find learning \( -type f -o -type l \) -print | LC_ALL=C sort) | while IFS= read -r f; do
+    printf '%s\t%s\n' "$f" "$(path_fingerprint "$1/$f")"
+  done
+}
+# Check 25's problems for one update: changed bytes, and output lines naming learning/.
+rel_learning_problems() { # $1 = sums before, $2 = sums after, $3 = the update's output, $4 = which update
+  local d
+  d="$(diff <(printf '%s\n' "$1") <(printf '%s\n' "$2") | grep -E '^[<>]' | sed -E 's/^< ([^\t]*)\t.*/\1 (before)/; s/^> ([^\t]*)\t.*/\1 (after)/' | paste -sd' ' - || true)"
+  [[ -z "$d" ]] || printf 'the %s update changed what stands under learning/: %s\n' "$4" "$d"
+  d="$(sed -e 's/\x1b\[[0-9;]*m//g' "$3" 2>/dev/null | grep -E -- "$SM_LEARNING_PATH_RE" | head -2 | sed 's/^[[:space:]]*//' | paste -sd'|' - || true)"
+  [[ -z "$d" ]] || printf 'the %s update reported a path under learning/: %s\n' "$4" "${d:0:160}"
+}
+
+# Check 26, where the update crosses v0.7.0: the v0.7.0 report (D86). The crossing update's
+# output must hold it exactly once, its syntek-author line on a line of its own, the lesson floor
+# and the status line (the report's lines joined, since they wrap); the second update's output
+# none. ANSI colour is removed first. Prints one problem per line.
+rel_report7_problems() { # $1 = the crossing update's output, $2 = the second update's output
+  python3 -I - "$1" "$2" "$SM_REPORT_MARK" "$SM_REPORT_AUTHOR_LINE" "$SM_REPORT_LESSON_FLOOR" "$SM_REPORT_STATUS_LINE" <<'PYREP7'
+import re, sys
+def lines(p):
+    try:
+        text = open(p, encoding="utf-8", errors="replace").read()
+    except OSError:
+        text = ""
+    return re.sub(r"\x1b\[[0-9;]*m", "", text).splitlines()
+first, again, mark, author, floor, status = lines(sys.argv[1]), lines(sys.argv[2]), *sys.argv[3:7]
+out = []
+at = [i for i, l in enumerate(first) if mark in l]
+if len(at) != 1:
+    out.append(f"the crossing update printed the v0.7.0 report ('{mark}') {len(at)} time(s), not once")
+else:
+    end = next((i for i in range(at[0] + 1, len(first)) if "This script changed nothing" in first[i]), len(first))
+    body = first[at[0]:end]
+    joined = " ".join(" ".join(body).split())
+    if not any(l.strip() == author for l in body):
+        out.append(f"the v0.7.0 report does not give syntek-author's floor, '{author}', on a line of its own")
+    if floor not in joined:
+        out.append(f"the v0.7.0 report does not say that syntek-author must '{floor}' (syntek-author D57)")
+    if status not in joined:
+        out.append(f"the v0.7.0 report does not say that the resolver's status '{status}'")
+n = sum(1 for l in again if mark in l)
+if n:
+    out.append(f"the second update printed the v0.7.0 report again ({n} time(s)): it runs only on the update that crosses 0.7.0")
+print("\n".join(out))
+PYREP7
+}
+
+# Check 26: the footage folder's records before and after (D86): the manifest seed, the planted
+# clip and every other file in the mirror but its README.md, which is the template's own (D42)
+# and which a release may rewrite, and whether the storage manifest stands.
+rel_footage_sums() { # $1 = project
+  local f
+  for f in production/src/footage/manifest.toml $(cd "$1" && find production/src/footage/raw -type f ! -path production/src/footage/raw/README.md 2>/dev/null | LC_ALL=C sort); do
+    printf '%s\t%s\n' "$f" "$(path_fingerprint "$1/$f")"
+  done
+  printf '%s\t%s\n' "$REL_STORAGE" "$(path_fingerprint "$1/$REL_STORAGE")"
+}
+
 release_own_files() {
   local s g m
   printf '%s\n' .claude/syntek-media-dataroot.json .claude/syntek-media-dataroot.py .claude/syntek-media-permissions.py
@@ -875,7 +986,7 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
   REL_LOG["$v"]="$log"; REL_COPY["$v"]=0; REL_UPD["$v"]=0; REL_CONF["$v"]=""; REL_CLIENTS["$v"]=""
   REL_STORE["$v"]=""; REL_WANT["$v"]=repo; REL_NEW["$v"]=""; REL_MISS["$v"]=""; REL_TOUCHED["$v"]=""
   REL_AGAIN["$v"]=0; REL_DIRTY["$v"]=""; REL_WANT_CLIENTS["$v"]="[]"; REL_HOWTO["$v"]=""; REL_SETTINGS["$v"]=""
-  REL_REPORT["$v"]=""
+  REL_REPORT["$v"]=""; REL_LEARN["$v"]=""; REL_REPORT7["$v"]=""
   : > "$log"
   REL_VARIANTS+="$v "
   author_files="$w/rel-$v.author"; : > "$author_files"
@@ -889,6 +1000,12 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
   SM_VCS_REF="$REL_TAG" sm_render "$REL_REPO" "$p" "$KIND" "${args[@]}" >>"$log" 2>&1 || { REL_COPY["$v"]=$?; return 0; }
   [[ -d "$p/.git" ]] || sm_git "$p" init -q
   sm_commit_all "$p" "syntek-media $REL_TAG"
+  # Checks 25 and 26 (D86): the author's lessons, and a clip in the footage folder's mirror.
+  rel_plant_lessons "$p"
+  mkdir -p "$(dirname "$p/$REL_CLIP")"; printf 'fixture clip bytes, never a real clip\n' > "$p/$REL_CLIP"
+  sm_commit_all "$p" 'the author: lessons and a clip'
+  local learn_before learn_mid footage_before
+  learn_before="$(rel_learning_sums "$p")"; footage_before="$(rel_footage_sums "$p")"
   # What the family questions default to (D80, D81): the record the copy at the earlier tag
   # wrote, where it holds the answer; then syntek-author's; then [] and repo.
   f="$(rel_clients_of "$p/$SM_ANSWERS_FILE")"
@@ -938,12 +1055,24 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
     [[ -e "$p/$f" ]] || REL_MISS["$v"]+="$f "
   done < <(release_own_files)
   REL_MISS["$v"]="${REL_MISS[$v]% }"
+  learn_mid="$(rel_learning_sums "$p")"
+  REL_LEARN["$v"]="$(rel_learning_problems "$learn_before" "$learn_mid" "$w/rel-$v.update.log" first)"
+  if $REL_CROSS7; then
+    f="$(diff <(printf '%s\n' "$footage_before") <(rel_footage_sums "$p") | grep -E '^>' | cut -f1 | sed 's/^> //' | paste -sd' ' - || true)"
+    [[ -z "$f" ]] || REL_REPORT7["$v"]="the update changed the footage folder's records: $f (D86: the claim moves and files nothing)"
+  fi
   sm_commit_all "$p" "syntek-media $REL_TO"
   SM_VCS_REF="$REL_TO" sm_update "$p" >"$w/rel-$v.again.log" 2>&1 || REL_AGAIN["$v"]=$?
   cat "$w/rel-$v.again.log" >>"$log"
   REL_DIRTY["$v"]="$(git -C "$p" status --porcelain 2>/dev/null)"
+  f="$(rel_learning_problems "$learn_mid" "$(rel_learning_sums "$p")" "$w/rel-$v.again.log" second)"
+  [[ -z "$f" ]] || REL_LEARN["$v"]="${REL_LEARN[$v]:+${REL_LEARN[$v]}$'\n'}$f"
   if $REL_CROSS; then
     REL_REPORT["$v"]="$(rel_report_problems "$w/rel-$v.update.log" "$w/rel-$v.again.log")"
+  fi
+  if $REL_CROSS7; then
+    f="$(rel_report7_problems "$w/rel-$v.update.log" "$w/rel-$v.again.log")"
+    [[ -z "$f" ]] || REL_REPORT7["$v"]="${REL_REPORT7[$v]:+${REL_REPORT7[$v]}$'\n'}$f"
   fi
 }
 
@@ -965,7 +1094,7 @@ run_release_flow() { # $1 = work dir — needs REL_REPO (and REL_AUTHOR for the 
   REL_VARIANTS=""
   REL_COPY=(); REL_UPD=(); REL_LOG=(); REL_CONF=(); REL_CLIENTS=(); REL_STORE=(); REL_WANT=()
   REL_NEW=(); REL_MISS=(); REL_TOUCHED=(); REL_AGAIN=(); REL_DIRTY=(); REL_WANT_CLIENTS=()
-  REL_HOWTO=(); REL_SETTINGS=(); REL_REPORT=()
+  REL_HOWTO=(); REL_SETTINGS=(); REL_REPORT=(); REL_LEARN=(); REL_REPORT7=()
   [[ -n "$REL_REPO" ]] || return 0
   # The crossing assertions (D81, D84) hold only on the update that crosses v0.6.0 (conflict
   # C7): the earlier tag below it and the target at or past it. From v0.6.0 or later Copier runs
@@ -974,6 +1103,12 @@ run_release_flow() { # $1 = work dir — needs REL_REPO (and REL_AUTHOR for the 
   if [[ "$(printf '%s\n' "${REL_TO#v}" 0.6.0 | sort -V | head -1)" == 0.6.0 \
         && "$(printf '%s\n' "${REL_TAG#v}" 0.6.0 | sort -V | head -1)" != 0.6.0 ]]; then
     REL_CROSS=true
+  fi
+  # Check 26's crossing assertions (D86): the earlier tag below v0.7.0, the target at or past it.
+  REL_CROSS7=false
+  if [[ "$(printf '%s\n' "${REL_TO#v}" 0.7.0 | sort -V | head -1)" == 0.7.0 \
+        && "$(printf '%s\n' "${REL_TAG#v}" 0.7.0 | sort -V | head -1)" != 0.7.0 ]]; then
+    REL_CROSS7=true
   fi
   release_variant "$1" "$1/rel-standalone" standalone
   [[ -n "$REL_AUTHOR" ]] && release_variant "$1" "$1/rel-over-author" over-author
@@ -1237,6 +1372,14 @@ run_checks() {
     if [[ "${REL_AGAIN[$v]}" -ne 0 || -n "${REL_DIRTY[$v]}" ]]; then
       finding "check 24 — $R a second update was not a no-op (exit ${REL_AGAIN[$v]}; $(printf '%s\n' "${REL_DIRTY[$v]}" | grep -c . || true) path(s) changed)"
     fi
+    # ── 25. The author's lessons, through both updates (D86) ──
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && finding "check 25 — $R $f: media ships, refreshes and reports nothing there; a lesson is the author's (DESIGN.md D86; syntek-author D57)"
+    done <<< "${REL_LEARN[$v]:-}"
+    # ── 26. The v0.7.0 report, where the update crosses it (D86) ──
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && finding "check 26 — $R $f (DESIGN.md D86) — see ${REL_LOG[$v]}"
+    done <<< "${REL_REPORT7[$v]:-}"
   done
   if [[ "$AGAIN_STATUS" -ne 0 || -n "$AGAIN_DIRTY" ]]; then
     finding "check 15 — $L a second update with no template change was not a no-op (exit $AGAIN_STATUS; $(printf '%s\n' "$AGAIN_DIRTY" | grep -c . || true) path(s) changed)"
@@ -1390,6 +1533,7 @@ self_test() {
     REL_COPY[$v]=0; REL_UPD[$v]=0; REL_LOG[$v]="$tmp/rel-$v.log"; REL_CONF[$v]=""; REL_CLIENTS[$v]="[]"; REL_WANT_CLIENTS[$v]="[]"
     REL_STORE[$v]=repo; REL_WANT[$v]=repo; REL_NEW[$v]=""; REL_MISS[$v]=""; REL_TOUCHED[$v]=""
     REL_AGAIN[$v]=0; REL_DIRTY[$v]=""; REL_HOWTO[$v]=""; REL_SETTINGS[$v]=""; REL_REPORT[$v]=""
+    REL_LEARN[$v]=""; REL_REPORT7[$v]=""
   done
   probe_clean "check 24 is quiet on a seeded clean update from the newest earlier release"
   REL_COPY[standalone]=1; probe "check 24 fires when the copy at the earlier release fails" "check 24 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the copy at v0.4.6 failed"; REL_COPY[standalone]=0
@@ -1475,6 +1619,52 @@ self_test() {
   rrep "$rgood" "$SM_HOWTO_MARK — again"
   probe "check 24 fires when the second update prints the crossing report again (D84)" "the second update printed the crossing report again (1 time(s))"
   REL_REPORT[standalone]=""; unset -f rrep
+  # Check 25 (D86): the lessons, planted and fingerprinted here, then changed one way each.
+  local lp="$tmp/rel-learn" lb lu="$tmp/rel-learn-update.log"
+  mkdir -p "$lp/learning"; printf '# CONTEXT.md\n' > "$lp/learning/CONTEXT.md"; printf '@./CONTEXT.md\n' > "$lp/learning/CLAUDE.md"
+  rel_plant_lessons "$lp"; lb="$(rel_learning_sums "$lp")"
+  printf '  identical  production/src/footage/manifest.toml\n%s update report\n' "$SM_UPDATE_REPORT_HEAD" > "$lu"
+  REL_LEARN[over-author]="$(rel_learning_problems "$lb" "$(rel_learning_sums "$lp")" "$lu" first)"
+  probe_clean "check 25 is quiet where both updates leave learning/ byte for byte and name nothing there"
+  printf 'x\n' >> "$lp/learning/knots/MISSION.md"; REL_LEARN[over-author]="$(rel_learning_problems "$lb" "$(rel_learning_sums "$lp")" "$lu" first)"
+  probe "check 25 fires when the update changes a lesson's bytes" "check 25 — [author-nonfiction] (over-author, v0.4.6 to v0.5.0) the first update changed what stands under learning/: learning/knots/MISSION.md (before) learning/knots/MISSION.md (after)"
+  rel_plant_lessons "$lp"; rm "$lp/learning/syntek-media/ferry-sound/MISSION.md"; REL_LEARN[over-author]=""
+  REL_LEARN[standalone]="$(rel_learning_problems "$lb" "$(rel_learning_sums "$lp")" "$lu" second)"
+  probe "check 25 fires when the second update deletes a lesson left from a removed sibling" "check 25 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the second update changed what stands under learning/: learning/syntek-media/ferry-sound/MISSION.md (before)"
+  rel_plant_lessons "$lp"; rm "$lp/learning/CLAUDE.md"
+  REL_LEARN[standalone]="$(rel_learning_problems "$lb" "$(rel_learning_sums "$lp")" "$lu" first)"
+  probe "check 25 fires when the update deletes syntek-author's learning/ pair" "the first update changed what stands under learning/: learning/CLAUDE.md (before)"
+  printf '@./CONTEXT.md\n' > "$lp/learning/CLAUDE.md"
+  printf '    refreshed  learning/tide-tables/MISSION.md\n' >> "$lu"
+  REL_LEARN[standalone]="$(rel_learning_problems "$lb" "$(rel_learning_sums "$lp")" "$lu" first)"
+  probe "check 25 fires when the update reports a path under learning/" "the first update reported a path under learning/: refreshed  learning/tide-tables/MISSION.md"
+  REL_LEARN[standalone]=""
+  # Check 26 (D86): the v0.7.0 report, on update logs written here, and the footage records.
+  local r7="$tmp/rel7-update.log" a7="$tmp/rel7-again.log" g7
+  g7="$(printf '%s — syntek-author, the data root and three new skills\n  Where this project holds syntek-author, update it to\n    %s\n  now. It must\n  %s (syntek-author D57).\n  The resolver'"'"'s status lists every mirror file and exits 1 until the\n  footage is filed, so its steps report it.\n  This script changed nothing. To run it again from the project root:\n' \
+    "$SM_REPORT_MARK" "$SM_REPORT_AUTHOR_LINE" "$SM_REPORT_LESSON_FLOOR")"
+  r7rep() { printf '%s\n' "$1" > "$r7"; printf '%s\n' "${2:-}" > "$a7"; REL_REPORT7[over-author]="$(rel_report7_problems "$r7" "$a7")"; }
+  r7rep "$g7"
+  probe_clean "check 26 is quiet on one v0.7.0 report, its lines wrapped, and none on the second update"
+  r7rep "$(printf '%s\n' "$g7" | grep -vF "$SM_REPORT_MARK")"
+  probe "check 26 fires when the crossing update prints no v0.7.0 report" "check 26 — [author-nonfiction] (over-author, v0.4.6 to v0.5.0) the crossing update printed the v0.7.0 report ('$SM_REPORT_MARK') 0 time(s), not once"
+  r7rep "$(printf '%s\n' "$g7" | sed "s/^    v0\.9\.1 or later/    v0.9.0 or later/")"
+  probe "check 26 fires when the report names another syntek-author floor" "the v0.7.0 report does not give syntek-author's floor"
+  r7rep "$(printf '%s\n' "$g7" | sed 's/v0\.8\.0 or later/v0.6.0 or later/')"
+  probe "check 26 fires when the report drops the v0.8.0 lesson floor" "the v0.7.0 report does not say that syntek-author must"
+  r7rep "$(printf '%s\n' "$g7" | sed 's/exits 1 until the/exits 0 until the/')"
+  probe "check 26 fires when the report drops the status line" "the v0.7.0 report does not say that the resolver's status '$SM_REPORT_STATUS_LINE'"
+  r7rep "$g7" "$SM_REPORT_MARK — again"
+  probe "check 26 fires when the second update prints the v0.7.0 report again" "the second update printed the v0.7.0 report again (1 time(s))"
+  unset -f r7rep; REL_REPORT7[over-author]=""
+  local fp7="$tmp/rel7-proj" fb7
+  mkdir -p "$fp7/production/src/footage/raw"; printf '# manifest\n' > "$fp7/production/src/footage/manifest.toml"
+  printf 'clip\n' > "$fp7/$REL_CLIP"; fb7="$(rel_footage_sums "$fp7")"
+  printf '[[file]]\n' > "$fp7/$REL_STORAGE"
+  f="$(diff <(printf '%s\n' "$fb7") <(rel_footage_sums "$fp7") | grep -E '^>' | cut -f1 | sed 's/^> //' | paste -sd' ' - || true)"
+  REL_REPORT7[standalone]="the update changed the footage folder's records: $f (D86: the claim moves and files nothing)"
+  probe "check 26 fires when the update writes a storage manifest in the footage folder" "check 26 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the update changed the footage folder's records: $REL_STORAGE"
+  REL_REPORT7[standalone]=""; REL_REPORT7[over-author]=""
   probe_clean "the fixture's updates keep every promise again once every mutation is undone"
   st_finish "an update that keeps its promises from one that breaks them"
 }

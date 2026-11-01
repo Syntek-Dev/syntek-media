@@ -20,7 +20,7 @@
 #                     Sections 3–5 transcribed), evaluated against the answers the render
 #                     recorded in .copier-answers.syntek-media.yml.
 #
-#                     Sixteen checks:
+#                     Seventeen checks:
 #                       1. The answers file records BRAND_KIND, PLATFORMS and MEDIA_KINDS.
 #                       2. Every skill the gates open is present, with its SKILL.md: Section
 #                          5.1's and the seven family skills (DESIGN.md D80).
@@ -100,14 +100,22 @@
 #                          passes). A stray file is one finding; a folder that is neither a family
 #                          container nor one of media's three (a folder named for another
 #                          template, say) is one finding, and nothing under it is reported again.
+#                      17. No rendered path is learning or lies under it, in any render:
+#                          standalone and, on media-owned paths, over-author (DESIGN.md D86;
+#                          syntek-author D57: only syntek-author ships there). One finding lists
+#                          what shipped, learning/CONTEXT.md and learning/CLAUDE.md first. It
+#                          stands beside check 5 (standalone renders) and check 11 (every
+#                          render), so it cites D86's run-time exception (Section 9 rule 4: the
+#                          lessons media-teach places at run time) rather than reading as a stray
+#                          syntek-author path.
 #
 #                     Numbers are stable identifiers. Append, never renumber.
 #
 #                     Over-author scope (DESIGN.md Section 7): on a <kind>--over-author tree,
 #                     whose <tree>.owned lists the files media's copy added, checks 5 and 8 are
 #                     skipped (syntek-author's paths are there by design; coexist-test.sh check 6
-#                     proves ownership), and checks 3, 7, 9, 11, 12, 13, 14, 15 and 16 read
-#                     media-owned paths only.
+#                     proves ownership), and checks 3, 7, 9, 11, 12, 13, 14, 15, since 0.6.0 16
+#                     and since 0.7.0 17 read media-owned paths only.
 #
 #                     What it CANNOT check: a file's CONTENT — a gated row inside an index file
 #                     that names an absent path is doc-references.sh's, and a shared file that
@@ -452,6 +460,48 @@ PYCLIENT
       finding "check 16 — $top16 ships under how-to/, where media ships only the thirteen family paths and its own files under how-to/docs/syntek-media/, how-to/src/TEMPLATE-GUIDE/syntek-media/ and how-to/workflows/syntek-media/ (DESIGN.md D84; syntek-author D56)"
     done < <(cd "$TREE" && find how-to \( -type f -o -type l \) -print | LC_ALL=C sort)
   fi
+
+  # ── 17. Nothing ships at or under learning/ (D86; syntek-author D57) ─────────
+  # media-teach places lessons there at run time; a render never does. Over syntek-author, its
+  # own learning/ pair is its, and only the paths media's copy added are read.
+  local -a l17=()
+  local lp
+  if [[ -e "$TREE/learning" || -L "$TREE/learning" ]]; then
+    if [[ -d "$TREE/learning" && ! -L "$TREE/learning" ]]; then
+      for lp in learning/CONTEXT.md learning/CLAUDE.md; do
+        [[ -e "$TREE/$lp" || -L "$TREE/$lp" ]] && is_owned_file "$lp" && l17+=("$lp")
+      done
+      while IFS= read -r lp; do
+        [[ -z "$lp" || "$lp" == learning/CONTEXT.md || "$lp" == learning/CLAUDE.md ]] && continue
+        is_owned_file "$lp" && l17+=("$lp")
+      done < <(cd "$TREE" && find learning \( -type f -o -type l \) -print | LC_ALL=C sort)
+      # An empty folder a standalone copy made is a path of its own.
+      if [[ ${#l17[@]} -eq 0 ]] && ! $SM_OWNED_MODE && [[ -z "$(find "$TREE/learning" -mindepth 1 -print -quit)" ]]; then
+        l17+=("learning/")
+      fi
+    else
+      is_owned_file learning && l17+=("learning")
+    fi
+  fi
+  if [[ ${#l17[@]} -gt 0 ]]; then
+    lp="${l17[*]:0:5}"; [[ ${#l17[@]} -gt 5 ]] && lp="$lp and $(( ${#l17[@]} - 5 )) more"
+    finding "check 17 — ${#l17[@]} path(s) ship at or under learning/: ${lp// /, } — media never ships there: media-teach places lessons at run time, the one run-time exception to the frozen name 'top learning' (DESIGN.md D86, Section 9 rule 4; syntek-author D57: only syntek-author ships the learning/ pair)"
+  fi
+}
+
+# Two findings at once: check 17 stands beside check 5 on a standalone render (D86).
+probe_both() { # $1 = label, $2 and $3 = substrings, one finding each
+  ST_PROBES=$((ST_PROBES + 1))
+  run_checks
+  local a=false b=false f
+  for f in "${FINDINGS[@]}"; do [[ "$f" == *"$2"* ]] && a=true; [[ "$f" == *"$3"* ]] && b=true; done
+  if [[ ${#FINDINGS[@]} -eq 2 ]] && $a && $b; then
+    log "  ✓ $1"
+  else
+    ST_FAILS=$((ST_FAILS + 1))
+    printf '\033[31m  ✗ %s produced %d finding(s): %s\033[0m\n' \
+      "$1" "${#FINDINGS[@]}" "$(printf '%s; ' "${FINDINGS[@]:-(none)}")"
+  fi
 }
 
 # ── Self-test ────────────────────────────────────────────────────────────────
@@ -631,6 +681,14 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   probe "check 8 fires when copier.yml leaks" "check 8 — copier.yml"
   rm -f "$TREE/copier.yml"
 
+  # 17: nothing ships at or under learning/ (D86). Standalone, check 5 reports the folder too.
+  mkdir -p "$TREE/learning/tides"
+  printf 'x\n' > "$TREE/learning/tides/MISSION.md"; printf 'x\n' > "$TREE/learning/CLAUDE.md"; printf 'x\n' > "$TREE/learning/CONTEXT.md"
+  probe_both "check 17 fires beside check 5 on a standalone learning/, naming its pair first" "check 5 — learning is syntek-author's" "check 17 — 3 path(s) ship at or under learning/: learning/CONTEXT.md, learning/CLAUDE.md, learning/tides/MISSION.md"
+  rm -rf "$TREE/learning"; mkdir -p "$TREE/learning"
+  probe_both "check 17 fires on an empty learning/ folder" "check 5 — learning is" "check 17 — 1 path(s) ship at or under learning/: learning/"
+  rm -rf "$TREE/learning"
+
   printf 'Hello <%%BRAND_NAME%%>\n' >> "$TREE/README.md"
   probe "check 9 fires on a surviving token" "check 9 — README.md"
   printf 'x\n' > "$TREE/README.md"
@@ -698,6 +756,12 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   probe_clean "syntek-author's own guide folder under how-to/ is not media's, over syntek-author"
   printf 'x\n' > "$f/how-to/stray.md"; printf 'how-to/stray.md\n' >> "$f.owned"; load_owned "$TREE"
   probe "check 16 fires on a media-owned stray under how-to/, over syntek-author" "check 16 — how-to/stray.md ships under how-to/"
+  rm -f "$f/how-to/stray.md"; sed -i '/^how-to\/stray.md$/d' "$f.owned"; load_owned "$TREE"
+  mkdir -p "$f/learning/syntek-media/tides"
+  printf 'x\n' > "$f/learning/CONTEXT.md"; printf 'x\n' > "$f/learning/CLAUDE.md"; printf 'x\n' > "$f/learning/syntek-media/tides/MISSION.md"
+  probe_clean "syntek-author's learning/ pair and a lesson placed at run time are not media's, over syntek-author"
+  printf 'learning/syntek-media/tides/MISSION.md\n' >> "$f.owned"; load_owned "$TREE"
+  probe "check 17 fires on a media-owned path under learning/, over syntek-author" "check 17 — 1 path(s) ship at or under learning/: learning/syntek-media/tides/MISSION.md"
   SM_OWNED_MODE=false; SM_OWNED=()
 
   SM_AUTHOR_NAMES_FILE="$real_names"; SM_PATHS="$real_paths"

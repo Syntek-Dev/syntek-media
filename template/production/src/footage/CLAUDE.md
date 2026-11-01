@@ -16,7 +16,9 @@ on any machine and every source traced to its rights.
 - **Routing:** workflow `production/workflows/01-log-source-media/`, or
   `production/workflows/08-bring-in-a-recording/` for a recording that becomes a piece; guide
   `production/docs/reference/source-media.md`; commands `python3 toolkit/media.py footage add`
-  and `footage verify`. A skill archiving an approved take runs the same command.
+  and `footage verify`. A skill archiving an approved take runs the same command. On a data
+  root, the resolver's `add` that a `footage verify` warning names files a copy
+  (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
 - **Model:** **Opus** for deciding what a file is, where its master copy lives and whether it
   needs a rights row; the mechanical tier for running the toolkit and filling a row the author
   has already decided (`.claude/rules/syntek-media/05-model-allocation.md`).
@@ -39,6 +41,10 @@ on any machine and every source traced to its rights.
   paste a link that carries a token.
 - **Never overwrite a table.** A correction is noted in `notes` with its date; a re-recorded take
   is a new file with a new ID.
+- **File on a data root only on the author's word,** with the resolver's `add` and the role
+  `footage`, or `approved-take` for a `generated` file, never another role; tell the author media
+  files its footage under those two alone. A filed copy is evidence and is never replaced; never
+  edit the resolver's storage manifest, and never work round a refusal.
 
 ## Output & naming
 
@@ -61,4 +67,6 @@ rights = ""                  # RRNNNN when licensed or showing people
 notes = ""                   # generated: the take or chapter it archives
 ```
 
-- **Generated (never hand-edit):** nothing tracked; the mirror's files are ignored.
+- **Written by the resolver (never hand-edit):** the storage manifest in this folder, where the
+  project keeps its files on a data root, one row per filed copy, committed.
+- **Generated (never hand-edit):** nothing else tracked; the mirror's files are ignored.

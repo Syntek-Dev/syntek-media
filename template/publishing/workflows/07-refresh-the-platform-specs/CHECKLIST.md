@@ -1,7 +1,7 @@
 ---
 workflow: 07-refresh-the-platform-specs
 phase: review
-skills: []
+skills: [media-research]
 model: opus
 ---
 

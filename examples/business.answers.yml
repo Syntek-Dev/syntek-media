@@ -50,11 +50,13 @@ OPENCODE_BASE_URL: http://127.0.0.1:11434/v1
 OPENCODE_MODEL: qwen3:30b
 OPENCODE_CONTEXT: 32768
 # Where binary files are kept: repo keeps them in the repository, as a project already in use
-# does. Media files nothing under a data root yet, so these answers only keep the two
-# templates' records in agreement. Over a syntek-author project that records DATA_STORE (every
-# one from its v0.5.0 on), delete DATA_STORE, the six folder lines and DATA_PROVIDER: the copy
-# then takes syntek-author's answers, and refuses a first store or folder that differs. The
-# folders are asked only with external.
+# does. Under external, media's map claims its footage folder on the data root: footage verify
+# warns of each logged file not yet filed, and the resolver's add files it, as footage or
+# approved-take only, run by the session on the author's word or by the author. Under repo
+# nothing is filed and footage stays on its mirror, never in Git. Over a syntek-author project
+# that records DATA_STORE (every one from its v0.5.0 on), delete DATA_STORE, the six folder
+# lines and DATA_PROVIDER: the copy then takes syntek-author's answers, and refuses a first
+# store or folder that differs. The folders are asked only with external.
 DATA_STORE: repo
 DATA_AREA: business
 DATA_SLUG: harbour-lane-studio

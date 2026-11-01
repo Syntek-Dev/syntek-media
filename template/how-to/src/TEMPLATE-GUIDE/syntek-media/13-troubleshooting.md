@@ -131,6 +131,12 @@ It prints the command that installs the browser, which you run yourself:
 uv run --with playwright==1.64.0 playwright install chromium
 ```
 
+**A card or scene command stops and names `MEDIA_CHROMIUM`.**
+`MEDIA_CHROMIUM` is set, so cards and scenes use the browser it names instead of Playwright's own, and that browser could not be found or would not start.
+The command stops with exit code 2, and never falls back to Playwright's own Chromium.
+Correct the value at user scope, to the browser's full path or a command name your shell finds, or unset it to use Playwright's own Chromium.
+`python3 toolkit/media.py check --setup` then names the browser cards and scenes will use.
+
 **The setup check says ffmpeg lacks a library.**
 Every render, caption burn and audio master needs an ffmpeg built with libass, libx264 and libmp3lame.
 Install the full build your system offers, as the setup check's fix line says, then check again.
@@ -219,8 +225,18 @@ An update records a client, but never writes its files: `how-to/workflows/syntek
 
 **After an update, a message says the data-root answers differ.**
 One project keeps one data-root store and one layout, so the data-root commands refuse to act until both templates agree.
-Text work goes on meanwhile, and media itself files nothing under a data root.
+Text work goes on meanwhile, and nothing can be filed in media's footage folder until they do.
 Make the answers agree through an update of one template, as the message says and `how-to/src/TEMPLATE-GUIDE/the-data-root.md` explains.
+
+**syntek-author's `make files-status` lists media's footage and stops with exit code 1.**
+Under `external`, media's footage folder is a filing folder, and a file the footage manifest lists is only on this machine until it is filed.
+The check is working: syntek-author's own steps that run it report media's footage too, until it is filed.
+File each one as `how-to/src/TEMPLATE-GUIDE/syntek-media/07-a-tour-of-the-project.md` explains, as `footage` or `approved-take` and never another role.
+
+**syntek-author lists media's lessons as its own topics.**
+A syntek-author older than v0.8.0 reads the topics at the top of the learning folder as its own, and media's folder there as one more topic.
+Update syntek-author to v0.8.0 or later, by its own update procedure, before either template teaches again.
+Its teaching skill then leaves media's topics alone, and media's leaves its topics alone.
 
 **The report says a file holds the other template's version.**
 That file waits for the other template's own update, which replaces it once that template ships a newer version.

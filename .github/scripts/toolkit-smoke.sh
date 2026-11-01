@@ -15,7 +15,7 @@
 #                    ElevenLabs call: a "take" is a tone or a few fake bytes, and the toolkit's
 #                    handling of the files around a call is what is proved (credits).
 #
-#                    Twenty-nine checks, per render: 1–29.
+#                    Thirty-one checks, per render: 1–31.
 #                      1. Every toolkit/*.py that offers `--self-test` passes it (media.py, which
 #                         exercises the media_*.py modules, card.py and transcribe.py). A self-test reads only
 #                         the toolkit, so one result serves every render whose toolkit/ is
@@ -193,12 +193,44 @@
 #                         >=3.10,<3.14' with a fake 3.12, that is the choice, never UV_PYTHON; where
 #                         it finds none, the call is exit 2 naming MEDIA_TRANSCRIBE_PYTHON. Either
 #                         way the log holds no uv run, venv, sync or pip: nothing is built.
+#                     30. `footage verify` on the data root (DESIGN.md D86), in the scratch copy,
+#                         its footage manifest put back to the seed and its mirror emptied, a
+#                         lavfi clip logged with `footage add`. Under external (every answers
+#                         file set to it, the layout keys made to agree, invented where missing):
+#                         verify exits 0 with one warning naming the clip, the resolver's add with
+#                         --role footage and --label, and the shared chapter on the data root;
+#                         the command the warning names, run under a temporary SYNTEK_DATA_ROOT
+#                         the check makes and marks, files it, so proving the shipped advice, and
+#                         verify then exits 0 with no warning; a storage row whose sha256 differs
+#                         is a warning, still exit 0. Under repo no warning is printed, and the
+#                         resolver's add --role footage exits 0 and writes no storage manifest.
+#                         Everything is put back after. SKIP by name without ffmpeg.
+#                     31. MEDIA_CHROMIUM (D20, D86). Set to a missing path, a relative path, a
+#                         non-executable file and a bare name absent from PATH, `card.py render`
+#                         is exit 2 naming the variable and the value, writes no PNG, and says
+#                         neither 'playwright install' nor 'is not installed'; `scene.py stills`
+#                         on check 28's fixture (written afresh, as check 28 leaves it changed) does
+#                         the same, with no ffmpeg. A stand-in executable that exits 1 gives exit
+#                         2 with 'would not start under Playwright 1.64.0' (a SKIP, named, only
+#                         where uv could not supply Playwright). `check --setup` reports a
+#                         missing path as a FAIL row naming the variable and a stand-in as a
+#                         note naming its path, launching nothing. Judged on exit 2 and its own
+#                         wording, never through check 4's SKIP pattern, which matches any
+#                         'chromium'. --skip-thumbnails skips neither check 30 nor check 31;
+#                         without uv the card and scene half is a SKIP, named.
+#
+#                    The driver unsets MEDIA_CHROMIUM and never inherits SYNTEK_DATA_ROOT: only
+#                    check 30 sets a root, its own, and only check 31 sets the variable, so
+#                    checks 1, 4, 9 and 28 always run on the pinned Chromium; media.py
+#                    --self-test, which check 1 runs, sets its own temporary root and ignores an
+#                    inherited one.
 #
 #                    Numbers are stable identifiers. Append, never renumber.
 #
 #                    A check whose tool is absent is SKIPPED and named (SKIP — …), never passed:
-#                    no ffmpeg (checks 2, 3, 5–7, 9, 10, 13, 15–18, 25), no uv or Chromium (check 4, card.py's
-#                    self-test, the cards of check 9), no fc-match (card.py's brand-font probe).
+#                    no ffmpeg (checks 2, 3, 5–7, 9, 10, 13, 15–18, 25, 30), no uv or Chromium (check 4, card.py's
+#                    self-test, the cards of check 9; no uv, check 31's card and scene half), no
+#                    fc-match (card.py's brand-font probe).
 #                    --require-ffmpeg (CI) turns a missing ffmpeg into exit 2; --skip-thumbnails
 #                    skips the Chromium steps by name. A step that does not apply to a render (no
 #                    audiobook folder, no deliverable short enough to over-run, no podcast folder,
@@ -230,6 +262,10 @@ set -euo pipefail
 SCRIPT_NAME="toolkit-smoke.sh"
 # shellcheck source=_common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
+
+# The driver's isolation (DESIGN.md D86): the machine's browser stand-in and data root never
+# reach a check. Only check 31 sets MEDIA_CHROMIUM, and only check 30 a SYNTEK_DATA_ROOT, its own.
+unset MEDIA_CHROMIUM SYNTEK_DATA_ROOT
 
 SELF_TEST=false
 REQUIRE_FFMPEG=false
@@ -778,6 +814,141 @@ SHIM
 
   # ── 29. transcribe.py's interpreter: never a UV_PYTHON outside its range (D20, D67, D81) ──
   smoke_uvpython
+
+  # ── 30. footage verify on the data root (D86): last, and everything it changes put back ──
+  if $HAVE_FFMPEG; then smoke_dataroot
+  else skip_step 30 'footage verify on the data root' 'ffmpeg or ffprobe is not installed'; fi
+
+  # ── 31. MEDIA_CHROMIUM: every bad value named, exit 2; check --setup reports it (D20, D86) ──
+  smoke_chromium
+}
+
+# Check 30: every answers file in the scratch copy set to one store, the layout keys made to
+# agree (the render's own where it records them, invented where it does not).
+c30_store() { # $1 = external | repo
+  PYTHONDONTWRITEBYTECODE=1 python3 -I - "$T" "$1" <<'PYSTORE'
+import pathlib, re, sys
+root, store = pathlib.Path(sys.argv[1]), sys.argv[2]
+keys = ["DATA_STORE", "DATA_AREA", "DATA_SLUG", "DATA_KIND_DOCS", "DATA_KIND_PHOTOS", "DATA_KIND_AUDIO", "DATA_KIND_VIDEOS"]
+files = sorted(root.glob(".copier-answers.syntek-*.yml"))
+known = {}
+for f in files:
+    for line in f.read_text(encoding="utf-8").splitlines():
+        m = re.match(r"^(DATA_[A-Z_]+):[ \t]*(.*)$", line)
+        if m and m.group(1) in keys[1:] and m.group(2).strip() and m.group(1) not in known:
+            known[m.group(1)] = m.group(2).strip()
+invented = {"DATA_AREA": "Projects", "DATA_SLUG": "harbour-lane", "DATA_KIND_DOCS": "Documents",
+            "DATA_KIND_PHOTOS": "Photos", "DATA_KIND_AUDIO": "Audio", "DATA_KIND_VIDEOS": "Videos"}
+values = dict(invented, **known, DATA_STORE=store)
+for f in files:
+    lines = [l for l in f.read_text(encoding="utf-8").splitlines() if not re.match(r"^(%s):" % "|".join(keys), l)]
+    f.write_text("\n".join(lines + ["%s: %s" % (k, values[k]) for k in keys]) + "\n", encoding="utf-8")
+PYSTORE
+}
+
+smoke_dataroot() {
+  local st foot="$T/production/src/footage" held="$W/c30.held" root="$W/c30-root" clip=c30-harbour-wall.mp4     rel="production/src/footage/raw/c30-harbour-wall.mp4" tool=".claude/syntek-media-dataroot.py" f line cmd
+  if [[ ! -f "$T/$tool" || ! -f "$foot/manifest.toml" ]]; then rec c30.ready no; return 0; fi
+  rec c30.ready yes
+  # Held: the footage records check 11 left, and every answers file; the seed and an empty mirror.
+  mkdir -p "$held/raw" "$root"; touch "$root/.syntek-data-root"
+  cp "$foot/manifest.toml" "$held/manifest.toml"
+  for f in "$T"/.copier-answers.syntek-*.yml; do [[ -f "$f" ]] && cp "$f" "$held/${f##*/}"; done
+  find "$foot/raw" -mindepth 1 -maxdepth 1 ! -name README.md -exec mv -t "$held/raw" {} + 2>/dev/null || true
+  cp "$src/production/src/footage/manifest.toml" "$foot/manifest.toml" 2>/dev/null || cp "$held/manifest.toml" "$foot/manifest.toml"
+  rm -f "$foot/external.toml"
+  ff -f lavfi -i "testsrc2=size=160x90:rate=10:duration=1" -f lavfi -i "sine=sample_rate=48000:duration=1"     -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -shortest "$OUT/$clip"
+  # Under external, with the check's own marked root.
+  c30_store external
+  st=0; SYNTEK_DATA_ROOT="$root" tk c30.add footage add "$OUT/$clip" --kind video --location 'Archive drive A' || st=$?
+  rec c30.add "$st"
+  st=0; SYNTEK_DATA_ROOT="$root" tk c30.ext footage verify || st=$?
+  rec c30.ext.status "$st"; rec c30.ext.warns "$(grep -cE '^  warn  F' "$OUT/c30.ext.log" || true)"
+  line="$(grep -E '^  warn  F' "$OUT/c30.ext.log" | head -1 || true)"
+  rec c30.ext.named "$([[ "$line" == *"raw/$clip"* && "$line" == *"add $rel --role footage --label "*     && "$line" == *"(see how-to/src/TEMPLATE-GUIDE/the-data-root.md)"* ]] && echo yes || echo no)"
+  # The command the warning names, run as the shipped advice says (D86).
+  cmd="${line#*with: }"; cmd="${cmd% (see *}"
+  st=0
+  if [[ -n "$line" && "$cmd" == "python3 $tool add "* ]]; then
+    (cd "$T" && SYNTEK_DATA_ROOT="$root" PYTHONDONTWRITEBYTECODE=1 python3 -I -c \
+      'import shlex, subprocess, sys; a = shlex.split(sys.argv[1]); sys.exit(subprocess.run([sys.executable] + a[1:]).returncode)' "$cmd") \
+      >"$OUT/c30.file.log" 2>&1 || st=$?
+  else
+    st=-1; printf 'the warning names no resolver add: %s
+' "$line" > "$OUT/c30.file.log"
+  fi
+  rec c30.file.status "$st"
+  st=0; SYNTEK_DATA_ROOT="$root" tk c30.after footage verify || st=$?
+  rec c30.after.status "$st"; rec c30.after.warns "$(grep -cE '^  warn  F' "$OUT/c30.after.log" || true)"
+  # A storage row whose sha256 differs: a warning, never a failure.
+  if [[ -f "$foot/external.toml" ]]; then
+    cp "$foot/external.toml" "$W/c30.storage.held"
+    sed -i -E 's/^(sha256 = ")[0-9a-f]{64}(")/\1'"$(printf '0%.0s' {1..64})"'\2/' "$foot/external.toml"
+    st=0; SYNTEK_DATA_ROOT="$root" tk c30.differ footage verify || st=$?
+    rec c30.differ.status "$st"; rec c30.differ.said "$(said c30.differ 'filed with another sha256')"
+    cp "$W/c30.storage.held" "$foot/external.toml"
+  else
+    rec c30.differ.status none
+  fi
+  # Under repo: silent, and the resolver's add writes nothing for a skipped role.
+  rm -f "$foot/external.toml"
+  c30_store repo
+  st=0; SYNTEK_DATA_ROOT="$root" tk c30.repo footage verify || st=$?
+  rec c30.repo.status "$st"; rec c30.repo.warns "$(grep -cE '^  warn  F' "$OUT/c30.repo.log" || true)"
+  st=0; (cd "$T" && SYNTEK_DATA_ROOT="$root" PYTHONDONTWRITEBYTECODE=1 python3 "$tool" add "$rel" --role footage --label 'Archive drive A')     >"$OUT/c30.repoadd.log" 2>&1 || st=$?
+  rec c30.repoadd.status "$st"; rec c30.repoadd.storage "$([[ -e "$foot/external.toml" ]] && echo yes || echo no)"
+  # Put back what check 30 changed.
+  rm -f "$foot/external.toml" "$foot/raw/$clip"
+  cp "$held/manifest.toml" "$foot/manifest.toml"
+  for f in "$held"/.copier-answers.syntek-*.yml; do [[ -f "$f" ]] && cp "$f" "$T/${f##*/}"; done
+  find "$held/raw" -mindepth 1 -maxdepth 1 -exec mv -t "$foot/raw" {} + 2>/dev/null || true
+  return 0
+}
+
+# Check 31: card.py and scene.py under each bad MEDIA_CHROMIUM, a stand-in that will not start,
+# and check --setup's two rows. No case launches a real browser.
+smoke_chromium() {
+  local st c v piece=922-scene-fixture fake="$W/c31-browser" plain="$W/c31-plain" launched="$W/c31.launched"
+  printf '#!/bin/sh
+touch "%s"
+exit 1
+' "$launched" > "$fake"; chmod 755 "$fake"
+  printf 'not a browser
+' > "$plain"; chmod 644 "$plain"
+  local -A values=([missing]="$W/c31-no-such-browser" [relative]="bin/c31-browser" [plain]="$plain" [bare]="c31-no-such-browser-on-path")
+  # check --setup, which needs no uv and launches nothing.
+  st=0; MEDIA_CHROMIUM="${values[missing]}" HOME="$GHOME" tk c31.setup.bad check --setup || st=$?
+  rec c31.setup.bad "$(grep -qE "FAIL[[:space:]]+MEDIA_CHROMIUM names '${values[missing]}'" "$OUT/c31.setup.bad.log" && echo yes || echo no)"
+  rm -f "$launched"
+  st=0; MEDIA_CHROMIUM="$fake" HOME="$GHOME" tk c31.setup.ok check --setup || st=$?
+  rec c31.setup.ok "$(grep -F -- "MEDIA_CHROMIUM: cards and scenes use $fake" "$OUT/c31.setup.ok.log" | grep -qv 'FAIL' && echo yes || echo no)"
+  rec c31.setup.launched "$([[ -e "$launched" ]] && echo yes || echo no)"
+  if ! $HAVE_UV; then skip_step 31 'MEDIA_CHROMIUM under card.py and scene.py' 'uv is not installed'; return 0; fi
+  # check 28's fixture, written afresh: check 28 may not have run (--skip-thumbnails, or no
+  # Chromium), and where it did, its last step left a [[clip]] row in the edit decision list.
+  (cd "$T" && PYTHONDONTWRITEBYTECODE=1 python3 -c 'import sys; from pathlib import Path; sys.path.insert(0, "toolkit"); import scene; scene.write_fixture(Path.cwd())') \
+    >"$OUT/c31.fixture.log" 2>&1 || true
+  for c in missing relative plain bare; do
+    v="${values[$c]}"
+    st=0; MEDIA_CHROMIUM="$v" tkc "c31.card.$c" render toolkit/templates/card.html --size 64x64 -o "$OUT/c31.$c.png" || st=$?
+    rec "c31.card.$c.status" "$st"
+    rec "c31.card.$c.named" "$(grep -qF "MEDIA_CHROMIUM names '$v'" "$OUT/c31.card.$c.log" && echo yes || echo no)"
+    rec "c31.card.$c.png" "$([[ -e "$OUT/c31.$c.png" ]] && echo yes || echo no)"
+    rec "c31.card.$c.misread" "$(said "c31.card.$c" 'playwright install|is not installed')"
+    st=0; MEDIA_CHROMIUM="$v" tkp "c31.scene.$c" scene.py stills "$piece" --size 160x90 || st=$?
+    rec "c31.scene.$c.status" "$st"
+    rec "c31.scene.$c.named" "$(grep -qF "MEDIA_CHROMIUM names '$v'" "$OUT/c31.scene.$c.log" && echo yes || echo no)"
+    rec "c31.scene.$c.misread" "$(said "c31.scene.$c" 'playwright install|is not installed')"
+  done
+  st=0; MEDIA_CHROMIUM="$fake" tkc c31.card.fake render toolkit/templates/card.html --size 64x64 -o "$OUT/c31.fake.png" || st=$?
+  if [[ "$st" != 0 ]] && grep -qE 'Playwright is not available|No module named .playwright' "$OUT/c31.card.fake.log"; then
+    skip_step 31s 'MEDIA_CHROMIUM naming a browser that will not start' 'uv could not supply Playwright'
+  else
+    rec c31.card.fake.status "$st"
+    rec c31.card.fake.said "$(said c31.card.fake 'would not start under Playwright 1\.64\.0')"
+    rec c31.card.fake.png "$([[ -e "$OUT/c31.fake.png" ]] && echo yes || echo no)"
+  fi
+  return 0
 }
 
 smoke_uvpython() {
@@ -2786,6 +2957,46 @@ run_checks() {
       || finding "check 29 — $L choosing transcribe.py's interpreter ran uv run, venv, sync or pip"
   fi
 
+  # 30: footage verify warns, never fails, under external, and is silent under repo (D86).
+  if [[ -z "${RES[skip.30]:-}" ]]; then
+    if [[ "${RES[c30.ready]:-no}" != yes ]]; then
+      finding "check 30 — $L the render holds no .claude/syntek-media-dataroot.py or footage manifest to check the data root with"
+    else
+      [[ "${RES[c30.add]:-}" == 0 ]] || finding "check 30 — $L footage add of a lavfi clip failed (exit ${RES[c30.add]:-?})"
+      [[ "${RES[c30.ext.status]:-}" == 0 && "${RES[c30.ext.warns]:-}" == 1 && "${RES[c30.ext.named]:-no}" == yes ]] \
+        || finding "check 30 — $L under external, footage verify did not exit 0 with one warning naming the clip, the resolver's add with --role footage and --label, and the shared chapter (exit ${RES[c30.ext.status]:-?}, ${RES[c30.ext.warns]:-?} warning(s), named: ${RES[c30.ext.named]:-?})"
+      [[ "${RES[c30.file.status]:-}" == 0 ]] \
+        || finding "check 30 — $L the command footage verify's warning names did not file the clip (exit ${RES[c30.file.status]:-?}): the shipped advice must work as printed"
+      [[ "${RES[c30.after.status]:-}" == 0 && "${RES[c30.after.warns]:-}" == 0 ]] \
+        || finding "check 30 — $L once filed, footage verify did not exit 0 with no warning (exit ${RES[c30.after.status]:-?}, ${RES[c30.after.warns]:-?} warning(s))"
+      [[ "${RES[c30.differ.status]:-}" == 0 && "${RES[c30.differ.said]:-no}" == yes ]] \
+        || finding "check 30 — $L a storage row whose sha256 differs was not a warning with exit 0 (exit ${RES[c30.differ.status]:-?})"
+      [[ "${RES[c30.repo.status]:-}" == 0 && "${RES[c30.repo.warns]:-}" == 0 ]] \
+        || finding "check 30 — $L under repo, footage verify printed a data-root warning or failed (exit ${RES[c30.repo.status]:-?}, ${RES[c30.repo.warns]:-?} warning(s))"
+      [[ "${RES[c30.repoadd.status]:-}" == 0 && "${RES[c30.repoadd.storage]:-yes}" == no ]] \
+        || finding "check 30 — $L under repo, the resolver's add --role footage did not exit 0 writing nothing (exit ${RES[c30.repoadd.status]:-?}, storage manifest written: ${RES[c30.repoadd.storage]:-?})"
+    fi
+  fi
+
+  # 31: every MEDIA_CHROMIUM fault is exit 2 naming the variable, judged on its own words (D20, D86).
+  [[ "${RES[c31.setup.bad]:-no}" == yes ]] \
+    || finding "check 31 — $L check --setup did not report a MEDIA_CHROMIUM naming a missing path as a FAIL naming the variable"
+  [[ "${RES[c31.setup.ok]:-no}" == yes && "${RES[c31.setup.launched]:-yes}" == no ]] \
+    || finding "check 31 — $L check --setup did not name the stand-in MEDIA_CHROMIUM names in a note, or launched it (note: ${RES[c31.setup.ok]:-?}, launched: ${RES[c31.setup.launched]:-?})"
+  if [[ -z "${RES[skip.31]:-}" ]]; then
+    for k in card scene; do
+      for v in missing relative plain bare; do
+        [[ "${RES[c31.$k.$v.status]:-}" == 2 && "${RES[c31.$k.$v.named]:-no}" == yes && "${RES[c31.$k.$v.png]:-no}" == no \
+           && "${RES[c31.$k.$v.misread]:-yes}" == no ]] \
+          || finding "check 31 — $L $k with MEDIA_CHROMIUM set to a $v value was not exit 2 naming the variable and the value, with no image and no word of a missing Playwright Chromium (exit ${RES[c31.$k.$v.status]:-?})"
+      done
+    done
+    if [[ -z "${RES[skip.31s]:-}" ]]; then
+      [[ "${RES[c31.card.fake.status]:-}" == 2 && "${RES[c31.card.fake.said]:-no}" == yes && "${RES[c31.card.fake.png]:-no}" == no ]] \
+        || finding "check 31 — $L card.py with MEDIA_CHROMIUM naming a browser that exits 1 was not exit 2 saying it would not start under Playwright 1.64.0 (exit ${RES[c31.card.fake.status]:-?})"
+    fi
+  fi
+
   # 24
   if [[ -n "${RES[real.status]:-}" ]]; then
     [[ "${RES[real.status]}" == 0 ]] || finding "check 24 — $L real fixture could not run (exit ${RES[real.status]})"
@@ -2884,6 +3095,58 @@ run_checks() {
 write_clean_results() { # $1 = file
   cat > "$1" <<'EOF'
 answers	ok
+c30.ready	yes
+c30.add	0
+c30.ext.status	0
+c30.ext.warns	1
+c30.ext.named	yes
+c30.file.status	0
+c30.after.status	0
+c30.after.warns	0
+c30.differ.status	0
+c30.differ.said	yes
+c30.repo.status	0
+c30.repo.warns	0
+c30.repoadd.status	0
+c30.repoadd.storage	no
+c31.setup.bad	yes
+c31.setup.ok	yes
+c31.setup.launched	no
+c31.card.missing.status	2
+c31.card.missing.named	yes
+c31.card.missing.png	no
+c31.card.missing.misread	no
+c31.card.relative.status	2
+c31.card.relative.named	yes
+c31.card.relative.png	no
+c31.card.relative.misread	no
+c31.card.plain.status	2
+c31.card.plain.named	yes
+c31.card.plain.png	no
+c31.card.plain.misread	no
+c31.card.bare.status	2
+c31.card.bare.named	yes
+c31.card.bare.png	no
+c31.card.bare.misread	no
+c31.scene.missing.status	2
+c31.scene.missing.named	yes
+c31.scene.missing.png	no
+c31.scene.missing.misread	no
+c31.scene.relative.status	2
+c31.scene.relative.named	yes
+c31.scene.relative.png	no
+c31.scene.relative.misread	no
+c31.scene.plain.status	2
+c31.scene.plain.named	yes
+c31.scene.plain.png	no
+c31.scene.plain.misread	no
+c31.scene.bare.status	2
+c31.scene.bare.named	yes
+c31.scene.bare.png	no
+c31.scene.bare.misread	no
+c31.card.fake.status	2
+c31.card.fake.said	yes
+c31.card.fake.png	no
 memory.status	0
 memory.uncapped	yes
 memory.capped	yes
@@ -3427,6 +3690,44 @@ self_test() {
   mut scene.clip 0; probe "check 28 refuses clip rows" "check 28 — [fixture] scene render did not refuse"
   write_clean_results "$f"; printf "skip.28\tno Chromium\n" >> "$f"; sed -i "/^scene\./d" "$f"; load_results "$f"
   probe_clean "missing Chromium skips the scene by name"
+  # 30: footage verify on the data root (D86).
+  mut c30.ext.warns 2;            probe "check 30 fires on a second warning under external" "check 30 — [fixture] under external, footage verify did not exit 0 with one warning"
+  mut c30.ext.status 1;           probe "check 30 fires when verify fails under external, where it only warns" "check 30 — [fixture] under external, footage verify did not exit 0"
+  mut c30.ext.named no;           probe "check 30 fires when the warning does not name the add, role, label and chapter" "named: no"
+  mut c30.file.status 2;          probe "check 30 fires when the command the warning names does not file the clip" "check 30 — [fixture] the command footage verify's warning names did not file the clip"
+  mut c30.after.warns 1;          probe "check 30 fires when the warning stays once the clip is filed" "check 30 — [fixture] once filed, footage verify did not exit 0 with no warning"
+  mut c30.differ.said no;         probe "check 30 fires when a differing sha256 is not a warning" "check 30 — [fixture] a storage row whose sha256 differs"
+  mut c30.differ.status 1;        probe "check 30 fires when a differing sha256 fails verify" "check 30 — [fixture] a storage row whose sha256 differs was not a warning with exit 0 (exit 1)"
+  mut c30.repo.warns 1;           probe "check 30 fires on a data-root warning under repo" "check 30 — [fixture] under repo, footage verify printed a data-root warning"
+  mut c30.repoadd.storage yes;    probe "check 30 fires when the resolver's add writes a storage manifest under repo" "check 30 — [fixture] under repo, the resolver's add --role footage did not exit 0 writing nothing"
+  mut c30.ready no;               probe "check 30 fires when the render holds no resolver" "check 30 — [fixture] the render holds no .claude/syntek-media-dataroot.py"
+  write_clean_results "$f"; printf 'skip.30\tffmpeg or ffprobe is not installed\n' >> "$f"; sed -i '/^c30\./d' "$f"; load_results "$f"
+  probe_clean "without ffmpeg check 30 is skipped by name"
+  # 31: MEDIA_CHROMIUM (D20, D86), never through check 4's SKIP pattern.
+  mut c31.card.missing.status 1;  probe "check 31 fires when a missing path is not exit 2" "check 31 — [fixture] card with MEDIA_CHROMIUM set to a missing value"
+  mut c31.card.relative.misread yes; probe "check 31 fires when a relative path reads as a missing Playwright Chromium" "check 31 — [fixture] card with MEDIA_CHROMIUM set to a relative value"
+  mut c31.scene.plain.named no;   probe "check 31 fires when scene.py does not name the variable for a non-executable file" "check 31 — [fixture] scene with MEDIA_CHROMIUM set to a plain value"
+  mut c31.card.bare.png yes;      probe "check 31 fires when a bad bare name still writes a PNG" "check 31 — [fixture] card with MEDIA_CHROMIUM set to a bare value"
+  mut c31.scene.bare.status 0;    probe "check 31 fires when scene.py ignores a bare name absent from PATH" "check 31 — [fixture] scene with MEDIA_CHROMIUM set to a bare value"
+  mut c31.card.fake.said no;      probe "check 31 fires when a stand-in that will not start is not named so" "check 31 — [fixture] card.py with MEDIA_CHROMIUM naming a browser that exits 1"
+  mut c31.setup.bad no;           probe "check 31 fires when check --setup does not FAIL a missing path" "check 31 — [fixture] check --setup did not report a MEDIA_CHROMIUM naming a missing path"
+  mut c31.setup.launched yes;     probe "check 31 fires when check --setup launches the stand-in" "check 31 — [fixture] check --setup did not name the stand-in MEDIA_CHROMIUM names in a note, or launched it (note: yes, launched: yes)"
+  write_clean_results "$f"; printf 'skip.31s\tuv could not supply Playwright\n' >> "$f"; sed -i '/^c31\.card\.fake\./d' "$f"; load_results "$f"
+  probe_clean "where uv could not supply Playwright the stand-in case is skipped by name, the rest judged"
+  write_clean_results "$f"; printf 'skip.31\tuv is not installed\n' >> "$f"; sed -i '/^c31\.\(card\|scene\)\./d' "$f"; load_results "$f"
+  probe_clean "without uv the card and scene half is skipped by name, check --setup still judged"
+  mut c31.setup.ok no;            probe "check 31 judges check --setup even under --skip-thumbnails" "check 31 — [fixture] check --setup did not name the stand-in"
+  # The driver's isolation: neither variable reaches a check from the caller (D86). The unset
+  # stands at the top level, before the first function a check runs in.
+  local un sm
+  un="$(grep -nx 'unset MEDIA_CHROMIUM SYNTEK_DATA_ROOT' "${BASH_SOURCE[0]}" | head -1 | cut -d: -f1 || true)"
+  sm="$(grep -n '^smoke() {' "${BASH_SOURCE[0]}" | head -1 | cut -d: -f1 || true)"
+  ST_PROBES=$((ST_PROBES + 1))
+  if [[ -n "$un" && -n "$sm" && "$un" -lt "$sm" && -z "${MEDIA_CHROMIUM+x}" && -z "${SYNTEK_DATA_ROOT+x}" ]]; then
+    log "  ✓ the driver unsets MEDIA_CHROMIUM and SYNTEK_DATA_ROOT before any check runs"
+  else
+    ST_FAILS=$((ST_FAILS + 1)); log "  ✗ the driver lets MEDIA_CHROMIUM or SYNTEK_DATA_ROOT through to the checks"
+  fi
   local workspace_status=0 key value
   PYTHONDONTWRITEBYTECODE=1 python3 - "$SM_ROOT" "$tmp" >"$tmp/workspace.tsv" 2>"$tmp/workspace.log" <<'PYTEST' || workspace_status=$?
 import os, subprocess, sys

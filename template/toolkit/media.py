@@ -112,6 +112,7 @@ import json
 import math
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -958,7 +959,8 @@ def self_test() -> int:
     have_ff = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
     have_git = bool(shutil.which("git"))
     with tempfile.TemporaryDirectory(prefix="media-self-test-") as tmp, hermetic_git(Path(tmp) / "gitconfig"), \
-            held_env(drop=('MEDIA_MEMORY_MAX', '_MEDIA_MEMORY_CAPPED', '_MEDIA_MEMORY_RECEIPT')):
+            held_env(drop=('MEDIA_MEMORY_MAX', '_MEDIA_MEMORY_CAPPED', '_MEDIA_MEMORY_RECEIPT',
+                           'SYNTEK_DATA_ROOT')):   # D86: no case ever reaches an inherited data root
         root = Path(tmp) / "project"
         C.ROOT = root
         try:
@@ -967,6 +969,8 @@ def self_test() -> int:
                       ("captions and script time", lambda: test_captions(verdict, cli, root)),
                       ("footage, takes in both layouts, audiobook text, flags, where and check",
                        lambda: test_repo(verdict, skip, cli, root, have_git, have_ff)),
+                      ("footage verify's data-root warnings, on a temporary project and root",
+                       lambda: test_data_root(verdict, skip, cli, root)),
                       ("uv scripts: the interpreter, the timeout, the first-run lock, card renders and the "
                        "setup row", lambda: test_uv(verdict, skip, cli, root)),
                       ("default output paths: each piece's own folder", lambda: test_piece_defaults(verdict))]
@@ -1166,6 +1170,22 @@ def cli_split(*argv):
         except SystemExit as stop:
             code = stop.code if isinstance(stop.code, int) else 2
     return code, out.getvalue(), err.getvalue()
+
+
+def card_browser():
+    """(ready, why not): whether a real card render can run here, where Playwright's pinned
+    Chromium is in its cache or MEDIA_CHROMIUM resolves to an executable file (D20, D86). The
+    self-test honours the variable; a value that does not resolve while the pinned Chromium is
+    present still runs the render, so card.py's exit 2 naming the variable is a FAIL, never a skip."""
+    import card as CARD
+    try:
+        named = CARD.chromium_override()
+        bad = ""
+    except C.Fatal as err:
+        named, bad = None, f"; {err}"
+    if named is not None or any(R.playwright_cache().glob(f"chromium*-{R.PLAYWRIGHT_REVISION}")):
+        return True, ""
+    return False, f"Playwright's Chromium is not installed and MEDIA_CHROMIUM names no browser{bad}"
 
 
 def write(p: Path, text: str) -> Path:
@@ -2171,6 +2191,84 @@ def test_transcript(verdict, root: Path, script: Path) -> None:
     verdict("captions transcript writes only with -o, and never over the tracked file",
             code == 0 and dest.is_file() and code2 == 2 and "never overwrites" in err2, err + err2)
     dest.unlink()
+
+
+DATA_ANSWERS = ("_commit: v0.7.0\nDATA_STORE: {store}\nDATA_AREA: business\nDATA_SLUG: fixture-project\n"
+                "DATA_KIND_DOCS: docs\nDATA_KIND_PHOTOS: photos\nDATA_KIND_AUDIO: audio\n"
+                "DATA_KIND_VIDEOS: videos\nDATA_PROVIDER: none\n")
+
+
+def test_data_root(verdict, skip, cli, root: Path) -> None:
+    """D86: under external, footage verify warns (never fails) on a logged row the storage manifest
+    does not hold, naming the resolver's add with the role its kind gives; the command it names
+    files the copy, after which the warning clears; a differing hash warns; under repo it is silent;
+    where the resolver's store cannot answer it says so. A temporary project and a temporary,
+    marked root: an inherited SYNTEK_DATA_ROOT is never used."""
+    shipped = C.TOOLKIT.parent / ".claude"
+    tool, mapping = shipped / "syntek-media-dataroot.py", shipped / "syntek-media-dataroot.json"
+    if not tool.is_file() or not mapping.is_file():
+        skip("footage verify's data-root warnings", "this project holds no .claude/syntek-media-dataroot.py "
+             "or its map")
+        return
+    saved = C.ROOT
+    project, data = Path(str(root) + "-dataroot"), Path(str(root) + "-data-root")
+    data.mkdir(parents=True, exist_ok=True)
+    (data / ".syntek-data-root").touch()
+    C.ROOT = project
+    try:
+        (project / ".claude").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(tool, project / ".claude" / tool.name)
+        shutil.copy2(mapping, project / ".claude" / mapping.name)
+        answers = write(project / ".copier-answers.syntek-media.yml", DATA_ANSWERS.format(store="external"))
+        write(C.path(C.MANIFEST), "# fixture manifest\n")
+        src = write(Path(str(root) + "-dataroot-in") / "harbour-b-roll.bin", "fixture b-roll bytes\n")
+        storage = C.path(C.FOOTAGE) / "external.toml"
+        with held_env(SYNTEK_DATA_ROOT=str(data)):
+            cli("footage", "add", src, "--kind", "stock", "--location", "Archive drive A")
+            take = C.read_text(C.path(C.MANIFEST)) + ('\n[[file]]\nid = "F0002"\npath = "raw/005-fixture.s01.t1.pcm"\n'
+                                                     f'kind = "generated"\nsha256 = "{"ab" * 32}"\nbytes = 4\n'
+                                                     'duration = 1.0\nlocation = "Archive drive B"\nrecorded = ""\n'
+                                                     'rights = ""\nnotes = "archives a fixture take"\n')
+            C.path(C.MANIFEST).write_text(take, encoding="utf-8")
+            code, out = cli("footage", "verify")
+            named = next((x for x in out.splitlines() if "warn  F0001" in x), "")
+            verdict("under external, footage verify warns (exit 0) on each row not filed, naming the resolver's add "
+                    "with the role its kind gives, the location as the label, and the shared chapter (D86)",
+                    code == 0 and "add production/src/footage/raw/harbour-b-roll.bin --role footage --label "
+                    "'Archive drive A'" in named and R.DATA_ROOT_CHAPTER in named
+                    and "--role approved-take --label 'Archive drive B'" in out and "once it is mirrored here" in out
+                    and "2 not filed" in out and not storage.exists(), out)
+            command = named.split("with: ", 1)[-1].rsplit(" (see ", 1)[0]
+            argv = shlex.split(command)
+            proc = subprocess.run([sys.executable, *argv[1:]], cwd=project, capture_output=True, text=True) \
+                if argv[:1] == ["python3"] else None
+            code, out = cli("footage", "verify")
+            verdict("the command the warning names files the copy as footage, and the warning clears (D86)",
+                    proc is not None and proc.returncode == 0 and storage.is_file()
+                    and 'role = "footage"' in C.read_text(storage) and code == 0 and "warn  F0001" not in out
+                    and "warn  F0002" in out and "1 not filed" in out,
+                    (proc.stdout + proc.stderr if proc else command) + out)
+            if storage.is_file():
+                text = C.read_text(storage)
+                digest = R.sha256(C.path(C.RAW) / "harbour-b-roll.bin")
+                storage.write_text(text.replace(digest, "0" * 64), encoding="utf-8")
+                code, out = cli("footage", "verify")
+                verdict("a filed row whose sha256 differs from the manifest's is a warning, never a failure (D86)",
+                        code == 0 and "warn  F0001" in out and "never replaced" in out
+                        and "--role footage" in out and "1 filed with another sha256" in out, out)
+                storage.write_text(text, encoding="utf-8")
+            write(answers, DATA_ANSWERS.format(store="repo"))
+            code, out = cli("footage", "verify")
+            verdict("under repo, footage verify prints no data-root warning and passes",
+                    code == 0 and "warn" not in out and "data root" not in out, out)
+            other = write(project / ".copier-answers.syntek-author.yml", DATA_ANSWERS.format(store="external"))
+            code, out = cli("footage", "verify")
+            verdict("where the resolver's store cannot answer (two records disagree), footage verify says so, skips "
+                    "the data-root check and still passes", code == 0 and "data-root check is skipped" in out
+                    and "warn" not in out, out)
+            other.unlink()
+    finally:
+        C.ROOT = saved
 
 
 def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> None:
@@ -3563,7 +3661,8 @@ out = "00:00:01.000"
     code, out = cli("captions", "check", lost, "--script", root / C.PIECES / "012-talk" / "transcript.md")
     verdict("captions check still fails words missing from a stretch the edit keeps",
             code == 1 and "the ferry is late" in out, out)
-    if shutil.which("uv") and any(R.playwright_cache().glob(f"chromium*-{R.PLAYWRIGHT_REVISION}")):
+    browser, why_not = card_browser()
+    if shutil.which("uv") and browser:
         real = write(C.path(C.CARDS) / "005-assembly.title.html", CARD_HTML)
         write(C.path(C.TOKENS), C.read_text(C.path(C.TOKENS)))
         os.utime(real, None)
@@ -3577,7 +3676,7 @@ out = "00:00:01.000"
             verdict("a stale card is rendered again with card.py, into its piece's cards/ folder", False, err)
     else:
         skip("a stale card is rendered again with card.py, into its piece's cards/ folder",
-             "uv or Playwright's Chromium is not installed")
+             "uv is not installed" if browser else why_not)
     audio_edl = write(C.path(C.EDITS) / "006-podcast.toml", f"""[edit]
 piece = "006-podcast"
 size = ""
