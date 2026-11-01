@@ -12,7 +12,7 @@ marks which is which.
 ├── syntek-media-agents.md       ← the bridge for Codex, Gemini CLI, Antigravity and OpenCode (template-owned)
 ├── syntek-media-permissions.py  ← passes settings.json's denies and asks to the other clients' files (template-owned)
 ├── syntek-media-dataroot.py     ← the data-root resolver and the guard the PreToolUse hook runs (template-owned)
-├── syntek-media-dataroot.json   ← media's filing folders on the data root: none (template-owned)
+├── syntek-media-dataroot.json   ← media's filing folders on the data root: the footage folder (template-owned)
 ├── CLAUDE.md               ← the project brief, where the rules live, project rules (read first; yours)
 ├── CONTEXT.md              ← this file (yours)
 ├── MEMORY.md               ← project memory: facts, decisions, feedback, status (read second; yours)
@@ -62,14 +62,15 @@ marks which is which.
   missing ones to client files that already exist. It never creates a file.
 - `syntek-media-dataroot.py` and its map `syntek-media-dataroot.json` — the data-root resolver
   every Syntek template ships (`python3`, 3.14 or later) and the guard the `PreToolUse` hook
-  runs; media's map names no folder (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
+  runs; media's map claims the footage folder, `production/src/footage`, with two roles,
+  `footage` and `approved-take` (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
 
 ## Cross-references
 
 - `.claude/rules/syntek-media/01-layout-and-routing.md` — the brand brief, the layers, the folder
   pair, who owns which files, and which rule wins (Section 10).
-- `.claude/rules/syntek-media/02-skills.md` — the media skill roster, and the family-shared
-  skills' roles.
+- `.claude/rules/syntek-media/02-skills.md` — the media skill roster (`media-research`,
+  `media-tone` and `media-teach` among it), and the family-shared skills' roles.
 - `.claude/hooks/CONTEXT.md` — the hook registry and the window threshold.
 - `.claude/rules/syntek-media/03-production-ethics.md` — credits, disclosure, rights and consent.
 - `.claude/skills/CONTEXT.md` — how skills are laid out.

@@ -79,9 +79,12 @@ paths and paid-call discipline. Do not infer author approval from client permiss
   `SYNTEK_DATA_ROOT` names. Claude Code's `PreToolUse` hook (where `.claude/settings.json`
   wires it) blocks its file tools' edits and writes there, and its searches where it offers
   `Grep` and `Glob`; no other client runs it. Never browse, search, list or edit anything under
-  a data root, by any tool or shell command. Media files nothing there:
-  `python3 .claude/syntek-media-dataroot.py store` and `root` (Python 3.14 or later) report the
-  store and the root, and `.claude/rules/syntek-media/06-global-rules.md` Section 12 says the
+  a data root, by any tool or shell command. Media's map claims one folder,
+  `production/src/footage`: `python3 .claude/syntek-media-dataroot.py` (Python 3.14 or later)
+  reports with `store` and `root`, and a session may run its `status` and `verify` over that
+  folder and, on the author's word, its `add` there with `--role footage` or
+  `--role approved-take` only, telling the author media files footage under those two roles
+  alone; never its `pull`. `.claude/rules/syntek-media/06-global-rules.md` Section 12 says the
   rest; never work round a refusal. Where one of these scripts warns that it did not run because
   Python is older than 3.14, tell the author at once, in its words, and ask them to upgrade.
 - **The user guide is read-only.** Claude Code denies edits under `how-to/`, and its guide
@@ -149,7 +152,9 @@ and the rules ship always.
 
   Where that Chromium then fails to start for missing system libraries, Playwright's
   `install-deps chromium` installs them with administrator rights: the author runs it, never a
-  session. ElevenLabs is not among the project's servers: it is configured once at user scope,
+  session. `MEDIA_CHROMIUM`, which may name another browser for the toolkit's cards and scenes,
+  never reaches Scrapling, whose browser is set only as rules 06 Section 13 says. ElevenLabs is not
+  among the project's servers: it is configured once at user scope,
   as `production/docs/reference/elevenlabs.md` says, and its key never enters a project file.
   An update offers the two servers once to each recorded client's MCP file that lacks them, and
   never adds back one counted as offered (OpenCode's and Gemini CLI's only after `--write`). Add

@@ -84,6 +84,9 @@ file beside it is ignored.
 <: if 'audiobook' in MEDIA_KINDS :>| `narrate-audiobook` | An audiobook, planned in its chapter register with its credits (its M2: an audiobook has no script), then chapter by chapter by the route each channel accepts (human, AI or external): text through `media.py audiobook text`, takes one call at a time, mastering and the ACX check through the toolkit, every approved master archived, disclosure always | moded |
 <: endif :>| `captions` | Captions by four timing routes, aligned known words included; a recorded piece's transcript; speech-to-text only when asked; SRT and VTT to house limits; `captions check`; burned or sidecar per platform; published transcripts (M6); model fetch left to the author | none |
 | `cut-for-platform` | Every render through the toolkit: the footage edit and cards through `assemble`, or the scene kit through stills/preview review and native masters (M4), `cut` and `encode` per deliverable with captions burned in the same pass (web video, silent loops and a feed episode's untagged audio among them), loudness, and a probe of every output (M5); `feed tag` at M7 | none |
+| `media-research` | Media's own reading, one answerable question at a time, at the primary source: a platform's own pages, a library's licence, a consent or disclosure rule, a format or loudness convention, a tool's documentation, a pronunciation's source; a forked background agent that looks in both places first, keeps no notes folder and records each source and its date in the file that uses it; `publishing/workflows/07-refresh-the-platform-specs/` runs it | moded |
+| `media-tone` | A tone pass on the words a piece says or shows, read for the creator, the audience, the type of content and where it is posted; freezes every figure, claim, quotation, disclosure, credit and limit and every recorded word; reports by location, applies only what the author accepts, and never writes the spoken voice or a profile, handing a settled tone to `brand/workflows/05-write-the-spoken-voice/` or `brand/workflows/04-set-up-a-platform/`; runs only when named or asked for | moded |
+| `media-teach` | A practice workspace for a media craft, tool or platform, away from the real work: one concept a lesson, recall before re-reading, a practice piece with invented people only, spaced reviews; media's topics in the learning folder, placed at run time as its `SKILL.md` says, text only; spends, publishes, registers and files nothing, and keeps every clip and render outside the repository | moded |
 
 ---
 
@@ -147,8 +150,10 @@ that path wins.
 | Record of provenance | none: media keeps no ledger (below); each item a piece uses has its row in `production/src/rights-register.md` |
 | Record of permissions and approvals | `production/src/rights-register.md` for a licence, permission, release or consent; a piece's approvals are the dates in its brief's `verified` |
 | Open-flags check | `python3 toolkit/media.py flags` |
-| Fact-checking and research skills | the fact-check and research skills (syntek-author), where present (below) |
-| Prototyping and teaching skills, and the learning workspace | syntek-author's, where present; media ships none |
+| Fact-checking skill | the fact-check skill (syntek-author), where present (below) |
+| Research skill | `media-research` for media's own reading (platforms, licences, consent, technique); the research skill (syntek-author), where present, for a piece's subject; route by the work at hand; look in both places |
+| Prototyping skill | syntek-author's, where present; media ships none |
+| Teaching skill, and the learning workspace | `media-teach` for a media craft, tool or platform, its topics in `learning/<topic>/` alone or `learning/syntek-media/<topic>/` beside another template; the teach skill (syntek-author), where present, for its own; route by the work at hand; look in both places |
 
 **Companions from syntek-author.** These are syntek-author's skills, and unlike the family-shared
 skills above they never ship here. Media names each one unbackticked, in one fixed form, 'the
@@ -165,9 +170,11 @@ it.
 | fact-check | every factual claim in a script, transcript or post | verdicts; an unresolved claim stays `VERIFY`; M2 and M7 need none open |
 | improve-section | a script the author drafted | report, then the agreed edits only; no ledger entry and no status change, said before it runs |
 | adapt-section | a script revised from the author's notes | report, then the agreed edits only; no ledger entry; the revise step of `write-script` is the fallback |
-| research | platform policies, the facts behind a script | as practice; sources and dates recorded where the guide says |
+| research | the subject of a piece, the facts behind a script | as practice; sources and dates recorded where the guide says; media's own reading is `media-research`'s |
 | social-media-documents | social media plans, content calendars, operating procedures, bios, channel voice, text-only posts | owns what each document sets for a platform where present, document by document; media's profiles, schedule and posts cite them, never duplicate them |
 | run-workflow | — | a boundary only: writing work goes there, a blog post's or a newsletter issue's own words included |
+| tone | — | a boundary only: a written document's voice goes there; the words a piece says or shows are `media-tone`'s |
+| teach | — | a boundary only: its topics, and its own folder in the learning folder, are never `media-teach`'s; a writing topic goes there |
 | pronounce | — | never run by media; its IPA is the source for constructed names in `brand/src/voice/voice.md` |
 
 The provenance ledger belongs to syntek-author's content layer, so improve-section and
@@ -189,4 +196,5 @@ over when a companion refuses a file that is not a section draft.
 - **A skill that spends credits** carries the call discipline of
   `.claude/rules/syntek-media/03-production-ethics.md` Section 4 in its own steps.
 - **A skill of the author's own** goes in a new folder whose name collides with no media or
-  syntek-author skill; its frontmatter `name` equals the folder, and Copier never touches it.
+  syntek-author skill and never starts `media-`, in any letter case (that prefix is media's);
+  its frontmatter `name` equals the folder, and Copier never touches it.

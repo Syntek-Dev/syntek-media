@@ -101,7 +101,10 @@ in Chromium, offline, with the safe-zone variables set and, for a deliverable, `
 and `data-platform` on `:root` (so a newsletter image shows its play button); `check HTML` proves the tokens resolve
 and the brand fonts load; `--self-test`. A missing browser is exit 2, naming
 `uv run --with playwright==1.64.0 playwright install chromium`; where a system bundle supplies the
-browsers (NixOS), it must ship the same revision.
+browsers (NixOS), it must ship the same revision. `MEDIA_CHROMIUM`, set by the author at user scope
+and never by a session, may name another Chromium-based browser (an absolute path or a command on
+PATH): cards and scenes launch it, say so on one line, and never fall back; a value that does not
+resolve, or a browser that will not start, is exit 2 naming the variable. The pinned one stays the reference.
 
 ---
 
@@ -182,7 +185,7 @@ browsers (NixOS), it must ship the same revision.
 |---|---|
 | `ffmpeg` and `ffprobe`, built with libass, x264 and mp3lame | every render, probe, loudness pass and caption burn |
 | `python3` (3.14 or later) and `git` | every `media.py` command; the repository root and what Git ignores |
-| `uv`, with Playwright's Chromium | `toolkit/card.py`, `toolkit/scene.py`, and the card PNGs `assemble` renders |
+| `uv`, with Playwright's Chromium, or the browser `MEDIA_CHROMIUM` names | `toolkit/card.py`, `toolkit/scene.py`, and the card PNGs `assemble` renders |
 | WhisperX 3.8.6 and its fetched English weights, punkt_tab and cross-check model (optional), on a Python from 3.10 to 3.13 kept beside 3.14, in uv's environment or at the interpreter path `MEDIA_TRANSCRIBE_PYTHON` names, never an environment the author activates | `transcribe`; the author runs `transcribe fetch` once, no skill downloads models |
 | Rhubarb Lip Sync 1.14.0 (optional), unzipped at user scope and linked onto PATH | `lipsync`; keep res/sphinx/cmudict-en-us.dict beside the real executable, never copy the binary alone |
 | `git-lfs` | large design exports in `brand/src/exports/large/` |

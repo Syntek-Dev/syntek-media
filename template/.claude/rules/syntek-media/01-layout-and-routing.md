@@ -70,8 +70,10 @@ The writing router of syntek-author, where present, reads only the layers its ow
   author's own guides, procedures and notes go in a layer's `docs/project/` or
   `workflows/local/`, or in the project rules (Section 10).
 - **Media has no working folders of its own.** The `handoffs/` folder is family-shared: media
-  ships only its pair, as syntek-author does. The learning and assets folders at the root are
-  syntek-author's, where it is applied; media's binaries live in its own layers.
+  ships only its pair, as syntek-author does. The assets folder at the root is syntek-author's,
+  where it is applied; media's binaries live in its own layers. The learning folder at the root
+  holds each teaching skill's topics: media ships nothing there, and `media-teach` writes media's
+  at run time, placed as its `SKILL.md` says.
 
 ---
 
@@ -140,6 +142,8 @@ The exceptions are syntek-author's, unchanged, then media's:
   that pair by hand: where it is missing (a project updated from a release before 0.5.0), the
   folder carries none until a template's copy or update brings it, because a pair written here
   would differ from the one every template ships.
+- The learning folder and every topic in it: media never writes a pair there; the folder's pair,
+  where present, is syntek-author's.
 - **Every piece folder carries its own pair**, written when the piece is opened
   (`scripts/workflows/01-brief-a-piece/`) from the skeleton in `scripts/src/pieces/CLAUDE.md`.
 
@@ -177,7 +181,7 @@ files and registers carry no `model:` key (`.claude/rules/syntek-media/05-model-
 | **Seed-if-missing** | creates the file only if it is absent, then never touches it | the seeds below |
 | **Copy-only shared** | written by a copy only where absent and never rendered by an update; after the render, the family update script (Python 3.14 or later) acts on the family-shared ones, `settings.json` and the MCP files | the shared files below |
 | **Seed-once example** | ships at generation only; once deleted, stays deleted | the worked example piece, when one was generated |
-| **Author-owned** | never touches | everything you write: pieces, register rows, `docs/project/` guides, `workflows/local/` procedures, edit lists, cards, plans and packages |
+| **Author-owned** | never touches | everything you write: pieces, register rows, `docs/project/` guides, `workflows/local/` procedures, edit lists, cards, plans and packages, the lessons `media-teach` writes, and the resolver's storage manifest in the footage folder |
 
 **Seeds** (deleting one brings back the empty seed; a platform's profile goes with its
 platform): the design register, `tokens.css` and the preview cards of `brand/src/`,
