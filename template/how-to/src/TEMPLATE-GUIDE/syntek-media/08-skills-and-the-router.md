@@ -23,6 +23,9 @@ These skills carry a piece from its script to its post, and you decide at every 
 | `voiceover` | Makes a voiceover with ElevenLabs, one segment at a time, after telling you what it will cost | 'record the voiceover for the trailer' |
 | `captions` | Writes and checks captions and transcripts, burned in or alongside | 'caption the talk' |
 | `cut-for-platform` | Assembles the master and cuts and encodes each deliverable through the toolkit, then checks each one | 'cut this for every platform' |
+| `media-research` | Researches how media is made and published, such as what each platform now asks of a video, at the primary source, and records each source and its date in the file that uses it | 'check what each platform now asks of a vertical video' |
+| `media-tone` | Reads the tone of what a piece says or shows, for you, the audience, the type of content and where it is posted, and changes only what you accept, never a fact or a recorded word | 'is the tone of this script right for the audience?' |
+| `media-teach` | Teaches you a media craft, tool or platform, one idea at a time, with a practice piece and a review schedule, in the learning folder | 'teach me how to light an interview' |
 | `repurpose` | Plans the cut-downs of one long piece, one for each platform you publish to | 'plan the clips from the talk' |
 | `thumbnail-brief` | Briefs and renders a piece's thumbnails, covers and other images | 'brief the thumbnail' |
 | `prepare-post` | Prepares each post's package and its schedule row, and never posts | 'get the post ready' |

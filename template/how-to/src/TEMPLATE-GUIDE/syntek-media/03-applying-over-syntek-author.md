@@ -11,7 +11,7 @@ Start from a clean, committed tree, on a branch of its own, so that every file t
 git switch -c apply-syntek-media
 ```
 
-The project's syntek-author must be v0.6.0 or later, and updated to it before syntek-media is applied.
+The project's syntek-author must be v0.6.0 or later, or v0.8.0 or later where lessons come from both templates, and updated to it before syntek-media is applied.
 An older syntek-author treats every `src/` folder as your own work, so its checks would read this guide's chapters as if you had written them.
 It also puts nothing back in `how-to/`, so a change made there would stand until a newer update.
 From v0.6.0, syntek-author carries its own guide, in a folder named for it beside this one.

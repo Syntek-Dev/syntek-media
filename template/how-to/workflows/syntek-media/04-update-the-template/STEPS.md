@@ -71,9 +71,10 @@ ls .copier-answers.syntek-author.yml && sed -n "s/^_commit: *['\"]\{0,1\}\([^'\"
 Where it says `No such file or directory`, the project is standalone: go on at step 3.
 Otherwise the two templates share files, answers and the user guide, so syntek-author is updated
 first, every time, to v0.6.0 or later: an older one ships no user guide of its own, which a
-combined project must not keep. Run syntek-author's own update procedure, in its folder under
-how-to/workflows/, to its own commit, then come back here; `git status` should again end
-`nothing to commit, working tree clean`. _Mechanical._
+combined project must not keep, and lessons from both templates need v0.8.0 or later. Run
+syntek-author's own update procedure, in its folder under how-to/workflows/, to its own commit,
+then come back here; `git status` should again end `nothing to commit, working tree clean`.
+_Mechanical._
 
 ## 3. Check the three hazards
 

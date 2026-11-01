@@ -85,10 +85,19 @@ Keep your own notes and procedures in a layer's `docs/project/` or `workflows/lo
 ## Binary files and the data root
 
 A project can keep binary files outside the repository, under a folder on each machine called the data root.
-syntek-media files nothing under a data root, whatever `DATA_STORE` records, because its map, `.claude/syntek-media-dataroot.json`, claims no folder.
-Its footage stays where `production/src/footage/manifest.toml` lists it, and its renders stay in the ignored output folders above.
-So for media there is no data-root procedure to follow, and the shared chapter's route to this template's own procedure ends here.
-`how-to/src/TEMPLATE-GUIDE/the-data-root.md` explains the data root for a template that does file there, such as syntek-author where it is applied.
+`how-to/src/TEMPLATE-GUIDE/the-data-root.md` explains it, and how to set one up on each machine.
+syntek-media's map, `.claude/syntek-media-dataroot.json`, claims one filing folder, its footage folder `production/src/footage/`, and nothing else.
+Where `DATA_STORE` is `external`, a copy of your source footage, or of an approved voiceover take, can be filed there, so that it is kept and checked beyond this machine.
+The map gives the folder two roles, `footage` for source footage and `approved-take` for an approved take, and a copy filed under either is evidence, which is never replaced.
+`production/src/footage/manifest.toml` stays syntek-media's own list of the footage, and the data-root tool keeps a list of its own beside it, of each copy it has filed.
+`python3 toolkit/media.py footage verify` warns, and never fails, of each file the manifest lists that is not yet filed, and each warning names the command that files it, with the role to give it.
+The shared tool's status check lists the same files, and stops with exit code 1 until they are filed, in syntek-author's commands too, where it is applied.
+Until a file is filed it is only on this machine, and it is lost with that disk.
+To file one, run the tool's `add` as the shared chapter gives it, with `--role footage` or `--role approved-take` and never another role, or ask the session to.
+A session files footage only when you say so, only with one of those two roles, and tells you that it has.
+syntek-media has no procedure of its own for this yet, so the shared chapter's commands are the ones to use.
+Where `DATA_STORE` is `repo`, nothing is filed, and the footage stays where the manifest lists it.
+The renders stay in the ignored output folders above, whatever the answer.
 
 ## Where the rules live
 

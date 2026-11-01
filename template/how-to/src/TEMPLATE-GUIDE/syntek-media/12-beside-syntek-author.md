@@ -89,6 +89,9 @@ This chapter explains how the two live together, and how to keep both in step.
 - An older syntek-author treats every `src/` folder as your work, so its checks would read the guide's chapters as if they were your text.
 - It also puts nothing back in `how-to/`, so a change made there would stand until a newer update.
 - Media's copy warns where syntek-author's answers file stands without syntek-author's guide, because that means its release is too old.
+- Where you keep lessons from both templates, the project needs syntek-author v0.8.0 or later, because an older one reads media's lessons as its own.
+- Media's teaching skill keeps its lessons in the learning folder at the top of the project: each topic in a folder of its own there in a project of media's alone, and in a folder named `syntek-media` inside it where another template's answers file stands beside media's.
+- syntek-author's teaching skill keeps its own lessons by the same rule, each topic records the template it belongs to, and neither template resumes, lists or edits the other's.
 
 ## Where the rules live
 
