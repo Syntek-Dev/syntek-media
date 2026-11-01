@@ -25,7 +25,7 @@
 #                     8. once per run, copies media over a syntek-author project whose how-to/
 #                        was deleted, as one older than v0.6.0 has none.
 #
-#                   Twenty-five checks per brand kind (13, 20, 22 and 23 once per run):
+#                   Twenty-eight checks per brand kind (13, 20, 22 and 23 once per run):
 #                     1. Media applies over the syntek-author project without --overwrite —
 #                        nothing it ships collides with what is there.
 #                     2. Both answers files exist, under different names.
@@ -136,6 +136,30 @@
 #                        where that file exists; and both templates' records,
 #                        refs/syntek-author/template and refs/syntek-media/template, stand side
 #                        by side (D81; syntek-author D51, D52).
+#                    26. In both orders (the over-author project of steps 1–2, and step 7's
+#                        media-first project, check 15's), lessons planted after the first
+#                        copy and committed — at learning/<topic>/ one marked `Template:
+#                        syntek-author`, one `Template: syntek-media` and one unmarked, at
+#                        learning/syntek-author/<topic>/ and at learning/syntek-media/<topic>/
+#                        — stay byte for byte through the second copy and both templates'
+#                        updates, with no conflict marker or *.rej under learning/ and no line
+#                        of media's copy or update output naming a path there (DESIGN.md D86;
+#                        syntek-author D57). Invented topics, written at run time.
+#                    27. In both orders, media's copy and media's update leave
+#                        learning/CONTEXT.md and learning/CLAUDE.md as syntek-author's render
+#                        left them (its bytes, or their absence), and media's render record,
+#                        refs/syntek-media/template, holds no path under learning/ (D86;
+#                        syntek-author D57, mirroring its checks 51 and 52).
+#                    28. In each composite (both orders, after both updates), in a scratch copy
+#                        whose two answers files record DATA_STORE external (the layout keys
+#                        made to agree, invented where missing), then repo: no folder media's
+#                        map names equals, contains or lies inside a folder another template's
+#                        map names; syntek-author's own resolver,
+#                        `.claude/syntek-author-dataroot.py status`, run without
+#                        SYNTEK_DATA_ROOT, reports no map it cannot read and no two maps that
+#                        'claim one folder'; and its `store` exits 0 (D86). The maps are the
+#                        --author tree's and media's own, so a later syntek-author claim under
+#                        production/ fails here.
 #
 #                   Without syntek-author (no --author, no SYNTEK_AUTHOR_DIR, no
 #                   ../syntek-author) the test prints a named SKIP and exits 0. A SKIP is never
@@ -167,7 +191,9 @@
 #
 # SELF-TEST. --self-test runs the whole flow with the fixture syntek-author and the fixture
 #            media of _common.sh (no real syntek-author needed), proves the result clean, then
-#            mutates the result once per check and asserts exactly one finding each.
+#            mutates the result once per check and asserts exactly one finding each. For checks
+#            27 and 28 the fixture syntek-author also ships a learning/ pair, a map of its own
+#            and the family resolver under its name, as the real one does since v0.8.0.
 #
 # Requirements: bash 4.3+, git, rsync, uvx (or COPIER_CMD), python3 3.14 or later, make (check
 #               24; without it a named SKIP). Network on the first uvx run only. A syntek-author
@@ -239,6 +265,10 @@ A_TOP_NAMES=(); A_SKILL_NAMES=(); B_TOP_NAMES=(); B_SKILL_NAMES=()
 NAMES_DRIFT=""; FAMILY_DRIFT=""; GLOBAL=false
 C23_STATUS=0; C23_RAN=false; C24_SKIP=""
 MEDIA_CHAPTERS="how-to/src/TEMPLATE-GUIDE/syntek-media/"
+# Check 26's lessons (D86): invented topics in every placement, each with its Template: line or
+# none, planted after the first copy in each order.
+C26_LESSONS="learning/tide-tables/MISSION.md:syntek-author learning/knots/MISSION.md:syntek-media learning/ferry-sound/MISSION.md:- learning/syntek-author/drafting/MISSION.md:syntek-author learning/syntek-media/framing/MISSION.md:syntek-media"
+C27_PAIR="learning/CONTEXT.md learning/CLAUDE.md"
 
 # Check 24: syntek-author's lint and flags over how-to/src in a composite, their output kept.
 capture_lint() { # $1 = project, $2 = out file
@@ -329,6 +359,116 @@ PYC25
   done
 }
 
+# Check 26 (D86): plant the lessons and commit them; then, after each later step, every planted
+# byte still there, nothing conflicted under learning/, and no line of media's output naming a
+# path there. Prints one problem per line.
+c26_plant() { # $1 = project, $2 = sums file written
+  local e f t
+  for e in $C26_LESSONS; do
+    f="${e%%:*}"; t="${e#*:}"
+    mkdir -p "$(dirname "$1/$f")"
+    if [[ "$t" == - ]]; then
+      printf '# %s\n\nA practice topic, invented for the coexistence test.\n' "$(basename "$(dirname "$f")")" > "$1/$f"
+    else
+      printf '# %s\n\nTemplate: %s\n\nA practice topic, invented for the coexistence test.\n' "$(basename "$(dirname "$f")")" "$t" > "$1/$f"
+    fi
+    printf '# Progress\n\n| Lesson | Reviewed |\n|---|---|\n' > "$(dirname "$1/$f")/PROGRESS.md"
+  done
+  sm_commit_all "$1" 'the author: lessons in every placement'
+  c26_sums "$1" > "$2"
+}
+c26_sums() { # $1 = project → path<TAB>fingerprint for every planted file
+  local e f
+  for e in $C26_LESSONS; do
+    f="${e%%:*}"
+    printf '%s\t%s\n' "$f" "$(path_fingerprint "$1/$f")"
+    printf '%s\t%s\n' "${f%/*}/PROGRESS.md" "$(path_fingerprint "$1/${f%/*}/PROGRESS.md")"
+  done
+}
+c26_state() { # $1 = project, $2 = sums when planted, $3... = media's output logs
+  local p="$1" sums="$2" f l
+  shift 2
+  f="$(diff "$sums" <(c26_sums "$p") | grep -E '^>' | sed 's/^> //' | cut -f1 | paste -sd' ' - || true)"
+  [[ -z "$f" ]] || printf 'a lesson changed or went missing: %s\n' "$f"
+  f="$(conflicts_in "$p" | grep -E '^learning/' | paste -sd' ' - || true)"
+  [[ -z "$f" ]] || printf 'a conflict was left under learning/: %s\n' "$f"
+  for l in "$@"; do
+    f="$(sed -e 's/\x1b\[[0-9;]*m//g' "$l" 2>/dev/null | grep -E -- "$SM_LEARNING_PATH_RE" | head -1 | sed 's/^[[:space:]]*//' || true)"
+    [[ -z "$f" ]] || printf "media's output in %s names a path under learning/: %s\n" "${l##*/}" "${f:0:160}"
+  done
+}
+
+# Check 27 (D86): the learning/ pair as syntek-author left it, and media's record of its render.
+c27_pair() { # $1 = project → path<TAB>fingerprint for the pair
+  local f
+  for f in $C27_PAIR; do printf '%s\t%s\n' "$f" "$(path_fingerprint "$1/$f")"; done
+}
+c27_state() { # $1 = project, $2 = the pair before media's step, $3 = that step's name
+  local f
+  f="$(diff <(printf '%s\n' "$2") <(c27_pair "$1") | grep -E '^>' | sed 's/^> //' | cut -f1 | paste -sd' ' - || true)"
+  [[ -z "$f" ]] || printf "media's %s changed what syntek-author's render left at %s\n" "$3" "$f"
+  if git -C "$1" rev-parse -q --verify refs/syntek-media/template >/dev/null 2>&1; then
+    f="$(git -C "$1" ls-tree -r --name-only refs/syntek-media/template 2>/dev/null | grep -E '^learning(/|$)' | head -3 | paste -sd' ' - || true)"
+    [[ -z "$f" ]] || printf "media's render record refs/syntek-media/template holds %s, under learning/, after its %s\n" "$f" "$3"
+  fi
+}
+
+# Check 28 (D86): in a scratch copy of a composite, under each store, the maps never overlap
+# and syntek-author's own resolver reads media's map. Prints one problem per line.
+c28_state() { # $1 = project, $2 = the order's name
+  local scr store out rc
+  scr="$(sm_mktemp)"; rm -rf "$scr"; cp -a "$1" "$scr" || { printf '%s: could not copy the composite\n' "$2"; return 0; }
+  if [[ ! -f "$scr/.claude/syntek-author-dataroot.py" ]]; then
+    printf "%s: syntek-author's resolver .claude/syntek-author-dataroot.py is not in the composite\n" "$2"
+    rm -rf "$scr"; return 0
+  fi
+  for store in external repo; do
+    python3 -I - "$scr" "$store" <<'PYSTORE' || printf '%s, %s: the answers files could not be set\n' "$2" "$store"
+import pathlib, re, sys
+root, store = pathlib.Path(sys.argv[1]), sys.argv[2]
+keys = ["DATA_STORE", "DATA_AREA", "DATA_SLUG", "DATA_KIND_DOCS", "DATA_KIND_PHOTOS", "DATA_KIND_AUDIO", "DATA_KIND_VIDEOS"]
+files = sorted(root.glob(".copier-answers.syntek-*.yml"))
+known = {}
+for f in files:
+    for line in f.read_text(encoding="utf-8").splitlines():
+        m = re.match(r"^(DATA_[A-Z_]+):\s*(.*)$", line)
+        if m and m.group(1) in keys[1:] and m.group(2).strip() and m.group(1) not in known:
+            known[m.group(1)] = m.group(2).strip()
+invented = {"DATA_AREA": "Projects", "DATA_SLUG": "harbour-lane", "DATA_KIND_DOCS": "Documents",
+            "DATA_KIND_PHOTOS": "Photos", "DATA_KIND_AUDIO": "Audio", "DATA_KIND_VIDEOS": "Videos"}
+values = dict(invented, **known, DATA_STORE=store)
+for f in files:
+    lines = [l for l in f.read_text(encoding="utf-8").splitlines() if not re.match(r"^(%s):" % "|".join(keys), l)]
+    lines += ["%s: %s" % (k, values[k]) for k in keys]
+    f.write_text("\n".join(lines) + "\n", encoding="utf-8")
+PYSTORE
+    python3 -I - "$scr" <<'PYMAPS' | sed "s/^/$2, $store: /"
+import json, pathlib, re, sys
+claude = pathlib.Path(sys.argv[1]) / ".claude"
+maps = {}
+for f in sorted(claude.glob("syntek-*-dataroot.json")):
+    name = re.match(r"syntek-(.+)-dataroot\.json$", f.name).group(1)
+    try:
+        maps[name] = [e["path"].strip("/") for e in json.loads(f.read_text(encoding="utf-8")).get("folders", [])]
+    except Exception as err:
+        print(f".claude/{f.name} does not parse ({err.__class__.__name__})")
+mine = maps.get("media", [])
+for other, folders in maps.items():
+    if other == "media":
+        continue
+    for a in mine:
+        for b in folders:
+            if a == b or a.startswith(b + "/") or b.startswith(a + "/"):
+                print(f"media's map names {a}, which meets {b} in .claude/syntek-{other}-dataroot.json: every folder belongs to one template's map (DESIGN.md D86)")
+PYMAPS
+    rc=0; out="$( (cd "$scr" && env -u SYNTEK_DATA_ROOT -u MEDIA_CHROMIUM python3 .claude/syntek-author-dataroot.py status) 2>&1)" || rc=$?
+    grep -E 'cannot be read|claim one folder' <<< "$out" | head -2 | sed "s/^/$2, $store: syntek-author's status reports: /" || true
+    rc=0; out="$( (cd "$scr" && env -u SYNTEK_DATA_ROOT python3 .claude/syntek-author-dataroot.py store) 2>&1)" || rc=$?
+    [[ "$rc" -eq 0 ]] || printf "%s, %s: syntek-author's store exits %s: %s\n" "$2" "$store" "$rc" "$(tail -1 <<< "$out" | cut -c1-160)"
+  done
+  rm -rf "$scr"
+}
+
 # syntek-author's own doc-references.sh on a tree: its findings, sorted, in OUT; its exit
 # status in OUT.status ("missing" when syntek-author has no such audit).
 author_doc_references() { # $1 = syntek-author snapshot, $2 = tree, $3 = out file
@@ -370,7 +510,8 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   A_OWNED=(); A_ALL=(); B_TOWNED=(); B_ALL=()
   for f in pre-media.sha post-media.sha shared-after.sha a-changed.txt b-changed.txt a-again.txt \
            b-again.txt r-changed.txt pre-remove.sha post-remove.sha b-added.txt b-copy.log \
-           lint.txt c25-copy.txt c25-update.txt c25-rev-copy.txt c25-rev-update.txt; do : > "$w/$f"; done
+           lint.txt c25-copy.txt c25-update.txt c25-rev-copy.txt c25-rev-update.txt \
+           c26.txt c26-planted.sha c26-rev-planted.sha c27.txt c28.txt b-update.log rev-b-copy.log rev-b-update.log; do : > "$w/$f"; done
   rm -f "$w/pre-settings.json" "$w/post-settings.json" "$w/settings-after.json"
   C24_SKIP=""
   sm_snapshot "$AUTHOR_SRC" "$a" >>"$log" 2>&1 || die "could not snapshot $AUTHOR_SRC"
@@ -385,6 +526,10 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   while read -r k p; do
     if [[ "$k" == O ]]; then A_OWNED+=("$p"); else A_ALL+=("$p"); fi
   done < <(owned_and_all "$PROJ" "$a/copier.yml" "$SM_AUTHOR_ANSWERS")
+  # Checks 26 and 27 (D86): the author's lessons, and the pair syntek-author's render left.
+  c26_plant "$PROJ" "$w/c26-planted.sha"
+  local c27_before
+  c27_before="$(c27_pair "$PROJ")"
   hash_tree "$PROJ" > "$w/pre-media.sha"
   [[ -f "$PROJ/.claude/settings.json" ]] && cp "$PROJ/.claude/settings.json" "$w/pre-settings.json"
   author_doc_references "$a" "$PROJ" "$w/dr-author.txt"
@@ -408,6 +553,8 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   [[ -f "$PROJ/.claude/settings.json" ]] && cp "$PROJ/.claude/settings.json" "$w/post-settings.json"
   LC_ALL=C comm -13 <(cut -f1 "$w/pre-media.sha" | LC_ALL=C sort) <(cut -f1 "$w/post-media.sha" | LC_ALL=C sort) > "$w/b-added.txt"
   sm_commit_all "$PROJ" 'syntek-media'
+  c26_state "$PROJ" "$w/c26-planted.sha" "$w/b-copy.log" | sed 's/^/(copy) /' >> "$w/c26.txt"
+  c27_state "$PROJ" "$c27_before" copy | sed 's/^/(copy) /' >> "$w/c27.txt"
   author_doc_references "$a" "$PROJ" "$w/dr-composite.txt"
   c25_state "$PROJ" "$b/$SM_REFRESH_DATA" > "$w/c25-copy.txt"
   # Check 24: syntek-author's own lint and flags over the guide, where its release has them.
@@ -431,9 +578,14 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
 
   sm_update_author "$PROJ" >>"$log" 2>&1 || A_UPDATE=$?
   changed_paths "$PROJ" > "$w/a-changed.txt"; sm_commit_all "$PROJ" 'update syntek-author'
-  sm_update "$PROJ" >>"$log" 2>&1 || B_UPDATE=$?
+  c27_before="$(c27_pair "$PROJ")"
+  sm_update "$PROJ" >"$w/b-update.log" 2>&1 || B_UPDATE=$?
+  cat "$w/b-update.log" >> "$log"
   changed_paths "$PROJ" > "$w/b-changed.txt"; sm_commit_all "$PROJ" 'update syntek-media'
   c25_state "$PROJ" "$b/$SM_REFRESH_DATA" > "$w/c25-update.txt"
+  c26_state "$PROJ" "$w/c26-planted.sha" "$w/b-update.log" | sed 's/^/(update) /' >> "$w/c26.txt"
+  c27_state "$PROJ" "$c27_before" update | sed 's/^/(update) /' >> "$w/c27.txt"
+  c28_state "$PROJ" over-author >> "$w/c28.txt"
 
   # 4. Each again, with nothing changed. The shared files are fingerprinted between the two.
   sm_update_author "$PROJ" >>"$log" 2>&1 || A_AGAIN_STATUS=$?
@@ -471,10 +623,12 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   fi
 
   # 7. The other order, in a fresh project: media first, then syntek-author.
-  sm_render "$b" "$w/rev" "$kind" >>"$log" 2>&1 || REV_B=$?
+  sm_render "$b" "$w/rev" "$kind" >"$w/rev-b-copy.log" 2>&1 || REV_B=$?
+  cat "$w/rev-b-copy.log" >> "$log"
   if [[ "$REV_B" -eq 0 ]]; then
     [[ -d "$w/rev/.git" ]] || sm_git "$w/rev" init -q
     sm_commit_all "$w/rev" 'syntek-media first'
+    c26_plant "$w/rev" "$w/c26-rev-planted.sha"
     # syntek-author's own pre-copy rule (its D47): a real .agents folder takes --exclude /.agents.
     agents_args=()
     [[ -d "$w/rev/.agents" && ! -L "$w/rev/.agents" ]] && agents_args=(--exclude /.agents)
@@ -482,10 +636,16 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
     if [[ "$REV_A" -eq 0 ]]; then
       sm_commit_all "$w/rev" 'syntek-author second'
       c25_state "$w/rev" "$b/$SM_REFRESH_DATA" > "$w/c25-rev-copy.txt"
+      c26_state "$w/rev" "$w/c26-rev-planted.sha" "$w/rev-b-copy.log" | sed 's/^/(rev-copy) /' >> "$w/c26.txt"
       # Both templates' updates there too, syntek-author first (D84), each committed.
       sm_update_author "$w/rev" >>"$log" 2>&1 || true; sm_commit_all "$w/rev" 'update syntek-author'
-      sm_update "$w/rev" >>"$log" 2>&1 || true; sm_commit_all "$w/rev" 'update syntek-media'
+      c27_before="$(c27_pair "$w/rev")"
+      sm_update "$w/rev" >"$w/rev-b-update.log" 2>&1 || true; sm_commit_all "$w/rev" 'update syntek-media'
+      cat "$w/rev-b-update.log" >> "$log"
       c25_state "$w/rev" "$b/$SM_REFRESH_DATA" > "$w/c25-rev-update.txt"
+      c26_state "$w/rev" "$w/c26-rev-planted.sha" "$w/rev-b-update.log" | sed 's/^/(rev-update) /' >> "$w/c26.txt"
+      c27_state "$w/rev" "$c27_before" update | sed 's/^/(rev-update) /' >> "$w/c27.txt"
+      c28_state "$w/rev" media-first >> "$w/c28.txt"
     fi
   fi
 
@@ -714,6 +874,17 @@ run_checks() {
       [[ -n "$f" ]] && finding "check 25 — $label ($when) $f (DESIGN.md D81; syntek-author D51, D52)"
     done < "$W/c25-$when.txt"
   done
+
+  # ── 26–28. Lessons in both orders, the learning/ pair, the two maps (D86) ──
+  while IFS= read -r f; do
+    [[ -n "$f" ]] && finding "check 26 — $label $f (DESIGN.md D86; syntek-author D57: a lesson is the author's, and neither template writes there)"
+  done < "$W/c26.txt"
+  while IFS= read -r f; do
+    [[ -n "$f" ]] && finding "check 27 — $label $f (DESIGN.md D86; syntek-author D57: only syntek-author ships the learning/ pair)"
+  done < "$W/c27.txt"
+  while IFS= read -r f; do
+    [[ -n "$f" ]] && finding "check 28 — $label $f"
+  done < "$W/c28.txt"
   return 0
 }
 
@@ -834,6 +1005,15 @@ while IFS= read -r f; do printf '  · check 1 — %s cites a dead end\n' "${f#"$
 exit "$st"
 STUB
   sm_commit_all "$tmp/author" 'fixture: its doc-references audit'
+  # Checks 27 and 28 (D86): the learning/ pair, a map of its own and the family resolver under
+  # its name, as syntek-author ships them since v0.8.0 (the resolver's bytes are media's
+  # vendored copy, the family's).
+  mkdir -p "$tmp/author/template/learning"
+  printf '# CONTEXT.md — learning/\n' > "$tmp/author/template/learning/CONTEXT.md"
+  printf '@./CONTEXT.md\n\n# CLAUDE.md — learning/\n' > "$tmp/author/template/learning/CLAUDE.md"
+  printf '{"format": 1, "folders": [{"path": "library/src", "kind": "docs"}, {"path": "assets"}]}\n' > "$tmp/author/template/.claude/syntek-author-dataroot.json"
+  cp "$SM_ROOT/template/.claude/syntek-media-dataroot.py" "$tmp/author/template/.claude/syntek-author-dataroot.py"
+  sm_commit_all "$tmp/author" 'fixture: the learning pair, its map and the resolver'
   sm_fixture_template "$tmp/media" >/dev/null
   # Check 22's inputs: the two manifests, as each template would write them for the same tag
   # (fixture bytes: each entry's hash is its path's), and the fixture syntek-author's seed with
@@ -911,6 +1091,53 @@ STUB
   c25_state "$PROJ" "$MEDIA_SRC/$SM_REFRESH_DATA" > "$W/c25-update.txt"
   probe "check 25 fires when media's record is missing (D81)" "check 25 — [author-fiction] (update) refs/syntek-media/template is missing"
   c25_state "$rev" "$MEDIA_SRC/$SM_REFRESH_DATA" > "$W/c25-rev-update.txt"; : > "$W/c25-update.txt"
+  # 26: the lessons, each fault on state recomputed here (D86).
+  local lf="$PROJ/learning/knots/MISSION.md" ll="$tmp/media-update.log"
+  cp "$lf" "$h"; printf 'x\n' >> "$lf"
+  c26_state "$PROJ" "$W/c26-planted.sha" > "$W/c26.txt"; cp "$h" "$lf"
+  probe "check 26 fires when an update changes a lesson's bytes" "check 26 — [author-fiction] a lesson changed or went missing: learning/knots/MISSION.md"
+  rm "$rev/learning/syntek-media/framing/MISSION.md"
+  c26_state "$rev" "$W/c26-rev-planted.sha" > "$W/c26.txt"; git -C "$rev" checkout -q -- learning/syntek-media/framing/MISSION.md
+  probe "check 26 fires when a lesson in media's folder goes missing, media first" "check 26 — [author-fiction] a lesson changed or went missing: learning/syntek-media/framing/MISSION.md"
+  printf 'x\n' > "$PROJ/learning/ferry-sound/MISSION.md.rej"
+  c26_state "$PROJ" "$W/c26-planted.sha" > "$W/c26.txt"; rm -f "$PROJ/learning/ferry-sound/MISSION.md.rej"
+  probe "check 26 fires on a rejected hunk under learning/" "check 26 — [author-fiction] a conflict was left under learning/: learning/ferry-sound/MISSION.md.rej"
+  printf '    identical  learning/syntek-author/drafting/MISSION.md\n' > "$ll"
+  c26_state "$PROJ" "$W/c26-planted.sha" "$ll" > "$W/c26.txt"
+  probe "check 26 fires when media's output names a path under learning/" "check 26 — [author-fiction] media's output in media-update.log names a path under learning/: identical  learning/syntek-author/drafting/MISSION.md"
+  : > "$W/c26.txt"
+  # 27: the pair and media's record (D86).
+  local pair
+  pair="$(c27_pair "$PROJ")"; cp "$PROJ/learning/CLAUDE.md" "$h"; printf 'x\n' >> "$PROJ/learning/CLAUDE.md"
+  c27_state "$PROJ" "$pair" update > "$W/c27.txt"; cp "$h" "$PROJ/learning/CLAUDE.md"
+  probe "check 27 fires when media's update changes syntek-author's learning/ pair" "check 27 — [author-fiction] media's update changed what syntek-author's render left at learning/CLAUDE.md"
+  local rold rblob ridx="$tmp/c27.index" rtree rnew
+  rold="$(git -C "$rev" rev-parse refs/syntek-media/template)"
+  rblob="$(printf '# a lesson\n' | git -C "$rev" hash-object -w --stdin)"
+  GIT_INDEX_FILE="$ridx" git -C "$rev" read-tree "$rold"
+  GIT_INDEX_FILE="$ridx" git -C "$rev" update-index --add --cacheinfo "100644,$rblob,learning/knots/MISSION.md"
+  rtree="$(GIT_INDEX_FILE="$ridx" git -C "$rev" write-tree)"
+  rnew="$(sm_git "$rev" commit-tree "$rtree" -p "$rold" -m 'a record holding a lesson')"
+  git -C "$rev" update-ref refs/syntek-media/template "$rnew"
+  c27_state "$rev" "$(c27_pair "$rev")" update > "$W/c27.txt"; git -C "$rev" update-ref refs/syntek-media/template "$rold"
+  probe "check 27 fires when media's render record holds a path under learning/" "check 27 — [author-fiction] media's render record refs/syntek-media/template holds learning/knots/MISSION.md"
+  : > "$W/c27.txt"
+  # 28: the two maps and syntek-author's resolver (D86), the first problem each.
+  printf '{"format": 1, "folders": [{"path": "library/src/scans"}]}\n' > "$PROJ/.claude/syntek-media-dataroot.json"
+  c28_state "$PROJ" over-author > "$tmp/c28.all"; head -1 "$tmp/c28.all" > "$W/c28.txt"
+  probe "check 28 fires when media's map claims a folder inside syntek-author's" "check 28 — [author-fiction] over-author, external: media's map names library/src/scans, which meets library/src"
+  printf '{"format": 1, "folders": [{"path": "production/src/footage"}], "roles": [{"name": "footage", "evidence": "yes"}]}\n' > "$PROJ/.claude/syntek-media-dataroot.json"
+  c28_state "$PROJ" over-author > "$tmp/c28.all"; head -1 "$tmp/c28.all" > "$W/c28.txt"
+  probe "check 28 fires when syntek-author's resolver cannot read media's map" "check 28 — [author-fiction] over-author, external: syntek-author's status reports: "
+  rm -f "$PROJ/.claude/syntek-media-dataroot.json"
+  printf '{"format": 1, "folders": [{"path": "production/src/footage"}], "roles": [{"name": "footage", "evidence": true, "repo": "skip"}]}\n' > "$PROJ/.claude/syntek-media-dataroot.json"
+  c28_state "$PROJ" over-author > "$W/c28.txt"
+  probe_clean "check 28 is quiet where media's map claims only its footage folder, under either store"
+  rm -f "$PROJ/.claude/syntek-media-dataroot.json"
+  mv "$PROJ/.claude/syntek-author-dataroot.py" "$h"
+  c28_state "$PROJ" over-author > "$W/c28.txt"; mv "$h" "$PROJ/.claude/syntek-author-dataroot.py"
+  probe "check 28 fires when the composite has no syntek-author resolver" "check 28 — [author-fiction] over-author: syntek-author's resolver .claude/syntek-author-dataroot.py is not in the composite"
+  : > "$W/c28.txt"
   # 22: the comparison runs for real on the fixture manifests and seed, once per mutation.
   local am="$tmp/author/family-shared.json" seed="$tmp/author/template/.claude/settings.json"
   cp "$am" "$tmp/manifest.held"; cp "$seed" "$tmp/seed.held"

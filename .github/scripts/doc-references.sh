@@ -59,7 +59,11 @@
 #                     (scrub.sh's); and generated output (anything inside a generated/,
 #                     renders/ or raw/ folder but its README.md, build/, audio/). A placeholder
 #                     is exempt from check 6 too: `handoffs/HANDOFF-<DESCRIPTOR>-DD-MM-YYYY.md`
-#                     describes a file name, it does not cite a place. A trailing :N line
+#                     describes a file name, it does not cite a place. Since 0.7.0 media cites
+#                     the learning folder only by the placeholders `learning/<topic>/` and
+#                     `learning/syntek-media/<topic>/`, and names every file made at run time in
+#                     prose or by placeholder (D86; DESIGN.md Section 3), so checks 1 and 6 hold
+#                     it unchanged: a backticked `learning/CLAUDE.md` is check 6's. A trailing :N line
 #                     anchor is peeled first. A path resolves if it exists from the tree root
 #                     or from any ancestor of the citing file, so `src/` inside
 #                     production/CLAUDE.md means production/src/. An unresolved path led by a
@@ -484,6 +488,13 @@ EOF
   sed -i '$d' "$t/production/src/CONTEXT.md"
   printf 'Stills: `production/src/assets/`; the rules: `.claude/rules/syntek-author/<file>.md`, `standards/*/style-sheet.md`.\n' >> "$g"
   probe_clean "check 6 matches only a first segment, and never a placeholder"
+  sed -i '$d' "$g"
+  # Since 0.7.0 media cites the learning folder only by its placeholders (D86; Section 3).
+  printf 'The lessons index is `learning/CLAUDE.md`.\n' >> "$g"
+  probe "check 6 fires on a backticked learning/CLAUDE.md, never check 1 (D86)" "check 6 — production/docs/reference/elevenlabs.md:23 backticks the syntek-author path \`learning/CLAUDE.md\`"
+  sed -i '$d' "$g"
+  printf 'media-teach places a lesson at `learning/syntek-media/<topic>/` or `learning/<topic>/`.\n' >> "$g"
+  probe_clean "the learning placeholders learning/syntek-media/<topic>/ and learning/<topic>/ are clean (D86)"
   sed -i '$d' "$g"
   printf 'Exactly one of `BUSINESS.md`, `FICTION.md`, `NONFICTION.md` ships; see `workflows/local/02-x/`, `renders/`, `raw/`, `reference/`, `local/`, `project/`.\n' >> "$g"
   probe_clean "a bare mode-file name, and every generic folder name, is never a missing path"

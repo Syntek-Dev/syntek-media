@@ -15,14 +15,14 @@
 #
 #                    Three layers in the ROOT .claude/settings.json close that (DESIGN.md
 #                    Section 7): permissions.deny lists Skill(<name>) for every template skill —
-#                    the ten of Section 5.1 and the seven family skills of D80 (grill-me,
-#                    grill-with-docs, grilling, handoff, to-questionnaire, wait-what,
-#                    wayfinder), which ship under template/ like any other — and an unqualified
-#                    deny also blocks the nested template:<name> form; skillOverrides sets each
-#                    of them "off", which hides it from the session's skill list as well;
-#                    claudeMdExcludes keeps the generated project's manuals out. A deny names a
-#                    skill, not a folder: it also refuses a user-level skill of the same name in
-#                    a session started here.
+#                    the thirteen of Section 5.1 (D86) and the seven family skills of D80
+#                    (grill-me, grill-with-docs, grilling, handoff, to-questionnaire,
+#                    wait-what, wayfinder), which ship under template/ like any other — and an
+#                    unqualified deny also blocks the nested template:<name> form;
+#                    skillOverrides sets each of them "off", which hides it from the
+#                    session's skill list as well; claudeMdExcludes keeps the generated
+#                    project's manuals out. A deny names a skill, not a folder: it also refuses
+#                    a user-level skill of the same name in a session started here.
 #
 #                    Seven checks:
 #                      1. The root .claude/settings.json exists and is valid JSON.
