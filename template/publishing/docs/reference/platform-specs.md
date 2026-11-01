@@ -1,6 +1,6 @@
 ---
 type: guide
-skills: [cut-for-platform, prepare-post]
+skills: [cut-for-platform, prepare-post, media-research]
 model: opus
 ---
 
@@ -67,7 +67,8 @@ render or a package relies on it.
 - **Workflow:** `publishing/workflows/07-refresh-the-platform-specs/` finds stale tables, re-reads
   their sources and records each confirmed difference as an override.
 - **Skills:** `cut-for-platform` reads each deliverable's preset before rendering; `prepare-post`
-  reads the character and hashtag keys before writing a package.
+  reads the character and hashtag keys before writing a package; `media-research` re-reads a
+  stale table at its source and proposes each override.
 
 ## Governing standard
 

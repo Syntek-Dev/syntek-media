@@ -12,7 +12,7 @@ model: opus
 **What it is.** The spoken voice is how the brand sounds when it is heard rather than read: its
 pace, its register, how its own name is said, the words it never says aloud, the narrator for each
 use, and how every hard word is pronounced. It lives in one file, `brand/src/voice/voice.md`,
-which `voiceover` reads before every call, so pieces voiced months apart sound like one brand.
+read by `voiceover` and `media-tone`, so pieces voiced months apart sound like one brand.
 
 ## Spoken against written
 
@@ -23,6 +23,8 @@ which `voiceover` reads before every call, so pieces voiced months apart sound l
 - What changes aloud is the delivery: pace in words a minute, sentences short enough to hear
   once, numbers said as a listener hears them, and the words that read well but sound wrong.
   How a script is written for the ear is `scripts/docs/reference/writing-for-the-ear.md`.
+- **Register by type of content:** a sub-bullet under the Register line for each type that sounds
+  different (a Short, an episode), set only in `brand/workflows/05-write-the-spoken-voice/`.
 
 ## A narrator for each use
 
@@ -55,25 +57,23 @@ which `voiceover` reads before every call, so pieces voiced months apart sound l
 
 ## Consent
 
-- No voice is cloned without the person's recorded consent: a `voice-consent` row in
-  `production/src/rights-register.md`, `cleared`, whose ID goes in the narrator's Consent column
-  before the first call.
-- The brand owner's own clone needs its consent row like any other, and a remix of it cites the
-  same row; every synthetic voice is disclosed (`publishing/docs/reference/ai-disclosure.md`).
+- No voice is cloned without the person's recorded consent, the brand owner's own included: a
+  `voice-consent` row in `production/src/rights-register.md`, `cleared`, whose ID goes in the
+  narrator's Consent column before the first call, and which a remix of that clone cites.
+- Every synthetic voice is disclosed (`publishing/docs/reference/ai-disclosure.md`).
 
 ## How we apply it here
 
 - The spoken voice is settled with the author in a grilling pass before the first voiceover.
-- The pace in `voice.md` is what a script is timed at, unless its brief sets its own.
-- Voice IDs stay in `voice.md`; a segment register names its narrator by Use, never by ID.
+- The pace in `voice.md` is what a script is timed at, unless its brief sets its own. Voice IDs
+  stay in `voice.md`; a segment register names its narrator by Use, never by ID.
 
 ## Who implements it
 
 - **Workflows:** `brand/workflows/05-write-the-spoken-voice/`,
-  `production/workflows/02-make-a-voiceover/` and
-  `production/workflows/11-design-character-voices/`.
-- **Skill:** `voiceover` reads `voice.md` before every call and records a narrator the first time
-  it needs one; audiobook narration, where the project makes audiobooks, reads it too.
+  `production/workflows/02-make-a-voiceover/`, `production/workflows/11-design-character-voices/`.
+- **Skills:** `voiceover` reads `voice.md` before every call and records a narrator the first time
+  it needs one; audiobook narration, where the project makes audiobooks, and `media-tone` read it.
 
 ## Governing standard
 

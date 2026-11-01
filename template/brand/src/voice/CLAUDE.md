@@ -15,12 +15,14 @@ narrator, settings and pronunciations without asking again.
 
 - **Routing:** workflow `brand/workflows/05-write-the-spoken-voice/`; guide
   `brand/docs/reference/the-spoken-voice.md`; skill `voiceover`, which records a narrator here
-  the first time it needs one and reads this file before every call.
+  the first time it needs one and reads this file before every call; skill `media-tone`, which
+  reads the spoken style for a tone pass and never writes here.
 - **Model:** **Opus** for the spoken style, choosing a narrator with the author and settling a
   pronunciation; the mechanical tier for writing a row the author has decided
   (`.claude/rules/syntek-media/05-model-allocation.md`).
 - **Concrete steps:** read the written voice, where present → settle the spoken style with the
-  author → choose a narrator per use (model found with `mcp__elevenlabs__list_models`, voices
+  author (the register, with a sub-bullet under it for each type of content whose register
+  differs, a tone `media-tone` hands over included) → choose a narrator per use (model found with `mcp__elevenlabs__list_models`, voices
   listed free; any trial costed and agreed first) → record each with its date → add
   pronunciations as words come up.
 - **Definition of done:** every use the project needs has one narrator row, with its consent ID
@@ -29,6 +31,8 @@ narrator, settings and pronunciations without asking again.
 
 ## Guardrails
 
+- **The spoken style changes only through `brand/workflows/05-write-the-spoken-voice/`,** on the
+  author's word. A tone settled in a tone pass is handed there, never written here by the pass.
 - **One narrator per use.** A second voice for the same use makes the brand sound like two.
   Changing a narrator is the author's decision, recorded in `.claude/MEMORY.md` with its date
   before the row changes.
