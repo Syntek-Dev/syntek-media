@@ -26,7 +26,7 @@ model: opus
 
 **Sources**
 
-- [ ] `footage verify` passes for every recording, bed and sting the episode uses. · _sonnet_
+- [ ] `footage verify` passes for every recording, bed and sting the episode uses (exit 0; any data-root warning reported to the author). · _sonnet_
 - [ ] The bed has its rights row; every guest has a signed release in the register. · _sonnet_
 - [ ] Any voiceover segment used is `approved` and archived. · _sonnet_
 

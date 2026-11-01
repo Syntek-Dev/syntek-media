@@ -34,9 +34,10 @@ model: opus
 **Verifying**
 
 - [ ] `footage verify` run; any mismatch or unlisted file reported, and the manifest left as it was. · _sonnet_
+- [ ] Any data-root warning reported; a file filed only on the author's word, with the resolver's `add` and the role `footage` or `approved-take`. · _sonnet_
 
 ## Done When
 
-- [ ] **Every file has a footage ID, a checksum and a location label, and `footage verify` passes.** · _opus_
+- [ ] **Every file has a footage ID, a checksum and a location label, and `footage verify` passes (exit 0; its data-root warnings reported).** · _opus_
 - [ ] No footage was committed or forced past `production/src/.gitignore`. · _sonnet_
-- [ ] Handed back: footage IDs, kinds, durations, locations, rights rows opened, the verify result. · _opus_
+- [ ] Handed back: footage IDs, kinds, durations, locations, rights rows opened, the verify result and its data-root warnings. · _opus_

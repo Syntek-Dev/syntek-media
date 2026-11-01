@@ -1,4 +1,10 @@
 {
   "format": 1,
-  "folders": []
+  "folders": [
+    {"path": "production/src/footage"}
+  ],
+  "roles": [
+    {"name": "footage", "evidence": true, "repo": "skip"},
+    {"name": "approved-take", "evidence": true, "repo": "skip"}
+  ]
 }

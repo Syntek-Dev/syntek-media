@@ -46,8 +46,12 @@ ID; `--rights RRNNNN` links its rights row. It refuses a file whose hash is alre
 `production/src/footage/raw/` is the git-ignored copy of the files this machine needs.
 `python3 toolkit/media.py footage verify` checks it against the manifest: a changed byte or an
 unlisted file fails, and an entry not mirrored here is listed so it can be fetched from its
-location. The toolkit opens a mirrored file only by the path the manifest names, and prints
-names and hashes, never contents.
+location. It opens a mirrored file only by the path the manifest names, and prints names and
+hashes, never contents. On a data root, the resolver's `add` files a mirrored copy, on the
+author's word, under the role its kind gives (`approved-take` for `generated`, `footage`
+otherwise): both are evidence, so a filed copy is never replaced, and the resolver's storage
+manifest beside this one records it. `footage verify` warns, never fails, of a file not filed
+or filed with another checksum, naming that `add`; the shared chapter on the data root sets it up.
 
 ## Music beds, stock and archived takes
 

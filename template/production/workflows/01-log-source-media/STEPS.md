@@ -57,12 +57,18 @@ new row's `recorded` (DD/MM/YYYY) and any `notes` with the author. _Mechanical._
 
 Run `python3 toolkit/media.py footage verify`. A changed byte or an unlisted file fails: report
 it, and never change the manifest to match. Entries listed as not mirrored can be fetched from
-their location when a piece needs them. _Mechanical._
+their location when a piece needs them. Where the project keeps its files on a data root, the
+command also warns of each logged file not yet filed there, or filed with another checksum, and
+names the resolver's `add` with the role its kind gives: `approved-take` for a `generated` take
+or chapter, `footage` for the rest. A warning never fails the step. Report it, and run that
+`add` only on the author's word, with one of those two roles and never another, telling the
+author that media files its footage under those two roles alone; never work round a refusal.
+_Mechanical._
 
 ## 6. Hand back
 
 > **Skill:** none · **Guide:** `production/docs/reference/source-media.md`
 
 Report each footage ID with its kind, duration and location, the rights rows opened, and the
-result of `footage verify`. Remind the author that the master copies are safe only once they are
-backed up at their location. _Substantive._
+result of `footage verify`, with its data-root warnings and any file filed. Remind the author
+that the master copies are safe only once they are backed up at their location. _Substantive._
