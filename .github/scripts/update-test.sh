@@ -946,10 +946,11 @@ PYREP7
 }
 
 # Check 26: the footage folder's records before and after (D86): the manifest seed, the planted
-# clip and every other file in the mirror, and whether the storage manifest stands.
+# clip and every other file in the mirror but its README.md, which is the template's own (D42)
+# and which a release may rewrite, and whether the storage manifest stands.
 rel_footage_sums() { # $1 = project
   local f
-  for f in production/src/footage/manifest.toml $(cd "$1" && find production/src/footage/raw -type f 2>/dev/null | LC_ALL=C sort); do
+  for f in production/src/footage/manifest.toml $(cd "$1" && find production/src/footage/raw -type f ! -path production/src/footage/raw/README.md 2>/dev/null | LC_ALL=C sort); do
     printf '%s\t%s\n' "$f" "$(path_fingerprint "$1/$f")"
   done
   printf '%s\t%s\n' "$REL_STORAGE" "$(path_fingerprint "$1/$REL_STORAGE")"
