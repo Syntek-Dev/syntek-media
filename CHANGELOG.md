@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Changed
+
+- **`family-shared.json` records `unreleased` again** after the `v0.7.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9), as `shipped-seeds.sh --write-manifest` writes it on the first commit after a release tag, so check 23 holds on every commit until the next release. Development only, nothing ships.
+
 ## [0.7.0] - 01/11/2026
 
 Adds D86: three skills of media's own, `media-research`, `media-tone` and `media-teach`, beside syntek-author's `research`, `tone` and `teach`; `media-teach`'s run-time place in `learning/`, which media never ships; a data-root map that claims the footage folder, with `footage verify` warning (never failing) on footage logged but not filed; and `MEDIA_CHROMIUM`, a user-scope variable naming the browser `card.py` and `scene.py` launch. It re-vendors the family-shared set from syntek-author `v0.9.1` (its `v0.9.0` bytes) and seeds the family's Concise output style.

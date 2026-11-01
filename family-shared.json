@@ -1,7 +1,7 @@
 {
   "format": 1,
   "owner": "syntek-media",
-  "release": "v0.7.0",
+  "release": "unreleased",
   "files": [
     {"path": ".agents/mcp_config.json", "source": "template/.agents/mcp_config.json", "kind": "file", "bytes": 1308, "sha256": "6438111483f24ec49f27c8a785a772dd4670e84e04778c2c92e69c22cfbceb29"},
     {"path": ".agents/skills", "source": "template/.agents/skills", "kind": "symlink", "target": "../.claude/skills"},
