@@ -95,7 +95,8 @@ Fix every finding before rendering. _Mechanical._
 For each deliverable, run `uv run toolkit/card.py render <html> --deliverable KEY -o <png>`, or
 `--size WxH` for a size the author confirmed in step 2, writing
 `publishing/src/renders/<piece>/<html-stem>.<platform>-<format>.png`, in the piece's own folder.
-Exit 2 names a missing uv or Chromium, with its install command: report it, and stop.
+Exit 2 names a missing uv or Chromium, with its install command, or a `MEDIA_CHROMIUM` that will
+not resolve or start, with its fix: report the line it prints, and stop.
 _Mechanical._
 
 ## 8. Make the posters, the other formats and the GIF

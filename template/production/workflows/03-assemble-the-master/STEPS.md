@@ -68,9 +68,10 @@ _Substantive._
 > **Skill:** `cut-for-platform` · **Guide:** `production/docs/reference/edit-decision-lists.md`
 
 Run `python3 toolkit/media.py assemble production/src/edits/<piece>.toml`. It renders any card
-PNG that is missing or stale with `uv run toolkit/card.py` first; exit 2 names uv or Chromium
-when it cannot, so report the install hint it prints and stop. Exit 1 means the master failed
-its own verification: report what failed, correct the list, and assemble again. _Mechanical._
+PNG that is missing or stale with `uv run toolkit/card.py` first; exit 2 names uv, Chromium or
+`MEDIA_CHROMIUM` when it cannot, so report the line it prints, an install hint or a
+`MEDIA_CHROMIUM` fix, and stop. Exit 1 means the master failed its own verification: report
+what failed, correct the list, and assemble again. _Mechanical._
 
 ## 6. Probe and measure
 

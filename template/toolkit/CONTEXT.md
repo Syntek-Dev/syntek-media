@@ -67,6 +67,11 @@ toolkit/
   the contract: tokens linked and resolving, brand fonts loading, `@dsCard` on line 1 of a
   preview. **A script with a dependency**, declared inline (PEP 723) and pinned, so
   `uv run toolkit/card.py` fetches Playwright for itself and installs nothing globally.
+  **The browser** is Playwright's own Chromium, the reference, unless `MEDIA_CHROMIUM`, set by
+  the author at user scope, names another Chromium-based browser by absolute path or command
+  name; `card.py` and `scene.py` then print one note naming it, and a value that does not
+  resolve, or a browser that will not start, is exit 2 naming the variable, never the install
+  line. The audits clear it, and nothing promises another browser's pixels match the reference.
 - `transcribe.py` — WhisperX 3.8.6 aligns approved segment words on the joined voice; the heard-word
   cross-check runs by default. `media.py transcribe` runs `MEDIA_TRANSCRIBE_PYTHON`'s interpreter
   by path where it is set, otherwise offline uv, never on a `UV_PYTHON` outside `transcribe.py`'s

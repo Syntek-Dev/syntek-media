@@ -115,7 +115,8 @@ are the procedure of record — do not restate them at length here.
    `python3 toolkit/media.py assemble production/src/edits/<piece>.toml`. It writes
    `production/src/renders/<piece>/<piece>.master.mp4` (`.wav` for an audio master), first
    rendering any card that is missing or older than its HTML or `tokens.css` into that folder's
-   cards subfolder with `uv run toolkit/card.py`, and exits 2 naming uv or Chromium when it cannot. If a
+   cards subfolder with `uv run toolkit/card.py`, and exits 2 naming uv, Chromium or `MEDIA_CHROMIUM`
+   when it cannot: report the line it prints, an install command or a `MEDIA_CHROMIUM` fix. If a
    tool is missing, say which one and which command it blocks; never report a command as passed
    when it could not run. Exit 1 is a failed verification: report it, and never run it again with
    changed settings to force a pass. Probe the master (`python3 toolkit/media.py probe`), measure

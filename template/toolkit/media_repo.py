@@ -13,6 +13,15 @@ take archived with --kind generated has its F ID written into its segment's arch
 verify' proves the mirror against the manifest: a changed file or an unlisted file fails, an
 entry not mirrored here is listed.
 
+The data root (DESIGN D86): media's map claims production/src/footage, with the roles footage
+and approved-take. Where the family resolver's 'store' prints external for syntek-media, 'footage
+verify' also reads the folder's storage manifest (production/src/footage/external.toml, written
+only by the resolver) and warns, never fails, on each logged row with no current filed row of
+its path and on each filed row whose sha256 differs, naming the resolver's add with the role the
+row's kind gives (approved-take for generated, footage otherwise), its location as the label, and
+the shared chapter on the data root. It never opens the data root and never files anything;
+where 'store' cannot answer it says so and skips that check, and under repo it is silent.
+
 The guard (DESIGN D19): Git LFS is used only for brand/src/exports/large/. 'check' finds an
 LFS-marked file stored as a plain blob, an LFS-marked file present while no LFS filter is
 configured, a file over 10 MB outside the ignored and LFS folders, and a missing nested ignore
@@ -22,7 +31,10 @@ avif muxer for AVIF), each named with the formats its absence blocks and never a
 Python, uv and whether the interpreter a plain 'uv run' of card.py or scene.py would choose here
 is a virtual environment's whose base is another Python version (DESIGN D20's mislink, found
 with 'uv python find' and the interpreter's own -c answer, so no environment is built and the
-network is never reached), the pinned Playwright's Chromium, git-lfs where large exports exist,
+network is never reached), the pinned Playwright's Chromium (a note, not a FAIL, where a valid
+MEDIA_CHROMIUM stands in) and which browser cards and scenes will use (D20, D86: Playwright's own,
+or the one MEDIA_CHROMIUM names, read through card.py's own rule and never launched here; a value
+that does not resolve is a FAIL), git-lfs where large exports exist,
 the optional espeak-ng, pandoc and fontconfig's fc-match (card.py --self-test's brand-font
 probe), the allow, ask and deny entries of .claude/settings.json (D13's two deny entries keep
 hand edits out of renders/ and generated/; its two voice remix ask entries make 'voice remix run'
@@ -54,7 +66,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import posixpath
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -243,10 +257,102 @@ def cmd_footage_verify(args) -> int:
         print(f"  FAIL  {C.shown(u)} is in the mirror but not in the manifest: log it with 'footage add'")
     for a in absent:
         print(f"  --    {a}: not mirrored here")
+    filing = filing_warnings(manifest, rows) if manifest.resolve() == C.path(C.MANIFEST).resolve() else ""
     found = len(bad) + len(unlisted)
     print(f"footage verify {C.shown(manifest)}: {len(rows)} entr{'y' if len(rows) == 1 else 'ies'}, "
-          f"{len(absent)} not mirrored, {'clean' if not found else f'{found} finding(s)'}")
+          f"{len(absent)} not mirrored, {'clean' if not found else f'{found} finding(s)'}{filing}")
     return 1 if found else 0
+
+
+# ── the data root (D86): warnings only, never a filing ─────────────────────────────────────
+
+DATA_ROOT_CHAPTER = "how-to/src/TEMPLATE-GUIDE/the-data-root.md"
+
+
+def role_for(kind) -> str:
+    """The role a manifest kind is filed under in media's map: approved-take for a generated take
+    or chapter, footage for every other kind (D86)."""
+    return "approved-take" if str(kind) == "generated" else "footage"
+
+
+def resolver():
+    """Media's own copy of the family's data-root resolver, the one footage verify asks and whose
+    add its warnings name (D86); None where the project no longer holds it."""
+    own = C.path(".claude/syntek-media-dataroot.py")
+    return own if own.is_file() else None
+
+
+def media_store(tool: Path):
+    """(store, why): the store the resolver's 'store' prints for syntek-media, or None and why it
+    could not answer. The toolkit asks the resolver and never reads an answers file (D86)."""
+    try:
+        proc = subprocess.run([sys.executable, str(tool), "store"], cwd=C.ROOT, capture_output=True,
+                              text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as err:
+        return None, f"its store command did not run ({err})"
+    if proc.returncode != 0:
+        said = [x.strip() for x in (proc.stderr + "\n" + proc.stdout).splitlines()
+                if x.strip() and set(x.strip()) != {"="}]
+        return None, f"its store command exited {proc.returncode}" + (f": {said[0]}" if said else "")
+    for line in proc.stdout.splitlines():
+        name, _, value = line.partition(":")
+        if name.strip() == "syntek-media":
+            return value.strip(), ""
+    return None, "its store command printed no store for syntek-media"
+
+
+def filing_warnings(manifest: Path, rows: list) -> str:
+    """Under external, a warning for each logged row the footage folder's storage manifest does not
+    hold as current, or holds with another sha256; the summary's tail. Never a failure (D86)."""
+    tool = resolver()
+    if tool is None:
+        print("  note  the data-root check is skipped: .claude/ holds no syntek-media-dataroot.py to ask the store")
+        return ""
+    store, why = media_store(tool)
+    if store is None:
+        print(f"  note  the data-root check is skipped: the resolver could not answer ({why})")
+        return ""
+    if store != "external":
+        if store != "repo":
+            print(f"  note  the data-root check is skipped: the store reads {store!r}, which this toolkit "
+                  "does not act on")
+        return ""
+    storage = manifest.parent / "external.toml"
+    filed = {}
+    if storage.is_file():
+        try:
+            import tomllib
+            entries = tomllib.loads(C.read_text(storage)).get("file", [])
+        except (ValueError, OSError) as err:
+            print(f"  note  the data-root check is skipped: {C.shown(storage)} does not parse ({err})")
+            return ""
+        for e in entries if isinstance(entries, list) else []:
+            if isinstance(e, dict) and e.get("state") == "current":
+                filed[str(e.get("path", ""))] = str(e.get("sha256", "")).lower()
+    command = "python3 " + tool.relative_to(C.ROOT).as_posix() if tool.is_relative_to(C.ROOT) else \
+        "python3 " + str(tool)
+    unfiled = differ = 0
+    for r in rows:
+        rel = str(r.get("path", ""))
+        project_rel = posixpath.normpath(f"{C.FOOTAGE}/{rel}")
+        add = (f"{command} add {shlex.quote(project_rel)} --role {role_for(r.get('kind'))} "
+               f"--label {shlex.quote(str(r.get('location', '')).strip() or 'LABEL')}")
+        if project_rel not in filed:
+            unfiled += 1
+            mirrored = "" if (manifest.parent / rel).is_file() else " once it is mirrored here"
+            print(f"  warn  {r.get('id')} {rel}: logged but not filed on the data root; file it{mirrored} "
+                  f"with: {add} (see {DATA_ROOT_CHAPTER})")
+        elif filed[project_rel] != str(r.get("sha256", "")).lower():
+            differ += 1
+            print(f"  warn  {r.get('id')} {rel}: filed on the data root with sha256 {filed[project_rel][:16]}…, "
+                  f"logged with {str(r.get('sha256', ''))[:16]}…; a filed copy is evidence and is never "
+                  f"replaced: check it with '{command} verify', and log a changed file under a new name, "
+                  f"then file that with: {command} add NEW-PATH --role {role_for(r.get('kind'))} --label "
+                  f"{shlex.quote(str(r.get('location', '')).strip() or 'LABEL')} (see {DATA_ROOT_CHAPTER})")
+    if not unfiled and not differ:
+        return "; data root: every entry filed"
+    return (f"; data root: {unfiled} not filed, {differ} filed with another sha256 "
+            "(warnings only)")
 
 
 # ── tokens ──────────────────────────────────────────────────────────────────────────────
@@ -763,10 +869,28 @@ def setup_report(root: Path) -> tuple:
                    'broken executable or missing res/sphinx/cmudict-en-us.dict'), C.INSTALL['rhubarb'])
     cache = playwright_cache()
     found = sorted(d.name for d in cache.glob(f"chromium*-{PLAYWRIGHT_REVISION}")) if cache.is_dir() else []
-    item(bool(found), f"Chromium for Playwright 1.64.0 ({', '.join(found) or 'not installed'})",
-         "uv run --with playwright==1.64.0 playwright install chromium; where the browsers come from "
-         "a system bundle (NixOS, where playwright install cannot write), it must ship revision "
-         f"{PLAYWRIGHT_REVISION}, set in PLAYWRIGHT_BROWSERS_PATH or by a uv wrapper")
+    import card as K   # standard library at import; the one MEDIA_CHROMIUM rule (D20, D86)
+    try:
+        chosen, refused = K.chromium_override(), ""
+    except K.ChromiumSetting as err:
+        chosen, refused = None, str(err)
+    install = ("uv run --with playwright==1.64.0 playwright install chromium; where the browsers come from "
+               "a system bundle (NixOS, where playwright install cannot write), it must ship revision "
+               f"{PLAYWRIGHT_REVISION}, set in PLAYWRIGHT_BROWSERS_PATH or by a uv wrapper")
+    if found or not chosen:
+        item(bool(found), f"Chromium for Playwright 1.64.0 ({', '.join(found) or 'not installed'})"
+             + (", the reference" if found and chosen else ""), install)
+    else:   # a valid MEDIA_CHROMIUM stands in: the reference's absence is a note (D49)
+        item(None, "Chromium for Playwright 1.64.0 not installed: it is the reference, which the audits "
+                   "use; cards and scenes here use MEDIA_CHROMIUM (to add the reference: "
+                   "uv run --with playwright==1.64.0 playwright install chromium)")
+    if refused:   # card.py never falls back to Playwright's own Chromium, so this is a FAIL
+        item(False, refused)
+    elif chosen:
+        item(None, f"MEDIA_CHROMIUM: cards and scenes use {chosen}, not the reference; not started here "
+                   "(uv run toolkit/card.py --self-test starts it)")
+    else:
+        item(None, "MEDIA_CHROMIUM unset: cards and scenes use Playwright's own Chromium, the reference")
     large = root / "brand/src/exports/large"
     exports = [f for f in C.walk_files(large) if f.name not in (".gitattributes", "CONTEXT.md", "CLAUDE.md")] \
         if large.is_dir() else []

@@ -102,6 +102,11 @@ deliverable is one line and a failed render says exactly what failed.
   `-o production/src/scenes/<piece>.real.json`; existing tracked copies must be Git-clean.
 - **Capture recovery:** cards and scenes retry Chromium's specific capture failure twice on
   the same page, without advancing a scene frame; exhaustion or another browser error exits 2.
+- **Another browser:** `MEDIA_CHROMIUM` is the author's, at user scope: never set, export or
+  change it from a session, not even to work round an error. A `card.py` or `scene.py` error
+  that names it is reported to the author as printed, with its two fixes (correct it, or unset
+  it to use Playwright's own Chromium); never answer it with the install line. A run on it
+  prints one note naming the browser; `uv run toolkit/card.py --self-test` proves the browser.
 
 - **Jev scoring:** `score plan INPUT` is offline. Show request and current cost basis, wait,
   then `score run INPUT --approve-call` sends one paid request with a user-scope key. Never

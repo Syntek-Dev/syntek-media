@@ -13,6 +13,10 @@ Usage:
 The tracked scene defines build_scene(root, piece), returning media_scene.Scene.
 Every run executes it by path and writes its ignored page afresh. Exit codes:
 0 verified, 1 findings, 2 could not run. No generation API or model fetch.
+
+The browser is card.py's (DESIGN D20, D86): Playwright's own Chromium, or the one a user-scope
+MEDIA_CHROMIUM names, with card.py's note, errors and exit 2. The self-test honours it, and a
+MEDIA_CHROMIUM error is a FAIL there, never the SKIP an absent browser is.
 """
 from __future__ import annotations
 
@@ -336,8 +340,14 @@ def self_test() -> int:
             have_browser = True
             try:
                 with card.Browser(): pass
+            except card.ChromiumSetting as err:   # a misconfigured variable, not a missing browser (D20)
+                have_browser = False
+                check(f'the browser {card.CHROMIUM_VAR} names starts under Playwright 1.64.0 '
+                      '(the browser cases need it)', False, err)
             except C.Fatal as err:
                 have_browser = False; skips.append(str(err)); print('  SKIP ' + str(err))
+            if have_browser and card.chromium_override() is not None:
+                print(f'  note: browser cases run on {card.CHROMIUM_VAR} ({card.chromium_override()}), not the reference')
             if have_browser:
                 def browser_checks():
                     args = argparse.Namespace(piece=scene.piece,size=['160x90','90x160'])
