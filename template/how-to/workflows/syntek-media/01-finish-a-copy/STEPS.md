@@ -89,7 +89,7 @@ _Mechanical._
 
 > **Skill:** none · **Guide:** `how-to/docs/syntek-media/finishing-a-copy.md`
 
-The media rules in `.claude/rules/syntek-media/` load at launch whatever the index files say, so
+The media rules in `.claude/rules/syntek-media/` load whatever the index files say, so
 this step is optional. Where the author wants it, add a line naming the media layers (`brand/`,
 `scripts/`, `production/` and `publishing/`) to `README.md` and `CONTEXT.md`, and one naming
 `.claude/rules/syntek-media/` to `.claude/CLAUDE.md`, in the author's words. Nothing needs adding

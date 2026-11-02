@@ -1,3 +1,31 @@
+---
+paths:
+  - "toolkit/**"
+  - ".gitattributes"
+  - "{production,publishing}/src/.gitignore"
+  - "{production,publishing}/src/renders/**"
+  - "production/src/{assets,audiobook,cards,edits,footage,scenes,timing,voiceover}/**"
+  - "publishing/src/{captions,cut-downs,podcast,thumbnails}/**"
+  - "brand/src/{design-system,exports}/**"
+  - "brand/src/platforms/overrides.toml"
+  - "brand/workflows/*-{set-up-the-brand-kit,sync-with-claude-design,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**"
+  - "brand/workflows/local/*-{set-up-the-brand-kit,sync-with-claude-design,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**"
+  - "scripts/workflows/*-{write-a-script,storyboard-a-piece}/**"
+  - "scripts/workflows/local/*-{write-a-script,storyboard-a-piece}/**"
+  - "production/workflows/*-{log-source-media,make-a-voiceover,assemble-the-master,master-a-podcast-episode,narrate-an-audiobook,master-an-audiobook,bring-in-a-recording,time-the-voice,animate-a-scene,design-character-voices}/**"
+  - "production/workflows/local/*-{log-source-media,make-a-voiceover,assemble-the-master,master-a-podcast-episode,narrate-an-audiobook,master-an-audiobook,bring-in-a-recording,time-the-voice,animate-a-scene,design-character-voices}/**"
+  - "publishing/workflows/*-{plan-the-cut-downs,cut-for-a-platform,caption-a-piece,brief-a-thumbnail,prepare-a-post,record-a-publication,refresh-the-platform-specs,publish-the-podcast-feed}/**"
+  - "publishing/workflows/local/*-{plan-the-cut-downs,cut-for-a-platform,caption-a-piece,brief-a-thumbnail,prepare-a-post,record-a-publication,refresh-the-platform-specs,publish-the-podcast-feed}/**"
+  - "brand/docs/{reference,project}/{claude-design,design-exports,the-brand-kit}.md"
+  - "scripts/docs/{reference,project}/storyboards-and-shot-lists.md"
+  - "production/docs/{reference,project}/{audiobook-narration,character-voices,edit-decision-lists,elevenlabs,scenes-as-code,sound-and-loudness,source-media,voiceover}.md"
+  - "publishing/docs/{reference,project}/{captions,cut-downs,platform-specs,podcast,podcast-feed,scoring-options,thumbnails}.md"
+  - ".claude/skills/{captions,cut-for-platform,narrate-audiobook,prepare-post,repurpose,storyboard,thumbnail-brief,voiceover,write-script}/**"
+  - "how-to/src/TEMPLATE-GUIDE/syntek-media/{02-prerequisites,09-your-first-piece,13-troubleshooting}.md"
+  - "how-to/docs/syntek-media/finishing-a-copy.md"
+  - "how-to/workflows/syntek-media/*-finish-a-copy/**"
+---
+
 # 04-toolkit-pipeline.md — how sources become masters and deliverables, and the toolkit commands
 
 **Last Updated**: <%DATE%> **Version**: 0.1.0 **Maintained By**: <%OWNER_NAME%>

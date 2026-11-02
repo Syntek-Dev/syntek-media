@@ -7,7 +7,7 @@ This chapter explains how the two live together, and how to keep both in step.
 ## What each template keeps
 
 - Each template records its answers in its own file: this one's is `.copier-answers.syntek-media.yml`, and syntek-author's is `.copier-answers.syntek-author.yml`.
-- Media keeps its rules in `.claude/rules/syntek-media/`, beside syntek-author's rules folder, and both sets load at launch.
+- Media keeps its rules in `.claude/rules/syntek-media/`, beside syntek-author's rules folder; each template loads most of its rules at launch and a few only once Claude opens a file they cover.
 - Media ships its own bridge for the other coding agents, `.claude/syntek-media-agents.md`, beside syntek-author's.
 - Media's skills, layers and workflows have names of their own, and none of them collides with syntek-author's.
 - syntek-author's project settings file, 00-project.md, outranks media's rules, as it outranks syntek-author's own.

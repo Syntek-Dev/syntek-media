@@ -95,6 +95,7 @@ Each recipe ends the same way: run the audits (Section 8) and add a `CHANGELOG.m
 3. A gated skill gets one `_exclude` line in its block of `copier.yml`: `"<: if not (GATE) :>/.claude/skills/<name><: endif :>"`.
 4. Add its row to `template/.claude/rules/syntek-media/02-skills.md` Section 3, wrapped in its gate, and to the skill catalogue in `.github/scripts/_common.sh`.
 5. Propose its `Skill(<name>)` deny line and its `"<name>": "off"` `skillOverrides` entry for the root `.claude/settings.json` and its line in the user-level Codex recipe of `.codex/CLAUDE.md` (Section 3).
+6. If it runs or teaches a toolkit command (`media.py`, `card.py`, `scene.py`, ffmpeg or `git lfs`), add its folder to rules 04's `paths` globs (D87) in one change, in all three places: the frontmatter of `template/.claude/rules/syntek-media/04-toolkit-pipeline.md`, its transcription in DESIGN.md Section 4.1 (approved first) and `SM_RULE_PATHS_04` in `_common.sh`. The list is one superset, never gated; `shipped-seeds.sh` check 37 catches a dead glob, never a missing one, and holds the frontmatter to `SM_RULE_PATHS_04`, but no audit reads DESIGN.md's copy: compare it by hand.
 
 **7.2 Add or remove a mode file.** Write `BUSINESS.md`, `FICTION.md` or `NONFICTION.md` beside the `SKILL.md` with the four H2s (beside a family-shared skill, `MEDIA-BUSINESS.md`, `MEDIA-FICTION.md` or `MEDIA-NONFICTION.md`, routing only: D7 as D80 amends it), then regenerate the block of `copier.yml` between the `BEGIN`/`END generated mode excludes` markers:
 
@@ -111,13 +112,14 @@ Never type a line in that block; `--check` fails CI when the block and the files
 2. Add one line to the right block of `copier.yml`: `"<: if not (GATE) :>/path<: endif :>"`, `GATE` copied verbatim, its item single-quoted and with no parentheses inside it. A membership test on `PLATFORMS` or `MEDIA_KINDS` needs no `BRAND_KIND` test (D15); a gate on a list question hidden by `when:` does, because a hidden question keeps its default in the render context.
 3. Wrap every index row, tree line and cross-reference that names the path in `<: if GATE :>…<: endif :>`, or name it in prose.
 4. If the path is also a seed or an example, it needs its gate line **and** its seed or seed-once line.
+5. If the path is a `src/` folder the toolkit reads or writes, or a workflow, guide or skill that runs or teaches a toolkit command, add it to rules 04's globs as 7.1 step 6 says, ungated: a glob for a path a render lacks matches nothing (D87).
 
 Never negate anything back in under a gated directory except a README-only output folder's own
 `README.md` (D42), with that negation above every gated line (D19, Sections 3.5 and 10).
 Copier obeys the last matching pattern, so a negation below a shut gate would reopen its path.
 `shipped-seeds.sh` check 16 checks the order; `shipped-brands.sh` check 12 checks the renders.
 
-**7.4 Add a workflow.** Numbers are frozen and append-only, unique within a layer across every brand kind, platform and media kind (D32). Take the next unused number, write all four files, add the row to the layer's `workflows/CLAUDE.md` table and `workflows/CONTEXT.md` (gated if the workflow is), and gate the folder in `copier.yml` if it is gated. Cite it everywhere by its full folder name. A how-to procedure takes the next unused number in `how-to/workflows/syntek-media/` (from 01, frozen and append-only), its four files, its row in that folder's `CLAUDE.md` table and its tree line in its `CONTEXT.md`, and its row in `_common.sh`'s catalogue; it is never gated (DESIGN.md Section 4.4, D84).
+**7.4 Add a workflow.** Numbers are frozen and append-only, unique within a layer across every brand kind, platform and media kind (D32). Take the next unused number, write all four files, add the row to the layer's `workflows/CLAUDE.md` table and `workflows/CONTEXT.md` (gated if the workflow is), and gate the folder in `copier.yml` if it is gated. Cite it everywhere by its full folder name. A how-to procedure takes the next unused number in `how-to/workflows/syntek-media/` (from 01, frozen and append-only), its four files, its row in that folder's `CLAUDE.md` table and its tree line in its `CONTEXT.md`, and its row in `_common.sh`'s catalogue; it is never gated (DESIGN.md Section 4.4, D84). If its steps run or teach a toolkit command beyond `presets`, add its slug to rules 04's globs as `*-<slug>`, with a layer workflow's `workflows/local/` twin (7.1, step 6); `shipped-seeds.sh` check 37 fails on a layer workflow that names the toolkit and that no glob matches.
 
 **7.5 Add a seed.** Add it to DESIGN.md Section 3.1 and to `_skip_if_exists` in `copier.yml`, **anchored with a leading slash** (an unanchored name matches at every depth and would freeze template-owned files of the same name). Ship it empty of entries. A gated seed also needs its `_exclude` line. **Never stop shipping a seed** without a migration that preserves it first: a seed the template drops is deleted from every project on its next update, filled in or not. **A shared root file, once shipped, is never removed from `template/` or renamed, and neither of its two lines in `copier.yml` is ever deleted** (D11, DESIGN.md Section 10).
 
@@ -133,6 +135,7 @@ Copier obeys the last matching pattern, so a negation below a shut gate would re
 4. Its line in `_message_before_update`, naming every file removing it deletes, workflows by full folder name (D16).
 5. Its row in `README.md`'s platforms or media-kinds table, and its rows in `_common.sh`'s path catalogue.
 6. Turn it on in at least one `examples/*.answers.yml`, so the three still cover every value, and check that it appears in the `all` renders and not in the `minimal` ones.
+7. Every guide, workflow, skill or `src/` folder it adds that runs or teaches a toolkit command goes into rules 04's globs (7.1, step 6), a guide with its `docs/project/` twin.
 
 **7.9 Adopt a new syntek-author tag (the family-shared set, D80).** Change `DESIGN.md` first: D80 and D81 name the tag media vendors from.
 

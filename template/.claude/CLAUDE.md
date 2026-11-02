@@ -7,7 +7,8 @@
 
 > Read this file first, then `.claude/MEMORY.md`, then the `CONTEXT.md` and `CLAUDE.md` of
 > whichever folder you are about to work in — in that order — before editing anything. The
-> template's rules in `.claude/rules/syntek-media/` load automatically with this file.
+> template's rules in `.claude/rules/syntek-media/` load automatically with this file (`04-`
+> once the work reaches its files, Section 2).
 
 ---
 
@@ -39,9 +40,12 @@ cadence, the next publish date and the running status live in `.claude/MEMORY.md
 
 ## 2. Where the rules live
 
-The rules are the files `01-` to `08-` in `.claude/rules/syntek-media/`. Claude Code loads them
-at launch, alongside this file, so there is no need to open them before working; open one when a
-task turns on its subject.
+The rules are the files `01-` to `08-` in `.claude/rules/syntek-media/`. Claude Code loads seven
+of them at launch, alongside this file, so there is no need to open those before working; open
+one when a task turns on its subject. `04-toolkit-pipeline.md` loads only once a session reads or
+edits a file its `paths` frontmatter lists, never for a command such as `python3 toolkit/media.py`
+that runs rather than reads: read it before running a toolkit command
+(`.claude/rules/syntek-media/01-layout-and-routing.md` Section 9).
 
 | File | Owns |
 |---|---|

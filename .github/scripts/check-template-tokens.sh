@@ -21,7 +21,7 @@
 #                            the design says is byte-identical is not — and a shared skill that
 #                            renders differently per brand is a fork nobody can review.
 #
-#                            Nine checks:
+#                            Ten checks:
 #                              1. Malformed variable — a lower-case name, an empty expression, or
 #                                 a backslash or asterisk inside it (Prettier escaping an
 #                                 underscore, or pairing it with _emphasis_).
@@ -47,6 +47,14 @@
 #                                 templated _exclude line. A copy-only or seed-once gate
 #                                 (_copier_operation, SEED_EXAMPLES) is never one: an index
 #                                 never gates a row on the examples (D43).
+#                             10. A rules file under .claude/rules/syntek-media/ that opens with
+#                                 --- leaves its frontmatter unclosed (no closing --- line
+#                                 before the file's first Markdown heading), or holds an opener
+#                                 of any of the three delimiters between its two --- lines. The
+#                                 rules are spine files, but their frontmatter is the one part
+#                                 that never varies: a gated glob would give each render its own
+#                                 paths list, and frontmatter Claude Code cannot parse loads the
+#                                 rule at launch, silently (DESIGN.md D87; syntek-author D59).
 #
 #                            The spine set (DESIGN.md Section 2): the root spine
 #                            (.claude/rules/syntek-media/*.md and the answers file); the
@@ -264,6 +272,21 @@ run_checks() {
   line="$(grep '^T' "$stats" || true)"
   TOKEN_COUNT="$(cut -f2 <<< "$line")"; FILE_COUNT="$(cut -f3 <<< "$line")"
   rm -f "$manifest" "$stats"
+
+  # ── 10. The rules' frontmatter never varies and always closes (D87) ─────────
+  local rf
+  for rf in "$TPL/.claude/rules/syntek-media/"*.md; do
+    [[ -f "$rf" ]] || continue
+    while IFS=$'\t' read -r loc msg; do
+      [[ -n "$loc" ]] && finding "check 10 — $loc — $msg"
+    done < <(awk -v rel="${rf#"$TPL/"}" '
+      FNR == 1 { if ($0 != "---") exit; open = 1; next }
+      open && $0 == "---" { open = 0; exit }
+      open && /^#{1,6} / { printf "%s:1\tfrontmatter opened with --- is never closed before the first heading — Claude Code cannot parse it and loads the rule at launch (D87)\n", rel; open = 0; bad = 1; exit }
+      open && /<%|<:|<~/ { printf "%s:%d\ta template delimiter inside the frontmatter — the paths list is the same in every render (D87; syntek-author D59)\n", rel, FNR }
+      END { if (open && !bad) printf "%s:1\tfrontmatter opened with --- is never closed — Claude Code cannot parse it and loads the rule at launch (D87)\n", rel }
+    ' "$rf")
+  done
 }
 
 # ── Self-test ────────────────────────────────────────────────────────────────
@@ -343,6 +366,18 @@ EOF
   iput "<: if BRAND_KIND == 'author-nonfiction' :>├── NONFICTION.md  ← a mode gate<: endif :>"
   probe_clean "a BRAND_KIND mode gate is a shipping gate"
   printf '%s\n' "$ikeep" > "$index"
+
+  # 10: the rules' frontmatter (D87). A clean scoped rule first: a token in its body is spine.
+  local rules="$TPL/.claude/rules/syntek-media" body
+  mkdir -p "$rules"
+  body="$(printf '# 04-toolkit-pipeline.md — <%%BRAND_NAME%%>\n\n---\n\n## 1. The pipeline\n')"
+  printf -- '---\npaths:\n  - "toolkit/**"\n---\n\n%s\n' "$body" > "$rules/04-toolkit-pipeline.md"
+  probe_clean "a rules file with closed, token-free frontmatter and a token in its body"
+  printf -- '---\npaths:\n  - "toolkit/**"\n  - "<: if %saudiobook%s in MEDIA_KINDS :>production/src/audiobook/**<: endif :>"\n---\n\n%s\n' "$q" "$q" "$body" > "$rules/04-toolkit-pipeline.md"
+  probe "check 10 fires on a gated glob line in a rules file's frontmatter" "check 10 — .claude/rules/syntek-media/04-toolkit-pipeline.md:4 — a template delimiter inside the frontmatter"
+  printf -- '---\npaths:\n  - "toolkit/**"\n\n%s\n' "$body" > "$rules/04-toolkit-pipeline.md"
+  probe "check 10 fires on frontmatter the file never closes" "check 10 — .claude/rules/syntek-media/04-toolkit-pipeline.md:1 — frontmatter opened with --- is never closed"
+  rm -rf "$TPL/.claude"
 
   TPL="$real_tpl"; COPIER="$real_copier"; SM_SETS_FOR=""
   st_finish "well-formed template syntax from broken"

@@ -129,8 +129,9 @@ The exceptions are syntek-author's, unchanged, then media's:
 
 - Every `build`, `.git`, `audio`, `__pycache__` and `node_modules` folder is generated; nothing in
   them is read for guidance.
-- `.claude/rules/` holds rules only: Claude Code loads every Markdown file there at launch, so a
-  `CONTEXT.md` placed there would load as a rule.
+- `.claude/rules/` holds rules only: Claude Code loads every Markdown file there, at launch or,
+  for a file with `paths` frontmatter, with its files (Section 9), so a `CONTEXT.md` placed there
+  would load as a rule.
 - The inside of each `.claude/skills/<skill>/` folder: a skill is its own manual.
 - Each `drafts` and `.base` folder carries only a `README.md`; its parent's pair governs it.
 - Each `generated`, `renders` and `raw` folder carries only a tracked `README.md`; everything else
@@ -221,12 +222,23 @@ syntek-author's 00-project.md, where present, or a project rule (Section 10).
 ## 9. Read order
 
 1. `.claude/CLAUDE.md`: the project brief. It imports the root `CONTEXT.md`, and these rules load
-   with it, this file's Section 1 among them (and syntek-author's rules, where present).
+   with it, this file's Section 1 among them, but for the one below (and syntek-author's unscoped
+   rules, where present).
 2. `.claude/MEMORY.md`, under the headings the Memory headings of syntek-author's 00-project.md
    map, where present.
 3. Each ancestor folder's `CONTEXT.md` then `CLAUDE.md`, from the top down.
 4. The target folder's `CONTEXT.md` (imported by its `CLAUDE.md`), then its `CLAUDE.md`.
 5. The routing frontmatter of the file you are about to open (Section 7).
+
+**One rule loads only with its files.** `.claude/rules/syntek-media/04-toolkit-pipeline.md`
+carries `paths` frontmatter: Claude Code loads it once a session reads or edits a file it lists,
+with a file tool or a one-file `cat`, `head`, `tail` or `sed -n` (a search such as `grep` loads
+nothing, even when it prints a line); a command that runs something, such as
+`python3 toolkit/media.py`, `uv run toolkit/card.py` or ffmpeg, loads nothing, and a file the
+session creates loads it only after the write. So read it before you run a toolkit command other
+than `--help`, ffmpeg or ffprobe on a project file, or `git lfs`, before you create a file under
+`toolkit/`, a renders folder or a `.gitattributes`, and before you report a render that failed;
+each unless it is already in this session.
 
 ---
 

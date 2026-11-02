@@ -23,7 +23,7 @@ in `.claude/rules/syntek-media/01-layout-and-routing.md` Section 1, and the rule
 │   ├── CLAUDE.md           ← the project brief and where the rules live (read first)
 │   ├── MEMORY.md           ← project memory (read second)
 │   ├── hooks/              ← the two session hooks (hand off, never compact) and the guide guard (shared)
-│   ├── rules/syntek-media/ ← loaded at launch: the brand brief (01, Section 1) and the template's rules (never edit)
+│   ├── rules/syntek-media/ ← the brand brief (01, Section 1) and the template's rules (never edit): at launch, but 04 with the files it covers
 │   └── skills/             ← one folder per skill
 ├── handoffs/               ← session handoffs, one per handed-over session (the pair is shared)
 ├── how-to/                 ← the user guide: chapters, guides and procedures (read-only; the shared pairs and chapters are the family's)

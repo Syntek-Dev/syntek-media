@@ -1640,7 +1640,7 @@ _message_after_copy: |
      renders one of these files on update; the update script that ends every syntek-media
      update refreshes only the family-shared files it lists, and only where you never changed
      them, and every file under how-to/ is read-only and put back by each full update.
-     The media rules in .claude/rules/syntek-media/ load at launch whatever those files say,
+     The media rules in .claude/rules/syntek-media/ load whatever those files say,
      so naming the media layers in README.md and CONTEXT.md, and .claude/rules/syntek-media/
      in .claude/CLAUDE.md, is optional. Nothing needs adding to .gitignore or .mcp.json:
      media's ignore rules are nested, and the ElevenLabs server is user-scoped.

@@ -15,7 +15,8 @@ The work lives in four production layers, the top-level folders where it is made
 - `publishing/` holds the cut-down plans, the captions, the thumbnails, the post packages, the schedule and the publish log.
 
 A supporting layer, `toolkit/`, holds the code every render runs through.
-The rules that tell Claude how all of this works are in `.claude/rules/syntek-media/`, and they load at the start of every session.
+The rules that tell Claude how all of this works are in `.claude/rules/syntek-media/`, and all but one of them load at the start of every session.
+The toolkit's rules load once Claude opens a file they cover, and the routing rules tell Claude to read them before it runs a toolkit command.
 `how-to/src/TEMPLATE-GUIDE/syntek-media/07-a-tour-of-the-project.md` takes you round each folder.
 
 ## The three brand kinds

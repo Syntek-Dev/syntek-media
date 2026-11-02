@@ -13,9 +13,13 @@ the rules that already exist.
 1. Read `.claude/CLAUDE.md` and its referenced CONTEXT.md files explicitly. An import line in
    a Claude manual is a pointer to read, even when this client does not expand it.
 2. Read every active Markdown rule recursively under .claude/rules, including each template's
-   subfolder. Apply a path-scoped rule when its paths match the task. Read project settings
-   and overrides first when a rule refers to them; syntek-author's project settings, where
-   present, outrank template rules. Do not rely on automatic discovery of nested rules.
+   subfolder. Apply a path-scoped rule when its paths match the task.
+   `.claude/rules/syntek-media/04-toolkit-pipeline.md` is one: it opens with `paths` frontmatter,
+   so read it when the work reads or edits a file it lists, or reaches a command
+   `.claude/rules/syntek-media/01-layout-and-routing.md` Section 9 names, before acting. Read
+   project settings and overrides first when a rule refers to them; syntek-author's project
+   settings, where present, outrank template rules. Do not rely on automatic discovery of nested
+   rules.
 3. Read `.claude/MEMORY.md`, then the CONTEXT.md and CLAUDE.md of the folder being worked in.
    Follow the folder's routing to project guides and local workflows before template ones.
 4. Read the chosen skill's SKILL.md and its selected brand-kind mode file before following

@@ -7,15 +7,80 @@ All notable changes to syntek-media are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D76 and D80–D86; D77–D79 and D87 are reserved) or section.
+Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D76 and D80–D87; D77–D79 are reserved) or section.
 
 ---
 
 ## [Unreleased]
 
+## [0.8.0] - 02/11/2026
+
+Adds D87: media's rules file for the toolkit, `04-toolkit-pipeline.md`, loads only with the files it governs, in syntek-author D59's form, and rules 06 Section 12 regains the two clauses D86's rewrite left out.
+
+**What existing projects receive.** Rules 01, 04 and 06, the bridge (`.claude/syntek-media-agents.md`) and the user guide's changed chapters, guide and procedure are template-owned and arrive with the next update, run as `README.md` 'Updating a project' gives it. No migration runs: nothing moves and no name is added (D11), and the maintainer waived recipe 7.7's migration on 01/11/2026, as syntek-author D59 waived its own.
+
+**What stays by hand.** A project made before 0.8.0 keeps the copy-only lines (D11) that say every rule loads at launch. Each is harmless unedited, because rules 01 Section 9, template-owned and replaced by the update, says when to read rules 04; to correct them, make these edits:
+
+- `.claude/CLAUDE.md`, line 10, the end of the opening blockquote, becomes two lines:
+
+  ```text
+  > template's rules in `.claude/rules/syntek-media/` load automatically with this file (`04-`
+  > once the work reaches its files, Section 2).
+  ```
+
+- `.claude/CLAUDE.md` Section 2, 'Where the rules live', its first paragraph:
+
+  ```text
+  The rules are the files `01-` to `08-` in `.claude/rules/syntek-media/`. Claude Code loads seven
+  of them at launch, alongside this file, so there is no need to open those before working; open
+  one when a task turns on its subject. `04-toolkit-pipeline.md` loads only once a session reads or
+  edits a file its `paths` frontmatter lists, never for a command such as `python3 toolkit/media.py`
+  that runs rather than reads: read it before running a toolkit command
+  (`.claude/rules/syntek-media/01-layout-and-routing.md` Section 9).
+  ```
+
+- `.claude/CONTEXT.md`, the two `rules/` rows of its tree:
+
+  ```text
+  ├── rules/                  ← the rules, one folder per template (no pair here)
+  │   └── syntek-media/       ← the template's rules: at launch, but 04 with the files it covers (template-owned; never edit)
+  ```
+
+- `.claude/CONTEXT.md`, its `rules/syntek-media/` bullet, which now reads:
+
+  ```text
+  - `rules/syntek-media/` — the template's rules, `01-…` to `08-…`; Section 1 of the first is the
+    brand brief, rendered from the answers and kept current by every update. Claude Code loads every
+    Markdown file under `rules/` as a rule with the same weight as `CLAUDE.md`: at launch, or, where
+    its frontmatter lists `paths` (`04-…`), once a session reads a file that matches. That is why
+    this folder holds no `CONTEXT.md` or `CLAUDE.md` of its own. Another template applied to this
+    project would add its own folder beside it.
+  ```
+
+- The root `CONTEXT.md`, its `rules/syntek-media/` row:
+
+  ```text
+  │   ├── rules/syntek-media/ ← the brand brief (01, Section 1) and the template's rules (never edit): at launch, but 04 with the files it covers
+  ```
+
+
+In a combined project the two `.claude/` files and the root `CONTEXT.md` are syntek-author's, already corrected by its D59, so there is nothing to edit.
+
+**syntek-author baseline.** Designed against syntek-author D59 at its `v0.9.1` tag (commit `ccb8340`), read 01/11/2026 from a clean clone, with Claude Code's memory, tools-reference and context-window documentation fetched the same day.
+
+**Results.** On the release tree (the D87 commits to `d7216d0` plus this release commit's versioning), 02/11/2026, `bash .github/scripts/run-all.sh --author` a clean clone of syntek-author at `v0.9.1` (`ccb8340`) ran on Python 3.14.8 and Copier 9.19.1: 39 PASS, 0 findings, 0 errors and 13 SKIP rows, each `toolkit-smoke.sh` check 22 (WhisperX live alignment, which no audit builds) in one of the twelve renders, named and never a pass. `shipped-brands.sh` check 18 measured media's always-loaded instruction files at 102,603–105,596 characters across the nine standalone renders, under the 110,000 budget, and logged 196,036–198,245 over syntek-author, never a finding (D87). `update-test.sh` passed for all three brand kinds, standalone and over syntek-author, updating from `v0.7.0` to `v0.8.0`; `coexist-test.sh` passed for all three in both orders with no SKIP (D27), its check 29 included. Media's `family-shared.json` records release `v0.8.0` (sha256 `9af425a8…`).
+
+### Added
+
+- **Rules 04 loads only with the files it governs** (DESIGN.md D87, Section 4.1; syntek-author D59; the maintainer, 28/10/2026 and 01/11/2026). `.claude/rules/syntek-media/04-toolkit-pipeline.md` opens with `paths` frontmatter, one literal list of 24 double-quoted globs (120 patterns from the brace lists, 125 with the five plain globs), a superset for every brand kind, platform and media kind, with no delimiter: `toolkit/`, the root `.gitattributes`, the output ignore files and renders folders, the `src/` folders the toolkit reads or writes, the brand's design system, exports and platform overrides, each layer workflow that runs a toolkit command beyond `presets` (by its frozen slug, with its `workflows/local/` twin), the guides that teach one (with their `docs/project/` twins), the moded skills that run one, and the user guide's chapters, guide and procedure that do. The other seven rules files stay unconditional, each for the reason D87 gives. Rules 01 Section 9 ends with a pointer that says when to read 04, since a command that runs a file loads no scoped rule; the bridge names 04 as a path-scoped rule for the clients that never read `.claude/rules/` natively. A standalone render's always-loaded instruction set (the seed `.claude/CLAUDE.md`, its imports and every unscoped rules file), counted as syntek-author's check 24 counts it on the twelve renders of `generate-all.sh` on 01/11/2026, falls from 124,048–127,041 characters to 102,603–105,596, under D59's 110,000; over syntek-author it falls from 218,451–220,029 to 196,574–198,152 (syntek-author's own share 100,820–102,597), logged, never failed, until the family agrees a ceiling (Section 11). Scoped, rules 04 is 25,328 characters, under the 40,000 on-demand limit. Probed live on 02/11/2026 in Claude Code 2.1.316 with an `InstructionsLoaded` hook: rules 04 does not load at session start; a Read, or a one-file `cat`, `head`, `tail` or `sed -n`, loads it; running a toolkit command, a `grep` or `rg` that prints a match, and a Skill-tool invocation load nothing, so rules 01's pointer, which first named `grep`, now says a search loads nothing.
+- **Audits for D87:** `check-template-tokens.sh` check 10 (a rules file's frontmatter always closes and holds no delimiter); `shipped-brands.sh` checks 18 (a standalone render's always-loaded set within `SM_STARTUP_BUDGET`, 110,000 characters, and a scoped rule within `SM_SCOPED_LIMIT`, 40,000; over syntek-author, logged only) and 19 (rules 04 opens with exactly Section 4.1's frontmatter, `SM_RULE_PATHS_04`, no other media rules file opens with `---`, and rules 01 Section 9 and the bridge name it); `shipped-seeds.sh` check 37 (rules 04's frontmatter is `SM_RULE_PATHS_04`, no glob is dead in the source, and no numbered layer workflow that runs the toolkit is left out, the presets-only `scripts/workflows/01-brief-a-piece/` aside); `coexist-test.sh` check 29 (neither template's update strips or adds the other's frontmatter, and the composite's total is logged). `_common.sh` gains `SM_STARTUP_BUDGET`, `SM_SCOPED_LIMIT`, `SM_SCOPED_RULES` and `SM_RULE_PATHS_04`, each check its self-test probes.
+
 ### Changed
 
 - **`family-shared.json` records `unreleased` again** after the `v0.7.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9), as `shipped-seeds.sh --write-manifest` writes it on the first commit after a release tag, so check 23 holds on every commit until the next release. Development only, nothing ships.
+- **Rules 06 Section 12 again points to syntek-author's own data-root rules**, where it is applied, for when its files are filed, while what a session runs over the footage folder stays this section's, and again says the update that leaves the two templates' data-root answers apart says so (D87; left out by D86 to stay within the 300-line cap). The refusal now names the case that refuses, two templates' recorded store or layout answers disagreeing (a different provider only warns, and a template that records no store is not yet asked). One clause that repeated a rule held in the same paragraph ('the resolver writes the root, the session never does') is removed, and the stills sentence now reads 'to look at it' (approved by the maintainer, 01/11/2026); no rule is lost, 'never list the footage mirror' stays, and the vendored 'rules-web-tools' block is unchanged, byte for byte. The file is at the 300-line cap, so a later addition to it trims first.
+- **The text that said every rule loads at launch** is corrected: rules 01's `.claude/rules/` bullet and read order, the user guide's overview, tour and 'beside syntek-author' chapters, its guide and procedure for finishing a copy, `_message_after_copy`, `README.md` and, for new copies, the copy-only seeds above (D11).
+- **The development manual's recipes 7.1, 7.3, 7.4 and 7.8** add a path that runs or teaches a toolkit command to rules 04's globs, DESIGN.md Section 4.1's list and `SM_RULE_PATHS_04` together, in one change (D87).
 
 ## [0.7.0] - 01/11/2026
 
