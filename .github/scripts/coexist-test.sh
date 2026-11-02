@@ -25,7 +25,7 @@
 #                     8. once per run, copies media over a syntek-author project whose how-to/
 #                        was deleted, as one older than v0.6.0 has none.
 #
-#                   Twenty-eight checks per brand kind (13, 20, 22 and 23 once per run):
+#                   Twenty-nine checks per brand kind (13, 20, 22 and 23 once per run):
 #                     1. Media applies over the syntek-author project without --overwrite —
 #                        nothing it ships collides with what is there.
 #                     2. Both answers files exist, under different names.
@@ -160,6 +160,14 @@
 #                        'claim one folder'; and its `store` exits 0 (D86). The maps are the
 #                        --author tree's and media's own, so a later syntek-author claim under
 #                        production/ fails here.
+#                    29. In each composite (both orders, after both updates), media's scoped
+#                        rules (SM_SCOPED_RULES) still open with exactly their SM_RULE_PATHS_*
+#                        frontmatter, syntek-author's rules 04 and 09 still open with --- then
+#                        paths:, and no other media rules file opens with ---, so neither
+#                        update strips or adds the other's frontmatter (DESIGN.md D87;
+#                        syntek-author D59). The composite's always-loaded total, counted as
+#                        syntek-author's check 24 counts it, is logged for the release entry,
+#                        never a finding.
 #
 #                   Without syntek-author (no --author, no SYNTEK_AUTHOR_DIR, no
 #                   ../syntek-author) the test prints a named SKIP and exits 0. A SKIP is never
@@ -193,7 +201,9 @@
 #            media of _common.sh (no real syntek-author needed), proves the result clean, then
 #            mutates the result once per check and asserts exactly one finding each. For checks
 #            27 and 28 the fixture syntek-author also ships a learning/ pair, a map of its own
-#            and the family resolver under its name, as the real one does since v0.8.0.
+#            and the family resolver under its name, as the real one does since v0.8.0; for
+#            check 29 it ships rules 04 and 09 with paths frontmatter, as the real one does
+#            since its D59, and the fixture media its rules 04 with SM_RULE_PATHS_04.
 #
 # Requirements: bash 4.3+, git, rsync, uvx (or COPIER_CMD), python3 3.14 or later, make (check
 #               24; without it a named SKIP). Network on the first uvx run only. A syntek-author
@@ -413,6 +423,57 @@ c27_state() { # $1 = project, $2 = the pair before media's step, $3 = that step'
   fi
 }
 
+# Check 29 (D87): in a composite after both updates, each template's scoped rules keep their
+# frontmatter, no other media rules file gains any, and the composite's always-loaded total
+# (syntek-author's check 24 counting, characters) is logged for the release entry. Prints
+# 'F<TAB>problem' per problem and one 'L<TAB>total' line.
+c29_state() { # $1 = project, $2 = the order's name
+  SM_RULE_PATHS_04="$SM_RULE_PATHS_04" SM_SCOPED_RULES="$SM_SCOPED_RULES" python3 -I - "$1" "$2" <<'PY29' \
+    || printf 'F\t%s: the D87 check could not run\n' "$2"
+import os, re, sys
+tree, order = sys.argv[1], sys.argv[2]
+M, A = ".claude/rules/syntek-media/", ".claude/rules/syntek-author/"
+FM = re.compile(r'---\npaths:\n((?:  - "[^"\n]+"\n)+)---\n')
+want = {M + f: os.environ["SM_RULE_PATHS_" + f[:2]].split("\n") for f in os.environ["SM_SCOPED_RULES"].split()}
+def read(p):
+    with open(p, encoding="utf-8") as fh:
+        return fh.read()
+for rel, globs in want.items():
+    p = os.path.join(tree, rel)
+    m = FM.match(read(p)) if os.path.isfile(p) else None
+    if not m or [l[5:-1] for l in m.group(1).splitlines()] != globs:
+        print(f"F\t{order}: {rel} no longer opens with exactly SM_RULE_PATHS_{rel[len(M):][:2]}'s frontmatter, so it would load at launch or for other files")
+for f in ("04-build-pipeline.md", "09-data-root.md"):
+    p = os.path.join(tree, A + f)
+    if not os.path.isfile(p) or not read(p).startswith("---\npaths:\n"):
+        print(f"F\t{order}: syntek-author's {A + f} no longer opens with --- then paths: (its D59), so media's update stripped or moved its frontmatter")
+md = os.path.join(tree, M)
+for f in sorted(os.listdir(md)) if os.path.isdir(md) else []:
+    if f.endswith(".md") and M + f not in want and read(os.path.join(md, f)).startswith("---"):
+        print(f"F\t{order}: {M + f} opens with ---; only {', '.join(sorted(w[len(M):] for w in want))} is path-scoped (D87)")
+loaded, seen = [], set()
+def take(p, depth):
+    p = os.path.normpath(p)
+    if depth > 4 or p in seen or not os.path.isfile(p):
+        return
+    seen.add(p); t = read(p); loaded.append(len(t)); fence = False
+    for line in t.splitlines():
+        if line.lstrip().startswith("```"):
+            fence = not fence; continue
+        if not fence:
+            for m in re.finditer(r'(?:^|\s)@([^\s`]+)', re.sub(r'`[^`]*`', '', line)):
+                take(os.path.join(os.path.dirname(p), m.group(1)), depth + 1)
+for s in (".claude/CLAUDE.md", "CLAUDE.md", "CLAUDE.local.md"):
+    take(os.path.join(tree, s), 0)
+for root, dirs, files in os.walk(os.path.join(tree, ".claude", "rules")):
+    dirs.sort()
+    for f in sorted(x for x in files if x.endswith(".md")):
+        if not FM.match(read(os.path.join(root, f))):
+            take(os.path.join(root, f), 0)
+print(f"L\t{order}: the composite's always-loaded instruction files total {sum(loaded):,} characters (logged for the release entry, never a finding; D87)")
+PY29
+}
+
 # Check 28 (D86): in a scratch copy of a composite, under each store, the maps never overlap
 # and syntek-author's own resolver reads media's map. Prints one problem per line.
 c28_state() { # $1 = project, $2 = the order's name
@@ -511,7 +572,7 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   for f in pre-media.sha post-media.sha shared-after.sha a-changed.txt b-changed.txt a-again.txt \
            b-again.txt r-changed.txt pre-remove.sha post-remove.sha b-added.txt b-copy.log \
            lint.txt c25-copy.txt c25-update.txt c25-rev-copy.txt c25-rev-update.txt \
-           c26.txt c26-planted.sha c26-rev-planted.sha c27.txt c28.txt b-update.log rev-b-copy.log rev-b-update.log; do : > "$w/$f"; done
+           c26.txt c26-planted.sha c26-rev-planted.sha c27.txt c28.txt c29.txt b-update.log rev-b-copy.log rev-b-update.log; do : > "$w/$f"; done
   rm -f "$w/pre-settings.json" "$w/post-settings.json" "$w/settings-after.json"
   C24_SKIP=""
   sm_snapshot "$AUTHOR_SRC" "$a" >>"$log" 2>&1 || die "could not snapshot $AUTHOR_SRC"
@@ -586,6 +647,7 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   c26_state "$PROJ" "$w/c26-planted.sha" "$w/b-update.log" | sed 's/^/(update) /' >> "$w/c26.txt"
   c27_state "$PROJ" "$c27_before" update | sed 's/^/(update) /' >> "$w/c27.txt"
   c28_state "$PROJ" over-author >> "$w/c28.txt"
+  c29_state "$PROJ" over-author >> "$w/c29.txt"
 
   # 4. Each again, with nothing changed. The shared files are fingerprinted between the two.
   sm_update_author "$PROJ" >>"$log" 2>&1 || A_AGAIN_STATUS=$?
@@ -646,6 +708,7 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
       c26_state "$w/rev" "$w/c26-rev-planted.sha" "$w/rev-b-update.log" | sed 's/^/(rev-update) /' >> "$w/c26.txt"
       c27_state "$w/rev" "$c27_before" update | sed 's/^/(rev-update) /' >> "$w/c27.txt"
       c28_state "$w/rev" media-first >> "$w/c28.txt"
+      c29_state "$w/rev" media-first >> "$w/c29.txt"
     fi
   fi
 
@@ -885,6 +948,11 @@ run_checks() {
   while IFS= read -r f; do
     [[ -n "$f" ]] && finding "check 28 — $label $f"
   done < "$W/c28.txt"
+
+  # ── 29. Neither update strips or adds the other's frontmatter (D87) ────────
+  while IFS=$'\t' read -r k f; do
+    [[ "$k" == F && -n "$f" ]] && finding "check 29 — $label $f (DESIGN.md D87; syntek-author D59)"
+  done < "$W/c29.txt"
   return 0
 }
 
@@ -1014,7 +1082,16 @@ STUB
   printf '{"format": 1, "folders": [{"path": "library/src", "kind": "docs"}, {"path": "assets"}]}\n' > "$tmp/author/template/.claude/syntek-author-dataroot.json"
   cp "$SM_ROOT/template/.claude/syntek-media-dataroot.py" "$tmp/author/template/.claude/syntek-author-dataroot.py"
   sm_commit_all "$tmp/author" 'fixture: the learning pair, its map and the resolver'
+  # Check 29 (D87): syntek-author's two scoped rules, and media's rules 04 with its paths list.
+  local rn g
+  for rn in 04-build-pipeline 09-data-root; do
+    printf -- '---\npaths:\n  - "x/**"\n---\n\n# %s\n' "$rn" > "$tmp/author/template/.claude/rules/syntek-author/$rn.md"
+  done
+  sm_commit_all "$tmp/author" 'fixture: its path-scoped rules'
   sm_fixture_template "$tmp/media" >/dev/null
+  { printf -- '---\npaths:\n'; while IFS= read -r g; do printf '  - "%s"\n' "$g"; done <<< "$SM_RULE_PATHS_04"
+    printf -- '---\n\n# 04-toolkit-pipeline.md\n'; } > "$tmp/media/template/.claude/rules/syntek-media/04-toolkit-pipeline.md"
+  sm_commit_all "$tmp/media" 'fixture: rules 04 with its paths list'
   # Check 22's inputs: the two manifests, as each template would write them for the same tag
   # (fixture bytes: each entry's hash is its path's), and the fixture syntek-author's seed with
   # the family's asks, deny and hooks.
@@ -1138,6 +1215,26 @@ STUB
   c28_state "$PROJ" over-author > "$W/c28.txt"; mv "$h" "$PROJ/.claude/syntek-author-dataroot.py"
   probe "check 28 fires when the composite has no syntek-author resolver" "check 28 — [author-fiction] over-author: syntek-author's resolver .claude/syntek-author-dataroot.py is not in the composite"
   : > "$W/c28.txt"
+  # 29: the scoped rules' frontmatter after both updates (D87), one fault each.
+  local r04="$PROJ/.claude/rules/syntek-media/04-toolkit-pipeline.md"
+  cp "$W/c29.txt" "$tmp/c29.held"; cp "$r04" "$h"
+  sed -i '1,/^---$/{/^---$/!d}; 1d' "$r04"
+  c29_state "$PROJ" over-author > "$W/c29.txt"
+  probe "check 29 fires when media's frontmatter is stripped in a composite" "check 29 — [author-fiction] over-author: .claude/rules/syntek-media/04-toolkit-pipeline.md no longer opens with exactly SM_RULE_PATHS_04's frontmatter"
+  cp "$h" "$r04"
+  local a09="$PROJ/.claude/rules/syntek-author/09-data-root.md"; cp "$a09" "$tmp/a09.held"
+  printf '# 09 — data root\n' > "$a09"
+  c29_state "$PROJ" over-author > "$W/c29.txt"
+  probe "check 29 fires when syntek-author's frontmatter is stripped in a composite" "check 29 — [author-fiction] over-author: syntek-author's .claude/rules/syntek-author/09-data-root.md no longer opens"
+  cp "$tmp/a09.held" "$a09"
+  cp "$PROJ/.claude/rules/syntek-media/01-layout-and-routing.md" "$tmp/r01.held"
+  { printf -- '---\npaths:\n  - "x"\n---\n'; cat "$tmp/r01.held"; } > "$PROJ/.claude/rules/syntek-media/01-layout-and-routing.md"
+  c29_state "$PROJ" over-author > "$W/c29.txt"
+  probe "check 29 fires when another media rules file gains frontmatter" "check 29 — [author-fiction] over-author: .claude/rules/syntek-media/01-layout-and-routing.md opens with ---"
+  cp "$tmp/r01.held" "$PROJ/.claude/rules/syntek-media/01-layout-and-routing.md"
+  c29_state "$PROJ" over-author > "$W/c29.txt"
+  probe_clean "check 29 logs the composite's total and finds nothing once the frontmatter is back"
+  cp "$tmp/c29.held" "$W/c29.txt"
   # 22: the comparison runs for real on the fixture manifests and seed, once per mutation.
   local am="$tmp/author/family-shared.json" seed="$tmp/author/template/.claude/settings.json"
   cp "$am" "$tmp/manifest.held"; cp "$seed" "$tmp/seed.held"
@@ -1220,10 +1317,12 @@ for kind in $KINDS; do
   GLOBAL=false
   if [[ ${#FINDINGS[@]} -eq 0 ]]; then
     log "  ✓ $kind (over $(author_doc_for_kind "$kind")) — both applied, both updated twice, $(grep -c . "$work/b-added.txt") media path(s) and ${#A_OWNED[@]} syntek-author-owned path(s) disjoint; $R_WHAT; the other order applies"
+    sed -n 's/^L\t/    · /p' "$work/c29.txt" | while IFS= read -r l; do log "$l"; done
     sm_rmtree "$work"
   else
     bold "✗ $kind — ${#FINDINGS[@]} finding(s) (work kept in $work; Copier's output in $work/flow.log):"
     print_findings
+    sed -n 's/^L\t/    · /p' "$work/c29.txt" | while IFS= read -r l; do log "$l"; done
     if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
       echo "::group::Copier output for $kind (last 80 lines of flow.log)"
       tail -n 80 "$work/flow.log" 2>/dev/null || true

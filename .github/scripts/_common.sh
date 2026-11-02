@@ -21,8 +21,9 @@
 #                  copy-only shared paths (one retired) and the two client folders' update
 #                  gates, the spine set, the identity tokens, the companion skills, pair-only
 #                  folders and pair exemptions, the D13 allow, ask, deny and hook lists, the
-#                  _message_after_copy lines, and the D83 community files and
-#                  private-reporting URL;
+#                  _message_after_copy lines, the D83 community files and
+#                  private-reporting URL, and, since 0.8.0, D87's start-up budget, on-demand
+#                  limit, scoped rules and rules 04's globs;
 #                - SM_FAMILY_SHARED, the family-shared set media vendors from one syntek-author
 #                  tag (DESIGN.md D80, D81, D85; syntek-author D48): forty-three files and four
 #                  blocks since 0.6.0, the update script and the user guide's fourteen among
@@ -1007,6 +1008,41 @@ SM_EXAMPLE_NAME="000-example-piece"
 # the examples are spine through their own sets; index files are computed.
 SM_ROOT_SPINE="$SM_ANSWERS_FILE"
 SM_ROOT_SPINE_GLOBS=".claude/rules/syntek-media/*.md"
+
+# The path-scoped rules and the start-up budget (DESIGN.md D87, Section 4.1; syntek-author D59,
+# whose figures media takes). The budget holds a standalone render's always-loaded instruction
+# files (the seed .claude/CLAUDE.md, its imports and every rules file without paths frontmatter);
+# the limit is Claude Code's on-demand per-file limit on a 200K window. Only rules 04 is scoped:
+# SM_SCOPED_RULES names it, and SM_RULE_PATHS_04 is Section 4.1's frontmatter block, one glob a
+# line, in order. shipped-brands.sh checks 18 and 19, shipped-seeds.sh check 37 and
+# coexist-test.sh check 29 read these; check-template-tokens.sh check 10 reads the folder.
+SM_STARTUP_BUDGET=110000
+SM_SCOPED_LIMIT=40000
+SM_SCOPED_RULES="04-toolkit-pipeline.md"
+SM_RULE_PATHS_04='toolkit/**
+.gitattributes
+{production,publishing}/src/.gitignore
+{production,publishing}/src/renders/**
+production/src/{assets,audiobook,cards,edits,footage,scenes,timing,voiceover}/**
+publishing/src/{captions,cut-downs,podcast,thumbnails}/**
+brand/src/{design-system,exports}/**
+brand/src/platforms/overrides.toml
+brand/workflows/*-{set-up-the-brand-kit,sync-with-claude-design,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**
+brand/workflows/local/*-{set-up-the-brand-kit,sync-with-claude-design,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**
+scripts/workflows/*-{write-a-script,storyboard-a-piece}/**
+scripts/workflows/local/*-{write-a-script,storyboard-a-piece}/**
+production/workflows/*-{log-source-media,make-a-voiceover,assemble-the-master,master-a-podcast-episode,narrate-an-audiobook,master-an-audiobook,bring-in-a-recording,time-the-voice,animate-a-scene,design-character-voices}/**
+production/workflows/local/*-{log-source-media,make-a-voiceover,assemble-the-master,master-a-podcast-episode,narrate-an-audiobook,master-an-audiobook,bring-in-a-recording,time-the-voice,animate-a-scene,design-character-voices}/**
+publishing/workflows/*-{plan-the-cut-downs,cut-for-a-platform,caption-a-piece,brief-a-thumbnail,prepare-a-post,record-a-publication,refresh-the-platform-specs,publish-the-podcast-feed}/**
+publishing/workflows/local/*-{plan-the-cut-downs,cut-for-a-platform,caption-a-piece,brief-a-thumbnail,prepare-a-post,record-a-publication,refresh-the-platform-specs,publish-the-podcast-feed}/**
+brand/docs/{reference,project}/{claude-design,design-exports,the-brand-kit}.md
+scripts/docs/{reference,project}/storyboards-and-shot-lists.md
+production/docs/{reference,project}/{audiobook-narration,character-voices,edit-decision-lists,elevenlabs,scenes-as-code,sound-and-loudness,source-media,voiceover}.md
+publishing/docs/{reference,project}/{captions,cut-downs,platform-specs,podcast,podcast-feed,scoring-options,thumbnails}.md
+.claude/skills/{captions,cut-for-platform,narrate-audiobook,prepare-post,repurpose,storyboard,thumbnail-brief,voiceover,write-script}/**
+how-to/src/TEMPLATE-GUIDE/syntek-media/{02-prerequisites,09-your-first-piece,13-troubleshooting}.md
+how-to/docs/syntek-media/finishing-a-copy.md
+how-to/workflows/syntek-media/*-finish-a-copy/**'
 
 # Tokens that may appear anywhere (DESIGN.md Section 2): identity and locale.
 SM_IDENTITY_TOKENS="BRAND_NAME BRAND_SLUG OWNER_NAME OWNER_FIRST_NAME DATE TIMEZONE"

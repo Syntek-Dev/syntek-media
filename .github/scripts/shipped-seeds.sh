@@ -25,7 +25,7 @@
 #                    hold the files, the four blocks and the renders to that record (since
 #                    0.6.0 forty-three files, since 0.7.0 from syntek-author's v0.9.1, D81, D84).
 #
-#                    Thirty-six checks:
+#                    Thirty-seven checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
 #                         _skip_if_exists.
 #                      2. Every _skip_if_exists entry names a file under template/.
@@ -258,8 +258,18 @@
 #                         (D86). Quiet on the order where check 20 already reports the update
 #                         entry out of place, and on v0.6.0's side where check 32 reports that
 #                         entry; a missing script is check 19's, and nothing more here.
+#                     37. template/.claude/rules/syntek-media/04-toolkit-pipeline.md's
+#                         frontmatter is not SM_RULE_PATHS_04 (DESIGN.md Section 4.1); or one of
+#                         its globs, after brace expansion, outside workflows/local/,
+#                         docs/project/ and the root .gitattributes, matches no path under
+#                         template/, where every gated path stands; or a numbered layer
+#                         workflow whose files name media.py, card.py, scene.py, ffmpeg or
+#                         ffprobe matches no glob and is not scripts/workflows/01-brief-a-piece/
+#                         (presets only, D87's one exemption, named here). So a misspelt
+#                         slug or a renamed guide cannot leave a glob dead, nor a new toolkit
+#                         workflow fall outside the list unseen (D87).
 #
-#                    Checks 1–4, 8, 16–26 and 30–34 and 36 read copier.yml, template/,
+#                    Checks 1–4, 8, 16–26, 30–34, 36 and 37 read copier.yml, template/,
 #                    migrations/, rules 06, family-shared.json and _common.sh's lists (static,
 #                    once; checks 21 and 25 also read Git's index, check 34 the names file).
 #                    Checks 5–7, 9, 11–15 and 28 read every tree given — template/ by default,
@@ -670,6 +680,86 @@ static_checks() {
   # ── 36. D86's crossing entry, then its script (a missing script is check 19's) ──
   for line in "${report_findings[@]}"; do finding "$line"; done
   if [[ -f "$SM_ROOT/$SM_REPORT_MIGRATION" ]]; then report_script_checks; fi
+
+  # ── 37. Rules 04's globs: none dead, no toolkit workflow left out (D87) ─────
+  rules04_checks
+}
+
+# 37 (D87): rules 04's paths list holds no dead glob, and leaves no toolkit workflow out. Read on
+# the template source, where every gated path stands; workflows/local/ and docs/project/ are the
+# author's (they ship their pair only) and the root .gitattributes is the owner's, so a glob
+# there matches nothing in template/ by design.
+rules04_checks() {
+  local n37 msg37
+  while IFS=$'\t' read -r n37 msg37; do
+    [[ -n "$n37" ]] && finding "check $n37 — $msg37"
+  done < <(SM_RULE_PATHS_04="$SM_RULE_PATHS_04" SM_LAYERS="$SM_LAYERS" python3 -I - "$TPL" <<'PY37'
+import os, re, sys
+def main():
+    tpl = sys.argv[1]
+    rel = ".claude/rules/syntek-media/04-toolkit-pipeline.md"
+    want = os.environ["SM_RULE_PATHS_04"].split("\n")
+    # D87's one exemption, as DESIGN.md Section 7 names it: this workflow runs the toolkit only
+    # for its presets, so it lies outside rules 04's globs by design.
+    exempt = {"scripts/workflows/01-brief-a-piece"}
+    FM = re.compile(r'---\npaths:\n((?:  - "[^"\n]+"\n)+)---\n')
+    p = os.path.join(tpl, rel)
+    try:
+        with open(p, encoding="utf-8") as fh:
+            m = FM.match(fh.read())
+    except OSError:
+        m = None
+    got = [l[5:-1] for l in m.group(1).splitlines()] if m else None
+    if got != want:
+        print(f"37\ttemplate/{rel}'s frontmatter is not SM_RULE_PATHS_04, one double-quoted glob a line (DESIGN.md Section 4.1, D87)")
+    def expand(g):
+        m = re.search(r'\{([^{}]*)\}', g)
+        return [g] if not m else [x for a in m.group(1).split(",") for x in expand(g[:m.start()] + a + g[m.end():])]
+    def rx(g):
+        out, i = "", 0
+        while i < len(g):
+            if g.startswith("**/", i): out += "(?:.*/)?"; i += 3
+            elif g.startswith("**", i): out += ".*"; i += 2
+            elif g[i] == "*": out += "[^/]*"; i += 1
+            else: out += re.escape(g[i]); i += 1
+        return re.compile(out + r"\Z")
+    files = []
+    for root, dirs, fs in os.walk(tpl):
+        dirs[:] = sorted(d for d in dirs if d != ".git")
+        for f in sorted(fs):
+            files.append(os.path.relpath(os.path.join(root, f), tpl))
+    pats = [(g, x, rx(x)) for g in want for x in expand(g)]
+    for g, x, r in pats:
+        if "workflows/local/" in x or "docs/project/" in x or x == ".gitattributes":
+            continue
+        if not any(r.match(f) for f in files):
+            print(f'37\tthe rules 04 glob "{g}" gives "{x}", which matches no path under template/: a misspelt slug or a renamed file leaves it dead (D87)')
+    tool = re.compile(r'\b(?:media\.py|card\.py|scene\.py|ffmpeg|ffprobe)\b')
+    for layer in os.environ["SM_LAYERS"].split():
+        wd = os.path.join(tpl, layer, "workflows")
+        if not os.path.isdir(wd):
+            continue
+        for d in sorted(os.listdir(wd)):
+            folder = f"{layer}/workflows/{d}"
+            if not re.match(r"[0-9]{2}-", d) or not os.path.isdir(os.path.join(tpl, folder)) or folder in exempt:
+                continue
+            mine = [f for f in files if f.startswith(folder + "/")]
+            runs = False
+            for f in mine:
+                try:
+                    with open(os.path.join(tpl, f), encoding="utf-8") as fh:
+                        if tool.search(fh.read()):
+                            runs = True; break
+                except (OSError, UnicodeDecodeError):
+                    continue
+            if runs and not any(r.match(f) for f in mine for _, _, r in pats):
+                print(f"37\t{folder}/ names the toolkit (media.py, card.py, scene.py, ffmpeg or ffprobe) but no rules 04 glob matches it: add its slug to DESIGN.md Section 4.1's list, the frontmatter and SM_RULE_PATHS_04 together (D87)")
+try:
+    main()
+except Exception as e:
+    print(f"37\tthe D87 check could not run: {e!r}")
+PY37
+)
 }
 
 # 33 and 34 (D86; syntek-author D57): media-teach places lessons in learning/ at run time, the
@@ -1328,6 +1418,19 @@ PYSTUB
   mkdir -p "$t/.claude/rules/syntek-media"
   printf '# 06-global-rules.md\n\n## 13. Web and code tools\n\n<!-- BEGIN family-shared rules: web and code tools -->\n- Use the plainest tool.\n<!-- END family-shared rules: web and code tools -->\n' \
     > "$t/.claude/rules/syntek-media/06-global-rules.md"
+  # Rules 04 with the fixture's paths list (check 37; self_test sets SM_RULE_PATHS_04 to it), a
+  # file for each glob, the toolkit workflows it covers, and the two it leaves out by design.
+  write_rules04 "$t"
+  mkdir -p "$t/toolkit" "$t/production/docs/reference" "$t/scripts/workflows/01-brief-a-piece" \
+    "$t/production/workflows/02-make-a-voiceover" "$t/production/workflows/03-assemble-the-master" \
+    "$t/production/workflows/07-clear-the-rights" "$t/production/workflows/08-time-the-voice"
+  printf 'print("toolkit")\n' > "$t/toolkit/media.py"
+  printf '# voiceover\n' > "$t/production/docs/reference/voiceover.md"
+  printf 'Run `python3 toolkit/media.py presets`.\n' > "$t/scripts/workflows/01-brief-a-piece/STEPS.md"
+  printf 'Run `python3 toolkit/media.py voice join`.\n' > "$t/production/workflows/02-make-a-voiceover/STEPS.md"
+  printf 'Run ffmpeg through `python3 toolkit/media.py assemble`.\n' > "$t/production/workflows/03-assemble-the-master/STEPS.md"
+  printf 'Log the licence in the rights register.\n' > "$t/production/workflows/07-clear-the-rights/STEPS.md"
+  printf 'Mark the timing in the timing file.\n' > "$t/production/workflows/08-time-the-voice/STEPS.md"
   printf '%s\n' "$DATAROOT_MAP_D86" > "$t/$SM_DATAROOT_MAP"
   for s in $SM_REGISTER_SEEDS; do
     printf '# %s\n\n%s\n\n## Register\n\n| ID | Notes |\n|---|---|\n' "${s##*/}" "$banner" > "$t/$s"
@@ -1395,8 +1498,20 @@ probe_both() { # $1 = label, $2 and $3 = substrings, one finding each
   fi
 }
 
+write_rules04() { # $1 = template dir — rules 04 opening with SM_RULE_PATHS_04 (check 37)
+  local g
+  { printf -- '---\npaths:\n'; while IFS= read -r g; do printf '  - "%s"\n' "$g"; done <<< "$SM_RULE_PATHS_04"
+    printf -- '---\n\n# 04-toolkit-pipeline.md\n'; } > "$1/.claude/rules/syntek-media/04-toolkit-pipeline.md"
+}
+
 self_test() {
   local tmp real_root="$SM_ROOT" real_tpl="$TPL" real_copier="$COPIER" t f m
+  local real_globs="$SM_RULE_PATHS_04"
+  SM_RULE_PATHS_04='toolkit/**
+.gitattributes
+production/workflows/*-{make-a-voiceover,assemble-the-master,time-the-voice}/**
+production/workflows/local/*-{make-a-voiceover,assemble-the-master,time-the-voice}/**
+production/docs/{reference,project}/voiceover.md'
   bold "▸ $SCRIPT_NAME --self-test"; log ""
   command -v python3 >/dev/null 2>&1 || die "python3 is not installed"
   tmp="$(sm_mktemp)"
@@ -1743,6 +1858,24 @@ self_test() {
   cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""; unset -f hmove
   probe_clean "the v0.6.0 crossing entry after v0.4.2's and before the update block"
 
+  # 37: rules 04's globs (D87), one fault each. brief-a-piece (presets only) and
+  # clear-the-rights (no toolkit) stay outside the list in the baseline.
+  local r04="$t/.claude/rules/syntek-media/04-toolkit-pipeline.md" fixture_globs="$SM_RULE_PATHS_04"
+  cp "$r04" "$tmp/r04"
+  sed -i 's#^  - "toolkit/\*\*"$#  - "tools/**"#' "$r04"
+  probe "check 37 fires when the frontmatter differs from SM_RULE_PATHS_04" "check 37 — template/.claude/rules/syntek-media/04-toolkit-pipeline.md's frontmatter is not SM_RULE_PATHS_04"
+  SM_RULE_PATHS_04="${fixture_globs/time-the-voice/tme-the-voice}"
+  write_rules04 "$t"
+  probe "check 37 fires on a slug misspelt inside a brace list" 'check 37 — the rules 04 glob "production/workflows/*-{make-a-voiceover,assemble-the-master,tme-the-voice}/**" gives "production/workflows/*-tme-the-voice/**"'
+  SM_RULE_PATHS_04="${fixture_globs/\/voiceover.md//voice-over.md}"; write_rules04 "$t"
+  probe "check 37 fires on a guide name that does not exist" 'check 37 — the rules 04 glob "production/docs/{reference,project}/voice-over.md" gives "production/docs/reference/voice-over.md"'
+  SM_RULE_PATHS_04="$fixture_globs"; cp "$tmp/r04" "$r04"
+  mkdir -p "$t/production/workflows/12-grade-the-footage"
+  printf 'Run `python3 toolkit/media.py grade`.\n' > "$t/production/workflows/12-grade-the-footage/STEPS.md"
+  probe "check 37 fires on a toolkit workflow no glob matches" "check 37 — production/workflows/12-grade-the-footage/ names the toolkit"
+  rm -rf "$t/production/workflows/12-grade-the-footage"
+  probe_clean "a presets-only brief and a toolkit-free rights workflow stay outside the globs"
+
   # 10 and 27: a render of the fixture, whose family files must keep the recorded bytes.
   local rt="$tmp/render"; cp -a "$t" "$rt"; TREE="$rt"; load_owned "$TREE"
   probe_clean "a render whose family files are the recorded bytes"
@@ -1799,7 +1932,7 @@ self_test() {
   probe "check 7 still fires on a media seed, over syntek-author" "check 7 — $f"
   rm -rf "$oa" "$oa.owned"; TREE="$TPL"; SM_OWNED_MODE=false; SM_OWNED=()
 
-  SM_ROOT="$real_root"; TPL="$real_tpl"; COPIER="$real_copier"; SM_SETS_FOR=""
+  SM_ROOT="$real_root"; TPL="$real_tpl"; COPIER="$real_copier"; SM_SETS_FOR=""; SM_RULE_PATHS_04="$real_globs"
   st_finish "wired, empty seeds from polluted or unwired ones"
 }
 

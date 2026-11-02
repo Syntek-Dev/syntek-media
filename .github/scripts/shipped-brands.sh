@@ -20,7 +20,7 @@
 #                     Sections 3–5 transcribed), evaluated against the answers the render
 #                     recorded in .copier-answers.syntek-media.yml.
 #
-#                     Seventeen checks:
+#                     Nineteen checks:
 #                       1. The answers file records BRAND_KIND, PLATFORMS and MEDIA_KINDS.
 #                       2. Every skill the gates open is present, with its SKILL.md: Section
 #                          5.1's and the seven family skills (DESIGN.md D80).
@@ -108,14 +108,36 @@
 #                          render), so it cites D86's run-time exception (Section 9 rule 4: the
 #                          lessons media-teach places at run time) rather than reading as a stray
 #                          syntek-author path.
+#                      18. In a standalone render the always-loaded instruction set is over
+#                          SM_STARTUP_BUDGET characters (DESIGN.md D87; syntek-author D59, its
+#                          check 24): .claude/CLAUDE.md, a root CLAUDE.md or CLAUDE.local.md if
+#                          one ships, each file they import with an @ line (outside code spans
+#                          and fences, relative to the importing file, four hops, each counted
+#                          once), and every .claude/rules/**/*.md that does not open with check
+#                          19's frontmatter, counted in characters, never bytes, the five
+#                          largest named; or, in any render, a scoped media rule is over
+#                          SM_SCOPED_LIMIT, past which Claude Code reads only its start. Over
+#                          syntek-author it logs media's unscoped share and the composite's
+#                          total, never a finding: the two templates' sets are one there, and
+#                          the family ceiling is still to agree. Every run logs the total.
+#                      19. A file in SM_SCOPED_RULES does not open with exactly DESIGN.md
+#                          Section 4.1's frontmatter (---, paths:, one double-quoted glob a line
+#                          equal to SM_RULE_PATHS_04, in order, ---, at offset 0), its brace
+#                          expansion passes 1,000 patterns, or a glob holds '['; another media
+#                          rules file opens with ---; or rules 01 Section 9 or
+#                          .claude/syntek-media-agents.md does not name each scoped file (D87;
+#                          syntek-author D59, its check 25). Any error in the check is itself a
+#                          check 19 finding: frontmatter Claude Code cannot parse loads the
+#                          rule at launch, silently.
 #
 #                     Numbers are stable identifiers. Append, never renumber.
 #
 #                     Over-author scope (DESIGN.md Section 7): on a <kind>--over-author tree,
 #                     whose <tree>.owned lists the files media's copy added, checks 5 and 8 are
 #                     skipped (syntek-author's paths are there by design; coexist-test.sh check 6
-#                     proves ownership), and checks 3, 7, 9, 11, 12, 13, 14, 15, since 0.6.0 16
-#                     and since 0.7.0 17 read media-owned paths only.
+#                     proves ownership), and checks 3, 7, 9, 11, 12, 13, 14, 15, since 0.6.0 16,
+#                     since 0.7.0 17 and since 0.8.0 18 (its combined total logged, never a
+#                     finding) and 19 read media-owned paths only.
 #
 #                     What it CANNOT check: a file's CONTENT — a gated row inside an index file
 #                     that names an absent path is doc-references.sh's, and a shared file that
@@ -129,7 +151,7 @@
 #            names file, proves it clean, then applies one mutation per check and asserts
 #            exactly one finding each; then proves the over-author scope on a composite tree.
 #
-# Requirements: bash 4+, grep, awk, find, python3 (client configuration). No network. Does NOT render — pass trees that
+# Requirements: bash 4+, grep, awk, find, python3 (client configuration, checks 18 and 19). No network. Does NOT render — pass trees that
 #               generate-all.sh (or `copier copy`) produced.
 #
 # Usage: shipped-brands.sh [--root DIR] [--quiet] [--self-test] [--help] <rendered-tree>...
@@ -179,6 +201,7 @@ done
 TREE=""
 EXPECT=""
 AUTHOR_SKILLS_SKIPPED=0
+BUDGET_NOTES=()
 
 # Shared by design: the copy-only paths, the folders that hold them, the per-template rules
 # folder's parent (DESIGN.md Section 9, rules 2 and 3), and every entry a family-shared path
@@ -487,6 +510,109 @@ PYCLIENT
     lp="${l17[*]:0:5}"; [[ ${#l17[@]} -gt 5 ]] && lp="$lp and $(( ${#l17[@]} - 5 )) more"
     finding "check 17 — ${#l17[@]} path(s) ship at or under learning/: ${lp// /, } — media never ships there: media-teach places lessons at run time, the one run-time exception to the frozen name 'top learning' (DESIGN.md D86, Section 9 rule 4; syntek-author D57: only syntek-author ships the learning/ pair)"
   fi
+
+  # ── 18–19. The always-loaded instruction set and the path-scoped rule (D87) ──
+  # syntek-author's checks 24 and 25 (its D59), ported: the FM regex byte for byte, sizes in
+  # characters, never bytes. Standalone, the budget is a finding; over syntek-author the two
+  # templates' sets are one, so media's share and the composite's total are logged, never a
+  # finding (DESIGN.md D87: the family ceiling is still to agree). Only media's rules folder is
+  # judged for the on-demand limit and stray frontmatter; over syntek-author, media-owned files.
+  local owned_list="" n18 msg18
+  if $SM_OWNED_MODE; then
+    owned_list="$(printf '%s\n' "${!SM_OWNED[@]}" | grep -E '^\.claude/' || true)"
+  fi
+  BUDGET_NOTES=()
+  while IFS=$'\t' read -r n18 msg18; do
+    [[ -z "$n18" ]] && continue
+    if [[ "$n18" == L ]]; then BUDGET_NOTES+=("$msg18"); else finding "check $n18 — $msg18"; fi
+  done < <(SM_RULE_PATHS_04="$SM_RULE_PATHS_04" SM_SCOPED_RULES="$SM_SCOPED_RULES" \
+    SM_OWNED_LIST="$owned_list" SM_OWNED_ON="$($SM_OWNED_MODE && echo 1 || echo 0)" \
+    python3 - "$TREE" "$SM_STARTUP_BUDGET" "$SM_SCOPED_LIMIT" <<'PY'
+import os, re, sys
+def main():
+    tree, budget, limit = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+    R = ".claude/rules/syntek-media/"
+    over = os.environ.get("SM_OWNED_ON") == "1"
+    owned = set(os.environ.get("SM_OWNED_LIST", "").split("\n")) - {""}
+    mine = lambda rel: not over or rel in owned
+    want = {R + f: os.environ["SM_RULE_PATHS_" + f[:2]].split("\n")
+            for f in os.environ["SM_SCOPED_RULES"].split()}
+    FM = re.compile(r'---\npaths:\n((?:  - "[^"\n]+"\n)+)---\n')
+    def read(p):
+        with open(p, encoding="utf-8") as fh:
+            return fh.read()
+    def scoped(t):
+        m = FM.match(t)
+        return [l[5:-1] for l in m.group(1).splitlines()] if m else None
+    loaded, seen = [], set()
+    def take(p, depth):
+        p = os.path.normpath(p)
+        if depth > 4 or p in seen or not os.path.isfile(p):
+            return
+        seen.add(p); t = read(p); loaded.append((p, len(t))); fence = False
+        for line in t.splitlines():
+            if line.lstrip().startswith("```"):
+                fence = not fence; continue
+            if not fence:
+                for m in re.finditer(r'(?:^|\s)@([^\s`]+)', re.sub(r'`[^`]*`', '', line)):
+                    take(os.path.join(os.path.dirname(p), m.group(1)), depth + 1)
+    for s in (".claude/CLAUDE.md", "CLAUDE.md", "CLAUDE.local.md"):
+        take(os.path.join(tree, s), 0)
+    for root, dirs, files in os.walk(os.path.join(tree, ".claude", "rules")):
+        dirs.sort()
+        for f in sorted(x for x in files if x.endswith(".md")):
+            p = os.path.join(root, f); t = read(p); rel = os.path.relpath(p, tree)
+            if scoped(t) is None:
+                take(p, 0)
+            elif len(t) > limit and rel.startswith(R) and mine(rel):
+                print(f"18\t{rel} is {len(t):,} characters; Claude Code reads only the first {limit:,} of a rule it loads on demand (D87)")
+            if rel.startswith(R) and rel not in want and t.startswith("---\n") and mine(rel):
+                print(f"19\t{rel} opens with frontmatter; only {', '.join(sorted(os.path.basename(w) for w in want))} is path-scoped (D87)")
+    total = sum(n for _, n in loaded)
+    if over:
+        share = sum(n for p, n in loaded if os.path.relpath(p, tree) in owned)
+        print(f"L\tthe always-loaded instruction files total {total:,} characters over syntek-author, media's unscoped share {share:,}; logged, never a finding (D87)")
+    else:
+        print(f"L\tthe always-loaded instruction files total {total:,} characters; the budget is {budget:,} (D87)")
+        if total > budget:
+            top = ", ".join(f"{os.path.relpath(p, tree)} {n:,}" for p, n in sorted(loaded, key=lambda x: -x[1])[:5])
+            print(f"18\tthe always-loaded instruction files total {total:,} characters; the budget is {budget:,} (D87): {top}")
+    def expand(g):
+        m = re.search(r'\{([^{}]*)\}', g)
+        return [g] if not m else [x for a in m.group(1).split(",") for x in expand(g[:m.start()] + a + g[m.end():])]
+    for rel, globs in want.items():
+        p = os.path.join(tree, rel)
+        if not os.path.isfile(p) or not mine(rel):
+            continue  # check 6 reports a missing file
+        got = scoped(read(p))
+        if got is None:
+            print(f"19\t{rel} does not open with D87's frontmatter (---, paths:, one double-quoted glob a line, ---): Claude Code would load it at launch"); continue
+        if any("[" in g for g in got):
+            print(f"19\t{rel} has a glob holding '[', which Section 4.1's globs never use (D87)"); continue
+        if sum(len(expand(g)) for g in got if "{" in g) > 1000:
+            print(f"19\t{rel}'s braces expand past 1,000 patterns; Claude Code would match the excess literally"); continue
+        if got != globs:
+            print(f"19\t{rel}'s paths differ from DESIGN.md Section 4.1 (SM_RULE_PATHS_{os.path.basename(rel)[:2]}, D87)"); continue
+    # Each scoped file is named where a session learns when to read it: rules 01 Section 9 and
+    # the bridge (D87). A missing file is check 6's.
+    r01, bridge = R + "01-layout-and-routing.md", ".claude/syntek-media-agents.md"
+    if os.path.isfile(os.path.join(tree, r01)) and mine(r01):
+        t = read(os.path.join(tree, r01))
+        m = re.search(r'^## 9\. .*?(?=^## |\Z)', t, re.S | re.M)
+        for rel in want:
+            if not m or rel not in m.group(0):
+                print(f"19\t{r01} Section 9 does not name {rel}, so nothing says when to read it (D87)")
+    if os.path.isfile(os.path.join(tree, bridge)) and mine(bridge):
+        t = read(os.path.join(tree, bridge))
+        for rel in want:
+            if rel not in t:
+                print(f"19\t{bridge} does not name {rel}, so another client never reads it (D87)")
+try:
+    main()
+except Exception as e:
+    print(f"19\tthe D87 check could not run: {e!r}")
+PY
+)
 }
 
 # Two findings at once: check 17 stands beside check 5 on a standalone render (D86).
@@ -533,7 +659,15 @@ build_tree() { # $1 = dir — every path the catalogue says the current answers 
   for path in AGENTS.md GEMINI.md; do
     printf 'Read every .claude/syntek-*-agents.md present before production work.\n' > "$t/$path"
   done
-  printf 'Read every other .claude/syntek-*-agents.md present.\n' > "$t/.claude/syntek-media-agents.md"
+  printf 'Read every other .claude/syntek-*-agents.md present.\n.claude/rules/syntek-media/04-toolkit-pipeline.md is path-scoped.\n' > "$t/.claude/syntek-media-agents.md"
+  # Rules 04 with D87's frontmatter, rules 01 Section 9 naming it (checks 18 and 19), and the
+  # seed .claude/CLAUDE.md importing CONTEXT.md.
+  local g
+  { printf -- '---\npaths:\n'; while IFS= read -r g; do printf '  - "%s"\n' "$g"; done <<< "$SM_RULE_PATHS_04"; printf -- '---\n\n# 04\n'; } \
+    > "$t/.claude/rules/syntek-media/04-toolkit-pipeline.md"
+  printf '# 01\n\n## 9. Read order\n\n**One rule loads only with its files.** `.claude/rules/syntek-media/04-toolkit-pipeline.md`\n\n## 10. Project settings\n' \
+    > "$t/.claude/rules/syntek-media/01-layout-and-routing.md"
+  printf '@../CONTEXT.md\n' > "$t/.claude/CLAUDE.md"
 }
 
 self_test() {
@@ -631,7 +765,7 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   printf 'Read .claude/syntek-media-agents.md before production work.\n' > "$TREE/AGENTS.md"
   probe "check 14 fires when an entrypoint names media's bridge alone (0.4.1 wording)" "check 14 — AGENTS.md must route to every"
   cp "$tmp/client-held" "$TREE/AGENTS.md"
-  cp "$TREE/.claude/syntek-media-agents.md" "$tmp/client-held"; printf '# A bridge that reads only itself\n' > "$TREE/.claude/syntek-media-agents.md"
+  cp "$TREE/.claude/syntek-media-agents.md" "$tmp/client-held"; printf '# A bridge that reads only itself\n.claude/rules/syntek-media/04-toolkit-pipeline.md is path-scoped.\n' > "$TREE/.claude/syntek-media-agents.md"
   probe "check 14 fires when the bridge stops reading the other bridges" "check 14 — .claude/syntek-media-agents.md must read every other"
   cp "$tmp/client-held" "$TREE/.claude/syntek-media-agents.md"
 
@@ -725,6 +859,50 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   rm -f "$TREE/publishing/src/renders/003-ferry.youtube-short.mp4"
   probe_clean "each output folder holding its README.md alone ships clean"
 
+  # 18–19 (D87): the always-loaded set, its imports, the on-demand limit and the frontmatter.
+  local r="$TREE/.claude/rules/syntek-media" real_globs="$SM_RULE_PATHS_04"
+  cp "$r/01-layout-and-routing.md" "$tmp/r01"; cp "$r/04-toolkit-pipeline.md" "$tmp/r04"
+  head -c "$SM_STARTUP_BUDGET" /dev/zero | tr '\0' x >> "$r/01-layout-and-routing.md"
+  probe "check 18 fires when the always-loaded instruction files pass the budget" "check 18 — the always-loaded instruction files total"
+  cp "$tmp/r01" "$r/01-layout-and-routing.md"
+  cp "$TREE/.claude/CLAUDE.md" "$tmp/cm"; cp "$TREE/.claude/MEMORY.md" "$tmp/mem"
+  printf '@MEMORY.md\n' >> "$TREE/.claude/CLAUDE.md"
+  head -c "$SM_STARTUP_BUDGET" /dev/zero | tr '\0' x >> "$TREE/.claude/MEMORY.md"
+  probe "check 18 counts a file .claude/CLAUDE.md imports" "check 18 — the always-loaded instruction files total"
+  printf '\n```\n@MEMORY.md\n```\nSee `@MEMORY.md`.\n' > "$TREE/.claude/CLAUDE.md"
+  probe_clean "check 18 reads no import inside a fence or a code span"
+  cp "$tmp/cm" "$TREE/.claude/CLAUDE.md"; cp "$tmp/mem" "$TREE/.claude/MEMORY.md"
+  head -c "$SM_SCOPED_LIMIT" /dev/zero | tr '\0' x >> "$r/04-toolkit-pipeline.md"
+  probe "check 18 fires when the scoped rule passes the on-demand limit" "check 18 — .claude/rules/syntek-media/04-toolkit-pipeline.md is"
+  cp "$tmp/r04" "$r/04-toolkit-pipeline.md"
+  sed -i 's#^  - "\(toolkit/\*\*\)"$#  - \1#' "$r/04-toolkit-pipeline.md"
+  probe "check 19 fires when a glob is not quoted" "check 19 — .claude/rules/syntek-media/04-toolkit-pipeline.md does not open with D87's frontmatter"
+  cp "$tmp/r04" "$r/04-toolkit-pipeline.md"
+  sed -i '0,/^---$/!{0,/^---$/{/^---$/d}}' "$r/04-toolkit-pipeline.md"
+  probe "check 19 fires when the frontmatter loses its closing ---" "check 19 — .claude/rules/syntek-media/04-toolkit-pipeline.md does not open with D87's frontmatter"
+  cp "$tmp/r04" "$r/04-toolkit-pipeline.md"
+  sed -i 's#^  - "\.gitattributes"$#  - "brand/.gitattributes"#' "$r/04-toolkit-pipeline.md"
+  probe "check 19 fires when one glob differs from Section 4.1" "check 19 — .claude/rules/syntek-media/04-toolkit-pipeline.md's paths differ from DESIGN.md Section 4.1"
+  cp "$tmp/r04" "$r/04-toolkit-pipeline.md"
+  sed -i 's#^  - "\.gitattributes"$#  - "[.]gitattributes"#' "$r/04-toolkit-pipeline.md"
+  probe "check 19 fires on a glob holding [" "check 19 — .claude/rules/syntek-media/04-toolkit-pipeline.md has a glob holding '['"
+  cp "$tmp/r04" "$r/04-toolkit-pipeline.md"
+  SM_RULE_PATHS_04="$real_globs"$'\n'"x/{$(seq -s, 1 1001)}"
+  { printf -- '---\npaths:\n'; while IFS= read -r g; do printf '  - "%s"\n' "$g"; done <<< "$SM_RULE_PATHS_04"; printf -- '---\n\n# 04\n'; } > "$r/04-toolkit-pipeline.md"
+  probe "check 19 fires when the braces expand past 1,000 patterns" "check 19 — .claude/rules/syntek-media/04-toolkit-pipeline.md's braces expand past 1,000"
+  SM_RULE_PATHS_04="$real_globs"; cp "$tmp/r04" "$r/04-toolkit-pipeline.md"
+  cp "$r/07-session-boundaries.md" "$tmp/r07"
+  { printf -- '---\npaths:\n  - "x"\n---\n'; cat "$tmp/r07"; } > "$r/07-session-boundaries.md"
+  probe "check 19 fires when another rules file opens with frontmatter" "check 19 — .claude/rules/syntek-media/07-session-boundaries.md opens with frontmatter"
+  cp "$tmp/r07" "$r/07-session-boundaries.md"
+  sed -i '/One rule loads only with its files/d' "$r/01-layout-and-routing.md"
+  probe "check 19 fires when rules 01 Section 9 loses the pointer" "check 19 — .claude/rules/syntek-media/01-layout-and-routing.md Section 9 does not name"
+  cp "$tmp/r01" "$r/01-layout-and-routing.md"
+  cp "$TREE/.claude/syntek-media-agents.md" "$tmp/br"
+  sed -i '/04-toolkit-pipeline/d' "$TREE/.claude/syntek-media-agents.md"
+  probe "check 19 fires when the bridge stops naming rules 04" "check 19 — .claude/syntek-media-agents.md does not name"
+  cp "$tmp/br" "$TREE/.claude/syntek-media-agents.md"
+
   # The over-author scope: syntek-author's files beside media's, and .owned listing media's.
   f="$tmp/oa"; TREE="$f"; build_tree "$TREE"
   mkdir -p "$f/.claude/skills/spelling" "$f/manuscript" "$f/.claude/hooks"
@@ -762,6 +940,13 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   probe_clean "syntek-author's learning/ pair and a lesson placed at run time are not media's, over syntek-author"
   printf 'learning/syntek-media/tides/MISSION.md\n' >> "$f.owned"; load_owned "$TREE"
   probe "check 17 fires on a media-owned path under learning/, over syntek-author" "check 17 — 1 path(s) ship at or under learning/: learning/syntek-media/tides/MISSION.md"
+  sed -i '/^learning\/syntek-media\/tides\/MISSION.md$/d' "$f.owned"; rm -rf "$f/learning"; load_owned "$TREE"
+  # 18 over syntek-author: the composite's total is logged, never a finding (D87).
+  mkdir -p "$f/.claude/rules/syntek-author"
+  head -c "$SM_STARTUP_BUDGET" /dev/zero | tr '\0' x > "$f/.claude/rules/syntek-author/01-layout-and-routing.md"
+  probe_clean "over syntek-author, a composite over the budget is logged, never a finding"
+  head -c "$SM_SCOPED_LIMIT" /dev/zero | tr '\0' x >> "$f/.claude/rules/syntek-media/04-toolkit-pipeline.md"
+  probe "check 18 fires on media's scoped rule past the on-demand limit, over syntek-author" "check 18 — .claude/rules/syntek-media/04-toolkit-pipeline.md is"
   SM_OWNED_MODE=false; SM_OWNED=()
 
   SM_AUTHOR_NAMES_FILE="$real_names"; SM_PATHS="$real_paths"
@@ -794,6 +979,7 @@ for target in "${TARGETS[@]}"; do
     print_findings
     STATUS=1
   fi
+  for note18 in "${BUDGET_NOTES[@]}"; do log "    · $note18"; done
 done
 log ""
 if [[ "$STATUS" -eq 0 ]]; then
