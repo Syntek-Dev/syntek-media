@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Changed
+
+- **`family-shared.json` records `unreleased` again** after the `v0.8.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9), as `shipped-seeds.sh --write-manifest` writes it on the first commit after a release tag, so check 23 holds on every commit until the next release. Development only, nothing ships.
+
 ## [0.8.0] - 02/11/2026
 
 Adds D87: media's rules file for the toolkit, `04-toolkit-pipeline.md`, loads only with the files it governs, in syntek-author D59's form, and rules 06 Section 12 regains the two clauses D86's rewrite left out.
