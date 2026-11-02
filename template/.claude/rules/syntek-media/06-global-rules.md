@@ -207,9 +207,8 @@ folders** (`production/src/renders/<piece>/`, `production/src/voiceover/generate
 `publishing/src/renders/<piece>/`) are never listed: `python3 toolkit/media.py where <piece>`
 lists the piece's tracked files and names those folders, saying whether each exists, never what
 is inside them. A working copy the toolkit writes in a piece's `timing` folder is never opened:
-the command that wrote it printed what it found, so read that output instead. A still
-`scene.py stills` has just written may be opened by its printed path to review its picture and mouths;
-never list the folder to find it.
+read what the command that wrote it printed instead. A still `scene.py stills` has just written
+may be opened by its printed path to look at it; never list the folder to find it.
 
 **The data root is off-limits too, whatever the store.** A data root is a folder outside every
 repository that holds a `.syntek-data-root` marker; this machine's is the one `SYNTEK_DATA_ROOT`
@@ -218,14 +217,16 @@ through the resolver commands below, and never list the footage mirror. Media's 
 `.claude/syntek-media-dataroot.json`, claims one folder, `production/src/footage`, whose
 `manifest.toml` stays the editorial record. The resolver, `python3 .claude/syntek-media-dataroot.py`
 (Python 3.14 or later), is the family's: `store` prints the store, `root` the root and its layout.
-Over the footage folder a session may run its `status` and `verify`, reading only the names,
-sizes, hashes and states they print, and, on the author's word, its `add` with `--role footage` or
-`--role approved-take` only, telling the author media files footage under those two roles alone;
-the resolver writes the root, the session never does. Never run its `pull`, and never work round
-a refusal. While two templates' data-root answers disagree, every data command refuses (exit 2):
-change them through an update (Section 11), never by hand.
-The guard hook in `.claude/settings.json` stops edits and writes under a root, and searches only
-where the client offers `Grep` and `Glob`; elsewhere this rule alone keeps a search out of the root.
+Over the footage folder a session may run its `status` and `verify`, reading only the names, sizes,
+hashes and states they print, and, on the author's word, its `add` with `--role footage` or
+`--role approved-take` only, telling the author media files footage under those two roles alone.
+Never run its `pull`, and never work round a refusal. Where syntek-author is applied, its own
+data-root rules say when its files are filed; what a session runs over the footage folder is this
+section's. While two templates' recorded store or layout answers disagree, every data command
+refuses (exit 2), and the update that leaves them apart says so: change them only through an update
+(Section 11). The guard hook in `.claude/settings.json` stops edits and writes under a root, and
+searches only where the client offers `Grep` and `Glob`; elsewhere this rule alone keeps a search
+out of the root.
 
 **Why this rule exists.** Ignored files hold credentials, local settings and private recordings. A
 search that reads them prints them into the session, and from there into a handoff or a commit.
