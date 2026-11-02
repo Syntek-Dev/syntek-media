@@ -19,8 +19,8 @@ marks which is which.
 ├── settings.json           ← model, compaction off, permissions, the ask rules, the session hooks, the guide guard and the data-root guard (yours)
 ├── settings.local.json     ← your machine-only overrides, if any (git-ignored; never committed)
 ├── hooks/                  ← context-threshold-handoff.sh, pre-compact-handoff.sh, how-to-read-only.sh and the pair (all shared)
-├── rules/                  ← rules loaded at launch, one folder per template (no pair here)
-│   └── syntek-media/       ← the template's rules, loaded at launch (template-owned; never edit)
+├── rules/                  ← the rules, one folder per template (no pair here)
+│   └── syntek-media/       ← the template's rules: at launch, but 04 with the files it covers (template-owned; never edit)
 │       ├── 01-layout-and-routing.md   ← the brand brief (Section 1), layers, the piece, ownership
 │       ├── 02-skills.md               ← the media skills, the family-shared skills and the companions
 │       ├── 03-production-ethics.md    ← who decides, the ladder, credits, disclosure, rights
@@ -38,8 +38,9 @@ marks which is which.
   and the project's own rules under 'Project-specific rules'. **Those rules win over the
   template's rules files where the two conflict.**
 - `rules/syntek-media/` — the template's rules, `01-…` to `08-…`; Section 1 of the first is the
-  brand brief, rendered from the answers and kept current by every update. Claude Code loads
-  every Markdown file under `rules/` at launch with the same weight as `CLAUDE.md`, which is why
+  brand brief, rendered from the answers and kept current by every update. Claude Code loads every
+  Markdown file under `rules/` as a rule with the same weight as `CLAUDE.md`: at launch, or, where
+  its frontmatter lists `paths` (`04-…`), once a session reads a file that matches. That is why
   this folder holds no `CONTEXT.md` or `CLAUDE.md` of its own. Another template applied to this
   project would add its own folder beside it.
 - `MEMORY.md` — the durable memory every session reads second. Template files name its six

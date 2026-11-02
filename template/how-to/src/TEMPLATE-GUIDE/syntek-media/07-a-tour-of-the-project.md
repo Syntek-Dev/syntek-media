@@ -63,7 +63,7 @@ An approved voiceover take cannot be made again, so archive it when you approve 
 `.claude/` is the folder Claude Code reads, and the other coding agents read it too.
 
 - `.claude/CLAUDE.md` is the project brief, and `.claude/MEMORY.md` is the project's memory: decisions, facts and where the work stands.
-- `.claude/rules/syntek-media/` holds the media rules, which load at the start of every session.
+- `.claude/rules/syntek-media/` holds the media rules: all but the toolkit's load at the start of every session, and the toolkit's once Claude opens a file they cover.
 - `.claude/skills/` holds the skills, which `how-to/src/TEMPLATE-GUIDE/syntek-media/08-skills-and-the-router.md` introduces.
 - `.claude/hooks/` holds the session hooks, which warn as a session fills and stop the guide being edited.
 - `.claude/syntek-media-agents.md` is the bridge, which tells the other coding agents what to read.

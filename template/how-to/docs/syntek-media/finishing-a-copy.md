@@ -53,7 +53,7 @@ them.
 - Every change to a settings file is made on the author's word, and never removes or weakens an
   entry the author already has.
 - The index lines in `README.md`, `CONTEXT.md` and `.claude/CLAUDE.md` are optional: the media
-  rules load at launch whatever those files say.
+  rules load whatever those files say.
 - The copy is committed with `.copier-answers.syntek-media.yml`, which every update merges
   against.
 
