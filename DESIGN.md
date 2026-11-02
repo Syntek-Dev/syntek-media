@@ -1,6 +1,6 @@
 # DESIGN.md — syntek-media
 
-**Last Updated**: 01/11/2026 **Version**: 0.7.0 **Maintained By**: Syntek Studio
+**Last Updated**: 02/11/2026 **Version**: 0.8.0 **Maintained By**: Syntek Studio
 **Language**: British English (en_GB)
 
 The build contract for `syntek-media`, a Copier template that adds audio and video production to a repository, in three brand kinds:

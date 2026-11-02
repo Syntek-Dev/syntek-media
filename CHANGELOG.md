@@ -13,6 +13,8 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+## [0.8.0] - 02/11/2026
+
 Adds D87: media's rules file for the toolkit, `04-toolkit-pipeline.md`, loads only with the files it governs, in syntek-author D59's form, and rules 06 Section 12 regains the two clauses D86's rewrite left out.
 
 **What existing projects receive.** Rules 01, 04 and 06, the bridge (`.claude/syntek-media-agents.md`) and the user guide's changed chapters, guide and procedure are template-owned and arrive with the next update, run as `README.md` 'Updating a project' gives it. No migration runs: nothing moves and no name is added (D11), and the maintainer waived recipe 7.7's migration on 01/11/2026, as syntek-author D59 waived its own.
@@ -65,6 +67,8 @@ Adds D87: media's rules file for the toolkit, `04-toolkit-pipeline.md`, loads on
 In a combined project the two `.claude/` files and the root `CONTEXT.md` are syntek-author's, already corrected by its D59, so there is nothing to edit.
 
 **syntek-author baseline.** Designed against syntek-author D59 at its `v0.9.1` tag (commit `ccb8340`), read 01/11/2026 from a clean clone, with Claude Code's memory, tools-reference and context-window documentation fetched the same day.
+
+**Results.** On the release tree (the D87 commits to `d7216d0` plus this release commit's versioning), 02/11/2026, `bash .github/scripts/run-all.sh --author` a clean clone of syntek-author at `v0.9.1` (`ccb8340`) ran on Python 3.14.8 and Copier 9.19.1: 39 PASS, 0 findings, 0 errors and 13 SKIP rows, each `toolkit-smoke.sh` check 22 (WhisperX live alignment, which no audit builds) in one of the twelve renders, named and never a pass. `shipped-brands.sh` check 18 measured media's always-loaded instruction files at 102,603–105,596 characters across the nine standalone renders, under the 110,000 budget, and logged 196,036–198,245 over syntek-author, never a finding (D87). `update-test.sh` passed for all three brand kinds, standalone and over syntek-author, updating from `v0.7.0` to `v0.8.0`; `coexist-test.sh` passed for all three in both orders with no SKIP (D27), its check 29 included. Media's `family-shared.json` records release `v0.8.0` (sha256 `9af425a8…`).
 
 ### Added
 
