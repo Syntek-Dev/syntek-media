@@ -3,3 +3,5 @@
 /.code-review-graph/
 # Development handoffs stay on the maintainer's machine; only their folder pair is committed.
 /handoffs/HANDOFF-*.md
+# graphify's local knowledge graph of this repository (graph.json, GRAPH_REPORT.md, its cache).
+/graphify-out/

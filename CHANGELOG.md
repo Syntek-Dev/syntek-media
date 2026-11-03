@@ -16,6 +16,7 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 ### Changed
 
 - **`family-shared.json` records `unreleased` again** after the `v0.8.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9), as `shipped-seeds.sh --write-manifest` writes it on the first commit after a release tag, so check 23 holds on every commit until the next release. Development only, nothing ships.
+- **The root `.gitignore` ignores `/graphify-out/`**, graphify's local knowledge graph of this repository, beside code-review-graph's database (DESIGN.md Section 7). Development only, nothing ships; `template/.gitignore` is unchanged.
 
 ## [0.8.0] - 02/11/2026
 
