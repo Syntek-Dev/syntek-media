@@ -23,9 +23,10 @@
 #                    templates holds one set of bytes whichever comes first. The root
 #                    family-shared.json records them in the family's format, and checks 21–27
 #                    hold the files, the four blocks and the renders to that record (since
-#                    0.6.0 forty-three files, since 0.7.0 from syntek-author's v0.9.1, D81, D84).
+#                    0.6.0 forty-three files, since 0.7.0 from syntek-author's v0.9.1, since 0.9.0 its
+#                    v0.11.0, D81, D84, D89).
 #
-#                    Thirty-seven checks:
+#                    Thirty-eight checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
 #                         _skip_if_exists.
 #                      2. Every _skip_if_exists entry names a file under template/.
@@ -70,9 +71,10 @@
 #                         family's embed_graph_tool deny, in that order, the six allows, the nine
 #                         ElevenLabs asks, the two voice remix run asks (D82) and the family's
 #                         eight MCP asks, those eight in the family's order (D80); a hooks key
-#                         equal, as parsed JSON, to syntek-author's v0.9.1 seed's hooks object
-#                         (the four handoff-hook entries, SessionStart compact among them, then
-#                         the data-root guard and the guide guard: D80, D81, D84); and no
+#                         equal, as parsed JSON, to the hooks object of the seed at the tag
+#                         SM_FAMILY_RELEASE names (v0.11.0's, unchanged since v0.9.1, D89: the
+#                         four handoff-hook entries, SessionStart compact among them, then the
+#                         data-root guard and the guide guard: D80, D81, D84); and no
 #                         owner-specific key (effortLevel, ultracode, enabledPlugins, disable*).
 #                     13. .claude/settings.json does not parse as JSON. Read only where the file
 #                         is plain JSON (every render; the source while it holds no block).
@@ -175,13 +177,17 @@
 #                         not read; nor is template/ (check 25's), nor the .agents/skills link
 #                         (shipped-brands.sh check 13's).
 #                     28. The data-root map, .claude/syntek-media-dataroot.json, is not exactly
-#                         D86's (DESIGN.md Section 4.1): format 1; the one folder
-#                         production/src/footage, with no other key; and the roles footage and
-#                         approved-take, each "evidence": true and "repo": "skip", nothing else
-#                         (D80, amended by D86). A second folder could equal or overlap one of
-#                         syntek-author's, which refuses every data command touching it; a role
-#                         that is not evidence would let a filed copy be replaced, and one
-#                         without "repo": "skip" would put footage in Git (D19).
+#                         D89's (DESIGN.md Section 4.1): format 1; the one folder entry
+#                         {"path": "production/src/footage", "roles": ["footage",
+#                         "approved-take"], "pull": "named"}, its roles in that order; and the
+#                         roles footage and approved-take, each "evidence": true and "repo":
+#                         "skip", nothing else (D80, amended by D86 and D89). A second folder
+#                         could equal or overlap one of syntek-author's, which refuses every
+#                         data command touching it; a role that is not evidence would let a
+#                         filed copy be replaced, and one without "repo": "skip" would put
+#                         footage in Git (D19); a folder entry without the binding would let
+#                         the resolver file another role there, or a whole pull copy the
+#                         footage back (syntek-author D61).
 #                     29. In a standalone render, `python3 .claude/syntek-media-permissions.py
 #                         --check` exits other than 0 or 1, or finds missing a rule that is not
 #                         one of media's own seed rules (the ElevenLabs and voice remix run
@@ -268,8 +274,21 @@
 #                         (presets only, D87's one exemption, named here). So a misspelt
 #                         slug or a renamed guide cannot leave a glob dead, nor a new toolkit
 #                         workflow fall outside the list unseen (D87).
+#                     38. copier.yml's _migrations does not declare 'version: v0.9.0' exactly
+#                         once, running '"<% _copier_python %>"
+#                         "<% _copier_conf.src_path %>/migrations/v0.9.0-footage-roles.py"' at
+#                         _stage 'after', after the v0.7.0 entry and before the family 'update'
+#                         block; or the script does not parse as Python 3.10 (ast,
+#                         feature_version), names a path under learning/, or, run in a scratch
+#                         project holding only media's answers file, writes anything or exits
+#                         other than 0 (D89: the report-only crossing script that says the
+#                         footage folder now binds its two roles and leaves a whole pull). Quiet
+#                         on the order where check 20 already reports the update entry out of
+#                         place, and on v0.7.0's side where check 36 reports that entry; a
+#                         missing script is check 19's, and nothing more here. It cannot check
+#                         what the report says: update-test.sh check 27 reads its words.
 #
-#                    Checks 1–4, 8, 16–26, 30–34, 36 and 37 read copier.yml, template/,
+#                    Checks 1–4, 8, 16–26, 30–34 and 36–38 read copier.yml, template/,
 #                    migrations/, rules 06, family-shared.json and _common.sh's lists (static,
 #                    once; checks 21 and 25 also read Git's index, check 34 the names file).
 #                    Checks 5–7, 9, 11–15 and 28 read every tree given — template/ by default,
@@ -308,10 +327,10 @@
 #            finding each; then proves the render checks on a render-shaped copy, and the
 #            over-author scope on a tree with a .owned list.
 #
-# Requirements: bash 4+, grep, awk, python3 3.14 or later (checks 10, 12, 13, 21–29, 33 and 36;
-#               _common.sh refuses an older one, and check 29 runs the vendored permissions
-#               script, which needs it), sha256sum or shasum (checks 21 and 22), git (checks 21,
-#               25 and 35, and the self-test). No network.
+# Requirements: bash 4+, grep, awk, python3 3.14 or later (checks 10, 12, 13, 21–29, 33, 36
+#               and 38; _common.sh refuses an older one, and check 29 runs the vendored
+#               permissions script, which needs it), sha256sum or shasum (checks 21 and 22), git
+#               (checks 21, 25 and 35, and the self-test). No network.
 #
 # Usage: shipped-seeds.sh [--root DIR] [--write-manifest] [--quiet] [--self-test] [--help]
 #                         [<tree>...]
@@ -531,7 +550,7 @@ static_checks() {
   # ── 20. D76's outside-link pair opens _migrations, D81's update entry closes it, and every
   #        entry between them is versioned ──
   local pair_ok=false upd_ok=true
-  local -a howto_findings=() report_findings=()
+  local -a howto_findings=() report_findings=() roles_findings=()
   if [[ -n "$mig" ]]; then
     local -a ver=() cmd=() whn=()
     local n=0 i v c w
@@ -603,6 +622,27 @@ static_checks() {
       [[ "$hn" -eq 1 ]] && ! [[ "$d76" -ge 0 && "$h" -lt "$d76" ]] && [[ "$h" -lt "$upd_at" ]] && h_ok=true
       if $upd_ok && { [[ "$r" -gt "$upd_at" ]] || { $h_ok && [[ "$r" -lt "$h" ]]; }; }; then
         report_findings+=("check 36 — the $SM_REPORT_VERSION entry is _migrations entry $((r + 1)) of $n, not after the $SM_HOWTO_VERSION entry and before the family 'update' block: releases run in order, and the update script must see what the crossing report saw (DESIGN.md D86, D81)")
+      fi
+    fi
+    # 38's reading: D89's crossing entry, after v0.7.0's (where check 36 found it once and in
+    # place) and before the 'update' block (where check 20 found it last).
+    local g=-1 gn=0
+    for ((i = 0; i < n; i++)); do
+      if [[ "${ver[$i]}" == "$SM_ROLES_VERSION" ]]; then g=$i; gn=$((gn + 1)); fi
+    done
+    if [[ "$gn" -ne 1 ]]; then
+      roles_findings+=("check 38 — _migrations declares 'version: $SM_ROLES_VERSION' $gn time(s), not once: D89's report-only crossing script, $SM_ROLES_MIGRATION, runs once, on the update that crosses 0.9.0 (DESIGN.md D89)")
+    else
+      [[ "${cmd[$g]}" == "'\"<% _copier_python %>\" \"<% _copier_conf.src_path %>/$SM_ROLES_MIGRATION\"'" \
+          && "${whn[$g]}" == *"_stage == 'after'"* ]] \
+        || roles_findings+=("check 38 — the $SM_ROLES_VERSION entry does not run '\"<% _copier_python %>\" \"<% _copier_conf.src_path %>/$SM_ROLES_MIGRATION\"' at _stage 'after': the crossing script runs on the Python that runs Copier, after the render (DESIGN.md D89, D85)")
+      # The order is check 20's where the update entry is out of place, and v0.7.0's own
+      # place is check 36's: v0.9.0 is held to it only where that entry stands well.
+      local h_ok2=false r_ok=false
+      [[ "$hn" -eq 1 ]] && ! [[ "$d76" -ge 0 && "$h" -lt "$d76" ]] && [[ "$h" -lt "$upd_at" ]] && h_ok2=true
+      [[ "$rn" -eq 1 ]] && [[ "$r" -lt "$upd_at" ]] && ! { $h_ok2 && [[ "$r" -lt "$h" ]]; } && r_ok=true
+      if $upd_ok && { [[ "$g" -gt "$upd_at" ]] || { $r_ok && [[ "$g" -lt "$r" ]]; }; }; then
+        roles_findings+=("check 38 — the $SM_ROLES_VERSION entry is _migrations entry $((g + 1)) of $n, not after the $SM_REPORT_VERSION entry and before the family 'update' block: releases run in order, and the update script must see what the crossing report saw (DESIGN.md D89, D81)")
       fi
     fi
   fi
@@ -679,10 +719,14 @@ static_checks() {
 
   # ── 36. D86's crossing entry, then its script (a missing script is check 19's) ──
   for line in "${report_findings[@]}"; do finding "$line"; done
-  if [[ -f "$SM_ROOT/$SM_REPORT_MIGRATION" ]]; then report_script_checks; fi
+  if [[ -f "$SM_ROOT/$SM_REPORT_MIGRATION" ]]; then report_script_checks 36 "$SM_REPORT_MIGRATION" D86; fi
 
   # ── 37. Rules 04's globs: none dead, no toolkit workflow left out (D87) ─────
   rules04_checks
+
+  # ── 38. D89's crossing entry, then its script (a missing script is check 19's) ──
+  for line in "${roles_findings[@]}"; do finding "$line"; done
+  if [[ -f "$SM_ROOT/$SM_ROLES_MIGRATION" ]]; then report_script_checks 38 "$SM_ROLES_MIGRATION" D89; fi
 }
 
 # 37 (D87): rules 04's paths list holds no dead glob, and leaves no toolkit workflow out. Read on
@@ -826,10 +870,12 @@ PYLEARN
   fi
 }
 
-# 36's script half: it parses as Python 3.10, names no path under learning/, and, run in a
-# scratch project holding only media's answers file, writes nothing and exits 0 (D86).
-report_script_checks() {
-  local scr="$SM_ROOT/$SM_REPORT_MIGRATION" why ln scratch rc=0 before after
+# The script half of checks 36 (D86) and 38 (D89), one crossing report each: it parses as
+# Python 3.10, names no path under learning/, and, run in a scratch project holding only
+# media's answers file, writes nothing and exits 0.
+report_script_checks() { # $1 = check number, $2 = the script (repository path), $3 = its decision
+  local num="$1" rel="$2" dec="$3"
+  local scr="$SM_ROOT/$rel" why ln scratch rc=0 before after
   why="$(python3 -I - "$scr" <<'PYPARSE' 2>&1
 import ast, sys
 try:
@@ -837,16 +883,16 @@ try:
 except SyntaxError as error:
     print("line %s: %s" % (error.lineno, error.msg)); sys.exit(1)
 PYPARSE
-)" || { finding "check 36 — $SM_REPORT_MIGRATION does not parse as Python 3.10 ($why): Copier 9.12.0 may run it on 3.10, and a crossing script that fails aborts the 'update' block after it (DESIGN.md D86, D85)"; return 0; }
+)" || { finding "check $num — $rel does not parse as Python 3.10 ($why): Copier 9.12.0 may run it on 3.10, and a crossing script that fails aborts the 'update' block after it (DESIGN.md $dec, D85)"; return 0; }
   ln="$(grep -nE -m1 -- "$SM_LEARNING_PATH_RE" "$scr" | cut -d: -f1 || true)"
-  [[ -z "$ln" ]] || finding "check 36 — $SM_REPORT_MIGRATION names a path under learning/ (line $ln): the report never names or looks at a lesson (DESIGN.md D86)"
+  [[ -z "$ln" ]] || finding "check $num — $rel names a path under learning/ (line $ln): the report never names or looks at a lesson (DESIGN.md $dec)"
   scratch="$(sm_mktemp)"
   : > "$scratch/$SM_ANSWERS_FILE"
   before="$(cd "$scratch" && find . -print0 | LC_ALL=C sort -z | xargs -0 ls -ld --time-style=+%s 2>/dev/null | awk '{ $5 = $5; print }' | md5sum)"
   (cd "$scratch" && env -u SYNTEK_DATA_ROOT -u MEDIA_CHROMIUM python3 -I "$scr" >/dev/null 2>&1) || rc=$?
   after="$(cd "$scratch" && find . -print0 | LC_ALL=C sort -z | xargs -0 ls -ld --time-style=+%s 2>/dev/null | awk '{ $5 = $5; print }' | md5sum)"
-  [[ "$rc" -eq 0 ]] || finding "check 36 — $SM_REPORT_MIGRATION exits $rc in a scratch project: a crossing report always exits 0, because a non-zero exit aborts the 'update' block after it (DESIGN.md D86, D81)"
-  [[ "$before" == "$after" ]] || finding "check 36 — $SM_REPORT_MIGRATION writes in a scratch project ($(cd "$scratch" && find . -mindepth 1 ! -name "$SM_ANSWERS_FILE" -print | sed 's#^\./##' | head -3 | paste -sd' ' -)): the report moves and writes nothing (DESIGN.md D86)"
+  [[ "$rc" -eq 0 ]] || finding "check $num — $rel exits $rc in a scratch project: a crossing report always exits 0, because a non-zero exit aborts the 'update' block after it (DESIGN.md $dec, D81)"
+  [[ "$before" == "$after" ]] || finding "check $num — $rel writes in a scratch project ($(cd "$scratch" && find . -mindepth 1 ! -name "$SM_ANSWERS_FILE" -print | sed 's#^\./##' | head -3 | paste -sd' ' -)): the report moves and writes nothing (DESIGN.md $dec)"
   rm -rf "$scratch"
 }
 
@@ -1044,7 +1090,7 @@ json_check() { # $1 = mode (settings|parse), $2 = file → prints one problem pe
   SM_ALLOW="$(printf '%s\n' "${SM_SETTINGS_ALLOW[@]}")" \
   SM_ASK="$(printf '%s\n' "${SM_SETTINGS_ASK[@]}" "${SM_SETTINGS_FAMILY_ASK[@]}")" \
   SM_FAMILY_ASK="$(printf '%s\n' "${SM_SETTINGS_FAMILY_ASK[@]}")" \
-  SM_HOOKS="$SM_SETTINGS_HOOKS" SM_BANNED="$SM_SETTINGS_BANNED_KEYS" \
+  SM_HOOKS="$SM_SETTINGS_HOOKS" SM_BANNED="$SM_SETTINGS_BANNED_KEYS" SM_REL="$SM_FAMILY_RELEASE" \
   SM_TOP="$(printf '%s\n' "${SM_SETTINGS_TOP[@]}")" \
   python3 - "$1" "$2" <<'PY'
 import json, os, sys
@@ -1067,7 +1113,7 @@ for kv in [t for t in os.environ["SM_TOP"].split("\n") if t]:
         why = "the family's output style (DESIGN.md D13; syntek-author D60)" if key == "outputStyle" else "hand off, never compact (DESIGN.md D13, D35, D81)"
         print(f"{key} is not {val} — {why}")
 if data.get("hooks") != json.loads(os.environ["SM_HOOKS"]):
-    print("hooks are not exactly syntek-author's v0.9.1 seed's hooks object — the four handoff-hook entries (UserPromptSubmit, "
+    print(f"hooks are not exactly syntek-author's {os.environ['SM_REL']} seed's hooks object — the four handoff-hook entries (UserPromptSubmit, "
           "PreCompact auto and manual, SessionStart compact), then the data-root guard and the guide guard — as parsed JSON "
           "(DESIGN.md D13, D35, D80, D81, D84)")
 for k in data:
@@ -1211,7 +1257,7 @@ tree_checks() { # on TREE
     done < <(sm_family_py tree "$SM_ROOT" "$TREE" "$own")
   fi
 
-  # ── 28. The data-root map is exactly D86's (D80, amended by D86) ─────────────
+  # ── 28. The data-root map is exactly D89's (D80, amended by D86 and D89) ─────
   f="$TREE/$SM_DATAROOT_MAP"
   if [[ -f "$f" ]] && is_owned_file "$SM_DATAROOT_MAP"; then
     line="$(python3 -I - "$f" <<'PYMAP' 2>&1
@@ -1225,14 +1271,14 @@ if not isinstance(data, dict) or set(data) != {"format", "folders", "roles"}:
     print("holds the keys %s, not exactly format, folders and roles" % sorted(data) if isinstance(data, dict) else "is not a JSON object")
 elif type(data["format"]) is not int or data["format"] != 1:
     print("is not format 1")
-elif data["folders"] != [{"path": "production/src/footage"}]:
-    print("claims %s, not the one folder production/src/footage with no other key" % json.dumps(data["folders"]))
+elif json.dumps(data["folders"], sort_keys=True) != json.dumps([{"path": "production/src/footage", "roles": ["footage", "approved-take"], "pull": "named"}], sort_keys=True):
+    print("claims %s, not the one folder production/src/footage with exactly \"roles\": [\"footage\", \"approved-take\"], in that order, and \"pull\": \"named\"" % json.dumps(data["folders"]))
 elif not isinstance(data["roles"], list) or sorted(json.dumps(r, sort_keys=True) for r in data["roles"]) != sorted(
         json.dumps(dict(role, name=n), sort_keys=True) for n in ("footage", "approved-take")):
     print("defines the roles %s, not exactly footage and approved-take, each \"evidence\": true and \"repo\": \"skip\"" % json.dumps(data["roles"]))
 PYMAP
 )"
-    [[ -z "$line" ]] || finding "check 28 — $SM_DATAROOT_MAP $line: media's map claims the footage folder with two evidence roles that never enter Git, and nothing else, so it never overlaps a folder of syntek-author's, which refuses every data command there (DESIGN.md D80, amended by D86; Section 4.1)"
+    [[ -z "$line" ]] || finding "check 28 — $SM_DATAROOT_MAP $line: media's map claims the footage folder with two evidence roles that never enter Git, binds it to them and keeps it out of a whole pull, and nothing else, so it never overlaps a folder of syntek-author's, which refuses every data command there (DESIGN.md D80, amended by D86 and D89; Section 4.1; syntek-author D61)"
   fi
 
   # ── 35. Each mapped folder ships, and its storage manifest can be committed (D86) ──
@@ -1324,8 +1370,8 @@ run_checks() {
 
 # ── Self-test ────────────────────────────────────────────────────────────────
 
-# D86's map, as the template ships it (check 28's fixture).
-DATAROOT_MAP_D86='{"format": 1, "folders": [{"path": "production/src/footage"}], "roles": [{"name": "footage", "evidence": true, "repo": "skip"}, {"name": "approved-take", "evidence": true, "repo": "skip"}]}'
+# D86's map, as D89 amends it and the template ships it (check 28's fixture).
+DATAROOT_MAP_D86='{"format": 1, "folders": [{"path": "production/src/footage", "roles": ["footage", "approved-take"], "pull": "named"}], "roles": [{"name": "footage", "evidence": true, "repo": "skip"}, {"name": "approved-take", "evidence": true, "repo": "skip"}]}'
 
 write_fixture() { # $1 = repo root
   local r="$1" t="$1/template" s q="'" banner
@@ -1351,6 +1397,9 @@ write_fixture() { # $1 = repo root
     # D86's crossing entry (check 36), after v0.6.0's and before the family update block.
     printf '  - version: %s\n    command: %s"<%% _copier_python %%>" "<%% _copier_conf.src_path %%>/%s"%s\n    when: "<%% _stage == %safter%s %%>"\n' \
       "$SM_REPORT_VERSION" "$q" "$SM_REPORT_MIGRATION" "$q" "$q" "$q"
+    # D89's crossing entry (check 38), after v0.7.0's and before the family update block.
+    printf '  - version: %s\n    command: %s"<%% _copier_python %%>" "<%% _copier_conf.src_path %%>/%s"%s\n    when: "<%% _stage == %safter%s %%>"\n' \
+      "$SM_ROLES_VERSION" "$q" "$SM_ROLES_MIGRATION" "$q" "$q" "$q"
     # The family update block (D81), byte for byte the tag's, closing _migrations.
     sm_family_update_block
     # _tasks (D81, D84): stand-ins for media's three, D84's copy-time warning, then the
@@ -1387,6 +1436,7 @@ PYFIX
   printf 'print("fixture outside-link migration")\n' > "$r/$SM_OUTSIDE_MIGRATION"
   printf 'print("fixture crossing report")\n' > "$r/$SM_HOWTO_MIGRATION"
   printf 'import sys\nprint("fixture v0.7.0 report")\nsys.exit(0)\n' > "$r/$SM_REPORT_MIGRATION"
+  printf 'import sys\nprint("fixture v0.9.0 report")\nsys.exit(0)\n' > "$r/$SM_ROLES_MIGRATION"
   chmod 755 "$r/$SM_OUTSIDE_MIGRATION"
   # The permissions script's stand-in is a stub check 29 can drive (STUB_PERM_* below): by
   # default it finds two of media's own seed rules missing until --write has run.
@@ -1594,7 +1644,7 @@ production/docs/{reference,project}/voiceover.md'
   sed -i 's/"autoCompactEnabled": false/"autoCompactEnabled": true/' "$t/.claude/settings.json"; probe "check 12 fires when compaction is switched on" "check 12 — .claude/settings.json autoCompactEnabled"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/, "mcp__elevenlabs__voice_clone"//' "$t/.claude/settings.json"; probe "check 12 fires when a credit-spending tool is not asked" "check 12 — .claude/settings.json does not ask mcp__elevenlabs__voice_clone"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"ask": \[/"ask": ["mcp__elevenlabs__list_models", /' "$t/.claude/settings.json"; probe "check 12 fires on an ask D13 does not list" "check 12 — .claude/settings.json asks mcp__elevenlabs__list_models"; cp "$tmp/h" "$t/.claude/settings.json"
-  sed -i 's/"timeout":10}]}],"PreToolUse"/"timeout":30}]}],"PreToolUse"/' "$t/.claude/settings.json"; probe "check 12 fires when a family hook registration drifts (D80)" "check 12 — .claude/settings.json hooks are not exactly syntek-author's v0.9.1 seed's hooks object"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/"timeout":10}]}],"PreToolUse"/"timeout":30}]}],"PreToolUse"/' "$t/.claude/settings.json"; probe "check 12 fires when a family hook registration drifts (D80)" "check 12 — .claude/settings.json hooks are not exactly syntek-author's $SM_FAMILY_RELEASE seed's hooks object"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"idleCompaction": false/"idleCompaction": true/' "$t/.claude/settings.json"; probe "check 12 fires when idle compaction is switched on (D81)" "check 12 — .claude/settings.json idleCompaction is not false"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"outputStyle": "Concise"/"outputStyle": "Explanatory"/' "$t/.claude/settings.json"; probe "check 12 fires when the output style is not the family's Concise (D13)" "check 12 — .claude/settings.json outputStyle is not \"Concise\" — the family's output style"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's#"Edit(/how-to/\*\*)", ##' "$t/.claude/settings.json"; probe "check 12 fires when the guide's deny is lost (D84)" "check 12 — .claude/settings.json does not deny Edit(/how-to/**)"; cp "$tmp/h" "$t/.claude/settings.json"
@@ -1733,7 +1783,7 @@ production/docs/{reference,project}/voiceover.md'
   rm -f "$m"; sm_family_py write "$tmp" || die "the writer failed"
   probe_clean "--write-manifest writes the record the checks hold the fixture to"
   cp "$tmp/manifest.held" "$m"
-  # 28: D86's map, exactly (D80, amended by D86).
+  # 28: D89's map, exactly (D80, amended by D86 and D89).
   mr() { python3 -I -c "import json,sys; d=json.loads(sys.argv[2]); $1; open(sys.argv[1], 'w').write(json.dumps(d) + '\\n')" "$t/$SM_DATAROOT_MAP" "$DATAROOT_MAP_D86"; }
   mr 'd["roles"].reverse()';                                  probe_clean "check 28 reads the two roles in either order"
   mr 'd["folders"].append({"path": "production/src/renders"})'; probe "check 28 fires when the map claims a second folder" "check 28 — $SM_DATAROOT_MAP claims"
@@ -1741,6 +1791,12 @@ production/docs/{reference,project}/voiceover.md'
   mr 'd["roles"][1]["evidence"] = False';                     probe "check 28 fires on a role that is not evidence" "check 28 — $SM_DATAROOT_MAP defines the roles"
   mr 'd["roles"][0]["repo"] = "copy"';                        probe "check 28 fires on a role that would enter Git" "check 28 — $SM_DATAROOT_MAP defines the roles"
   mr 'd["folders"][0]["kind"] = "video"';                     probe "check 28 fires on a folder with a fixed kind" "check 28 — $SM_DATAROOT_MAP claims"
+  mr 'del d["folders"][0]["roles"]';                          probe "check 28 fires on a folder entry that binds no roles (D89)" "check 28 — $SM_DATAROOT_MAP claims"
+  mr 'd["folders"][0]["roles"].append("asset")';              probe "check 28 fires when the binding takes a shared role (D89)" "check 28 — $SM_DATAROOT_MAP claims"
+  mr 'd["folders"][0]["roles"].reverse()';                    probe "check 28 holds the bound roles in order (D89)" "check 28 — $SM_DATAROOT_MAP claims"
+  mr 'del d["folders"][0]["pull"]';                           probe "check 28 fires on a folder a whole pull would copy (D89)" "check 28 — $SM_DATAROOT_MAP claims"
+  mr 'd["folders"][0]["pull"] = True';                        probe "check 28 fires on a pull that is not \"named\" (D89)" "check 28 — $SM_DATAROOT_MAP claims"
+  mr 'd["folders"][0]["rows"] = "none"';                      probe "check 28 fires on a folder that takes no rows (D89)" "check 28 — $SM_DATAROOT_MAP claims"
   mr 'pass'; unset -f mr
 
   # 33: nothing under learning/ in copier.yml, the refresh data or template/ (D86).
@@ -1791,7 +1847,7 @@ production/docs/{reference,project}/voiceover.md'
       '$0 == v { skip = 3 } skip { skip--; next } $0 == at { print e } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
   }
   rmove "  - version: $SM_HOWTO_VERSION"
-  probe "check 36 fires when the v0.7.0 entry comes before v0.6.0's (D86)" "check 36 — the $SM_REPORT_VERSION entry is _migrations entry 4 of 6, not after the $SM_HOWTO_VERSION entry"
+  probe "check 36 fires when the v0.7.0 entry comes before v0.6.0's (D86)" "check 36 — the $SM_REPORT_VERSION entry is _migrations entry 4 of 7, not after the $SM_HOWTO_VERSION entry"
   rmove "_tasks:"
   probe "check 36 stays quiet, and check 20 claims it, when the v0.7.0 entry follows the update block" "check 20 — _migrations does not close with the family 'update' block's one entry"
   sed "s#^    command: '\"<% _copier_python %>\" \"<% _copier_conf.src_path %>/$SM_REPORT_MIGRATION\"'\$#    command: python3 \"<% _copier_conf.src_path %>/$SM_REPORT_MIGRATION\"#" "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
@@ -1812,6 +1868,38 @@ production/docs/{reference,project}/voiceover.md'
   probe "a missing v0.7.0 script is check 19's alone" "check 19 — a migration runs $SM_REPORT_MIGRATION, which is not in this repository"
   mv "$tmp/report.held" "$f"
   probe_clean "the v0.7.0 crossing entry after v0.6.0's and before the update block, its script clean"
+
+  # 38: D89's crossing entry and its script (D89).
+  cp "$COPIER" "$tmp/c"
+  local ge
+  ge="$(printf '  - version: %s\n    command: %s"<%% _copier_python %%>" "<%% _copier_conf.src_path %%>/%s"%s\n    when: "<%% _stage == %safter%s %%>"' \
+    "$SM_ROLES_VERSION" "'" "$SM_ROLES_MIGRATION" "'" "'" "'")"
+  gmove() { # $1 = the line the entry goes before (an exact match)
+    awk -v v="  - version: $SM_ROLES_VERSION" -v at="$1" -v e="$ge" \
+      '$0 == v { skip = 3 } skip { skip--; next } $0 == at { print e } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  }
+  gmove "  - version: $SM_REPORT_VERSION"
+  probe "check 38 fires when the v0.9.0 entry comes before v0.7.0's (D89)" "check 38 — the $SM_ROLES_VERSION entry is _migrations entry 5 of 7, not after the $SM_REPORT_VERSION entry"
+  gmove "_tasks:"
+  probe "check 38 stays quiet, and check 20 claims it, when the v0.9.0 entry follows the update block" "check 20 — _migrations does not close with the family 'update' block's one entry"
+  sed "s#^    command: '\"<% _copier_python %>\" \"<% _copier_conf.src_path %>/$SM_ROLES_MIGRATION\"'\$#    command: python3 \"<% _copier_conf.src_path %>/$SM_ROLES_MIGRATION\"#" "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
+  probe "check 38 fires when the v0.9.0 entry runs python3, not _copier_python" "check 38 — the $SM_ROLES_VERSION entry does not run"
+  gmove "no such line"
+  probe "check 38 fires when the v0.9.0 entry is not declared (D89)" "check 38 — _migrations declares 'version: $SM_ROLES_VERSION' 0 time(s)"
+  cp "$tmp/c" "$COPIER"; SM_SETS_FOR=""; unset -f gmove
+  f="$tmp/$SM_ROLES_MIGRATION"; cp "$f" "$tmp/roles.held"
+  printf 'try:\n    pass\nexcept* ValueError:\n    pass\n' >> "$f"
+  probe "check 38 fires when the script needs Python 3.11 (except*)" "check 38 — $SM_ROLES_MIGRATION does not parse as Python 3.10"; cp "$tmp/roles.held" "$f"
+  printf 'print("see learning/syntek-media/<topic>/")\n' >> "$f"
+  probe "check 38 fires when the script names a path under learning/" "check 38 — $SM_ROLES_MIGRATION names a path under learning/ (line 4)"; cp "$tmp/roles.held" "$f"
+  printf 'import sys\nopen("written.txt", "w").write("x")\nsys.exit(0)\n' > "$f"
+  probe "check 38 fires when the script writes a file" "check 38 — $SM_ROLES_MIGRATION writes in a scratch project (written.txt)"; cp "$tmp/roles.held" "$f"
+  printf 'import sys\nsys.exit(1)\n' > "$f"
+  probe "check 38 fires when the script exits 1" "check 38 — $SM_ROLES_MIGRATION exits 1 in a scratch project"; cp "$tmp/roles.held" "$f"
+  mv "$f" "$tmp/roles.held"
+  probe "a missing v0.9.0 script is check 19's alone" "check 19 — a migration runs $SM_ROLES_MIGRATION, which is not in this repository"
+  mv "$tmp/roles.held" "$f"
+  probe_clean "the v0.9.0 crossing entry after v0.7.0's and before the update block, its script clean"
 
   # 30: the baseline task last, line for line, after D84's warning (D81, D84).
   cp "$COPIER" "$tmp/c"
@@ -1848,7 +1936,7 @@ production/docs/{reference,project}/voiceover.md'
       '$0 == v { skip = 3 } skip { skip--; next } $0 == at { print e } { print }' "$tmp/c" > "$COPIER"; SM_SETS_FOR=""
   }
   hmove "  - version: $SM_D76_VERSION"
-  probe "check 32 fires when the v0.6.0 entry comes before v0.4.2's (D84)" "check 32 — the $SM_HOWTO_VERSION entry is _migrations entry 3 of 6, not after the $SM_D76_VERSION entry"
+  probe "check 32 fires when the v0.6.0 entry comes before v0.4.2's (D84)" "check 32 — the $SM_HOWTO_VERSION entry is _migrations entry 3 of 7, not after the $SM_D76_VERSION entry"
   hmove "_tasks:"
   probe "check 32 stays quiet, and check 20 claims it, when the v0.6.0 entry follows the update block" "check 20 — _migrations does not close with the family 'update' block's one entry"
   sed "s#^    command: '\"<% _copier_python %>\" \"<% _copier_conf.src_path %>/$SM_HOWTO_MIGRATION\"'\$#    command: python3 \"<% _copier_conf.src_path %>/$SM_HOWTO_MIGRATION\"#" "$tmp/c" > "$COPIER"; SM_SETS_FOR=""

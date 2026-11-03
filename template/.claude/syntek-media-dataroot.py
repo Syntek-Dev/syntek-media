@@ -48,20 +48,28 @@ filing folders; this tool names none:
    "folders": [{"path": "<project-relative folder>",      required; '/'-separated, Windows-safe
                 "kind": "docs | photos | audio | videos",  optional: fixes every file's kind
                 "warn_over_kib": <positive integer>,       optional: status warns above it
-                "rows": "none"}],                          optional: working output, no rows
+                "rows": "none",                            optional: working output, no rows
+                "roles": ["<role>", ...],                  optional: only these roles are filed
+                "pull": "named"}],                         optional: a whole pull leaves it out
    "roles": [{"name": "<lower-case words joined by hyphens>",   the list is optional
               "evidence": true | false,                    required in each role
               "repo": "skip"}]}                            optional: under 'repo', never filed
 A file belongs to the most specific folder that contains it; a folder the project lacks is
 skipped. A folder marked "rows": "none" holds working output: add never files there, and status
 and verify never list its files. Two maps naming one folder, or one inside the other, refuse
-every data command that touches it (exit 2). A role is named in lower-case words joined by
-hyphens (brand-export), never as a shared role or a kind; where two maps define one role
-differently, evidence wins and status warns. A key this tool does not know, on a map, a folder
-entry, a role entry or a row, is kept as it is and ignored. A map or manifest that is of a newer
-format, does not parse or is invalid is reported and refuses only the commands that touch its
-folders: every other command runs. The kind of a file no folder fixes follows its extension
-(any case), and any other extension is a document:
+every data command that touches it (exit 2). A folder entry's "roles" lists the only roles add
+files there (exit 2 for another, under either store), judged by the folder a path is written in
+and the one its links lead to; "pull": "named" leaves the folder out of a pull without a GLOB,
+or with one that does not name it. Neither key is inherited by a folder nested inside: each
+entry carries only its own. Only a malformed one makes the map invalid: a listed role neither
+shared nor defined in the same map matches nothing, and a "pull" value other than "named" is
+read as "named", each with a warning; on a folder marked "rows": "none" both are ignored. A
+role is named in lower-case words joined by hyphens (brand-export), never as a shared role or a
+kind; where two maps define one role differently, evidence wins and status warns. A key this
+tool does not know, on a map, a folder entry, a role entry or a row, is kept as it is and
+ignored. A map or manifest that is of a newer format, does not parse or is invalid is reported
+and refuses only the commands that touch its folders: every other command runs. The kind of a
+file no folder fixes follows its extension (any case), and any other extension is a document:
   docs    pdf doc docx xls xlsx ppt pptx odt ods odp zip 7z tar gz eml msg
   photos  png jpg jpeg tif tiff heic webp gif psd bmp dng exr
   audio   mp3 wav flac m4a ogg aac aif aiff opus pcm
@@ -110,6 +118,9 @@ Subcommands (exit 0 done, 1 a check failed, 2 it cannot act):
                        only while that copy still hashes as its row says (exit 1 otherwise),
                        and only once the new copy is written and checked; an interrupt is
                        undone. REL is a file: never a filing folder or a folder.
+                       A role the folder's "roles" does not list is refused (exit 2) under
+                       either store, --force included; under 'repo' after the error below and
+                       before the roles that write nothing, so generated is refused there too.
                        Under 'repo' it refuses ('commit the file instead'), except --role
                        generated and a map role with "repo": "skip", which write nothing and
                        exit 0; where the root and the repository contain one another or a
@@ -125,7 +136,10 @@ Subcommands (exit 0 done, 1 a check failed, 2 it cannot act):
                        With no valid root it warns that it did not check the copies (under
                        repo, only where the root and the repository contain one another or a
                        marker sits above it), and the root never makes it exit 2
-  pull [GLOB]          copy listed files into the work tree, verifying each; never replaces
+  pull [GLOB]          copy listed files into the work tree, verifying each; never replaces.
+                       A folder marked "pull": "named", and a row whose work-tree path leads
+                       into one through a link, is left out, in one line, unless the GLOB names
+                       it: its text before the first '*', '?' or '[' is the folder or inside it
   plan [--copy] [--issue-statuses "S ..."]
                        tracked binaries, their destinations, roles and conflicts; --copy files
                        those with a role (a copy: never a move, never an untrack). The role
@@ -952,12 +966,14 @@ class Record:
 
 
 class Folder:
-    def __init__(self, path, kind, warn_over, source, takes_rows=True):
+    def __init__(self, path, kind, warn_over, source, takes_rows=True, roles=None, pull_named=False):
         self.path = path
         self.kind = kind
         self.warn_over = warn_over
         self.source = source
         self.takes_rows = takes_rows     # False for a folder marked "rows": "none"
+        self.roles = roles               # None: any role; else the only roles filed here (maybe none)
+        self.pull_named = pull_named     # True: a whole pull leaves it out, a GLOB naming it pulls it
 
     def holds(self, rel):
         return rel == self.path or rel.startswith(self.path + "/")
@@ -1122,7 +1138,7 @@ class Context:
             data = None
             try:
                 data = json.loads((claude / name).read_text(encoding="utf-8"))
-                folders, roles = parse_map(data)
+                folders, roles, notes = parse_map(data)
             except (OSError, UnicodeDecodeError, ValueError, Unreadable) as err:
                 bad = BadMap(name, str(err), claimed_folders(data))
                 self.bad_maps.append(bad)
@@ -1130,8 +1146,9 @@ class Context:
                 self.warnings.append(f".claude/{name} cannot be read: {err}; the commands that touch its folders "
                                      f"refuse until it is fixed, and every other command runs (its folders: {where})")
                 continue
-            for path, kind, warn_over, takes_rows in folders:
-                self.folders.append(Folder(path, kind, warn_over, template, takes_rows))
+            self.warnings.extend(f".claude/{name} {note}" for note in notes)
+            for path, kind, warn_over, takes_rows, bound, pull_named in folders:
+                self.folders.append(Folder(path, kind, warn_over, template, takes_rows, bound, pull_named))
             for role, evidence, skip in roles:
                 defined.setdefault(role, []).append((template, evidence, skip))
         for role, defs in defined.items():
@@ -1301,8 +1318,12 @@ def claimed_folders(data):
 
 
 def parse_map(data):
-    """The folders [(path, kind, warn_over in bytes, takes rows)] and roles [(name, evidence,
-    skipped under repo)] of one map. A key this tool does not know is ignored."""
+    """The folders [(path, kind, warn_over in bytes, takes rows, roles or None, pull named)],
+    roles [(name, evidence, skipped under repo)] and notes (warnings, each after the map's name)
+    of one map. A key this tool does not know is ignored. Only a malformed "roles" or "pull"
+    makes the map unreadable: a role name neither shared nor defined in this map matches nothing,
+    and a "pull" value other than "named" is read as "named", each with a note, so that a later
+    release may add either; on a folder marked "rows": "none" both are ignored."""
     if not isinstance(data, dict):
         raise Unreadable("it is not a JSON object")
     fmt = data.get("format")
@@ -1335,7 +1356,20 @@ def parse_map(data):
         rows = e.get("rows")
         if rows is not None and rows != "none":
             raise Unreadable(f"folders[{i}] rows is not \"none\" (the one value: working output that never takes rows)")
-        folders.append((path, kind, over * 1024 if over else None, rows is None))
+        bound = e.get("roles")
+        if bound is not None:
+            if not isinstance(bound, list) or not all(isinstance(r, str) and ROLE_NAME.fullmatch(r) for r in bound):
+                raise Unreadable(f"folders[{i}] roles is not a list of role names")
+            if not bound:
+                raise Unreadable(f"folders[{i}] roles is empty (a folder that takes no rows is \"rows\": \"none\")")
+            twice = next((r for j, r in enumerate(bound) if r in bound[:j]), None)
+            if twice:
+                raise Unreadable(f"folders[{i}] roles names '{twice}' twice")
+        pull = e.get("pull")
+        if pull is not None and not isinstance(pull, str):
+            raise Unreadable(f"folders[{i}] pull is not a string (the value is \"named\": a whole pull leaves "
+                             "the folder out)")
+        folders.append((path, kind, over * 1024 if over else None, rows is None, bound, pull))
     roles, named = [], set()
     extra = data.get("roles", [])
     if not isinstance(extra, list):
@@ -1357,7 +1391,21 @@ def parse_map(data):
         if repo is not None and repo != "skip":
             raise Unreadable(f"roles[{i}] repo is not \"skip\" (the one value: under repo, never filed)")
         roles.append((name, evidence, repo == "skip"))
-    return folders, roles
+    known = set(SHARED_ROLES) | named
+    notes, read = [], []
+    for i, (path, kind, over, takes_rows, bound, pull) in enumerate(folders):
+        if not takes_rows:
+            bound = pull = None    # working output: add refuses there and pull finds no rows
+        for r in bound or []:
+            if r not in known:
+                notes.append(f"folders[{i}] roles names '{r}', which is neither a shared role nor one this map "
+                             f"defines: nothing is filed in {path} under it")
+        if pull is not None and pull != "named":
+            notes.append(f"folders[{i}] pull '{pull}' is not a value this tool knows: it reads it as \"named\", "
+                         f"so a whole pull leaves {path} out")
+        read.append((path, kind, over, takes_rows,
+                     None if bound is None else tuple(r for r in bound if r in known), pull is not None))
+    return read, roles, notes
 
 
 def row_problem(r, folder):
@@ -1624,6 +1672,48 @@ def project_rel(ctx, value):
     return None
 
 
+def real_rel(ctx, rel):
+    """The project path the work-tree path rel leads to through its links, or None outside."""
+    top = os.path.realpath(str(ctx.project))
+    real = os.path.realpath(os.path.join(top, *rel.split("/")))
+    if not within(real, top):
+        return None
+    out = os.path.relpath(real, top)
+    return "" if out == "." else out.replace(os.sep, "/")
+
+
+def article(word):
+    """"an" before a vowel, "a" otherwise, for a role named in a message."""
+    return "an" if word[:1] in "aeiou" else "a"
+
+
+def binding_refusal(ctx, rel, role):
+    """Why role may not be filed at the project path rel, where the map of the folder rel is
+    written in, or of the folder its links lead to, lists the only roles filed there; or None."""
+    real = real_rel(ctx, rel)
+    for path, linked in ((rel, False), (real, True)):
+        if path is None or (linked and path == rel):
+            continue
+        folder = ctx.folder_for(path)
+        if folder is None or folder.roles is None or role in folder.roles:
+            continue
+        where = (f"{rel} leads through a link into {folder.path}" if linked else f"{rel} is in {folder.path}")
+        where += f", where .claude/{folder.source}-dataroot.json files "
+        if folder.roles:
+            return (where + f"only the roles {', '.join(folder.roles)}: file it as one "
+                    f"of them, or {article(role)} '{role}' copy in another folder")
+        return where + f"no role this tool knows: file {article(role)} '{role}' copy in another folder"
+    return None
+
+
+def pull_names(glob, folder):
+    """True when a GLOB names the folder: its literal start is the folder or lies inside it."""
+    if not glob:
+        return False
+    start = re.split(r"[*?[]", glob, maxsplit=1)[0]
+    return start == folder.path or start.startswith(folder.path + "/")
+
+
 def mirror_files(ctx, rows):
     """(under, rel, full path) of every file in every folder of the root this project uses."""
     unders = {r.filed_under for r in rows}
@@ -1882,6 +1972,9 @@ def cmd_add(ctx, args):
     if ctx.store == "repo":
         if ctx.contained:
             return refuse(ctx.root_error)   # before the roles that write nothing, as cmd_path
+        why = binding_refusal(ctx, rel, args.role) if rel else None
+        if why:
+            return refuse(why)              # before the roles that write nothing: a bound folder decides
         if args.role == "generated":
             say("not filed: generated files stay git-ignored in the work tree (this project keeps its files in the repository)")
             return 0
@@ -1890,6 +1983,9 @@ def cmd_add(ctx, args):
                 "so the file stays where it is in the work tree (this project keeps its files in the repository)")
             return 0
         return refuse("this project keeps its files in the repository (DATA_STORE repo): commit the file instead")
+    why = binding_refusal(ctx, rel, args.role) if rel else None
+    if why:
+        return refuse(why)                  # before every other check, and before --force is weighed
     if not ctx.root:
         return refuse(ctx.no_root())
     if not os.path.isfile(src):
@@ -1930,6 +2026,9 @@ def cmd_add(ctx, args):
 
 def file_one(ctx, src, rel, folder, role, source, label, force, former):
     """File one copy (the add procedure); returns the exit code."""
+    why = binding_refusal(ctx, rel, role)   # again, for plan --copy, which never passes through add
+    if why:
+        return refuse(why)
     why = names_refusal(ctx, rel)
     if why:
         return refuse(f"{rel}: {why}; file it under a Windows-safe name with --as "
@@ -2285,9 +2384,27 @@ def cmd_pull(ctx, args):
     told = False
     failed = in_place = 0
     pulled = []
+    wanted, marked, linked = [], [], 0
     for r in rows:
         if r.state != "current" or (args.glob and not fnmatch.fnmatchcase(r.path, args.glob)):
             continue
+        # A folder its map marks "pull": "named" is pulled only by a GLOB that names it, and so is a
+        # row whose work-tree path leads into one through a link (pull writes through links).
+        real = real_rel(ctx, r.path)
+        via = ctx.folder_for(real) if real is not None and real != r.path else None
+        out = next((f for f in (r.folder, via) if f is not None and f.pull_named and not pull_names(args.glob, f)), None)
+        if out is None:
+            wanted.append(r)
+            continue
+        if out.path not in marked:
+            marked.append(out.path)
+        linked += out is not r.folder
+    if marked:
+        say(f"pull leaves out {', '.join(marked)}: "
+            + ("its map says" if len(marked) == 1 else "their maps say") + ' "pull": "named"'
+            + (f" ({linked} row(s) lead into {'it' if len(marked) == 1 else 'one'} through a link)" if linked else "")
+            + f"; name {'it' if len(marked) == 1 else 'one'}, as GLOB='{marked[0]}/*', to pull it")
+    for r in wanted:
         loc = ctx.at(r)
         dest = os.path.join(str(ctx.project), *r.path.split("/"))
         if not os.path.isfile(loc):
@@ -2915,13 +3032,45 @@ def self_test_units(check):
         except Unreadable:
             refused = True
         check(f"maps: a role named {name!r} makes the map invalid", refused)
-    folders, roles = parse_map({"format": 1, "later": {"x": 1},
-                                "folders": [{"path": "a/src", "later": True}, {"path": "a/src/out", "rows": "none"}],
-                                "roles": [{"name": "brand-export", "evidence": False, "later": [1]},
-                                          {"name": "take", "evidence": True, "repo": "skip"}]})
+    folders, roles, notes = parse_map({"format": 1, "later": {"x": 1},
+                                       "folders": [{"path": "a/src", "later": True}, {"path": "a/src/out", "rows": "none"}],
+                                       "roles": [{"name": "brand-export", "evidence": False, "later": [1]},
+                                                 {"name": "take", "evidence": True, "repo": "skip"}]})
     check("maps: unknown keys on the map, a folder entry and a role entry are ignored; rows and repo are read",
-          folders == [("a/src", None, None, True), ("a/src/out", None, None, False)]
-          and roles == [("brand-export", False, False), ("take", True, True)])
+          folders == [("a/src", None, None, True, None, False), ("a/src/out", None, None, False, None, False)]
+          and roles == [("brand-export", False, False), ("take", True, True)] and notes == [])
+    folders, _, notes = parse_map({"format": 1, "folders": [{"path": "f/src", "roles": ["take", "archive"], "pull": "named"},
+                                                            {"path": "f/src/out", "rows": "none", "roles": ["x"], "pull": "y"}],
+                                   "roles": [{"name": "take", "evidence": True, "repo": "skip"}]})
+    check("maps: a folder's roles and pull are read into its entry; on a \"rows\": \"none\" folder both are "
+          "ignored without a note", folders == [("f/src", None, None, True, ("take", "archive"), True),
+                                                ("f/src/out", None, None, False, None, False)] and notes == [])
+    for entry, why in (({"roles": "take"}, "roles is not a list of role names"),
+                       ({"roles": []}, "roles is empty"),
+                       ({"roles": ["take", 3]}, "roles is not a list of role names"),
+                       ({"roles": ["Brand_Export"]}, "roles is not a list of role names"),
+                       ({"roles": ["take", "take"]}, "roles names 'take' twice"),
+                       ({"pull": False}, "pull is not a string"),
+                       ({"pull": ["named"]}, "pull is not a string")):
+        try:
+            parse_map({"format": 1, "folders": [dict(entry, path="f/src")],
+                       "roles": [{"name": "take", "evidence": True}]})
+            raised = ""
+        except Unreadable as err:
+            raised = str(err)
+        check(f"maps: a malformed folder key makes the map unreadable ({entry})", why in raised)
+    for listed, gone in ((["take", "later-role"], "later-role"), (["take", "videos"], "videos"),
+                         (["take", "brand-export"], "brand-export")):
+        folders, _, notes = parse_map({"format": 1, "folders": [{"path": "f/src", "roles": listed}],
+                                       "roles": [{"name": "take", "evidence": True}]})
+        check(f"maps: a listed role neither shared nor defined in the same map ({gone!r}) matches nothing, "
+              "with a note, and the map stays readable", folders[0][4] == ("take",) and len(notes) == 1
+              and f"roles names '{gone}', which is neither a shared role nor one this map defines" in notes[0])
+    folders, _, notes = parse_map({"format": 1, "folders": [{"path": "f/src", "roles": ["later-role"]}]})
+    check("maps: a list of nothing but unknown roles binds the folder to no role", folders[0][4] == () and len(notes) == 1)
+    folders, _, notes = parse_map({"format": 1, "folders": [{"path": "f/src", "pull": "later"}]})
+    check("maps: a pull value other than \"named\" is read as named, with a note",
+          folders[0][5] is True and len(notes) == 1 and "pull 'later' is not a value this tool knows" in notes[0])
     for bad, why in (({"format": 1, "folders": [{"path": "a", "rows": "some"}]}, "rows"),
                      ({"format": 1, "folders": [], "roles": [{"name": "take", "evidence": True, "repo": "commit"}]}, "repo"),
                      ({"format": 1, "folders": [], "roles": [{"name": "take", "evidence": True},
@@ -3942,6 +4091,7 @@ def self_test_projects(check, base, json, tomllib):
     check("check-names with no path: the filing folders' files", code == 0 and "checked" in out)
 
     self_test_role_rules(check, base, json, tomllib, project, run, own_root, git, has_git)
+    self_test_bound_folders(check, base, json, project, run, own_root)
 
     # ── Outside a work tree: the project is the folder holding an answers file ──
     pg = project({ONE: EXTERNAL}, use_git=False)
@@ -4211,6 +4361,191 @@ def self_test_role_rules(check, base, json, tomllib, project, run, own_root, git
     code, out, err = run(["verify"], ph, env_h)
     check("verify: while a map cannot be read, an unnamed manifest is not judged an orphan",
           code == 0 and "not judged as orphaned" in err)
+
+
+def self_test_bound_folders(check, base, json, project, run, own_root):
+    """A folder entry's "roles" and "pull": add refuses another role under either store, through
+    links too, and before --force; plan --copy never files one; a whole pull leaves a marked folder
+    out unless a GLOB names it; nested entries inherit nothing; verify and status are unchanged."""
+
+    def bound_map(roles=("take",), pull="named", extra=()):
+        entry = {"path": "footage/src", "kind": "videos"}
+        if roles is not None:
+            entry["roles"] = list(roles)
+        if pull is not None:
+            entry["pull"] = pull
+        return {"format": 1, "folders": [entry, *extra],
+                "roles": [{"name": "take", "evidence": True, "repo": "skip"},
+                          {"name": "brand-export", "evidence": False}]}
+
+    def write_map(proj, data):
+        (proj / ".claude" / f"{TWO}-dataroot.json").write_text(json.dumps(data), encoding="utf-8")
+
+    def man(proj, folder="footage/src"):
+        path = proj / folder / MANIFEST
+        return path.read_bytes() if path.exists() else None
+
+    # ── add under external: refused before every other check, --force included ──
+    pa = project({ONE: EXTERNAL}, {ONE: MAP_ONE, TWO: bound_map()})
+    root_a, env_a = own_root("root-bound")
+    (pa / "footage/src/x.mov").write_bytes(b"x")
+    code, _, err = run(["add", "footage/src/x.mov", "--role", "archive"], pa, env_a)
+    check("bound: add of a role the folder does not list -> exit 2, naming the allowed roles, nothing written",
+          code == 2 and "footage/src/x.mov is in footage/src" in err and "files only the roles take" in err
+          and man(pa) is None and not (root_a / "business").exists())
+    code, _, err = run(["add", "footage/src/x.mov", "--role", "archive"], pa, {})
+    check("bound: the refusal comes before the root is needed (the root unset)",
+          code == 2 and "files only the roles take" in err and ROOT_ENV not in err)
+    code, out, _ = run(["add", "footage/src/x.mov", "--role", "take"], pa, env_a)
+    check("bound: add of a listed map role -> exit 0", code == 0 and out.startswith("filed: footage/src/x.mov"))
+    write_map(pa, bound_map(roles=("take", "archive", "brand-export")))
+    (pa / "footage/src/y.mov").write_bytes(b"y one")
+    code_s, _, _ = run(["add", "footage/src/y.mov", "--role", "brand-export"], pa, env_a)
+    (pa / "footage/src/z.mov").write_bytes(b"z")
+    code, _, _ = run(["add", "footage/src/z.mov", "--role", "archive"], pa, env_a)
+    check("bound: add of a listed shared role -> exit 0", code_s == 0 and code == 0)
+    write_map(pa, bound_map())
+    (pa / "footage/src/y.mov").write_bytes(b"y two")
+    before = man(pa)
+    held = root_a / "business/videos/demo-project/footage/src/y.mov"
+    code, _, err = run(["add", "footage/src/y.mov", "--role", "archive", "--force"], pa, env_a)
+    check("bound: add --force of an unlisted role over a row that is not protected -> exit 2, row and copy unchanged",
+          code == 2 and "files only the roles take" in err and man(pa) == before and held.read_bytes() == b"y one")
+    write_map(pa, bound_map(roles=("take", "later-role")))
+    code, _, err = run(["add", "footage/src/y.mov", "--role", "archive"], pa, env_a)
+    check("bound: a listed role this tool does not know is warned of and matches nothing; the others still bind",
+          code == 2 and "roles names 'later-role'" in err and "files only the roles take:" in err)
+    write_map(pa, bound_map(roles=("later-role",)))
+    code, _, err = run(["add", "footage/src/y.mov", "--role", "take"], pa, env_a)
+    check("bound: a folder listing only unknown roles takes no new row",
+          code == 2 and "files no role this tool knows" in err)
+
+    # ── add under repo: after the containment error, before the roles that write nothing ──
+    pr = project({ONE: {"DATA_STORE": "repo"}}, {ONE: MAP_ONE, TWO: bound_map()})
+    (pr / "footage/src/t.mov").write_bytes(b"t")
+    code, _, err = run(["add", "footage/src/t.mov", "--role", "archive"], pr, {})
+    check("bound: under repo, an unlisted role gets the binding line, not 'commit the file instead' (exit 2)",
+          code == 2 and "files only the roles take" in err and "commit the file instead" not in err)
+    code, _, err = run(["add", "footage/src/t.mov", "--role", "generated"], pr, {})
+    check("bound: under repo, generated in a bound folder that does not list it -> exit 2",
+          code == 2 and "files only the roles take" in err)
+    code, out, _ = run(["add", "footage/src/t.mov", "--role", "take"], pr, {})
+    check("bound: under repo, a listed skip role -> exit 0, 'not filed:'", code == 0 and out.startswith("not filed: "))
+    held_in = base / "held-bound"
+    held_in.mkdir()
+    (held_in / MARKER).write_text("", encoding="utf-8")
+    shutil.move(str(pr), str(held_in / pr.name))
+    code, _, err = run(["add", "footage/src/t.mov", "--role", "archive"], held_in / pr.name, {})
+    check("bound: under repo, a repository inside a data root gets the containment error, not the binding line",
+          code == 2 and "puts this repository inside a data root" in err and "files only the roles" not in err)
+
+    # ── Nested entries inherit nothing ──
+    child = {"path": "footage/src/cut"}
+    pn = project({ONE: EXTERNAL}, {ONE: MAP_ONE, TWO: bound_map(extra=[child])})
+    _, env_n = own_root("root-nested")
+    (pn / "footage/src/cut").mkdir()
+    (pn / "footage/src/cut/a.mov").write_bytes(b"a")
+    (pn / "footage/src/p.mov").write_bytes(b"p")
+    code, _, _ = run(["add", "footage/src/cut/a.mov", "--role", "archive"], pn, env_n)
+    code_p, _, _ = run(["add", "footage/src/p.mov", "--role", "archive"], pn, env_n)
+    check("bound: an unbound child of a bound parent takes any role; the parent still refuses",
+          code == 0 and code_p == 2)
+    pv = project({ONE: EXTERNAL}, {ONE: MAP_ONE, TWO: bound_map(roles=None, pull=None, extra=[dict(child, roles=["take"])])})
+    _, env_v = own_root("root-nested-2")
+    (pv / "footage/src/cut").mkdir()
+    (pv / "footage/src/cut/a.mov").write_bytes(b"a")
+    (pv / "footage/src/p.mov").write_bytes(b"p")
+    code, _, _ = run(["add", "footage/src/cut/a.mov", "--role", "archive"], pv, env_v)
+    code_p, _, _ = run(["add", "footage/src/p.mov", "--role", "archive"], pv, env_v)
+    check("bound: a bound child of an unbound parent refuses another role; the parent takes any", code == 2 and code_p == 0)
+    pp = project({ONE: EXTERNAL}, {ONE: MAP_ONE, TWO: bound_map(roles=None, extra=[dict(child, pull="named")])})
+    _, env_p = own_root("root-nested-pull")
+    (pp / "footage/src/cut").mkdir()
+    for rel in ("footage/src/cut/a.mov", "footage/src/p.mov"):
+        (pp / rel).write_bytes(rel.encode())
+        run(["add", rel, "--role", "archive"], pp, env_p)
+        (pp / rel).unlink()
+    code, out, _ = run(["pull", "footage/src/*"], pp, env_p)
+    check("bound: with parent and child both marked, GLOB='parent/*' pulls the parent's rows and not the child's",
+          code == 0 and (pp / "footage/src/p.mov").exists() and not (pp / "footage/src/cut/a.mov").exists()
+          and "pull leaves out footage/src/cut" in out)
+    code, out, _ = run(["pull", "footage/src/cut/*"], pp, env_p)
+    check("bound: GLOB='parent/child/*' pulls the child's", code == 0 and (pp / "footage/src/cut/a.mov").exists())
+
+    # ── pull: a whole pull leaves a marked folder out, in one line; a naming GLOB pulls it ──
+    pl = project({ONE: EXTERNAL}, {ONE: MAP_ONE, TWO: bound_map()})
+    _, env_l = own_root("root-pull-bound")
+    (pl / "footage/src/f.mov").write_bytes(b"f")
+    (pl / "notes/src/n.pdf").write_bytes(b"n")
+    run(["add", "footage/src/f.mov", "--role", "take"], pl, env_l)
+    run(["add", "notes/src/n.pdf", "--role", "archive"], pl, env_l)
+    (pl / "footage/src/f.mov").unlink()
+    (pl / "notes/src/n.pdf").unlink()
+    line = ('pull leaves out footage/src: its map says "pull": "named"; name it, as GLOB=\'footage/src/*\', to pull it')
+    code, out, _ = run(["pull"], pl, env_l)
+    check("pull: a whole pull leaves the marked folder out in one line, pulls the rest, summary unchanged, exit 0",
+          code == 0 and out.splitlines().count(line) == 1 and out.splitlines()[0] == line
+          and not (pl / "footage/src/f.mov").exists() and (pl / "notes/src/n.pdf").exists()
+          and "pull: 1 copied, 0 already in place, 0 not copied" in out)
+    for glob in ("*", "*.mov", "footage/*"):
+        code, out, _ = run(["pull", glob], pl, env_l)
+        check(f"pull: GLOB={glob!r} does not name the folder, so it is left out", code == 0 and line in out
+              and not (pl / "footage/src/f.mov").exists())
+    code, out, _ = run(["pull", "notes/*"], pl, env_l)
+    check("pull: a GLOB that matches none of its rows says nothing of the folder", code == 0 and "leaves out" not in out)
+    code, out, _ = run(["pull", "footage/src/*"], pl, env_l)
+    check("pull: GLOB='<folder>/*' pulls it", code == 0 and (pl / "footage/src/f.mov").exists() and "leaves out" not in out)
+    write_map(pl, bound_map(pull="later"))
+    (pl / "footage/src/f.mov").unlink()
+    code, out, err = run(["pull"], pl, env_l)
+    check("pull: a pull value this tool does not know is read as named, with a warning",
+          code == 0 and "pull 'later' is not a value this tool knows" in err and "pull leaves out footage/src" in out
+          and not (pl / "footage/src/f.mov").exists())
+
+    # ── Links: judged by the folder written and the folder the link leads to ──
+    pk = project({ONE: EXTERNAL}, {ONE: MAP_ONE, TWO: bound_map()})
+    _, env_k = own_root("root-link-bound")
+    try:
+        os.symlink(pk / "footage/src", pk / "notes/src/link", target_is_directory=True)
+        links = True
+    except (OSError, NotImplementedError):
+        links = False
+    if links:
+        (pk / "in.mov").write_bytes(b"in")
+        code, _, err = run(["add", "in.mov", "--as", "notes/src/link/x.mov", "--role", "archive"], pk, env_k)
+        check("bound: add through a link into a bound folder, with an unlisted role -> exit 2, the link line",
+              code == 2 and "notes/src/link/x.mov leads through a link into footage/src" in err
+              and man(pk, "notes/src") is None)
+        code, _, _ = run(["add", "in.mov", "--as", "notes/src/link/z.mov", "--role", "take"], pk, env_k)
+        code_p, out, _ = run(["pull"], pk, env_k)
+        check("pull: a row whose work-tree path leads into a marked folder through a link is left out, and said",
+              code == 0 and code_p == 0 and "pull leaves out footage/src" in out and "through a link" in out
+              and not (pk / "footage/src/z.mov").exists())
+    else:
+        check("links cannot be made here: the link cases are skipped", True)
+
+    # ── plan --copy never files an unlisted role (outside a work tree, where plan lists every binary) ──
+    pc = project({ONE: EXTERNAL}, {TWO: bound_map()}, use_git=False)
+    root_c, env_c = own_root("root-plan-bound")
+    (pc / "footage/src/clip.mov").write_bytes(b"clip")
+    code, out, err = run(["plan", "--copy"], pc, env_c)
+    check("plan --copy: a guessed role the folder does not list is one failed copy, exit 1, nothing filed",
+          code == 1 and "copied 0, 1 failed" in out and "files only the roles take" in err
+          and man(pc) is None and not (root_c / "business").exists())
+
+    # ── verify and status are unchanged by the keys ──
+    ps = project({ONE: EXTERNAL}, {ONE: MAP_ONE, TWO: bound_map()})
+    root_s, env_s = own_root("root-same-bound")
+    (ps / "footage/src/s.mov").write_bytes(b"s")
+    run(["add", "footage/src/s.mov", "--role", "take"], ps, env_s)
+    (ps / "footage/src/u.mov").write_bytes(b"u")
+    stray = root_s / "business/videos/demo-project/footage/src/w.mov"
+    stray.write_bytes(b"w")
+    with_keys = [run([c], ps, env_s) for c in ("verify", "status")]
+    write_map(ps, bound_map(roles=None, pull=None))
+    without = [run([c], ps, env_s) for c in ("verify", "status")]
+    check("verify and status: output byte-identical with and without the keys", with_keys == without
+          and "unlisted: " in with_keys[0][1])
 
 
 def fake_stat(paths):

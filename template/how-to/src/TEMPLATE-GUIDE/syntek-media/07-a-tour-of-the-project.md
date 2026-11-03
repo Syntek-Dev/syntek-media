@@ -93,9 +93,11 @@ The map gives the folder two roles, `footage` for source footage and `approved-t
 `python3 toolkit/media.py footage verify` warns, and never fails, of each file the manifest lists that is not yet filed, and each warning names the command that files it, with the role to give it.
 The shared tool's status check lists the same files, and stops with exit code 1 until they are filed, in syntek-author's commands too, where it is applied.
 Until a file is filed it is only on this machine, and it is lost with that disk.
-To file one, run the tool's `add` as the shared chapter gives it, with `--role footage` or `--role approved-take` and never another role, or ask the session to.
+To file one, run syntek-media's own copy of the tool, `python3 .claude/syntek-media-dataroot.py add <file> --role footage`, or `--role approved-take` for an approved take, or ask the session to.
+Never file footage through the shared chapter's loop: in a project that also holds syntek-author, that loop runs syntek-author's copy first, and that copy may be older.
+syntek-media's copy refuses any other role in the footage folder.
 A session files footage only when you say so, only with one of those two roles, and tells you that it has.
-syntek-media has no procedure of its own for this yet, so the shared chapter's commands are the ones to use.
+syntek-media has no procedure of its own for this yet, so the shared chapter explains the rest of the tool.
 Where `DATA_STORE` is `repo`, nothing is filed, and the footage stays where the manifest lists it.
 The renders stay in the ignored output folders above, whatever the answer.
 

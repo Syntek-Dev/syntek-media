@@ -17,7 +17,7 @@
     {"path": ".claude/skills/to-questionnaire/SKILL.md", "source": "template/.claude/skills/to-questionnaire/SKILL.md", "kind": "file", "bytes": 10732, "sha256": "c4ac0f110a0874c2ec95a4fac1477b9b4048c23bd18bf1ee9274b29e1dd89043"},
     {"path": ".claude/skills/wait-what/SKILL.md", "source": "template/.claude/skills/wait-what/SKILL.md", "kind": "file", "bytes": 5434, "sha256": "4e0ca29f860b403bc84bf21cac4c24e97468f3205b9361e4405f1aab81e169dc"},
     {"path": ".claude/skills/wayfinder/SKILL.md", "source": "template/.claude/skills/wayfinder/SKILL.md", "kind": "file", "bytes": 12208, "sha256": "259651782732c446509ce560d6f9d4515e4123c55ebf03654fa7e5024cdd720e"},
-    {"path": ".claude/syntek-<template>-dataroot.py", "source": "template/.claude/syntek-media-dataroot.py", "kind": "file", "bytes": 224180, "sha256": "ba0d704e054f8ebb07735a1dc9c0af293d33870cbb9d8df48923a7fcb00dc596"},
+    {"path": ".claude/syntek-<template>-dataroot.py", "source": "template/.claude/syntek-media-dataroot.py", "kind": "file", "bytes": 246499, "sha256": "4fbe80ba34a04110f808c2c9020dc090a5db64bc454ebe85558e0ba23d5fb326"},
     {"path": ".claude/syntek-<template>-permissions.py", "source": "template/.claude/syntek-media-permissions.py", "kind": "file", "bytes": 40594, "sha256": "9a3a0e514b1b9fd17abf0dfc1f01fefb14dc4a7dd6a2d93654c4084d649a883f"},
     {"path": ".codex/CLAUDE.md", "source": "template/.codex/CLAUDE.md", "kind": "file", "bytes": 1728, "sha256": "d5f8f68837733124a0d50318f72f5ae985c6a21be830993968dcca4ef0797d92"},
     {"path": ".codex/CONTEXT.md", "source": "template/.codex/CONTEXT.md", "kind": "file", "bytes": 2143, "sha256": "e65106ae3e70e22bda752cf7739d34bd68deec6df2e403b60b7eff10104955b1"},

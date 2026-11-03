@@ -891,7 +891,7 @@ SM_CRASH_VERSION="v0.4.3"
 # coexist-test.sh check 22 can tell one from a family file media has never heard of. Since
 # D81 (0.6.0) it is empty: media vendors every file and block the tag lists, so a family file
 # a later tag adds fails check 22 until it is adopted.
-SM_FAMILY_RELEASE="v0.9.1"
+SM_FAMILY_RELEASE="v0.11.0"
 SM_FAMILY_MANIFEST="family-shared.json"
 SM_FAMILY_OWNER="syntek-media"
 # destination path · source in this repository · scope (blank: project, under template/). The
@@ -1098,11 +1098,12 @@ SM_SETTINGS_FAMILY_ASK=(
 )
 SM_SETTINGS_FAMILY_DENY=("mcp__code-review-graph__embed_graph_tool")
 # The seed's hooks key: syntek-author's seed's hooks object, byte for byte as JSON, at
-# SM_FAMILY_RELEASE (D80; since 0.7.0 its v0.9.1, D81, D84): four handoff-hook entries in the
-# silent `|| exit 0` form, the context-threshold handoff on UserPromptSubmit, the pre-compact
-# handoff on PreCompact (auto and manual) and on SessionStart (compact, `compacted`); then two
-# PreToolUse entries, the data-root guard and the guide guard (how-to-read-only.sh). Each finds
-# its script from the repository root at run time and does nothing where the script is absent.
+# SM_FAMILY_RELEASE (D80; since 0.7.0 its v0.9.1, D81, D84; since 0.9.0 its v0.11.0, D89): four
+# handoff-hook entries in the silent `|| exit 0` form, the context-threshold handoff on
+# UserPromptSubmit, the pre-compact handoff on PreCompact (auto and manual) and on SessionStart
+# (compact, `compacted`); then two PreToolUse entries, the data-root guard and the guide guard
+# (how-to-read-only.sh). Each finds its script from the repository root at run time and does
+# nothing where the script is absent.
 # Compared as parsed JSON by shipped-seeds.sh check 12, and with the --author tree's seed by
 # coexist-test.sh check 22.
 SM_SETTINGS_HOOKS=$(cat <<'EOF'
@@ -1135,6 +1136,20 @@ SM_REPORT_MARK="▸ v0.7.0 migration (syntek-media)"
 SM_REPORT_AUTHOR_LINE="v0.9.1 or later (the release media 0.7.0 vendors; a later media release names its own)"
 SM_REPORT_LESSON_FLOOR="be v0.8.0 or later where lessons come from both templates"
 SM_REPORT_STATUS_LINE="exits 1 until the footage is filed"
+
+# D89's crossing migration: media's own report-only script, run by the update that crosses
+# v0.9.0 (shipped-seeds.sh check 38 holds its _migrations entry: after v0.7.0's, before the
+# 'update' block, through _copier_python). Its heading and the fragments update-test.sh check
+# 27 reads in the crossing update's log: the refusal, the syntek-author line, the unchanged
+# floor and the storage-manifest pointer; each copied from the script's final text, and each
+# printed on one line of it.
+SM_ROLES_MIGRATION="migrations/v0.9.0-footage-roles.py"
+SM_ROLES_VERSION="v0.9.0"
+SM_ROLES_MARK="▸ v0.9.0 migration (syntek-media)"
+SM_ROLES_REFUSAL_LINE="refuses add of any other role there (exit 2)"
+SM_ROLES_AUTHOR_LINE="only from syntek-author v0.11.0 or"
+SM_ROLES_FLOOR_LINE="Media's floor for combined projects is unchanged"
+SM_ROLES_POINTER_LINE="git grep -n --untracked 'role = ' -- production/src/footage/external.toml"
 
 # The lessons' folder (D86; syntek-author D57): media ships nothing there and names it only by
 # placeholder. A path at or under the top-level learning/, backticked or not, with or without
