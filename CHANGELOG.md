@@ -7,13 +7,20 @@ All notable changes to syntek-media are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D76 and D80–D87; D77–D79 are reserved) or section.
+Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D76 and D80–D88; D77–D79 are reserved) or section.
 
 ---
 
 ## [Unreleased]
 
+### Added
+
+- **D88, the family ceiling** (DESIGN.md D88, amending D87; syntek-author D59 'Combined' at `v0.10.0`, `9c891a6`, read 03/11/2026; the maintainer, 03/11/2026). Over syntek-author, media's unscoped share is at most 100,000 characters (`SM_COMPANION_SHARE`). That share is media's rules files without `paths` frontmatter, with what they import that the root files do not already load. Beside it, syntek-author's set is at most 105,000, so a combined project loads at most 205,000, and neither template raises its cap without the other's agreement. Measured 03/11/2026 on the twelve renders with syntek-author `v0.10.0`: media's share is 95,221–95,855, about 4,100 under the cap; syntek-author's set over it is 92,410–94,143; the combined total is 188,211–189,789. Development only, nothing ships, and no migration runs.
+- **Audits for D88:** `shipped-brands.sh` check 18 fails a render, standalone or over syntek-author, whose media share is over the cap, counted by path rather than by the files media's copy added, so every platform and media kind is held. New `coexist-test.sh` check 30 fails a composite whose share is over the cap, in both orders after both updates, and logs the share beside check 29's total. Self-test probes prove each.
+
 ### Changed
+
+- **The standalone budget of 110,000 characters is media's own** (DESIGN.md D88, amending D87). It was syntek-author D59's figure at 0.8.0; syntek-author lowered its own to 105,000 at `v0.10.0`, and media's figure now moves only by a media decision. The 40,000 scoped limit stays D59's. Section 11 records the ceiling as decided and leaves further scoping open.
 
 - **`family-shared.json` records `unreleased` again** after the `v0.8.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9), as `shipped-seeds.sh --write-manifest` writes it on the first commit after a release tag, so check 23 holds on every commit until the next release. Development only, nothing ships.
 - **The root `.gitignore` ignores `/graphify-out/`**, graphify's local knowledge graph of this repository, beside code-review-graph's database (DESIGN.md Section 7). Development only, nothing ships; `template/.gitignore` is unchanged.

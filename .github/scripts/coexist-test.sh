@@ -25,7 +25,7 @@
 #                     8. once per run, copies media over a syntek-author project whose how-to/
 #                        was deleted, as one older than v0.6.0 has none.
 #
-#                   Twenty-nine checks per brand kind (13, 20, 22 and 23 once per run):
+#                   Thirty checks per brand kind (13, 20, 22 and 23 once per run):
 #                     1. Media applies over the syntek-author project without --overwrite —
 #                        nothing it ships collides with what is there.
 #                     2. Both answers files exist, under different names.
@@ -168,6 +168,14 @@
 #                        syntek-author D59). The composite's always-loaded total, counted as
 #                        syntek-author's check 24 counts it, is logged for the release entry,
 #                        never a finding.
+#                    30. In each composite (both orders, after both updates), media's unscoped
+#                        share is over SM_COMPANION_SHARE (DESIGN.md D88; syntek-author D59
+#                        'Combined'): every .claude/rules/syntek-media/*.md without paths
+#                        frontmatter, with each file it imports that the root files do not
+#                        already load, counted as shipped-brands.sh check 18 counts it, the
+#                        five largest named. The share is logged beside check 29's total.
+#                        Copies here take media's defaults, so shipped-brands.sh check 18 holds
+#                        the cap for every platform and media kind.
 #
 #                   Without syntek-author (no --author, no SYNTEK_AUTHOR_DIR, no
 #                   ../syntek-author) the test prints a named SKIP and exits 0. A SKIP is never
@@ -425,10 +433,13 @@ c27_state() { # $1 = project, $2 = the pair before media's step, $3 = that step'
 
 # Check 29 (D87): in a composite after both updates, each template's scoped rules keep their
 # frontmatter, no other media rules file gains any, and the composite's always-loaded total
-# (syntek-author's check 24 counting, characters) is logged for the release entry. Prints
-# 'F<TAB>problem' per problem and one 'L<TAB>total' line.
+# (syntek-author's check 24 counting, characters) is logged for the release entry. Check 30
+# (D88) is counted in the same pass, so media's share leaves out what the root files load.
+# Prints 'F<TAB>problem' per check 29 problem, 'G<TAB>problem' for check 30, and one
+# 'L<TAB>total' line.
 c29_state() { # $1 = project, $2 = the order's name
-  SM_RULE_PATHS_04="$SM_RULE_PATHS_04" SM_SCOPED_RULES="$SM_SCOPED_RULES" python3 -I - "$1" "$2" <<'PY29' \
+  SM_RULE_PATHS_04="$SM_RULE_PATHS_04" SM_SCOPED_RULES="$SM_SCOPED_RULES" \
+    SM_COMPANION_SHARE="$SM_COMPANION_SHARE" python3 -I - "$1" "$2" <<'PY29' \
     || printf 'F\t%s: the D87 check could not run\n' "$2"
 import os, re, sys
 tree, order = sys.argv[1], sys.argv[2]
@@ -456,7 +467,7 @@ def take(p, depth):
     p = os.path.normpath(p)
     if depth > 4 or p in seen or not os.path.isfile(p):
         return
-    seen.add(p); t = read(p); loaded.append(len(t)); fence = False
+    seen.add(p); t = read(p); loaded.append((p, len(t))); fence = False
     for line in t.splitlines():
         if line.lstrip().startswith("```"):
             fence = not fence; continue
@@ -465,12 +476,20 @@ def take(p, depth):
                 take(os.path.join(os.path.dirname(p), m.group(1)), depth + 1)
 for s in (".claude/CLAUDE.md", "CLAUDE.md", "CLAUDE.local.md"):
     take(os.path.join(tree, s), 0)
+shared, cap = [], int(os.environ["SM_COMPANION_SHARE"])
 for root, dirs, files in os.walk(os.path.join(tree, ".claude", "rules")):
     dirs.sort()
     for f in sorted(x for x in files if x.endswith(".md")):
-        if not FM.match(read(os.path.join(root, f))):
-            take(os.path.join(root, f), 0)
-print(f"L\t{order}: the composite's always-loaded instruction files total {sum(loaded):,} characters (logged for the release entry, never a finding; D87)")
+        p = os.path.join(root, f)
+        if not FM.match(read(p)):
+            k = len(loaded); take(p, 0)
+            if os.path.relpath(p, tree).startswith(M):
+                shared.extend(loaded[k:])  # D88: media's file and what only it imports
+share = sum(n for _, n in shared)
+if share > cap:
+    top = ", ".join(f"{os.path.relpath(p, tree)} {n:,}" for p, n in sorted(shared, key=lambda x: -x[1])[:5])
+    print(f"G\t{order}: media's unscoped share is {share:,} characters; the cap beside syntek-author is {cap:,}: {top}")
+print(f"L\t{order}: the composite's always-loaded instruction files total {sum(n for _, n in loaded):,} characters (logged for the release entry, never a finding; D87); media's unscoped share {share:,}, its cap {cap:,} (D88)")
 PY29
 }
 
@@ -953,6 +972,11 @@ run_checks() {
   while IFS=$'\t' read -r k f; do
     [[ "$k" == F && -n "$f" ]] && finding "check 29 — $label $f (DESIGN.md D87; syntek-author D59)"
   done < "$W/c29.txt"
+
+  # ── 30. Media's unscoped share within the family ceiling (D88) ─────────────
+  while IFS=$'\t' read -r k f; do
+    [[ "$k" == G && -n "$f" ]] && finding "check 30 — $label $f (DESIGN.md D88; syntek-author D59 'Combined')"
+  done < "$W/c29.txt"
   return 0
 }
 
@@ -1234,6 +1258,16 @@ STUB
   cp "$tmp/r01.held" "$PROJ/.claude/rules/syntek-media/01-layout-and-routing.md"
   c29_state "$PROJ" over-author > "$W/c29.txt"
   probe_clean "check 29 logs the composite's total and finds nothing once the frontmatter is back"
+  # 30: media's unscoped share past the family ceiling (D88), and only media's.
+  head -c "$SM_COMPANION_SHARE" /dev/zero | tr '\0' x >> "$PROJ/.claude/rules/syntek-media/01-layout-and-routing.md"
+  c29_state "$PROJ" over-author > "$W/c29.txt"
+  probe "check 30 fires when media's unscoped share passes the cap in a composite" "check 30 — [author-fiction] over-author: media's unscoped share is"
+  cp "$tmp/r01.held" "$PROJ/.claude/rules/syntek-media/01-layout-and-routing.md"
+  cp "$PROJ/.claude/CLAUDE.md" "$tmp/cm.held"
+  head -c "$SM_COMPANION_SHARE" /dev/zero | tr '\0' x >> "$PROJ/.claude/CLAUDE.md"
+  c29_state "$PROJ" over-author > "$W/c29.txt"
+  probe_clean "check 30 leaves the root files out of media's share"
+  cp "$tmp/cm.held" "$PROJ/.claude/CLAUDE.md"
   cp "$tmp/c29.held" "$W/c29.txt"
   # 22: the comparison runs for real on the fixture manifests and seed, once per mutation.
   local am="$tmp/author/family-shared.json" seed="$tmp/author/template/.claude/settings.json"

@@ -28,12 +28,12 @@ Nothing here is rendered, and nothing here writes under `template/`.
 ├── shipped-seeds.sh          ← seeds wired and empty; copy-only files; D13 settings; output README negations above gates; family-shared.json and every vendored file and block it records (--write-manifest writes it); D86's data-root map, and in a render each mapped folder present with its storage manifest committable; in a render, only media's own seed rules wait for the permissions script's --write; the baseline task, the refresh data and the v0.6.0 entry; nothing under learning/ and the frozen name kept; the v0.7.0 entry and its report script; rules 04's globs, none dead and no toolkit workflow left out (D87)
 ├── skill-conformance.sh      ← DESIGN.md Section 5's contract for every skill and mode file (the family skills' vendored H1, locale and Mode paragraph excepted); the ElevenLabs guard; media-teach's placement words, and no other media skill or mode file naming learning/
 ├── generate-all.sh           ← renders every BRAND_KIND × profile from a snapshot, and each over syntek-author
-├── shipped-brands.sh         ← skills, modes, gates (AGENT_CLIENTS's included), no syntek-author name but the family's; output folders ship only their README; nothing under how-to/ outside the family's paths and media's three folders; nothing at or under learning/; the start-up budget and rules 04's frontmatter (D87)
+├── shipped-brands.sh         ← skills, modes, gates (AGENT_CLIENTS's included), no syntek-author name but the family's; output folders ship only their README; nothing under how-to/ outside the family's paths and media's three folders; nothing at or under learning/; the start-up budget, media's share within the family ceiling and rules 04's frontmatter (D87, D88)
 ├── byte-identity.sh          ← shared files identical in every standalone render that ships them
 ├── doc-references.sh         ← every cited path and skill exists in that render; companions and syntek-author paths, its how-to folders included, in prose (family-shared text excepted)
 ├── toolkit-smoke.sh          ← the toolkit's self-tests and commands on synthetic clips; ignore and LFS rules; footage verify on the data root; MEDIA_CHROMIUM's errors; no ElevenLabs call
 ├── update-test.sh            ← a real copier update keeps author work, lessons included, delivers template work, refuses a BRAND_KIND change; the v0.7.0 report
-└── coexist-test.sh           ← real syntek-author first, then media, per brand kind: both apply, both update, neither touches the other, nor the lessons; media's family-shared.json against the --author tree's; the two data-root maps never overlap; neither update strips the other's rules frontmatter (D87)
+└── coexist-test.sh           ← real syntek-author first, then media, per brand kind: both apply, both update, neither touches the other, nor the lessons; media's family-shared.json against the --author tree's; the two data-root maps never overlap; neither update strips the other's rules frontmatter (D87); media's share within the family ceiling (D88)
 ```
 
 ## What's here
@@ -98,9 +98,11 @@ Grouped by what each script reads:
   syntek-author's checks 24 and 25 (its regex byte for byte, counting characters), hold a
   standalone render's always-loaded set to `SM_STARTUP_BUDGET`, the scoped rule to
   `SM_SCOPED_LIMIT` and its frontmatter to the list, and log every render's total, over
-  syntek-author never a finding, since the family ceiling is still to agree; `shipped-seeds.sh`
+  syntek-author never a finding; check 18 also holds media's unscoped share, in every render,
+  to `SM_COMPANION_SHARE`, the family ceiling agreed with syntek-author (D88); `shipped-seeds.sh`
   check 37 proves on the source that no glob is dead and no toolkit workflow is left out; and
-  `coexist-test.sh` check 29 proves neither update strips or adds either template's frontmatter.
+  `coexist-test.sh` check 29 proves neither update strips or adds either template's frontmatter,
+  and check 30 holds media's share to the same cap in both orders after both updates (D88).
 - **The user guide** (D84): `docs-pairing.sh` reads the family's pairs under `how-to/` as any
   pair, and its checks 12–17 reach media's procedures and guides there; `line-cap.sh` caps the
   chapters of `how-to/src/`, which are instructional; `doc-references.sh` check 6 treats
@@ -132,7 +134,7 @@ Grouped by what each script reads:
   report printed; since 0.7.0 planted lessons kept byte for byte through two updates, and,
   where the update crosses 0.7.0, the v0.7.0 report printed once, the footage folder's records
   left as they were) and
-  `coexist-test.sh` (twenty-nine checks per brand kind, 13, 20, 22 and 23 once per run: the
+  `coexist-test.sh` (thirty checks per brand kind, 13, 20, 22 and 23 once per run: the
   real syntek-author first, then media, both updated twice, the other order, a removed platform
   and media kind, syntek-author's own `doc-references.sh` on the composite, the vendored set
   against its manifest, D84's warning on a copy over a syntek-author without its guide,
@@ -140,7 +142,8 @@ Grouped by what each script reads:
   server standing once in both orders, and, since 0.7.0, lessons in every placement kept
   through both copies and updates in both orders, syntek-author's `learning/` pair and media's
   render record untouched, and the two data-root maps apart under either store; since 0.8.0,
-  both templates' rules frontmatter kept through both updates, the composite's total logged). Their self-tests run the whole flow against the two
+  both templates' rules frontmatter kept through both updates, the composite's total logged;
+  since D88, media's unscoped share within the family ceiling). Their self-tests run the whole flow against the two
   fixture templates in `_common.sh` (a minimal syntek-media and a minimal syntek-author), so they
   prove the harness even while the real template is incomplete. `coexist-test.sh`, the
   over-author renders and the over-author half of `update-test.sh` check 24 need a syntek-author

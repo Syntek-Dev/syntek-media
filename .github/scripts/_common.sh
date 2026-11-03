@@ -1009,15 +1009,20 @@ SM_EXAMPLE_NAME="000-example-piece"
 SM_ROOT_SPINE="$SM_ANSWERS_FILE"
 SM_ROOT_SPINE_GLOBS=".claude/rules/syntek-media/*.md"
 
-# The path-scoped rules and the start-up budget (DESIGN.md D87, Section 4.1; syntek-author D59,
-# whose figures media takes). The budget holds a standalone render's always-loaded instruction
-# files (the seed .claude/CLAUDE.md, its imports and every rules file without paths frontmatter);
-# the limit is Claude Code's on-demand per-file limit on a 200K window. Only rules 04 is scoped:
-# SM_SCOPED_RULES names it, and SM_RULE_PATHS_04 is Section 4.1's frontmatter block, one glob a
-# line, in order. shipped-brands.sh checks 18 and 19, shipped-seeds.sh check 37 and
-# coexist-test.sh check 29 read these; check-template-tokens.sh check 10 reads the folder.
+# The path-scoped rules, the start-up budget and the family ceiling (DESIGN.md D87, D88, Section
+# 4.1; syntek-author D59). The budget holds a standalone render's always-loaded instruction files
+# (the seed .claude/CLAUDE.md, its imports and every rules file without paths frontmatter); its
+# 110,000 was D59's at 0.8.0 and is media's own since D88. The limit is D59's, Claude Code's
+# on-demand per-file limit on a 200K window. SM_COMPANION_SHARE is D88's cap on media's unscoped
+# share beside syntek-author (media's rules files without frontmatter, with what they import
+# that the root files do not already load), agreed with syntek-author: neither template raises
+# its cap without the other's agreement. Only rules 04 is scoped: SM_SCOPED_RULES names it, and
+# SM_RULE_PATHS_04 is Section 4.1's frontmatter block, one glob a line, in order.
+# shipped-brands.sh checks 18 and 19, shipped-seeds.sh check 37 and coexist-test.sh checks 29
+# and 30 read these; check-template-tokens.sh check 10 reads the folder.
 SM_STARTUP_BUDGET=110000
 SM_SCOPED_LIMIT=40000
+SM_COMPANION_SHARE=100000
 SM_SCOPED_RULES="04-toolkit-pipeline.md"
 SM_RULE_PATHS_04='toolkit/**
 .gitattributes

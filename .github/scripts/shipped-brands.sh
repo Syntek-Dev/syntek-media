@@ -116,10 +116,16 @@
 #                          once), and every .claude/rules/**/*.md that does not open with check
 #                          19's frontmatter, counted in characters, never bytes, the five
 #                          largest named; or, in any render, a scoped media rule is over
-#                          SM_SCOPED_LIMIT, past which Claude Code reads only its start. Over
-#                          syntek-author it logs media's unscoped share and the composite's
-#                          total, never a finding: the two templates' sets are one there, and
-#                          the family ceiling is still to agree. Every run logs the total.
+#                          SM_SCOPED_LIMIT, past which Claude Code reads only its start; or, in
+#                          any render, media's unscoped share is over SM_COMPANION_SHARE (D88:
+#                          every .claude/rules/syntek-media/*.md without that frontmatter, with
+#                          each file it imports that the root files do not already load), the
+#                          five largest named. The share depends only on media's answers, so a
+#                          standalone render with every platform and media kind holds the cap
+#                          where coexist-test.sh's default copies cannot. Over syntek-author the
+#                          composite's total is logged, never a finding: syntek-author's own
+#                          audit holds its set (syntek-author D59 'Combined'). Every run logs
+#                          the total and the share.
 #                      19. A file in SM_SCOPED_RULES does not open with exactly DESIGN.md
 #                          Section 4.1's frontmatter (---, paths:, one double-quoted glob a line
 #                          equal to SM_RULE_PATHS_04, in order, ---, at offset 0), its brace
@@ -137,7 +143,8 @@
 #                     skipped (syntek-author's paths are there by design; coexist-test.sh check 6
 #                     proves ownership), and checks 3, 7, 9, 11, 12, 13, 14, 15, since 0.6.0 16,
 #                     since 0.7.0 17 and since 0.8.0 18 (its combined total logged, never a
-#                     finding) and 19 read media-owned paths only.
+#                     finding; media's share, D88, judged by path) and 19 read media-owned
+#                     paths only.
 #
 #                     What it CANNOT check: a file's CONTENT — a gated row inside an index file
 #                     that names an absent path is doc-references.sh's, and a shared file that
@@ -513,10 +520,12 @@ PYCLIENT
 
   # ── 18–19. The always-loaded instruction set and the path-scoped rule (D87) ──
   # syntek-author's checks 24 and 25 (its D59), ported: the FM regex byte for byte, sizes in
-  # characters, never bytes. Standalone, the budget is a finding; over syntek-author the two
-  # templates' sets are one, so media's share and the composite's total are logged, never a
-  # finding (DESIGN.md D87: the family ceiling is still to agree). Only media's rules folder is
-  # judged for the on-demand limit and stray frontmatter; over syntek-author, media-owned files.
+  # characters, never bytes. Standalone, the budget is a finding; in every render media's
+  # unscoped share over SM_COMPANION_SHARE is a finding (DESIGN.md D88; syntek-author D59
+  # 'Combined'), counted by path: media's rules folder, with what its files import that the
+  # root files do not already load. Over syntek-author the composite's total is logged, never a
+  # finding. Only media's rules folder is judged for the on-demand limit and stray frontmatter;
+  # over syntek-author, media-owned files.
   local owned_list="" n18 msg18
   if $SM_OWNED_MODE; then
     owned_list="$(printf '%s\n' "${!SM_OWNED[@]}" | grep -E '^\.claude/' || true)"
@@ -527,10 +536,10 @@ PYCLIENT
     if [[ "$n18" == L ]]; then BUDGET_NOTES+=("$msg18"); else finding "check $n18 — $msg18"; fi
   done < <(SM_RULE_PATHS_04="$SM_RULE_PATHS_04" SM_SCOPED_RULES="$SM_SCOPED_RULES" \
     SM_OWNED_LIST="$owned_list" SM_OWNED_ON="$($SM_OWNED_MODE && echo 1 || echo 0)" \
-    python3 - "$TREE" "$SM_STARTUP_BUDGET" "$SM_SCOPED_LIMIT" <<'PY'
+    python3 - "$TREE" "$SM_STARTUP_BUDGET" "$SM_SCOPED_LIMIT" "$SM_COMPANION_SHARE" <<'PY'
 import os, re, sys
 def main():
-    tree, budget, limit = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+    tree, budget, limit, cap = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
     R = ".claude/rules/syntek-media/"
     over = os.environ.get("SM_OWNED_ON") == "1"
     owned = set(os.environ.get("SM_OWNED_LIST", "").split("\n")) - {""}
@@ -544,7 +553,7 @@ def main():
     def scoped(t):
         m = FM.match(t)
         return [l[5:-1] for l in m.group(1).splitlines()] if m else None
-    loaded, seen = [], set()
+    loaded, seen, shared = [], set(), []
     def take(p, depth):
         p = os.path.normpath(p)
         if depth > 4 or p in seen or not os.path.isfile(p):
@@ -563,20 +572,23 @@ def main():
         for f in sorted(x for x in files if x.endswith(".md")):
             p = os.path.join(root, f); t = read(p); rel = os.path.relpath(p, tree)
             if scoped(t) is None:
-                take(p, 0)
+                k = len(loaded); take(p, 0)
+                if rel.startswith(R):
+                    shared.extend(loaded[k:])  # D88: media's file and what only it imports
             elif len(t) > limit and rel.startswith(R) and mine(rel):
                 print(f"18\t{rel} is {len(t):,} characters; Claude Code reads only the first {limit:,} of a rule it loads on demand (D87)")
             if rel.startswith(R) and rel not in want and t.startswith("---\n") and mine(rel):
                 print(f"19\t{rel} opens with frontmatter; only {', '.join(sorted(os.path.basename(w) for w in want))} is path-scoped (D87)")
-    total = sum(n for _, n in loaded)
+    total, share = sum(n for _, n in loaded), sum(n for _, n in shared)
+    top5 = lambda xs: ", ".join(f"{os.path.relpath(p, tree)} {n:,}" for p, n in sorted(xs, key=lambda x: -x[1])[:5])
     if over:
-        share = sum(n for p, n in loaded if os.path.relpath(p, tree) in owned)
-        print(f"L\tthe always-loaded instruction files total {total:,} characters over syntek-author, media's unscoped share {share:,}; logged, never a finding (D87)")
+        print(f"L\tthe always-loaded instruction files total {total:,} characters over syntek-author, logged, never a finding (D87); media's unscoped share {share:,}, its cap {cap:,} (D88)")
     else:
-        print(f"L\tthe always-loaded instruction files total {total:,} characters; the budget is {budget:,} (D87)")
+        print(f"L\tthe always-loaded instruction files total {total:,} characters; the budget is {budget:,} (D87); media's unscoped share {share:,}, its cap over syntek-author {cap:,} (D88)")
         if total > budget:
-            top = ", ".join(f"{os.path.relpath(p, tree)} {n:,}" for p, n in sorted(loaded, key=lambda x: -x[1])[:5])
-            print(f"18\tthe always-loaded instruction files total {total:,} characters; the budget is {budget:,} (D87): {top}")
+            print(f"18\tthe always-loaded instruction files total {total:,} characters; the budget is {budget:,} (D87): {top5(loaded)}")
+    if share > cap:
+        print(f"18\tmedia's unscoped share is {share:,} characters; the cap beside syntek-author is {cap:,} (D88; syntek-author D59 'Combined'): {top5(shared)}")
     def expand(g):
         m = re.search(r'\{([^{}]*)\}', g)
         return [g] if not m else [x for a in m.group(1).split(",") for x in expand(g[:m.start()] + a + g[m.end():])]
@@ -862,10 +874,17 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   # 18–19 (D87): the always-loaded set, its imports, the on-demand limit and the frontmatter.
   local r="$TREE/.claude/rules/syntek-media" real_globs="$SM_RULE_PATHS_04"
   cp "$r/01-layout-and-routing.md" "$tmp/r01"; cp "$r/04-toolkit-pipeline.md" "$tmp/r04"
-  head -c "$SM_STARTUP_BUDGET" /dev/zero | tr '\0' x >> "$r/01-layout-and-routing.md"
-  probe "check 18 fires when the always-loaded instruction files pass the budget" "check 18 — the always-loaded instruction files total"
-  cp "$tmp/r01" "$r/01-layout-and-routing.md"
   cp "$TREE/.claude/CLAUDE.md" "$tmp/cm"; cp "$TREE/.claude/MEMORY.md" "$tmp/mem"
+  head -c "$SM_STARTUP_BUDGET" /dev/zero | tr '\0' x >> "$TREE/.claude/CLAUDE.md"
+  probe "check 18 fires when the always-loaded instruction files pass the budget" "check 18 — the always-loaded instruction files total"
+  cp "$tmp/cm" "$TREE/.claude/CLAUDE.md"
+  head -c "$SM_COMPANION_SHARE" /dev/zero | tr '\0' x >> "$r/01-layout-and-routing.md"
+  probe "check 18 fires when media's unscoped share passes the cap (D88)" "check 18 — media's unscoped share is"
+  cp "$tmp/r01" "$r/01-layout-and-routing.md"
+  printf '@../../MEMORY.md\n' >> "$r/01-layout-and-routing.md"
+  head -c "$SM_COMPANION_SHARE" /dev/zero | tr '\0' x >> "$TREE/.claude/MEMORY.md"
+  probe "check 18 counts what a media rule imports in its share (D88)" "check 18 — media's unscoped share is"
+  cp "$tmp/r01" "$r/01-layout-and-routing.md"; cp "$tmp/mem" "$TREE/.claude/MEMORY.md"
   printf '@MEMORY.md\n' >> "$TREE/.claude/CLAUDE.md"
   head -c "$SM_STARTUP_BUDGET" /dev/zero | tr '\0' x >> "$TREE/.claude/MEMORY.md"
   probe "check 18 counts a file .claude/CLAUDE.md imports" "check 18 — the always-loaded instruction files total"
@@ -941,10 +960,15 @@ rules 01-layout-and-routing.md" > "$SM_AUTHOR_NAMES_FILE"
   printf 'learning/syntek-media/tides/MISSION.md\n' >> "$f.owned"; load_owned "$TREE"
   probe "check 17 fires on a media-owned path under learning/, over syntek-author" "check 17 — 1 path(s) ship at or under learning/: learning/syntek-media/tides/MISSION.md"
   sed -i '/^learning\/syntek-media\/tides\/MISSION.md$/d' "$f.owned"; rm -rf "$f/learning"; load_owned "$TREE"
-  # 18 over syntek-author: the composite's total is logged, never a finding (D87).
+  # 18 over syntek-author: the composite's total is logged, never a finding (D87); media's
+  # share is still capped (D88).
   mkdir -p "$f/.claude/rules/syntek-author"
   head -c "$SM_STARTUP_BUDGET" /dev/zero | tr '\0' x > "$f/.claude/rules/syntek-author/01-layout-and-routing.md"
   probe_clean "over syntek-author, a composite over the budget is logged, never a finding"
+  cp "$f/.claude/rules/syntek-media/01-layout-and-routing.md" "$tmp/r01o"
+  head -c "$SM_COMPANION_SHARE" /dev/zero | tr '\0' x >> "$f/.claude/rules/syntek-media/01-layout-and-routing.md"
+  probe "check 18 fires on media's share past the cap, over syntek-author (D88)" "check 18 — media's unscoped share is"
+  cp "$tmp/r01o" "$f/.claude/rules/syntek-media/01-layout-and-routing.md"
   head -c "$SM_SCOPED_LIMIT" /dev/zero | tr '\0' x >> "$f/.claude/rules/syntek-media/04-toolkit-pipeline.md"
   probe "check 18 fires on media's scoped rule past the on-demand limit, over syntek-author" "check 18 — .claude/rules/syntek-media/04-toolkit-pipeline.md is"
   SM_OWNED_MODE=false; SM_OWNED=()
