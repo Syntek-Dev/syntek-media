@@ -891,7 +891,7 @@ SM_CRASH_VERSION="v0.4.3"
 # coexist-test.sh check 22 can tell one from a family file media has never heard of. Since
 # D81 (0.6.0) it is empty: media vendors every file and block the tag lists, so a family file
 # a later tag adds fails check 22 until it is adopted.
-SM_FAMILY_RELEASE="v0.11.0"
+SM_FAMILY_RELEASE="v0.11.1"
 SM_FAMILY_MANIFEST="family-shared.json"
 SM_FAMILY_OWNER="syntek-media"
 # destination path · source in this repository · scope (blank: project, under template/). The
@@ -1098,7 +1098,7 @@ SM_SETTINGS_FAMILY_ASK=(
 )
 SM_SETTINGS_FAMILY_DENY=("mcp__code-review-graph__embed_graph_tool")
 # The seed's hooks key: syntek-author's seed's hooks object, byte for byte as JSON, at
-# SM_FAMILY_RELEASE (D80; since 0.7.0 its v0.9.1, D81, D84; since 0.9.0 its v0.11.0, D89): four
+# SM_FAMILY_RELEASE (D80; since 0.7.0 its v0.9.1, D81, D84; since 0.9.0 its v0.11.1, D89): four
 # handoff-hook entries in the silent `|| exit 0` form, the context-threshold handoff on
 # UserPromptSubmit, the pre-compact handoff on PreCompact (auto and manual) and on SessionStart
 # (compact, `compacted`); then two PreToolUse entries, the data-root guard and the guide guard

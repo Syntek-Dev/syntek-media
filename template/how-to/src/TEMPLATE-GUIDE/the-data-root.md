@@ -66,7 +66,8 @@ In the project's text, a filed file is named `ext:<path in the repository>`.
 
 ## The tool
 
-Each template ships the data-root tool under its own name, as `.claude/syntek-*-dataroot.py`, and the copies are the same bytes.
+Each template ships the data-root tool under its own name, as `.claude/syntek-*-dataroot.py`.
+The copies are the same bytes once every template in the project is up to date; where they differ, only the newer copy refuses a role a folder's template does not allow there.
 It needs Python 3.14 or later: on an older Python, every command says in a framed message that it did NOT run, and changes nothing.
 You choose its job with one word after its name.
 
@@ -76,7 +77,7 @@ You choose its job with one word after its name.
 - `add` files a copy of one file under the root and lists it in the manifest.
 - `status` reports what is at risk, such as binaries no manifest lists and copies kept online only.
 - `verify` checks every listed copy against its checksum.
-- `pull` copies listed files back into your work tree, where Git ignores them.
+- `pull` copies listed files back into your work tree, where Git ignores them, except from a folder its template keeps out of a whole pull: give a pattern that names that folder to pull it.
 - `plan` lists the binaries Git still holds in the filing folders and where each would go.
 - `check-names` checks that names are safe on Windows, which refuses some characters and names.
 
@@ -85,6 +86,8 @@ This command runs `root` and changes nothing; the `for` loop runs the first copy
 ```bash
 for f in .claude/syntek-*-dataroot.py; do python3 "$f" root; break; done
 ```
+
+To file into a folder another template owns, use that template's own copy of the tool, as its guide says.
 
 Run it first on a new machine, and again whenever a data command refuses.
 When the tool refuses for any other reason, it says why in one line: fix the cause, and never work round it by copying, moving or editing a file yourself.
