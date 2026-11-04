@@ -25,7 +25,7 @@
 #                     8. once per run, copies media over a syntek-author project whose how-to/
 #                        was deleted, as one older than v0.6.0 has none.
 #
-#                   Thirty checks per brand kind (13, 20, 22 and 23 once per run):
+#                   Thirty-one checks per brand kind (13, 20, 22 and 23 once per run):
 #                     1. Media applies over the syntek-author project without --overwrite —
 #                        nothing it ships collides with what is there.
 #                     2. Both answers files exist, under different names.
@@ -176,6 +176,25 @@
 #                        five largest named. The share is logged beside check 29's total.
 #                        Copies here take media's defaults, so shipped-brands.sh check 18 holds
 #                        the cap for every platform and media kind.
+#                    31. In a fresh scratch copy of each composite (both orders, after both
+#                        updates) for each resolver, .claude/syntek-author-dataroot.py and
+#                        .claude/syntek-media-dataroot.py, under each store with a data root of
+#                        its own (marked, named by SYNTEK_DATA_ROOT, under ${TMPDIR:-/tmp}): an
+#                        `add` of a clip in production/src/footage/raw/ under a role the folder
+#                        does not bind (asset, and under repo generated too) exits 2 and writes
+#                        no production/src/footage/external.toml; `--role footage` files it under
+#                        external (exit 0, the storage manifest written) and writes nothing under
+#                        repo (exit 0, nothing under the root); and under external, with the
+#                        work-tree copies removed, a whole `pull` prints its 'pull leaves out
+#                        production/src/footage' line and restores a file filed in research/src/
+#                        (a folder syntek-author's map claims in every composite) but not the
+#                        clip, which `pull 'production/src/footage/*'` restores (DESIGN.md D89;
+#                        syntek-author D61). D86's claim is held only by the rules without the
+#                        binding, and a whole pull would copy every footage file to a machine.
+#                        The clips are fake bytes written at run time. It cannot check `plan
+#                        --copy`, a path that reaches the folder through a link, or a resolver
+#                        older than v0.11.0, which ignores both keys; nor any role but the two
+#                        it tries, and the resolver's own self-test covers the rest.
 #
 #                   Without syntek-author (no --author, no SYNTEK_AUTHOR_DIR, no
 #                   ../syntek-author) the test prints a named SKIP and exits 0. A SKIP is never
@@ -211,7 +230,9 @@
 #            27 and 28 the fixture syntek-author also ships a learning/ pair, a map of its own
 #            and the family resolver under its name, as the real one does since v0.8.0; for
 #            check 29 it ships rules 04 and 09 with paths frontmatter, as the real one does
-#            since its D59, and the fixture media its rules 04 with SM_RULE_PATHS_04.
+#            since its D59, and the fixture media its rules 04 with SM_RULE_PATHS_04. For check
+#            31 the fixture syntek-author's map also claims research/src, which it ships, and
+#            the fixture media ships its real map, resolver and production/src/footage/raw/.
 #
 # Requirements: bash 4.3+, git, rsync, uvx (or COPIER_CMD), python3 3.14 or later, make (check
 #               24; without it a named SKIP). Network on the first uvx run only. A syntek-author
@@ -493,17 +514,10 @@ print(f"L\t{order}: the composite's always-loaded instruction files total {sum(n
 PY29
 }
 
-# Check 28 (D86): in a scratch copy of a composite, under each store, the maps never overlap
-# and syntek-author's own resolver reads media's map. Prints one problem per line.
-c28_state() { # $1 = project, $2 = the order's name
-  local scr store out rc
-  scr="$(sm_mktemp)"; rm -rf "$scr"; cp -a "$1" "$scr" || { printf '%s: could not copy the composite\n' "$2"; return 0; }
-  if [[ ! -f "$scr/.claude/syntek-author-dataroot.py" ]]; then
-    printf "%s: syntek-author's resolver .claude/syntek-author-dataroot.py is not in the composite\n" "$2"
-    rm -rf "$scr"; return 0
-  fi
-  for store in external repo; do
-    python3 -I - "$scr" "$store" <<'PYSTORE' || printf '%s, %s: the answers files could not be set\n' "$2" "$store"
+# Checks 28 and 31: make both answers files in a scratch copy record one store, the layout keys
+# made to agree (invented where missing).
+set_store() { # $1 = scratch copy, $2 = external or repo
+  python3 -I - "$1" "$2" <<'PYSTORE'
 import pathlib, re, sys
 root, store = pathlib.Path(sys.argv[1]), sys.argv[2]
 keys = ["DATA_STORE", "DATA_AREA", "DATA_SLUG", "DATA_KIND_DOCS", "DATA_KIND_PHOTOS", "DATA_KIND_AUDIO", "DATA_KIND_VIDEOS"]
@@ -522,6 +536,19 @@ for f in files:
     lines += ["%s: %s" % (k, values[k]) for k in keys]
     f.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PYSTORE
+}
+
+# Check 28 (D86): in a scratch copy of a composite, under each store, the maps never overlap
+# and syntek-author's own resolver reads media's map. Prints one problem per line.
+c28_state() { # $1 = project, $2 = the order's name
+  local scr store out rc
+  scr="$(sm_mktemp)"; rm -rf "$scr"; cp -a "$1" "$scr" || { printf '%s: could not copy the composite\n' "$2"; return 0; }
+  if [[ ! -f "$scr/.claude/syntek-author-dataroot.py" ]]; then
+    printf "%s: syntek-author's resolver .claude/syntek-author-dataroot.py is not in the composite\n" "$2"
+    rm -rf "$scr"; return 0
+  fi
+  for store in external repo; do
+    set_store "$scr" "$store" || printf '%s, %s: the answers files could not be set\n' "$2" "$store"
     python3 -I - "$scr" <<'PYMAPS' | sed "s/^/$2, $store: /"
 import json, pathlib, re, sys
 claude = pathlib.Path(sys.argv[1]) / ".claude"
@@ -547,6 +574,103 @@ PYMAPS
     [[ "$rc" -eq 0 ]] || printf "%s, %s: syntek-author's store exits %s: %s\n" "$2" "$store" "$rc" "$(tail -1 <<< "$out" | cut -c1-160)"
   done
   rm -rf "$scr"
+}
+
+# Check 31 (D89; syntek-author D61): in a fresh scratch copy of a composite for each resolver
+# and each store, with a data root of its own, the footage folder's binding refuses a role it
+# does not list, and a whole pull leaves the folder out. Prints one problem per line. The
+# resolvers and stores default to all four pairs; the self-test narrows them, so that one
+# mutation gives one finding.
+C31_FOLDER="production/src/footage"
+C31_OTHER="research/src"   # a folder syntek-author's map claims in every composite
+c31_state() { # $1 = project, $2 = the order's name, [$3 = resolvers, $4 = stores]
+  local res store scr root
+  for res in ${3:-author media}; do
+    for store in ${4:-external repo}; do
+      scr="$(sm_mktemp)"; rm -rf "$scr"
+      cp -a "$1" "$scr" || { printf '%s, %s: could not copy the composite\n' "$2" "$store"; continue; }
+      if [[ ! -f "$scr/.claude/syntek-$res-dataroot.py" ]]; then
+        printf '%s: the resolver .claude/syntek-%s-dataroot.py is not in the composite\n' "$2" "$res"
+        sm_rmtree "$scr"; break
+      fi
+      root="$(sm_mktemp)"
+      set_store "$scr" "$store" || printf '%s, %s: the answers files could not be set\n' "$2" "$store"
+      C31_FOLDER="$C31_FOLDER" C31_OTHER="$C31_OTHER" python3 -I - "$scr" "$root" "$res" "$store" <<'PY31' \
+        | sed "s#^#$2, .claude/syntek-$res-dataroot.py, $store: #" \
+        || printf '%s, %s, %s: the D89 check could not run\n' "$2" "$res" "$store"
+import os, subprocess, sys
+proj, root, res, store = sys.argv[1:5]
+F, O = os.environ["C31_FOLDER"], os.environ["C31_OTHER"]
+tool = f".claude/syntek-{res}-dataroot.py"
+env = {k: v for k, v in os.environ.items() if k not in ("SYNTEK_DATA_ROOT", "MEDIA_CHROMIUM")}
+env["SYNTEK_DATA_ROOT"] = root
+open(os.path.join(root, ".syntek-data-root"), "w").close()
+manifest = os.path.join(proj, *F.split("/"), "external.toml")
+out = []
+def run(*a):
+    p = subprocess.run([sys.executable, tool, *a], cwd=proj, env=env, capture_output=True, text=True)
+    lines = [l.strip() for l in (p.stdout + p.stderr).splitlines() if l.strip()]
+    return p.returncode, p.stdout + p.stderr, (lines[-1][:160] if lines else "(no output)")
+def write(rel, data):
+    path = os.path.join(proj, *rel.split("/"))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as fh:
+        fh.write(data)
+    return path
+def under_root():
+    return sorted(os.path.relpath(os.path.join(d, f), root) for d, _, fs in os.walk(root) for f in fs if f != ".syntek-data-root")
+if not os.path.isdir(os.path.join(proj, *F.split("/"))):
+    print(f"{F} is not in the composite, so its binding cannot be proved")
+    sys.exit(0)
+# Fake bytes, written at run time: the resolver hashes and copies, and never decodes a clip.
+refused, clip, note = F + "/raw/c31-refused.mp4", F + "/raw/c31-take.mp4", O + "/c31-note.pdf"
+write(refused, b"\x00\x00\x00\x18ftypmp42 an invented clip, refused\n")
+clip_path = write(clip, b"\x00\x00\x00\x18ftypmp42 an invented clip, filed\n")
+for role in ["asset"] + (["generated"] if store == "repo" else []):
+    rc, _, last = run("add", refused, "--role", role)
+    wrote = os.path.exists(manifest)
+    if rc != 2 or wrote:
+        out.append(f"add {refused} --role {role} exits {rc}" + (" and writes " + F + "/external.toml" if wrote else "")
+                   + f", where the folder binds only footage and approved-take: exit 2, writing nothing, is D89's: {last}")
+    if wrote:
+        os.remove(manifest)
+rc, _, last = run("add", clip, "--role", "footage")
+if store == "repo":
+    left = under_root() + (["external.toml"] if os.path.exists(manifest) else [])
+    if rc != 0 or left:
+        out.append(f"add {clip} --role footage exits {rc}" + (f" and writes {', '.join(left[:3])}" if left else "")
+                   + f", where under repo it files nothing and exits 0: {last}")
+elif rc != 0 or not os.path.exists(manifest):
+    out.append(f"add {clip} --role footage exits {rc}" + ("" if os.path.exists(manifest) else f" with no {F}/external.toml")
+               + f", where under external it files the clip: {last}")
+elif not os.path.isdir(os.path.join(proj, *O.split("/"))):
+    out.append(f"{O} is not in the composite, so a whole pull cannot be shown to restore another folder's file")
+else:
+    note_path = write(note, b"%PDF-1.4 an invented research note\n")
+    rc, _, last = run("add", note, "--role", "archive")
+    if rc != 0:
+        out.append(f"add {note} --role archive exits {rc}, so a whole pull cannot be proved: {last}")
+    else:
+        os.remove(clip_path); os.remove(note_path)
+        rc, text, last = run("pull")
+        faults = []
+        if f"pull leaves out {F}" not in text:
+            faults.append(f"prints no 'pull leaves out {F}' line")
+        if os.path.exists(clip_path):
+            faults.append(f"restores {clip}")
+        if not os.path.exists(note_path):
+            faults.append(f"does not restore {note}")
+        if faults:
+            out.append(f"a whole pull (exit {rc}) " + "; ".join(faults) + f", where the map says \"pull\": \"named\": {last}")
+        rc, _, last = run("pull", F + "/*")
+        if not os.path.exists(clip_path):
+            out.append(f"pull '{F}/*' exits {rc} and does not restore {clip}: {last}")
+for line in out:
+    print(line)
+PY31
+      sm_rmtree "$scr"; sm_rmtree "$root"
+    done
+  done
 }
 
 # syntek-author's own doc-references.sh on a tree: its findings, sorted, in OUT; its exit
@@ -591,7 +715,7 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   for f in pre-media.sha post-media.sha shared-after.sha a-changed.txt b-changed.txt a-again.txt \
            b-again.txt r-changed.txt pre-remove.sha post-remove.sha b-added.txt b-copy.log \
            lint.txt c25-copy.txt c25-update.txt c25-rev-copy.txt c25-rev-update.txt \
-           c26.txt c26-planted.sha c26-rev-planted.sha c27.txt c28.txt c29.txt b-update.log rev-b-copy.log rev-b-update.log; do : > "$w/$f"; done
+           c26.txt c26-planted.sha c26-rev-planted.sha c27.txt c28.txt c29.txt c31.txt b-update.log rev-b-copy.log rev-b-update.log; do : > "$w/$f"; done
   rm -f "$w/pre-settings.json" "$w/post-settings.json" "$w/settings-after.json"
   C24_SKIP=""
   sm_snapshot "$AUTHOR_SRC" "$a" >>"$log" 2>&1 || die "could not snapshot $AUTHOR_SRC"
@@ -667,6 +791,7 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
   c27_state "$PROJ" "$c27_before" update | sed 's/^/(update) /' >> "$w/c27.txt"
   c28_state "$PROJ" over-author >> "$w/c28.txt"
   c29_state "$PROJ" over-author >> "$w/c29.txt"
+  c31_state "$PROJ" over-author >> "$w/c31.txt"
 
   # 4. Each again, with nothing changed. The shared files are fingerprinted between the two.
   sm_update_author "$PROJ" >>"$log" 2>&1 || A_AGAIN_STATUS=$?
@@ -728,6 +853,7 @@ run_flow() { # $1 = BRAND_KIND, $2 = work dir — fills the state the checks rea
       c27_state "$w/rev" "$c27_before" update | sed 's/^/(rev-update) /' >> "$w/c27.txt"
       c28_state "$w/rev" media-first >> "$w/c28.txt"
       c29_state "$w/rev" media-first >> "$w/c29.txt"
+      c31_state "$w/rev" media-first >> "$w/c31.txt"
     fi
   fi
 
@@ -977,6 +1103,11 @@ run_checks() {
   while IFS=$'\t' read -r k f; do
     [[ "$k" == G && -n "$f" ]] && finding "check 30 — $label $f (DESIGN.md D88; syntek-author D59 'Combined')"
   done < "$W/c29.txt"
+
+  # ── 31. Each resolver holds the footage folder's binding and leaves it out of a whole pull (D89) ──
+  while IFS= read -r f; do
+    [[ -n "$f" ]] && finding "check 31 — $label $f (DESIGN.md D89; syntek-author D61)"
+  done < "$W/c31.txt"
   return 0
 }
 
@@ -1103,7 +1234,10 @@ STUB
   mkdir -p "$tmp/author/template/learning"
   printf '# CONTEXT.md — learning/\n' > "$tmp/author/template/learning/CONTEXT.md"
   printf '@./CONTEXT.md\n\n# CLAUDE.md — learning/\n' > "$tmp/author/template/learning/CLAUDE.md"
-  printf '{"format": 1, "folders": [{"path": "library/src", "kind": "docs"}, {"path": "assets"}]}\n' > "$tmp/author/template/.claude/syntek-author-dataroot.json"
+  printf '{"format": 1, "folders": [{"path": "library/src", "kind": "docs"}, {"path": "research/src"}, {"path": "assets"}]}\n' > "$tmp/author/template/.claude/syntek-author-dataroot.json"
+  # Check 31 (D89): research/src, which syntek-author's map claims in every composite.
+  mkdir -p "$tmp/author/template/research/src"
+  printf '# CONTEXT.md — research/src/\n' > "$tmp/author/template/research/src/CONTEXT.md"
   cp "$SM_ROOT/template/.claude/syntek-media-dataroot.py" "$tmp/author/template/.claude/syntek-author-dataroot.py"
   sm_commit_all "$tmp/author" 'fixture: the learning pair, its map and the resolver'
   # Check 29 (D87): syntek-author's two scoped rules, and media's rules 04 with its paths list.
@@ -1116,6 +1250,11 @@ STUB
   { printf -- '---\npaths:\n'; while IFS= read -r g; do printf '  - "%s"\n' "$g"; done <<< "$SM_RULE_PATHS_04"
     printf -- '---\n\n# 04-toolkit-pipeline.md\n'; } > "$tmp/media/template/.claude/rules/syntek-media/04-toolkit-pipeline.md"
   sm_commit_all "$tmp/media" 'fixture: rules 04 with its paths list'
+  # Check 31 (D89): media's own map, its resolver (the family's bytes) and the footage folder.
+  mkdir -p "$tmp/media/template/production/src/footage/raw"
+  cp "$SM_ROOT/template/.claude/syntek-media-dataroot.py" "$SM_ROOT/template/$SM_DATAROOT_MAP" "$tmp/media/template/.claude/"
+  printf '# raw/\n\nCamera originals, never committed.\n' > "$tmp/media/template/production/src/footage/raw/README.md"
+  sm_commit_all "$tmp/media" 'fixture: the data-root map, its resolver and the footage folder'
   # Check 22's inputs: the two manifests, as each template would write them for the same tag
   # (fixture bytes: each entry's hash is its path's), and the fixture syntek-author's seed with
   # the family's asks, deny and hooks.
@@ -1269,6 +1408,48 @@ STUB
   probe_clean "check 30 leaves the root files out of media's share"
   cp "$tmp/cm.held" "$PROJ/.claude/CLAUDE.md"
   cp "$tmp/c29.held" "$W/c29.txt"
+  # 31: each resolver and the footage folder's binding (D89), narrowed to one resolver and one
+  # store per probe, so one mutation gives one finding. The map is rewritten, then put back.
+  local mp="$PROJ/$SM_DATAROOT_MAP" p31="check 31 — [author-fiction] over-author, .claude/syntek-media-dataroot.py"
+  local a31="check 31 — [author-fiction] over-author, .claude/syntek-author-dataroot.py"
+  git -C "$PROJ" checkout -q -- "$SM_DATAROOT_MAP" research/src
+  st_c31_map() { # $1 = the folder's roles (JSON), $2 = its pull key (JSON, or empty), $3 = footage's repo key
+    printf '{"format": 1, "folders": [{"path": "production/src/footage", "roles": %s%s}], "roles": [{"name": "footage", "evidence": true%s}, {"name": "approved-take", "evidence": true, "repo": "skip"}]}\n' \
+      "$1" "${2:+, \"pull\": $2}" "$3" > "$mp"
+  }
+  st_c31_map '["footage", "approved-take", "asset"]' '"named"' ', "repo": "skip"'
+  c31_state "$PROJ" over-author media external > "$W/c31.txt"
+  probe "check 31 fires when the folder's binding admits a role it should refuse" "$p31, external: add production/src/footage/raw/c31-refused.mp4 --role asset exits 0"
+  st_c31_map '["footage", "approved-take", "generated"]' '"named"' ', "repo": "skip"'
+  c31_state "$PROJ" over-author author repo > "$W/c31.txt"
+  probe "check 31 fires when generated is filed in the folder under repo" "$a31, repo: add production/src/footage/raw/c31-refused.mp4 --role generated exits 0"
+  st_c31_map '["approved-take"]' '"named"' ', "repo": "skip"'
+  c31_state "$PROJ" over-author media external > "$W/c31.txt"
+  probe "check 31 fires when --role footage is not filed under external" "$p31, external: add production/src/footage/raw/c31-take.mp4 --role footage exits 2"
+  st_c31_map '["footage", "approved-take"]' '"named"' ''
+  c31_state "$PROJ" over-author author repo > "$W/c31.txt"
+  probe "check 31 fires when --role footage is refused under repo" "$a31, repo: add production/src/footage/raw/c31-take.mp4 --role footage exits 2"
+  st_c31_map '["footage", "approved-take"]' '' ', "repo": "skip"'
+  c31_state "$PROJ" over-author media external > "$W/c31.txt"
+  probe "check 31 fires when a whole pull restores the footage folder" "$p31, external: a whole pull (exit 0) prints no 'pull leaves out production/src/footage' line; restores production/src/footage/raw/c31-take.mp4"
+  git -C "$PROJ" checkout -q -- "$SM_DATAROOT_MAP"
+  # A stand-in resolver that runs the real one but for a named pull, which it drops.
+  local rv="$PROJ/.claude/syntek-media-dataroot.py"
+  mv "$rv" "$PROJ/.claude/c31-held.py"
+  printf 'import runpy, sys\nif sys.argv[1:2] == ["pull"] and len(sys.argv) > 2:\n    sys.exit(0)\nsys.argv[0] = ".claude/c31-held.py"\nrunpy.run_path(".claude/c31-held.py", run_name="__main__")\n' > "$rv"
+  c31_state "$PROJ" over-author media external > "$W/c31.txt"
+  probe "check 31 fires when a named pull leaves the clip out" "$p31, external: pull 'production/src/footage/*' exits 0 and does not restore production/src/footage/raw/c31-take.mp4"
+  mv "$PROJ/.claude/c31-held.py" "$rv"
+  rm -rf "${PROJ:?}/research/src"
+  c31_state "$PROJ" over-author media external > "$W/c31.txt"
+  probe "check 31 fires when the composite lacks research/src" "$p31, external: research/src is not in the composite"
+  git -C "$PROJ" checkout -q -- research/src
+  mv "$rv" "$h"
+  c31_state "$PROJ" over-author media > "$W/c31.txt"; mv "$h" "$rv"
+  probe "check 31 fires when the composite has no media resolver" "check 31 — [author-fiction] over-author: the resolver .claude/syntek-media-dataroot.py is not in the composite"
+  c31_state "$PROJ" over-author > "$W/c31.txt"
+  probe_clean "check 31 is quiet for both resolvers under both stores once the map and resolver are back"
+  : > "$W/c31.txt"
   # 22: the comparison runs for real on the fixture manifests and seed, once per mutation.
   local am="$tmp/author/family-shared.json" seed="$tmp/author/template/.claude/settings.json"
   cp "$am" "$tmp/manifest.held"; cp "$seed" "$tmp/seed.held"

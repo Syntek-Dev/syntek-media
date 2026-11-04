@@ -200,6 +200,24 @@
 #                       update) and the absence of a storage manifest
 #                       (production/src/footage/external.toml) are as they were (DESIGN.md
 #                       D86).
+#                   27. The update from the newest earlier release that crosses 0.9.0 (the
+#                       earlier tag below v0.9.0, VERSION 0.9.0 or later; otherwise these are
+#                       gated off, and quiet, as check 26's are), standalone and over
+#                       syntek-author: its output holds the v0.9.0 report
+#                       ('▸ v0.9.0 migration (syntek-media)', migrations/v0.9.0-footage-roles.py)
+#                       exactly once, before the vendored update script's report ('▸ syntek-media
+#                       update report'), with its refusal line (an add of any other role in the
+#                       footage folder, exit 2), its line that syntek-author's commands refuse
+#                       only from syntek-author v0.11.0, the line that media's floor for
+#                       combined projects is unchanged (read with the report's lines joined,
+#                       since they wrap) and the storage-manifest pointer
+#                       (git grep … production/src/footage/external.toml) on a line of its own;
+#                       the second update's output holds no v0.9.0 report; the delivered
+#                       .claude/syntek-media-dataroot.json equals, as JSON, the map of the
+#                       working tree the update renders, D89's (the footage folder bound to
+#                       footage and approved-take, "pull": "named"; shipped-seeds.sh check 28
+#                       holds that file to the literal); and the footage records check 26 reads
+#                       are as they were (DESIGN.md D89).
 #
 #                  Copier prints a MissingFileWarning on a fresh copy and on every update (the
 #                  previous answers are read through _external_data, D14). It is expected and
@@ -231,7 +249,10 @@
 #                  that lacks them gains them, by design (D81), which this check does not
 #                  exercise. Check 24's crossing assertions read only the release its
 #                  scratch repository crosses, so they say nothing until VERSION reads 0.6.0,
-#                  and check 26's say nothing until it reads 0.7.0. Check 25 proves that an
+#                  check 26's say nothing until it reads 0.7.0, and check 27's say nothing
+#                  until it reads 0.9.0. Check 27 reads the report's words, not the refusal it
+#                  describes: the resolver's own --self-test and shipped-seeds.sh check 28
+#                  prove that. Check 25 proves that an
 #                  update leaves lessons alone, not that media-teach places them right:
 #                  skill-conformance.sh check 22 holds its words, and a reviewer its steps.
 #
@@ -240,7 +261,7 @@
 #            fixture show register and saved feed are written; proves the result clean, then
 #            mutates the result once per check and asserts exactly one finding each — the
 #            register deleted by the removal among them. The fixture has no release history,
-#            so the state of checks 24–26 is seeded clean, then mutated the same way.
+#            so the state of checks 24–27 is seeded clean, then mutated the same way.
 #
 # Requirements: bash 4.3+, git, rsync, uvx (or COPIER_CMD), python3 3.14 or later (_common.sh's
 #               pin: the family scripts every copy and update run need it). Network on the first
@@ -344,6 +365,10 @@ REL_CROSS=false
 # one problem per line.
 declare -A REL_LEARN=() REL_REPORT7=()
 REL_CROSS7=false
+# Since 0.9.0 (D89), where the update crosses v0.9.0: what the two updates got wrong about the
+# v0.9.0 report, the delivered data-root map and the footage folder (check 27), one problem per line.
+declare -A REL_REPORT9=()
+REL_CROSS9=false
 # Invented topics, written at run time (check 25): one marked as media's, one unmarked with a
 # progress file only beside its mission, and one in media's folder left from a removed sibling.
 REL_LESSONS="learning/tide-tables/MISSION.md learning/tide-tables/PROGRESS.md learning/knots/MISSION.md learning/knots/PROGRESS.md learning/syntek-media/ferry-sound/MISSION.md"
@@ -956,6 +981,63 @@ rel_footage_sums() { # $1 = project
   printf '%s\t%s\n' "$REL_STORAGE" "$(path_fingerprint "$1/$REL_STORAGE")"
 }
 
+# Check 27, where the update crosses v0.9.0: the v0.9.0 report (D89). The crossing update's
+# output must hold it exactly once, before the vendored update script's report (a line that
+# opens with its head), with the refusal line, the syntek-author line and the floor line (the
+# report's lines joined, since they wrap) and the storage-manifest pointer on a line of its own;
+# the second update's output none. ANSI colour is removed first. Prints one problem per line.
+rel_report9_problems() { # $1 = the crossing update's output, $2 = the second update's output
+  python3 -I - "$1" "$2" "$SM_ROLES_MARK" "$SM_ROLES_REFUSAL_LINE" "$SM_ROLES_AUTHOR_LINE" "$SM_ROLES_FLOOR_LINE" "$SM_ROLES_POINTER_LINE" "$SM_UPDATE_REPORT_HEAD" <<'PYREP9'
+import re, sys
+def lines(p):
+    try:
+        text = open(p, encoding="utf-8", errors="replace").read()
+    except OSError:
+        text = ""
+    return re.sub(r"\x1b\[[0-9;]*m", "", text).splitlines()
+first, again, mark, refusal, author, floor, pointer, head = lines(sys.argv[1]), lines(sys.argv[2]), *sys.argv[3:9]
+out = []
+at = [i for i, l in enumerate(first) if mark in l]
+if len(at) != 1:
+    out.append(f"the crossing update printed the v0.9.0 report ('{mark}') {len(at)} time(s), not once")
+else:
+    end = next((i for i in range(at[0] + 1, len(first)) if "This script changed nothing" in first[i]), len(first))
+    body = first[at[0]:end]
+    joined = " ".join(" ".join(body).split())
+    if refusal not in joined:
+        out.append(f"the v0.9.0 report does not say that media's copy '{refusal}' in the footage folder")
+    if author not in joined:
+        out.append(f"the v0.9.0 report does not say that syntek-author's commands refuse '{author}' later")
+    if floor not in joined:
+        out.append(f"the v0.9.0 report does not say '{floor}'")
+    if not any(l.strip() == pointer for l in body):
+        out.append(f"the v0.9.0 report does not give the storage-manifest pointer, '{pointer}', on a line of its own")
+    # A line that opens with the head: _message_after_update quotes it mid-line, which never counts.
+    if not any(i > at[0] for i, l in enumerate(first) if l.lstrip().startswith(head)):
+        out.append(f"no update report ('{head}') follows the v0.9.0 report: the 'update' block must run last")
+n = sum(1 for l in again if mark in l)
+if n:
+    out.append(f"the second update printed the v0.9.0 report again ({n} time(s)): it runs only on the update that crosses 0.9.0")
+print("\n".join(out))
+PYREP9
+}
+
+# Check 27: the delivered data-root map against the map of the working tree the update renders
+# (D89), compared as JSON. Prints one problem, or nothing.
+rel_map9_problems() { # $1 = the project's .claude/syntek-media-dataroot.json, $2 = the template's
+  python3 -I - "$1" "$2" <<'PYMAP9'
+import json, sys
+def load(p):
+    try:
+        return json.load(open(p, encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return f"unreadable ({type(error).__name__})"
+got, want = load(sys.argv[1]), load(sys.argv[2])
+if got != want:
+    print(f"the delivered .claude/syntek-media-dataroot.json is not D89's map: {json.dumps(got)[:200]}")
+PYMAP9
+}
+
 release_own_files() {
   local s g m
   printf '%s\n' .claude/syntek-media-dataroot.json .claude/syntek-media-dataroot.py .claude/syntek-media-permissions.py
@@ -986,7 +1068,7 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
   REL_LOG["$v"]="$log"; REL_COPY["$v"]=0; REL_UPD["$v"]=0; REL_CONF["$v"]=""; REL_CLIENTS["$v"]=""
   REL_STORE["$v"]=""; REL_WANT["$v"]=repo; REL_NEW["$v"]=""; REL_MISS["$v"]=""; REL_TOUCHED["$v"]=""
   REL_AGAIN["$v"]=0; REL_DIRTY["$v"]=""; REL_WANT_CLIENTS["$v"]="[]"; REL_HOWTO["$v"]=""; REL_SETTINGS["$v"]=""
-  REL_REPORT["$v"]=""; REL_LEARN["$v"]=""; REL_REPORT7["$v"]=""
+  REL_REPORT["$v"]=""; REL_LEARN["$v"]=""; REL_REPORT7["$v"]=""; REL_REPORT9["$v"]=""
   : > "$log"
   REL_VARIANTS+="$v "
   author_files="$w/rel-$v.author"; : > "$author_files"
@@ -1061,6 +1143,12 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
     f="$(diff <(printf '%s\n' "$footage_before") <(rel_footage_sums "$p") | grep -E '^>' | cut -f1 | sed 's/^> //' | paste -sd' ' - || true)"
     [[ -z "$f" ]] || REL_REPORT7["$v"]="the update changed the footage folder's records: $f (D86: the claim moves and files nothing)"
   fi
+  if $REL_CROSS9; then
+    f="$(diff <(printf '%s\n' "$footage_before") <(rel_footage_sums "$p") | grep -E '^>' | cut -f1 | sed 's/^> //' | paste -sd' ' - || true)"
+    [[ -z "$f" ]] || REL_REPORT9["$v"]="the update changed the footage folder's records: $f (D89: the binding moves and files nothing)"
+    f="$(rel_map9_problems "$p/.claude/syntek-media-dataroot.json" "$REL_REPO/template/.claude/syntek-media-dataroot.json")"
+    [[ -z "$f" ]] || REL_REPORT9["$v"]="${REL_REPORT9[$v]:+${REL_REPORT9[$v]}$'\n'}$f"
+  fi
   sm_commit_all "$p" "syntek-media $REL_TO"
   SM_VCS_REF="$REL_TO" sm_update "$p" >"$w/rel-$v.again.log" 2>&1 || REL_AGAIN["$v"]=$?
   cat "$w/rel-$v.again.log" >>"$log"
@@ -1073,6 +1161,10 @@ release_variant() { # $1 = work dir, $2 = project dir, $3 = standalone | over-au
   if $REL_CROSS7; then
     f="$(rel_report7_problems "$w/rel-$v.update.log" "$w/rel-$v.again.log")"
     [[ -z "$f" ]] || REL_REPORT7["$v"]="${REL_REPORT7[$v]:+${REL_REPORT7[$v]}$'\n'}$f"
+  fi
+  if $REL_CROSS9; then
+    f="$(rel_report9_problems "$w/rel-$v.update.log" "$w/rel-$v.again.log")"
+    [[ -z "$f" ]] || REL_REPORT9["$v"]="${REL_REPORT9[$v]:+${REL_REPORT9[$v]}$'\n'}$f"
   fi
 }
 
@@ -1094,7 +1186,7 @@ run_release_flow() { # $1 = work dir — needs REL_REPO (and REL_AUTHOR for the 
   REL_VARIANTS=""
   REL_COPY=(); REL_UPD=(); REL_LOG=(); REL_CONF=(); REL_CLIENTS=(); REL_STORE=(); REL_WANT=()
   REL_NEW=(); REL_MISS=(); REL_TOUCHED=(); REL_AGAIN=(); REL_DIRTY=(); REL_WANT_CLIENTS=()
-  REL_HOWTO=(); REL_SETTINGS=(); REL_REPORT=(); REL_LEARN=(); REL_REPORT7=()
+  REL_HOWTO=(); REL_SETTINGS=(); REL_REPORT=(); REL_LEARN=(); REL_REPORT7=(); REL_REPORT9=()
   [[ -n "$REL_REPO" ]] || return 0
   # The crossing assertions (D81, D84) hold only on the update that crosses v0.6.0 (conflict
   # C7): the earlier tag below it and the target at or past it. From v0.6.0 or later Copier runs
@@ -1109,6 +1201,12 @@ run_release_flow() { # $1 = work dir — needs REL_REPO (and REL_AUTHOR for the 
   if [[ "$(printf '%s\n' "${REL_TO#v}" 0.7.0 | sort -V | head -1)" == 0.7.0 \
         && "$(printf '%s\n' "${REL_TAG#v}" 0.7.0 | sort -V | head -1)" != 0.7.0 ]]; then
     REL_CROSS7=true
+  fi
+  # Check 27's crossing assertions (D89): the earlier tag below v0.9.0, the target at or past it.
+  REL_CROSS9=false
+  if [[ "$(printf '%s\n' "${REL_TO#v}" 0.9.0 | sort -V | head -1)" == 0.9.0 \
+        && "$(printf '%s\n' "${REL_TAG#v}" 0.9.0 | sort -V | head -1)" != 0.9.0 ]]; then
+    REL_CROSS9=true
   fi
   release_variant "$1" "$1/rel-standalone" standalone
   [[ -n "$REL_AUTHOR" ]] && release_variant "$1" "$1/rel-over-author" over-author
@@ -1380,6 +1478,10 @@ run_checks() {
     while IFS= read -r f; do
       [[ -n "$f" ]] && finding "check 26 — $R $f (DESIGN.md D86) — see ${REL_LOG[$v]}"
     done <<< "${REL_REPORT7[$v]:-}"
+    # ── 27. The v0.9.0 report, the map and the footage records, where the update crosses it (D89) ──
+    while IFS= read -r f; do
+      [[ -n "$f" ]] && finding "check 27 — $R $f (DESIGN.md D89) — see ${REL_LOG[$v]}"
+    done <<< "${REL_REPORT9[$v]:-}"
   done
   if [[ "$AGAIN_STATUS" -ne 0 || -n "$AGAIN_DIRTY" ]]; then
     finding "check 15 — $L a second update with no template change was not a no-op (exit $AGAIN_STATUS; $(printf '%s\n' "$AGAIN_DIRTY" | grep -c . || true) path(s) changed)"
@@ -1533,7 +1635,7 @@ self_test() {
     REL_COPY[$v]=0; REL_UPD[$v]=0; REL_LOG[$v]="$tmp/rel-$v.log"; REL_CONF[$v]=""; REL_CLIENTS[$v]="[]"; REL_WANT_CLIENTS[$v]="[]"
     REL_STORE[$v]=repo; REL_WANT[$v]=repo; REL_NEW[$v]=""; REL_MISS[$v]=""; REL_TOUCHED[$v]=""
     REL_AGAIN[$v]=0; REL_DIRTY[$v]=""; REL_HOWTO[$v]=""; REL_SETTINGS[$v]=""; REL_REPORT[$v]=""
-    REL_LEARN[$v]=""; REL_REPORT7[$v]=""
+    REL_LEARN[$v]=""; REL_REPORT7[$v]=""; REL_REPORT9[$v]=""
   done
   probe_clean "check 24 is quiet on a seeded clean update from the newest earlier release"
   REL_COPY[standalone]=1; probe "check 24 fires when the copy at the earlier release fails" "check 24 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the copy at v0.4.6 failed"; REL_COPY[standalone]=0
@@ -1665,6 +1767,44 @@ self_test() {
   REL_REPORT7[standalone]="the update changed the footage folder's records: $f (D86: the claim moves and files nothing)"
   probe "check 26 fires when the update writes a storage manifest in the footage folder" "check 26 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the update changed the footage folder's records: $REL_STORAGE"
   REL_REPORT7[standalone]=""; REL_REPORT7[over-author]=""
+  # Check 27 (D89): the v0.9.0 report, on update logs written here, the delivered map and the
+  # footage records.
+  local r9="$tmp/rel9-update.log" a9="$tmp/rel9-again.log" g9
+  g9="$(printf '%s — the footage folder'"'"'s roles (DESIGN.md D89); report only\n\n  Media'"'"'s copy of the data-root tool\n  refuses add of any other role\n  there (exit 2), naming the two.\n\n  Where this project holds syntek-author, its own copy refuses\n  %s later.\n  %s: v0.6.0, and v0.8.0\n  where lessons come from both templates.\n\n  To find any, look in the storage manifest:\n    %s\n\n  This script changed nothing. To run it again, from the project root:\n\n%s, 0.8.0 → 0.9.0\n' \
+    "$SM_ROLES_MARK" "$SM_ROLES_AUTHOR_LINE" "$SM_ROLES_FLOOR_LINE" "$SM_ROLES_POINTER_LINE" "$SM_UPDATE_REPORT_HEAD")"
+  r9rep() { printf '%s\n' "$1" > "$r9"; printf '%s\n' "${2:-}" > "$a9"; REL_REPORT9[over-author]="$(rel_report9_problems "$r9" "$a9")"; }
+  r9rep "$g9"
+  probe_clean "check 27 is quiet on one v0.9.0 report, its lines wrapped, before the update report, and none on the second update"
+  r9rep "$(printf '%s\n' "$g9" | grep -vF "$SM_ROLES_MARK")"
+  probe "check 27 fires when the crossing update prints no v0.9.0 report" "check 27 — [author-nonfiction] (over-author, v0.4.6 to v0.5.0) the crossing update printed the v0.9.0 report ('$SM_ROLES_MARK') 0 time(s), not once"
+  r9rep "$(printf '%s\n' "$g9" | sed 's/^  there (exit 2)/  there (exit 1)/')"
+  probe "check 27 fires when the report drops the refusal line" "the v0.9.0 report does not say that media's copy '$SM_ROLES_REFUSAL_LINE'"
+  r9rep "$(printf '%s\n' "$g9" | sed 's/syntek-author v0\.11\.0 or/syntek-author v0.9.1 or/')"
+  probe "check 27 fires when the report names another syntek-author release" "the v0.9.0 report does not say that syntek-author's commands refuse '$SM_ROLES_AUTHOR_LINE'"
+  r9rep "$(printf '%s\n' "$g9" | sed 's/combined projects is unchanged/combined projects is now v0.11.0/')"
+  probe "check 27 fires when the report drops the unchanged floor" "the v0.9.0 report does not say '$SM_ROLES_FLOOR_LINE'"
+  r9rep "$(printf '%s\n' "$g9" | grep -vxF "    $SM_ROLES_POINTER_LINE")"
+  probe "check 27 fires when the report drops the storage-manifest pointer" "the v0.9.0 report does not give the storage-manifest pointer"
+  r9rep "$SM_UPDATE_REPORT_HEAD, 0.8.0 → 0.9.0"$'\n'"$(printf '%s\n' "$g9" | grep -vF "$SM_UPDATE_REPORT_HEAD")"
+  probe "check 27 fires when the update report comes before the v0.9.0 report" "no update report ('$SM_UPDATE_REPORT_HEAD') follows the v0.9.0 report"
+  r9rep "$g9" "$SM_ROLES_MARK — again"
+  probe "check 27 fires when the second update prints the v0.9.0 report again" "the second update printed the v0.9.0 report again (1 time(s))"
+  unset -f r9rep; REL_REPORT9[over-author]=""
+  local mp9="$tmp/rel9-map.json" mt9="$SM_ROOT/template/.claude/syntek-media-dataroot.json"
+  cp "$mt9" "$mp9"; REL_REPORT9[standalone]="$(rel_map9_problems "$mp9" "$mt9")"
+  probe_clean "check 27 is quiet where the delivered map is the template's, D89's"
+  python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); d["folders"][0].pop("pull"); json.dump(d, open(sys.argv[1], "w"))' "$mp9"
+  REL_REPORT9[standalone]="$(rel_map9_problems "$mp9" "$mt9")"
+  probe "check 27 fires when the delivered map leaves the footage folder in a whole pull" "check 27 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the delivered .claude/syntek-media-dataroot.json is not D89's map"
+  REL_REPORT9[standalone]=""
+  local fp9="$tmp/rel9-proj" fb9
+  mkdir -p "$fp9/production/src/footage/raw"; printf '# manifest\n' > "$fp9/production/src/footage/manifest.toml"
+  printf 'clip\n' > "$fp9/$REL_CLIP"; fb9="$(rel_footage_sums "$fp9")"
+  printf 'changed\n' > "$fp9/$REL_CLIP"
+  f="$(diff <(printf '%s\n' "$fb9") <(rel_footage_sums "$fp9") | grep -E '^>' | cut -f1 | sed 's/^> //' | paste -sd' ' - || true)"
+  REL_REPORT9[standalone]="the update changed the footage folder's records: $f (D89: the binding moves and files nothing)"
+  probe "check 27 fires when the update changes a clip in the footage folder's mirror" "check 27 — [author-nonfiction] (standalone, v0.4.6 to v0.5.0) the update changed the footage folder's records: $REL_CLIP"
+  REL_REPORT9[standalone]=""; REL_REPORT9[over-author]=""
   probe_clean "the fixture's updates keep every promise again once every mutation is undone"
   st_finish "an update that keeps its promises from one that breaks them"
 }

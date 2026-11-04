@@ -258,17 +258,18 @@ _exclude:
   - /.claude/mcp_config.json
   #
   # D80: seventeen more shared paths, syntek-author's family-shared files (syntek-author D48,
-  # D51), vendored byte for byte from its v0.9.1 tag and listed in family-shared.json: the
-  # Gemini CLI settings and their pair, OpenCode's settings, the SKILL.md of the seven
-  # working-practice skills, the two session hooks with the .claude/hooks/ pair, and the
-  # handoffs/ pair. Each takes the same two lines as the nineteen, FILE by file, never the
-  # folder: five of the skill folders also hold media's own MEDIA-<KIND>.md mode files, which
-  # are template-owned and update (the generated block below). syntek-author writes the same
-  # paths copy-only, so neither template's update renders, merges or deletes the copy the
-  # other one wrote, and a combined project holds one copy whichever template came first.
-  # A copy-only file reaches an existing project only through an update script: D81's update
-  # script delivers the listed ones (the seven SKILL.md, both hooks, the two pairs), never a
-  # client file. A line here is never removed once released (D11).
+  # D51), vendored byte for byte from its v0.11.0 tag (since 0.9.0, D89) and listed in
+  # family-shared.json: the Gemini CLI settings and their pair, OpenCode's settings, the
+  # SKILL.md of the seven working-practice skills, the two session hooks with the
+  # .claude/hooks/ pair, and the handoffs/ pair. Each takes the same two lines as the
+  # nineteen, FILE by file, never the folder: five of the skill folders also hold media's own
+  # MEDIA-<KIND>.md mode files, which are template-owned and update (the generated block
+  # below). syntek-author writes the same paths copy-only, so neither template's update
+  # renders, merges or deletes the copy the other one wrote, and a combined project holds one
+  # copy whichever template came first. A copy-only file reaches an existing project only
+  # through an update script: D81's update script delivers the listed ones (the seven
+  # SKILL.md, both hooks, the two pairs), never a client file. A line here is never removed
+  # once released (D11).
   - "<: if _copier_operation == 'update' :>/.gemini/settings.json<: endif :>"
   - "<: if _copier_operation == 'update' :>/.gemini/CONTEXT.md<: endif :>"
   - "<: if _copier_operation == 'update' :>/.gemini/CLAUDE.md<: endif :>"
@@ -288,16 +289,17 @@ _exclude:
   - "<: if _copier_operation == 'update' :>/handoffs/CLAUDE.md<: endif :>"
   #
   # D84: fourteen more shared paths, syntek-author's family-shared files for the user guide
-  # (syntek-author D56), vendored byte for byte from its v0.9.1 tag with every other family
-  # file and listed in family-shared.json: the guide guard, .claude/hooks/how-to-read-only.sh,
-  # then the five container pairs of how-to/ and its three shared chapters, in syntek-author's
-  # order. Each takes the same two lines as the rest, FILE by file: never a line naming /how-to
-  # or a folder under it, because every how-to folder also holds media's own files under its
-  # three syntek-media/ folders, which are template-owned and update. Copier never renders one
-  # on update; D81's update script writes one only where the project never had it, refreshes
-  # one the owner has not changed, and, since how-to/ is read-only (family-refresh.json
-  # "restore"), puts the new render's bytes back on any file under how-to/ that differs, never
-  # over another template's version of a shared one (D84). These lines are permanent (D11).
+  # (syntek-author D56), vendored byte for byte from its v0.11.0 tag (since 0.9.0, D89) with
+  # every other family file and listed in family-shared.json: the guide guard,
+  # .claude/hooks/how-to-read-only.sh, then the five container pairs of how-to/ and its three
+  # shared chapters, in syntek-author's order. Each takes the same two lines as the rest, FILE
+  # by file: never a line naming /how-to or a folder under it, because every how-to folder
+  # also holds media's own files under its three syntek-media/ folders, which are
+  # template-owned and update. Copier never renders one on update; D81's update script writes
+  # one only where the project never had it, refreshes one the owner has not changed, and,
+  # since how-to/ is read-only (family-refresh.json "restore"), puts the new render's bytes
+  # back on any file under how-to/ that differs, never over another template's version of a
+  # shared one (D84). These lines are permanent (D11).
   - "<: if _copier_operation == 'update' :>/.claude/hooks/how-to-read-only.sh<: endif :>"
   - "<: if _copier_operation == 'update' :>/how-to/CONTEXT.md<: endif :>"
   - "<: if _copier_operation == 'update' :>/how-to/CLAUDE.md<: endif :>"
@@ -976,16 +978,16 @@ DATE:
 # project uses, and their models (syntek-author D47); where its binary files are kept, and
 # with what layout (syntek-author D50); and which service keeps a copy of that data root
 # (syntek-author D53). Since 0.5.0 (D80) the lines strictly between the two marker lines below
-# are syntek-author's family-shared 'questions' block, byte for byte: since 0.7.0 at its v0.9.1
-# tag, not its v0.5.0 or v0.8.0 (D81), as family-shared.json records it. Never edit them
-# here: they come again only from a later syntek-author tag (one tag for all, D85). Its client
-# and model defaults now read the project's previous answers, then syntek-author's record
-# (syntek-author D47 and its Section 9 rule 7), so its peer read covers AGENT_CLIENTS,
-# CODEX_MODEL, GEMINI_MODEL and the OPENCODE_* keys as well as DATA_* (D14's text, corrected by
-# D81). The marker lines are syntek-author's too, byte for byte, so that its family-shared.sh
-# finds the block: their D48 is syntek-author's decision, never media's D48. So the block names
-# no template and no media path: where its comments and help say 'the other template' or 'the
-# sibling', read syntek-author.
+# are syntek-author's family-shared 'questions' block, byte for byte: since 0.9.0 at its
+# v0.11.0 tag (D89), not its v0.5.0, v0.8.0 or v0.9.1 (D81), as family-shared.json records it.
+# Never edit them here: they come again only from a later syntek-author tag (one tag for all,
+# D85). Its client and model defaults now read the project's previous answers, then
+# syntek-author's record (syntek-author D47 and its Section 9 rule 7), so its peer read covers
+# AGENT_CLIENTS, CODEX_MODEL, GEMINI_MODEL and the OPENCODE_* keys as well as DATA_* (D14's
+# text, corrected by D81). The marker lines are syntek-author's too, byte for byte, so that
+# its family-shared.sh finds the block: their D48 is syntek-author's decision, never media's
+# D48. So the block names no template and no media path: where its comments and help say 'the
+# other template' or 'the sibling', read syntek-author.
 #
 # Inside the block a delimiter reads only its own fifteen keys, `_external_data` (prev and
 # peer, named above, outside the block), `_folder_name` (the slug's default), Copier's `UNSET`
@@ -1397,7 +1399,7 @@ _migrations:
   #
   # Since 0.4.5 the pair is syntek-author's family-shared 'migrations' block (D85; syntek-author
   # D48): the lines strictly between the two marker lines below are that block's bytes, since
-  # 0.7.0 at syntek-author's v0.9.1 tag (D81), as migrations/agents-outside-link.py is its
+  # 0.9.0 at syntek-author's v0.11.0 tag (D89), as migrations/agents-outside-link.py is its
   # script. The block's bytes are unchanged since v0.5.0; the script now needs Python 3.14 and,
   # below it, moves nothing and prints a framed message naming the Python found. Never edit
   # either here; both come again only from a later syntek-author tag (shipped-seeds.sh checks
@@ -1456,8 +1458,21 @@ _migrations:
   - version: v0.7.0
     command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/v0.7.0-report.py"'
     when: "<% _stage == 'after' %>"
-  # D81 (0.6.0): syntek-author's family-shared 'update' block, byte for byte from its v0.9.1
-  # tag; the marker lines are syntek-author's too, so their D48 is syntek-author's decision,
+  # v0.9.0 (D89) vendors syntek-author v0.11.0's data-root resolver and binds media's footage
+  # folder to its two roles, out of a whole pull (syntek-author D61). The map and the resolver
+  # are template-owned and no author file moves, so no migration is required (D11). Media's
+  # own report-only crossing check carries the update message once, on the update that
+  # crosses 0.9.0: what media's copy now refuses; that syntek-author's commands refuse only
+  # from its v0.11.0, while media's floor stays; and how to find rows filed there earlier
+  # under another role, in the storage manifest. It reads only the _src_path line of media's
+  # own answers file (D14), writes nothing and always exits 0. It runs through _copier_python
+  # and parses and exits 0 on Python 3.10. shipped-seeds.sh check 38 holds it here: after
+  # v0.7.0's entry and before the 'update' block's BEGIN marker.
+  - version: v0.9.0
+    command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/v0.9.0-footage-roles.py"'
+    when: "<% _stage == 'after' %>"
+  # D81 (0.6.0): syntek-author's family-shared 'update' block, byte for byte from its v0.11.0
+  # tag (D89); the marker lines are syntek-author's too, so their D48 is syntek-author's decision,
   # never media's D48. Its one entry runs migrations/family-update.py, vendored from the same
   # tag and never edited here, through _copier_python. It is the second stated exception to
   # the version-keyed rule (above, and .claude/CLAUDE.md Section 7.7), and it stays LAST, so it
@@ -1834,8 +1849,8 @@ _tasks:
   # a failing task aborts the whole generation, or the whole update, after the files are
   # already written. Tasks 1 and 2 are syntek-author's exact commands, so without git task 1
   # fails as syntek-author's does; the toolkit and the skills need git in any case. Task 5 is
-  # syntek-author's too, transcribed byte for byte from its v0.9.1 copier.yml, and stays last.
-  # No task runs the permissions script: _message_after_copy item (2) gives its --write.
+  # syntek-author's too, transcribed byte for byte from its v0.11.0 copier.yml, and stays
+  # last. No task runs the permissions script: _message_after_copy item (2) gives its --write.
   #
   # There are no `mv` seed tasks. Seeds are _skip_if_exists, which is safe over an existing
   # project; an `mv` onto an existing file clobbers it (probe e1).
