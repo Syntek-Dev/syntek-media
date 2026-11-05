@@ -1,7 +1,7 @@
 {
   "format": 1,
   "owner": "syntek-media",
-  "release": "unreleased",
+  "release": "v0.9.0",
   "files": [
     {"path": ".agents/mcp_config.json", "source": "template/.agents/mcp_config.json", "kind": "file", "bytes": 1308, "sha256": "6438111483f24ec49f27c8a785a772dd4670e84e04778c2c92e69c22cfbceb29"},
     {"path": ".agents/skills", "source": "template/.agents/skills", "kind": "symlink", "target": "../.claude/skills"},
@@ -39,7 +39,7 @@
     {"path": "how-to/src/TEMPLATE-GUIDE/CLAUDE.md", "source": "template/how-to/src/TEMPLATE-GUIDE/CLAUDE.md", "kind": "file", "bytes": 2557, "sha256": "6d762bb0a38c5ef680a42b5230be1edede96e2c878ed53c597d24a09517f5f1e"},
     {"path": "how-to/src/TEMPLATE-GUIDE/CONTEXT.md", "source": "template/how-to/src/TEMPLATE-GUIDE/CONTEXT.md", "kind": "file", "bytes": 3056, "sha256": "9094398bc257b0f47860bfbf91f0c8cd293f81b2b76b18261c0f2757e249bb7c"},
     {"path": "how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md", "source": "template/how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md", "kind": "file", "bytes": 12910, "sha256": "43f51658f7cff165e67fd021561645db8231a3100478cb694c98ee6fdebadb92"},
-    {"path": "how-to/src/TEMPLATE-GUIDE/the-data-root.md", "source": "template/how-to/src/TEMPLATE-GUIDE/the-data-root.md", "kind": "file", "bytes": 10290, "sha256": "b0d5841cf7799040f96468070644e70056914564c61b4f6edba098dd64d2168f"},
+    {"path": "how-to/src/TEMPLATE-GUIDE/the-data-root.md", "source": "template/how-to/src/TEMPLATE-GUIDE/the-data-root.md", "kind": "file", "bytes": 10649, "sha256": "e79b94237accb35460e3e2b7de0d24338d3415d5339132826960af3da7b83957"},
     {"path": "how-to/src/TEMPLATE-GUIDE/updating-and-recovery.md", "source": "template/how-to/src/TEMPLATE-GUIDE/updating-and-recovery.md", "kind": "file", "bytes": 15603, "sha256": "8a2c3b979c1fa6fd9ebc1557ae67c3a131ac85a138ced6d94d414807040452db"},
     {"path": "how-to/workflows/CLAUDE.md", "source": "template/how-to/workflows/CLAUDE.md", "kind": "file", "bytes": 2396, "sha256": "876ab794968968be1d4f6fc4035052f5450726af88a2a322652ea7f96f048b45"},
     {"path": "how-to/workflows/CONTEXT.md", "source": "template/how-to/workflows/CONTEXT.md", "kind": "file", "bytes": 2192, "sha256": "0dcc64d0e8010335ba3f2288c0f22c238677e55dadb804712ad2c5f90f63e9a0"},

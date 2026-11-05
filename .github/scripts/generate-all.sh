@@ -185,7 +185,7 @@ sorted_csv() { tr ' ,' '\n\n' <<< "$1" | { grep -v '^$' || true; } | LC_ALL=C so
 # What DESIGN.md Section 2 says the render should record: the kind's defaults, then the
 # profile's answers on top. Lists are expected as their values sorted and joined by commas,
 # as shipped-brands.sh reads them (the order Copier keeps is not a promise). The family-shared
-# questions (D80, at syntek-author's v0.9.1 since 0.7.0, D81, and its v0.11.0 since 0.9.0,
+# questions (D80, at syntek-author's v0.9.1 since 0.7.0, D81, and its v0.11.1 since 0.9.0,
 # D89): a fresh copy, with no record, ticks all four clients, and stores binaries on the data
 # root (external) unless syntek-author's record says otherwise; over a fresh syntek-author
 # render its record ticks all four and stores externally too, so the client and store defaults

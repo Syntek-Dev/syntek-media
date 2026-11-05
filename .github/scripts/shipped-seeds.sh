@@ -24,7 +24,7 @@
 #                    family-shared.json records them in the family's format, and checks 21–27
 #                    hold the files, the four blocks and the renders to that record (since
 #                    0.6.0 forty-three files, since 0.7.0 from syntek-author's v0.9.1, since 0.9.0 its
-#                    v0.11.0, D81, D84, D89).
+#                    v0.11.1, D81, D84, D89).
 #
 #                    Thirty-eight checks:
 #                      1. Every DESIGN.md seed and shared file is listed in copier.yml's
@@ -72,7 +72,7 @@
 #                         ElevenLabs asks, the two voice remix run asks (D82) and the family's
 #                         eight MCP asks, those eight in the family's order (D80); a hooks key
 #                         equal, as parsed JSON, to the hooks object of the seed at the tag
-#                         SM_FAMILY_RELEASE names (v0.11.0's, unchanged since v0.9.1, D89: the
+#                         SM_FAMILY_RELEASE names (v0.11.1's, unchanged since v0.9.1, D89: the
 #                         four handoff-hook entries, SessionStart compact among them, then the
 #                         data-root guard and the guide guard: D80, D81, D84); and no
 #                         owner-specific key (effortLevel, ultracode, enabledPlugins, disable*).
