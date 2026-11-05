@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Changed
+
+- **`family-shared.json` records `unreleased` again** after the `v0.9.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9), as `shipped-seeds.sh --write-manifest` writes it on the first commit after a release tag, so check 23 holds on every commit until the next release. Development only, nothing ships.
+
 ## [0.9.0] - 04/11/2026
 
 Adds D88 and D89: the family ceiling on media's always-loaded instruction files beside syntek-author, and the footage folder bound to its two roles and kept out of a whole pull, with syntek-author's `v0.11.1` family files, its `v0.11.0` data-root resolver among them.
