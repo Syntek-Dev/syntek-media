@@ -165,7 +165,8 @@ python3 .claude/syntek-media-permissions.py --write
 
 Run `--check` again afterwards: it should end `Every expressible rule is in place.` For
 Antigravity, which keeps its permissions in the app, it lists what to set there instead. It is
-the only way the ElevenLabs asks reach Gemini CLI and OpenCode. _Mechanical._
+the only way the MCP asks reach Gemini CLI and OpenCode, and the voice remix asks OpenCode;
+Gemini CLI cannot hold a shell ask, and `--check` says so. _Mechanical._
 
 ## 7. Restart the client and confirm what it reads
 

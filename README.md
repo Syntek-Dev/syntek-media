@@ -2,7 +2,7 @@
 
 **A Copier template that adds audio and video production to a repository — brand, scripts, production and publishing layers, a small ffmpeg toolkit and a Claude Code skill suite — for a business or an author.**
 
-![Version](https://img.shields.io/badge/version-0.9.0-blue)
+![Version](https://img.shields.io/badge/version-0.10.0-blue)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 ![Template: Copier](https://img.shields.io/badge/template-copier-blue)
 
@@ -192,26 +192,14 @@ Every media folder is new, so no move has exactly one right destination, and loo
 
 The copy prints these at the end, with your answers filled in:
 
-1. **`.claude/settings.json`** — syntek-author's settings allow neither the toolkit nor ffmpeg, so every toolkit call would prompt. Add the four `Bash(…)` entries to `permissions.allow` by hand, beside the entries already there: no copy or update of either template offers an allow (`WebSearch` and `WebFetch`, the seed's other two, are already allowed by syntek-author's settings):
+1. **`.claude/settings.json`** — syntek-author's settings allow neither the toolkit nor ffmpeg, so every toolkit call would prompt. Add the four `Bash(…)` entries and the nine ElevenLabs tools that spend credits to `permissions.allow` by hand, beside the entries already there: no copy or update of either template offers an allow (`WebSearch` and `WebFetch`, the seed's other two, are already allowed by syntek-author's settings). The nine run only after you agree a batch and its cost, so the allow spares a prompt per call (D90); leave them out and every call asks:
 
    ```json
    "allow": [
      "Bash(python3 toolkit/*.py *)",
      "Bash(uv run toolkit/*.py *)",
      "Bash(ffmpeg *)",
-     "Bash(ffprobe *)"
-   ]
-   ```
-
-   Everything else media's refresh data, `migrations/family-refresh.json`, lists for this file, the copy's last task, `baseline`, has already added to the file the copy kept, once each and on Python 3.14, never removing or changing an entry of yours, and never adding one any earlier commit of the file held, which it names instead (D81): `"autoCompactEnabled": false`, `"idleCompaction": false` and `"outputStyle": "Concise"` where each key is absent; the nine ElevenLabs asks and the two `voice remix run` asks; syntek-author's eight Scrapling and code-review-graph asks; the denies `AskUserQuestion`, `Edit(**/generated/**)`, `Edit(**/renders/**)`, `Edit(/how-to/**)` and `mcp__code-review-graph__embed_graph_tool`; the four handoff-hook entries (`UserPromptSubmit`, `PreCompact` `auto` and `manual`, and `SessionStart` `compact`); and the guide guard's `PreToolUse` entry. One you already allow is reported, not added.
-   The ElevenLabs server marks every tool as read-only, so only an `ask` rule makes Claude Code stop before a call that spends credits. Voice remix is the one ElevenLabs call the toolkit makes itself, because the server has no remix tool; the toolkit `allow` entries would let `python3 toolkit/media.py voice remix run` spend credits unprompted, so its two `ask` entries, which take precedence over an `allow`, make Claude Code stop first. The two output-folder denies keep hand edits out of every `generated/` and `renders/` folder, whose files the toolkit and ElevenLabs write, and `Edit(/how-to/**)` keeps them out of the read-only user guide.
-   **Only where that task did not run** — the copy printed a message framed in lines of `=` saying that family-update did NOT run (Copier ran on a Python older than 3.14), or it took `--skip-tasks` — add these by hand too, and the four handoff-hook entries and the guide guard's `PreToolUse` entry from the `"hooks"` object of `template/.claude/settings.json` at the template's source:
-
-   ```json
-   "autoCompactEnabled": false,
-   "idleCompaction": false,
-   "outputStyle": "Concise",
-   "ask": [
+     "Bash(ffprobe *)",
      "mcp__elevenlabs__text_to_speech",
      "mcp__elevenlabs__speech_to_text",
      "mcp__elevenlabs__compose_music",
@@ -220,7 +208,19 @@ The copy prints these at the end, with your answers filled in:
      "mcp__elevenlabs__voice_clone",
      "mcp__elevenlabs__isolate_audio",
      "mcp__elevenlabs__text_to_voice",
-     "mcp__elevenlabs__create_voice_from_preview",
+     "mcp__elevenlabs__create_voice_from_preview"
+   ]
+   ```
+
+   Everything else media's refresh data, `migrations/family-refresh.json`, lists for this file, the copy's last task, `baseline`, has already added to the file the copy kept, once each and on Python 3.14, never removing or changing an entry of yours, and never adding one any earlier commit of the file held, which it names instead (D81): `"autoCompactEnabled": false`, `"idleCompaction": false` and `"outputStyle": "Concise"` where each key is absent; the two `voice remix run` asks; syntek-author's eight Scrapling and code-review-graph asks; the denies `AskUserQuestion`, `Edit(**/generated/**)`, `Edit(**/renders/**)`, `Edit(/how-to/**)` and `mcp__code-review-graph__embed_graph_tool`; the four handoff-hook entries (`UserPromptSubmit`, `PreCompact` `auto` and `manual`, and `SessionStart` `compact`); and the guide guard's `PreToolUse` entry. One you already allow is reported, not added.
+   The ElevenLabs tools that spend credits are allowed, not asked (D90): the project's rules let a session call them only after you agree the batch and its cost, and each call is logged. Voice remix is the one ElevenLabs call the toolkit makes itself, because the server has no remix tool; the toolkit `allow` entries would let `python3 toolkit/media.py voice remix run` spend credits unprompted, so its two `ask` entries, which take precedence over an `allow`, make Claude Code stop first. The two output-folder denies keep hand edits out of every `generated/` and `renders/` folder, whose files the toolkit and ElevenLabs write, and `Edit(/how-to/**)` keeps them out of the read-only user guide.
+   **Only where that task did not run** — the copy printed a message framed in lines of `=` saying that family-update did NOT run (Copier ran on a Python older than 3.14), or it took `--skip-tasks` — add these by hand too, and the four handoff-hook entries and the guide guard's `PreToolUse` entry from the `"hooks"` object of `template/.claude/settings.json` at the template's source:
+
+   ```json
+   "autoCompactEnabled": false,
+   "idleCompaction": false,
+   "outputStyle": "Concise",
+   "ask": [
      "Bash(python3 toolkit/media.py voice remix run *)",
      "Bash(uv run toolkit/media.py voice remix run *)",
      "mcp__scrapling__stealthy_fetch",
@@ -405,6 +405,8 @@ The second run updates from the version you had (Copier prints 'Updating to temp
 
 **Updating to 0.9.0.** Media 0.9.0 vendors syntek-author v0.11.1, whose data-root resolver is v0.11.0's and whose shared chapter on the data root now says the same, and media's map now binds the footage folder, `production/src/footage`, to its two roles, `footage` and `approved-take`, and keeps it out of a whole `pull` (D89; syntek-author D61). The update that crosses 0.9.0 prints media's crossing report once (`migrations/v0.9.0-footage-roles.py`): that from this release media's own copy, `python3 .claude/syntek-media-dataroot.py`, on Python 3.14 or later, refuses an `add` of any other role in the folder, exit 2, `--force` included and, under `DATA_STORE` `repo`, `--role generated` too, and that a whole `pull`, or one such as `*` or `production/src/*`, leaves the folder out, while `pull 'production/src/footage/*'` still pulls it; that syntek-author's `make files-*` commands run its own copy, which refuses only from syntek-author v0.11.0, while media's floor for combined projects stays v0.6.0, and v0.8.0 for lessons from both templates; and that rows filed there earlier under another role stay as they are, found in the storage manifest with `git grep -n --untracked 'role = ' -- production/src/footage/external.toml`. It reads only the source line of media's own answers file, runs neither Git nor the resolver, names no path under `learning/`, moves and writes nothing and always exits 0. No author file moves and no seed's required content changes. File footage through media's own copy, never through a loop that may run syntek-author's older one first.
 
+**Updating to 0.10.0.** The nine ElevenLabs tools that spend credits are allowed, not asked (D90): a batch still runs only after you agree it and its cost, and each call is still logged in `production/src/credits-log.md`, but Claude Code no longer stops before every call. An update never removes or changes an entry of yours, so a project made earlier keeps its nine `mcp__elevenlabs__` asks, and its prompts, until you move them from `"ask"` to `"allow"` in `.claude/settings.json` by hand; keep the two `voice remix run` asks. The permissions script never removes a rule either: delete the nine from any client file it wrote (Gemini CLI's `tools.confirmationRequired`, OpenCode's ask rules, and Codex's tables where `.codex/config.toml` declares the server). Keeping the asks is your choice: `python3 toolkit/media.py check --setup` notes them, and no longer fails a tool you allow. No migration runs.
+
 **Why Python 3.14.** Every update ends with media's update script, `migrations/family-update.py`, and the outside-link pair runs around the render; both run on the Python that runs Copier (D81, D85). The quoted `--python '>=3.14'` makes `uvx` choose 3.14 or later; on an older Python each script changes nothing and says so in a message framed in lines of `=`.
 
 **Why `-a`.** The answers file is called `.copier-answers.syntek-media.yml`, not Copier's default `.copier-answers.yml`, so that it can sit beside syntek-author's own. Copier only finds a non-default answers file when you name it; without `-a` it stops and changes nothing.
@@ -432,7 +434,7 @@ The second runs on every update and is keyed to no release (D76). Copier refuses
 Those two steps run on the Python that runs Copier, which the command above asks to be 3.14 or later; on an older one they hold nothing and say so in a message framed in lines of `=`, and the update stops with `ForbiddenPathError` naming a path in `.agents`: discard it as above, then run the update again as shown (D81, D85).
 The third runs on every update too, and last: the family 'update' entry, which runs the update script that ends with the report above. It does write over files: it replaces a listed shared file only where you never changed it, offers the listed entries and servers once each, and puts back over an edit or a deletion any file of the read-only guide under `how-to/`, while Git keeps your version in `HEAD` and in `refs/syntek-media/yours` (D81, D84). And 0.6.0's own migration, keyed to that release, only reports: where the guide starts, that it is read-only, syntek-author's guide or its version, `how-to` as a link, a case twin or a folder Git ignores, files of yours at the guide's paths, files under `how-to/` that no template ships, and, where `opencode.json` exists, the permissions script's `--check` and `--write` (D84). It moves nothing, and prints the command that runs it again. 0.7.0's, keyed to that release, only reports too, as 'Updating to 0.7.0' above says (D86), and so does 0.9.0's, as 'Updating to 0.9.0' says (D89).
 
-**Settings and the update.** `.claude/settings.json` is a copy-only shared file, so Copier never changes it, but since 0.6.0 the update script adds, once each on Python 3.14, the entries and top-level values media's refresh data lists that the file lacks (D81). That includes the two `ask` entries for `voice remix run` that release 0.4.4 added ([the hand edits](#the-hand-edits-after-a-copy)), never one you removed after it was committed; until an update adds them, `python3 toolkit/media.py check --setup` reports each missing one as a FAIL with the line to add. The six allows stay by hand: no copy or update offers an allow. Seeds never update either: release 0.4.4 changed the Consent rule of `brand/src/voice/voice.md` (a remixed voice cites its source clone's consent ID) and the rules of `production/src/credits-log.md` (the `voice remix` row), which an older project edits by hand.
+**Settings and the update.** `.claude/settings.json` is a copy-only shared file, so Copier never changes it, but since 0.6.0 the update script adds, once each on Python 3.14, the entries and top-level values media's refresh data lists that the file lacks (D81). That includes the two `ask` entries for `voice remix run` that release 0.4.4 added ([the hand edits](#the-hand-edits-after-a-copy)), never one you removed after it was committed; until an update adds them, `python3 toolkit/media.py check --setup` reports each missing one as a FAIL with the line to add. The six allows and, since 0.10.0, the nine ElevenLabs tools that spend credits (D90) stay by hand: no copy or update offers an allow. Seeds never update either: release 0.4.4 changed the Consent rule of `brand/src/voice/voice.md` (a remixed voice cites its source clone's consent ID) and the rules of `production/src/credits-log.md` (the `voice remix` row), which an older project edits by hand.
 The data-root guard is never offered, by either template (syntek-author D17, D50): a settings file seeded before it shipped gains it only by hand. Add this entry to the `"PreToolUse"` list of its `"hooks"` object, beside any entry already there:
 
 ```json
@@ -546,7 +548,7 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
 Replace `"$HOME"` with that folder where your projects live elsewhere; when the error appears, the `captions` skill prints the exact command with a base path it has computed to contain the project.
 Export the key in your shell first rather than typing it on the command line, and never commit it. The server must be named `elevenlabs`: the skills call its tools by that name (`mcp__elevenlabs__text_to_speech`).
 
-- **Permissions.** The server marks every tool read-only, so a project's `.claude/settings.json` asks before each of the nine tools that spend credits and before `voice remix run`; over syntek-author, the copy's `baseline` task adds those `ask` entries on Python 3.14, and you add them by hand only where it did not run ([the hand edits](#the-hand-edits-after-a-copy)). `python3 .claude/syntek-media-permissions.py --write` then carries them to Gemini CLI's and OpenCode's files (see [Using other coding agents](#using-other-coding-agents)).
+- **Permissions.** A project's `.claude/settings.json` allows the nine tools that spend credits, so a batch you have agreed runs without a prompt per call, and asks before `voice remix run` (D90, D82). Over syntek-author you add the nine allows by hand, and the copy's `baseline` task adds the two `voice remix run` asks on Python 3.14 ([the hand edits](#the-hand-edits-after-a-copy)). `python3 .claude/syntek-media-permissions.py --write` carries the asks to Gemini CLI's and OpenCode's files (see [Using other coding agents](#using-other-coding-agents)); it never writes an allow. A project made before 0.10.0 keeps its nine asks until you move them ([Updating to 0.10.0](#updating-a-project)).
 - **Character voices.** The workflow `production/workflows/11-design-character-voices/`, in every brand kind, designs a character's voice from your own cloned voice: it drafts a description from the manuscript or script, `python3 toolkit/media.py voice remix plan` shows the one call first, and `voice remix run --approve-call` sends it straight to ElevenLabs with the `ELEVENLABS_API_KEY` exported in your shell, saving the previews as a voice trial. You listen and choose; the chosen preview is saved through the server (`mcp__elevenlabs__create_voice_from_preview`) and recorded in `brand/src/voice/voice.md` under the consent of the voice it came from. Remix accepts only a voice your account created, never a Voice Library voice. One voice per take for now: a piece that switches voice between segments is not supported yet.
 - **The model** is discovered with `mcp__elevenlabs__list_models` and recorded per use in `brand/src/voice/voice.md`, never assumed.
 - **Voiceover** is made one segment per spoken sentence or beat, so the captions can be timed from the segments' own durations at no cost.
@@ -584,7 +586,7 @@ A model you name in `CODEX_MODEL`, `GEMINI_MODEL` or the `OPENCODE_*` answers is
 
 **MCP servers.** `.mcp.json` and each client's own file carry two servers, pinned and keyless: `scrapling` (web pages) and `code-review-graph` (a local map of the code). The ElevenLabs server is never among them: it is added at user scope (see [Audio with ElevenLabs](#audio-with-elevenlabs)). Use them as `.claude/rules/syntek-media/06-global-rules.md` Section 13 says: ask before each of Scrapling's six browser tools, and never run `code-review-graph install` or `scrapling install`. Codex and Gemini CLI start them only in a trusted project; OpenCode starts them when it opens the project and runs every tool the project does not ask for without a prompt. The first start downloads them through `uvx`. Since 0.6.0 the copy's `baseline` task and every update add the two servers, once each, to `.mcp.json` and the existing MCP files of the clients the answers record, and to `opencode.json` and `.gemini/settings.json` only once `python3 .claude/syntek-media-permissions.py --write` has given them every ask form the servers' tools need (D81); a server you removed after it was committed is never added back.
 
-**Permissions in every client.** `.claude/settings.json` holds the project's ask and deny rules, the ElevenLabs asks among them. After a copy, and whenever you change those rules, carry them to the other clients' files that exist:
+**Permissions in every client.** `.claude/settings.json` holds the project's ask and deny rules, the `voice remix run` asks among them. After a copy, and whenever you change those rules, carry them to the other clients' files that exist:
 
 ```bash
 python3 .claude/syntek-media-permissions.py --check    # what is missing, and what a client cannot express

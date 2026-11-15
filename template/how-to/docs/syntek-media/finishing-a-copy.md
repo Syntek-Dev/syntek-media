@@ -19,18 +19,18 @@ committing, before any session spends a credit.
 
 On Python 3.14 or later, the copy's last step, the `baseline` task, records the version just
 copied for the first update's report and offers the settings entries and MCP servers the
-template lists to the files the copy kept, once each: the compaction settings, the asks for every
-ElevenLabs tool that spends credits, for `voice remix run` and for the Scrapling and
-code-review-graph tools, the denies (the generated and renders folders and `how-to/` among them),
-and the handoff and guide-guard hooks. It never removes or
-changes an entry of yours. A copy that made `.claude/settings.json` itself already holds all of
+template lists to the files the copy kept, once each: the compaction settings, the asks for
+`voice remix run` and for the Scrapling and code-review-graph tools, the denies (the generated
+and renders folders and `how-to/` among them), and the handoff and guide-guard hooks. It never
+removes or changes an entry of yours. A copy that made `.claude/settings.json` itself already holds all of
 them.
 
 ## What stays by hand
 
 - **The allows no lane offers.** Where the copy kept an existing settings file, its `"allow"`
-  list needs the toolkit, ffmpeg and ffprobe entries and `WebSearch` and `WebFetch`, as the
-  message after the copy lists them; without them every toolkit call asks for permission.
+  list needs the toolkit, ffmpeg and ffprobe entries, `WebSearch` and `WebFetch`, and the nine
+  ElevenLabs tools that spend credits, as the message after the copy lists them; without them
+  every toolkit call, and every paid call of an agreed batch, asks for permission.
 - **The data-root guard,** the seed's other `PreToolUse` hook, in a settings file that lacks it:
   no copy or update in either template adds it.
 - **Everything the `baseline` task offers,** where it did not run: the copy printed, framed in

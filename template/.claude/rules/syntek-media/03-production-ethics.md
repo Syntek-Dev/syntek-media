@@ -114,10 +114,11 @@ printed or written. One call, no automatic retry; the run writes its own credits
 Run it only as `python3 toolkit/media.py voice remix run …` or the `uv run` form, never through a
 rewritten path, which the ask rule would not match.
 
-**Requirement.** A call that spends ElevenLabs credits (text-to-speech, speech-to-text, and the
-rest of the ask list in the standalone `.claude/settings.json`) is made only when the author
-asked for that audio or transcript. If nothing was asked, stop: never generate unasked, including
-as a 'helpful' extra after another skill.
+**Requirement.** A call that spends ElevenLabs credits (text-to-speech, speech-to-text and the
+other credit-spending ElevenLabs tools, which the standalone `.claude/settings.json` allows
+without a prompt because this rule, not a prompt per call, guards them) is made only when the
+author asked for that audio or transcript. If nothing was asked, stop: never generate unasked,
+including as a 'helpful' extra after another skill.
 
 - **State the cost, then wait**: the characters or audio minutes, the calls and the estimated
   credits, before any call.

@@ -68,8 +68,8 @@
 #                         autoCompactEnabled false, since 0.6.0 idleCompaction false (D81) and,
 #                         since 0.7.0, outputStyle Concise (syntek-author D60);
 #                         exactly the three denies, the guide's Edit(/how-to/**) (D84) and the
-#                         family's embed_graph_tool deny, in that order, the six allows, the nine
-#                         ElevenLabs asks, the two voice remix run asks (D82) and the family's
+#                         family's embed_graph_tool deny, in that order, the six allows and the
+#                         nine ElevenLabs tools (D90), the two voice remix run asks (D82) and the family's
 #                         eight MCP asks, those eight in the family's order (D80); a hooks key
 #                         equal, as parsed JSON, to the hooks object of the seed at the tag
 #                         SM_FAMILY_RELEASE names (v0.11.1's, unchanged since v0.9.1, D89: the
@@ -190,8 +190,8 @@
 #                         footage back (syntek-author D61).
 #                     29. In a standalone render, `python3 .claude/syntek-media-permissions.py
 #                         --check` exits other than 0 or 1, or finds missing a rule that is not
-#                         one of media's own seed rules (the ElevenLabs and voice remix run
-#                         asks, the two Edit denies, the six allows: DESIGN.md D13; never the
+#                         one of media's own seed rules (the two voice remix run
+#                         asks, the two Edit denies, the fifteen allows: DESIGN.md D13, D90; never the
 #                         guide's Edit(/how-to/**), a family rule, D84): the vendored
 #                         client files carry the family's eight asks and its deny already (D80),
 #                         so only media's own reach them by hand, through the --write line of
@@ -1022,7 +1022,7 @@ perms = settings.get("permissions") if isinstance(settings.get("permissions"), d
 seed_perms = seed.get("permissions") if isinstance(seed.get("permissions"), dict) else {}
 for kind in sorted(perms):
     if kind not in ("deny", "ask"):
-        say(f"lists permissions.{kind}, which D81 never offers (the six allows are given by hand; DESIGN.md D13, D81)")
+        say(f"lists permissions.{kind}, which D81 never offers (the allows are given by hand; DESIGN.md D13, D81, D90)")
 for kind, env in (("deny", "SR_DENY"), ("ask", "SR_ASK")):
     want = [w for w in E[env].splitlines() if w]
     have = perms.get(kind) if isinstance(perms.get(kind), list) else []
@@ -1451,7 +1451,7 @@ if "--write" in sys.argv:
 if mark.exists() and not os.environ.get("STUB_PERM_STILL"):
     print("every expressible rule is in place")
     sys.exit(0)
-missing = [m for m in os.environ.get("STUB_PERM_MISSING", "mcp__elevenlabs__text_to_speech|Edit(**/renders/**)").split("|") if m]
+missing = [m for m in os.environ.get("STUB_PERM_MISSING", "Bash(python3 toolkit/media.py voice remix run *)|Edit(**/renders/**)").split("|") if m]
 for m in missing:
     print("  \u2717 %s -> a rule is missing" % m)
 sys.exit(int(os.environ.get("STUB_PERM_EXIT", "1" if missing else "0")))
@@ -1642,7 +1642,8 @@ production/docs/{reference,project}/voiceover.md'
   probe_clean "the LFS attributes file and the README-only raw/ and generated/ folders are declared extras"
   cp "$t/.claude/settings.json" "$tmp/h"
   sed -i 's/"autoCompactEnabled": false/"autoCompactEnabled": true/' "$t/.claude/settings.json"; probe "check 12 fires when compaction is switched on" "check 12 — .claude/settings.json autoCompactEnabled"; cp "$tmp/h" "$t/.claude/settings.json"
-  sed -i 's/, "mcp__elevenlabs__voice_clone"//' "$t/.claude/settings.json"; probe "check 12 fires when a credit-spending tool is not asked" "check 12 — .claude/settings.json does not ask mcp__elevenlabs__voice_clone"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/, "mcp__elevenlabs__voice_clone"//' "$t/.claude/settings.json"; probe "check 12 fires when a credit-spending tool is not allowed (D90)" "check 12 — .claude/settings.json does not allow mcp__elevenlabs__voice_clone"; cp "$tmp/h" "$t/.claude/settings.json"
+  sed -i 's/"ask": \[/"ask": ["mcp__elevenlabs__voice_clone", /' "$t/.claude/settings.json"; probe "check 12 fires when a credit-spending tool is asked again (D90)" "check 12 — .claude/settings.json asks mcp__elevenlabs__voice_clone, which DESIGN.md D13 does not list"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"ask": \[/"ask": ["mcp__elevenlabs__list_models", /' "$t/.claude/settings.json"; probe "check 12 fires on an ask D13 does not list" "check 12 — .claude/settings.json asks mcp__elevenlabs__list_models"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"timeout":10}]}],"PreToolUse"/"timeout":30}]}],"PreToolUse"/' "$t/.claude/settings.json"; probe "check 12 fires when a family hook registration drifts (D80)" "check 12 — .claude/settings.json hooks are not exactly syntek-author's $SM_FAMILY_RELEASE seed's hooks object"; cp "$tmp/h" "$t/.claude/settings.json"
   sed -i 's/"idleCompaction": false/"idleCompaction": true/' "$t/.claude/settings.json"; probe "check 12 fires when idle compaction is switched on (D81)" "check 12 — .claude/settings.json idleCompaction is not false"; cp "$tmp/h" "$t/.claude/settings.json"
@@ -1992,7 +1993,7 @@ production/docs/{reference,project}/voiceover.md'
   mv "$rt/production/src/footage" "$tmp/footage.held"
   probe "check 35 fires when the mapped folder is missing from a render" "check 35 — production/src/footage/, a folder $SM_DATAROOT_MAP names, is not in this render"
   mv "$tmp/footage.held" "$rt/production/src/footage"
-  STUB_PERM_MISSING='mcp__elevenlabs__voice_clone|mcp__scrapling__fetch' \
+  STUB_PERM_MISSING='Bash(uv run toolkit/media.py voice remix run *)|mcp__scrapling__fetch' \
     probe "check 29 fires when the permissions script finds a family rule missing in a render" "check 29 — $SM_PERMISSIONS_PY --check finds mcp__scrapling__fetch missing"
   STUB_PERM_MISSING='Edit(**/renders/**)|Edit(/how-to/**)' \
     probe "check 29 fires when the guide's deny, a family rule, is missing in a render (D84)" "check 29 — $SM_PERMISSIONS_PY --check finds Edit(/how-to/**) missing"

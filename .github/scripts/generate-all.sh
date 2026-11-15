@@ -66,10 +66,10 @@
 #                        render carries every _message_after_copy line of _common.sh's lists
 #                        (DESIGN.md D13, D73, D76, D80): every shared path a copy writes (the
 #                        eighteen of D11, the seventeen of D80 and, since 0.6.0, the fourteen of
-#                        D84) and the skip rule; item (2) as D81 words it: the six allows by
-#                        hand, which no lane offers, then the rest only where family-update did
-#                        NOT run or the copy took --skip-tasks (nine ElevenLabs asks, the two
-#                        voice remix run asks of D82, the Edit denies with the guide's, D84, the
+#                        D84) and the skip rule; item (2) as D81 words it: the six allows and,
+#                        since 0.10.0, the nine ElevenLabs tools (D90) by hand, which no lane
+#                        offers, then the rest only where family-update did NOT run or the copy
+#                        took --skip-tasks (the two voice remix run asks of D82, the Edit denies with the guide's, D84, the
 #                        seed's idleCompaction and outputStyle values, the family's asks and
 #                        deny, the hooks object's SessionStart entry and the guide guard's
 #                        PreToolUse entry), the data-root guard that no lane offers, and the

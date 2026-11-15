@@ -32,10 +32,10 @@ _Substantive._
 
 Load the `elevenlabs` tools with ToolSearch (searching 'elevenlabs'). Run
 `python3 toolkit/media.py check --setup` and read its ElevenLabs lines: the server's base path
-must contain this repository, and every credit-spending tool must be an ask rule. If either
-fails, give the fix it prints and stop. If the tools are absent, run `command -v espeak-ng`: if
-it finds the program, offer the fallback at step 8, or stop; with neither route, give the install
-hint (the system package `espeak-ng`) and the server's setup command from
+must contain this repository, and no line may be a FAIL (a note that a tool prompts is fine).
+If either fails, give the fix it prints and stop. If the tools are absent, run
+`command -v espeak-ng`: if it finds the program, offer the fallback at step 8, or stop; with
+neither route, give the install hint (the system package `espeak-ng`) and the server's setup command from
 `production/docs/reference/elevenlabs.md`, and stop. _Mechanical._
 
 ## 3. Check the narrator, or choose one with the author

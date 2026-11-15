@@ -7,15 +7,32 @@ All notable changes to syntek-media are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D76 and D80–D89; D77–D79 are reserved) or section.
+Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D76 and D80–D90; D77–D79 are reserved) or section.
 
 ---
 
 ## [Unreleased]
 
+## [0.10.0] - 15/11/2026
+
+Adds D90: the nine ElevenLabs tools that spend credits are allowed, not asked. A production run makes a hundred calls or more. Each one was a prompt, after the author had already agreed the batch and its cost, and that agreement is what guards the credits: rules 03 Section 4, the guard sentence in every skill that names a tool, and the credits log. The prompt per call added nothing.
+
 ### Changed
 
-- **`family-shared.json` records `unreleased` again** after the `v0.9.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9), as `shipped-seeds.sh --write-manifest` writes it on the first commit after a release tag, so check 23 holds on every commit until the next release. Development only, nothing ships.
+- **The standalone `.claude/settings.json` seed** (DESIGN.md D13 as D90 amends it) moves the nine tools from `permissions.ask` to `permissions.allow`, after the six allows: `mcp__elevenlabs__text_to_speech`, `speech_to_text`, `compose_music`, `text_to_sound_effects`, `speech_to_speech`, `voice_clone`, `isolate_audio`, `text_to_voice` and `create_voice_from_preview`. The two `voice remix run` asks stay, because the toolkit's broad allow would otherwise run a remix (D82), and so do syntek-author D54's eight asks. The seed now has fifteen allows and ten asks. There is no wildcard: any other ElevenLabs tool is left to Claude Code's default.
+- **`media.py check --setup`** (D49 as D90 amends it) reports each of the nine apart from D13's other entries. Allowed is clean. Asked or absent is a note that each call prompts, which is the owner's choice. Denied is a note that the tool cannot run. None of these is a FAIL. The `voice remix run` asks are still a FAIL when missing.
+- **`migrations/family-refresh.json`** no longer lists the nine asks, and lists no allow, so neither the copy's `baseline` task nor an update offers them. Its family lists are unchanged.
+- **`_message_after_copy`** item 2 gives the nine with the six allows, to add by hand, and no longer among the asks. **`_message_before_update`** gains an 'Updating to 0.10.0' paragraph, mirrored in DESIGN.md Section 3.5.
+- **The shipped text** now says the paid ElevenLabs tools are allowed and that the author's agreement guards them. This covers rules 03 Section 4, the bridge, `.claude/CONTEXT.md`, the template README, the ElevenLabs and character-voices guides, the voiceover, character-voice and setup-check workflows, and the finish-a-copy and enable-a-client procedures and their guide. It also covers chapter `10-customising.md`. The bridge, the template README and the enable-a-client procedure now say the permissions script carries the voice remix asks to OpenCode only: Gemini CLI cannot hold a shell ask, and `--check` says so.
+- **The audits** keep the nine in a list of their own, `SM_SETTINGS_CREDIT` in `_common.sh`, which joins `SM_SETTINGS_ALLOW`. `skill-conformance.sh` check 21 still asks the guard sentence of any skill naming one of them. `shipped-seeds.sh` check 12 fails on a credit tool that is not allowed, or is asked again. `toolkit-smoke.sh` check 14 now removes a `voice remix run` ask. `media.py --self-test` proves the notes, and that no ElevenLabs line is a FAIL.
+- **`SECURITY.md`** (D83) no longer counts a credit-spending ElevenLabs tool running without a prompt as in scope: that is now the design.
+- **`family-shared.json`** records `v0.10.0` (syntek-author D48's release rule). The previous `unreleased` record, written after the `v0.9.0` tag, is folded into this release.
+
+**What existing projects receive, and how.** An update never removes or changes an owner's entry, and `.claude/settings.json` is the owner's, so a project made before 0.10.0 keeps its nine asks, and its prompts, until the owner moves them. Move the nine `mcp__elevenlabs__` entries from `"ask"` to `"allow"` by hand, and keep the two `voice remix run` asks. The permissions script never removes a rule either, so also delete the nine by hand from any client file it wrote: Gemini CLI's `tools.confirmationRequired`, OpenCode's ask rules, and Codex's tables where `.codex/config.toml` declares the server. The update message says so. No migration runs: nothing moves and no seed's required content changes (D11). Everything else arrives through Copier's merge, and the read-only guide through the update script on Python 3.14.
+
+**syntek-author baseline.** Media still vendors syntek-author's `v0.11.1` tag (commit `4b5f4ee8f1e8fe880b6cc31e19e25c096024fb45`), read 15/11/2026 from a clean clone. No family file or block changed. syntek-author was given a note, for its next tag, on the permissions script's handling of an ask that moves to an allow.
+
+**Results.** On the release tree, 15/11/2026, `bash .github/scripts/run-all.sh --author` a clean clone of syntek-author at `v0.11.1` (`4b5f4ee`) ran on Python 3.14.8 and Copier 9.19.1: 39 PASS, 0 findings, 0 errors and 13 SKIP rows. The SKIPs are the `toolkit-smoke.sh` row and its twelve check 22 rows, one per render: WhisperX live alignment, which no audit builds. They are named, and never a pass. `update-test.sh` passed for all three brand kinds, standalone and over syntek-author, updating from `v0.9.0`. `coexist-test.sh` passed for all three, in both orders, with no SKIP (D27). Media's unscoped share stayed under D88's 100,000 characters (at most 95,954). A three-lens read-only review of the change ran before the second run, and its findings are fixed here: stale counts, the update paragraph's sentence on `check --setup`, the Gemini CLI claim, and line wrapping.
 
 ## [0.9.0] - 04/11/2026
 

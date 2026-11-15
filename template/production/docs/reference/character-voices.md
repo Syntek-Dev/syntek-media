@@ -49,8 +49,9 @@ server. A remix is still the author's voice, so it carries the clone's consent a
 
 - The author listens to every preview. Another attempt is a new description or text, planned
   again under a new trial name; an old trial is never reused or deleted.
-- Saving is an MCP call on the ask list: `mcp__elevenlabs__create_voice_from_preview` with the
-  chosen `generated_voice_id` (`VERIFY` on first use that it accepts a remix's), after a yes.
+- Saving is an allowed MCP call, so nothing prompts: after the author's yes, call
+  `mcp__elevenlabs__create_voice_from_preview` with the chosen `generated_voice_id` (`VERIFY`
+  on first use that it accepts a remix's).
 - The saved voice gets a `character:<name>` row in `brand/src/voice/voice.md`. Its Consent is
   the source clone's `voice-consent` rights ID: the remix is the author's voice, re-described.
 - A trial of the saved voice on a few lines is an ordinary voice trial, made through

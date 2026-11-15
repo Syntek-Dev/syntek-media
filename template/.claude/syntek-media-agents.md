@@ -62,19 +62,20 @@ paths and paid-call discipline. Do not infer author approval from client permiss
   automatic compaction or summarising where the client allows it (OpenCode's opencode.json does).
 - **The settings file's denies and asks are rules.** `.claude/settings.json` denies some edits
   and tools in Claude Code (hand edits in every generated and renders folder and in the user
-  guide, the dialog tool, the cloud-embedding tool) and asks before every credit-spending
-  ElevenLabs tool, the voice remix, and the browser and writing tools of the two shipped MCP
-  servers. Treat every deny there as a rule in this client too, and every ask as a question to
-  the author before the call. Where it denies asking the author through a dialog, ask in the
-  conversation instead.
+  guide, the dialog tool, the cloud-embedding tool) and asks before the voice remix and the
+  browser and writing tools of the two shipped MCP servers. Treat every deny there as a rule in
+  this client too, and every ask as a question to the author before the call. It allows the
+  credit-spending ElevenLabs tools, because the author's yes to a stated batch is what governs
+  them (rules 03 Section 4), never a client's prompt or the lack of one. Where it denies asking
+  the author through a dialog, ask in the conversation instead.
 - **Passing the settings to each client.** `python3 .claude/syntek-media-permissions.py --check`
   (Python 3.14 or later) prints which of those denies and asks each client's file already
   carries, which it cannot express and why, and exits 1 if one it can express is missing.
   `--write` adds the missing ones to the client files that already exist, changing only their
-  permission keys; it never creates a file. Run it once after the first copy, because the
-  ElevenLabs asks reach Gemini CLI and OpenCode only this way (and Codex only where its own
-  settings declare the server), and again after changing `.claude/settings.json` or adding a
-  client, with the author's agreement. Run `--write` too when an update report gives it: the two
+  permission keys; it never creates a file, and never removes a rule. Run it once after the
+  first copy, because the MCP asks reach Gemini CLI and OpenCode, and the voice remix asks
+  OpenCode, only this way (Gemini CLI cannot hold a shell ask, and `--check` says so), and again
+  after changing `.claude/settings.json` or adding a client, with the author's agreement. Run `--write` too when an update report gives it: the two
   MCP servers reach opencode.json and Gemini CLI's settings only once each holds every ask form.
   Allow rules stay with each client. Every `.claude/syntek-*-permissions.py` present is the same
   script.
@@ -269,7 +270,8 @@ is held aside and restored by every update, as Client setup says; it is never co
    with the owner's agreement remove that link (never its target) and do the same. Do not
    replace a real folder or another link.
 4. Compare the fresh project's `.claude/settings.json` with the real one and, with the owner's
-   agreement, add by hand only the six allows and, where the file lacks it, the data-root guard.
+   agreement, add by hand only the fifteen allows (the six and the nine credit-spending
+   ElevenLabs tools) and, where the file lacks it, the data-root guard.
    The asks, the denies, the compaction values, the output style, the four handoff-hook entries
    and the guide guard come from the copy or the update script; add them by hand only where it
    did not run. Never remove or weaken an entry the owner has.

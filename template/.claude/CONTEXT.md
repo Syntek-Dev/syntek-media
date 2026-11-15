@@ -47,8 +47,9 @@ marks which is which.
   headings. It splits into `memory/<topic>.md` files once it passes 300 lines.
 - `settings.json` — `"model": "opus"`, `"autoCompactEnabled": false`, `"idleCompaction": false`
   and `"outputStyle": "Concise"` (Claude Code's built-in Concise style), an allow list for the
-  toolkit, ffmpeg and ffprobe, an ask list that makes every credit-spending ElevenLabs tool and
-  the shipped MCP servers' browser and writing tools prompt, a deny list that keeps hand edits
+  toolkit, ffmpeg, ffprobe and the credit-spending ElevenLabs tools (each call still waits for
+  the author's yes to the batch), an ask list that makes `voice remix run` and the shipped MCP
+  servers' browser and writing tools prompt, a deny list that keeps hand edits
   out of generated and renders folders and out of the user guide (`Edit(/how-to/**)`), and the
   hooks: the `UserPromptSubmit` window hook, the `PreCompact` hook, the `SessionStart` `compact`
   entry, and, under `PreToolUse`, the data-root guard and the guide guard. To a `settings.json`

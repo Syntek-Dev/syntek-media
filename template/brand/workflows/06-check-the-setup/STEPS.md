@@ -44,7 +44,8 @@ Explain each finding to the author: what is missing, what it blocks, and the fix
 | configured WhisperX interpreter broken or not version 3.8.6, or its Python outside 3.10 to 3.13 | `transcribe`; fix MEDIA_TRANSCRIBE_PYTHON at user scope, an interpreter's path |
 | git-lfs or its filter missing while `brand/src/exports/large/` holds files | adding a large export |
 | an allow entry missing from `.claude/settings.json` | nothing, but every toolkit call asks for permission |
-| an ask entry missing from `.claude/settings.json` | every credit-spending ElevenLabs call, `voice remix run` included, which would not prompt |
+| a `voice remix run` ask entry missing from `.claude/settings.json` | `voice remix run`, which would spend credits without a prompt |
+| a credit-spending ElevenLabs tool asked or not allowed (a note) | nothing, but each call prompts; the author may allow it |
 | a deny entry missing from `.claude/settings.json` | nothing, but a file in a generated or renders folder could be edited by hand |
 | the ElevenLabs base path does not contain the repository | speech-to-text and every tool that reads a project file |
 | `ELEVENLABS_API_KEY` absent from this shell (a note) | `voice remix run` only; the author exports it at user scope, never on a command line |
@@ -68,7 +69,8 @@ file. _Substantive._
 
 Run `python3 toolkit/media.py check --setup` again after the fixes. Repeat until it exits 0, or
 until every finding left open has been accepted by the author with the commands it blocks. No
-credit-spending batch starts while an ElevenLabs line is open. _Mechanical._
+credit-spending batch starts while an ElevenLabs line is open; a note that a tool prompts is
+not open. _Mechanical._
 
 ## 5. Record
 

@@ -41,7 +41,7 @@ stopped on a collision, which is a fault in the template
 ## The failure this procedure exists to prevent
 
 A first session that spends credits before the project is ready. A settings file kept from
-before the copy lacks the ask rules that make Claude Code stop before a paid call, and an
+before the copy lacks the ask rules that make Claude Code stop before a voice remix, and an
 ElevenLabs server whose base path does not contain the project refuses every file it is given.
 A copy left uncommitted also leaves the first update with no answers file to work from.
 

@@ -11,8 +11,8 @@ model: opus
 
 **What it is.** Voiceover, narration and speech-to-text come from ElevenLabs through the
 user-scope MCP server `elevenlabs`, and every call spends the author's credits; the one direct
-call, a voice remix, is `production/docs/reference/character-voices.md`'s. Every tool is marked
-read-only, so only this discipline and the ask rules stand between a request and the bill.
+call, a voice remix, is `production/docs/reference/character-voices.md`'s. The settings allow
+the paid tools without a prompt, so only this discipline stands between a request and the bill.
 
 ## Setting up the server
 
@@ -64,7 +64,7 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
 ## How we apply it here
 
 - Run `python3 toolkit/media.py check --setup` before the first batch: it reports the base path
-  and the ask rules, and no batch runs until its ElevenLabs lines are clean.
+  and the remix's ask rules, and no batch runs while an ElevenLabs line is a FAIL.
 - Generated audio stays git-ignored, and an approved take, which cannot be made again, is
   archived with `footage add --kind generated`; voice IDs live only in the brand's own files.
 

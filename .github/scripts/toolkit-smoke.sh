@@ -87,7 +87,8 @@
 #                     13. `captions align --lines` places every cue of a synthetic cut, and
 #                         `--anchors` keeps every cue of a beat inside that beat.
 #                     14. `check --setup`, with HOME pointed at a scratch folder holding a fixture
-#                         ~/.claude.json, reports a missing ask rule and a base path outside the
+#                         ~/.claude.json, reports a missing voice remix run ask rule (D82; the
+#                         nine credit tools are allowed and never a FAIL, D90) and a base path outside the
 #                         repository, prints no other value from that file, and names the optional
 #                         encoders `image` needs (libwebp; an AV1 encoder and the avif muxer).
 #                     15. `image` encodes a PNG into each format of every image deliverable in the
@@ -313,7 +314,7 @@ P_WHERE="914-smoke-where"; P_FRAMES="915-smoke-frames"
 CONSTRUCTED="velunar"
 SECRET="smoke-secret-value-never-printed"
 SECRET_MAIL="robin@example.com"
-GONE_ASK="mcp__elevenlabs__voice_clone"
+GONE_ASK="Bash(uv run toolkit/media.py voice remix run *)"   # D82; the nine credit tools are allowed since D90
 
 NAME=""; W=""; T=""; OUT=""; GHOME=""; RESULTS=""; TRIPWIRE=""
 declare -A RES=()
@@ -1338,7 +1339,7 @@ PY
   fi
   st=0; HOME="$GHOME" tk setup check --setup || st=$?
   rec setup.status "$st"
-  rec setup.ask "$(said setup "$GONE_ASK")"
+  rec setup.ask "$(said setup 'ask Bash\(uv run toolkit/media\.py voice remix run \*\) is not in')"
   rec setup.base "$(said setup 'base path.*(does not contain|outside)|(does not contain|outside).*repositor')"
   rec setup.leak "$(grep -qF -e "$SECRET" -e "$SECRET_MAIL" "$OUT/setup.log" && echo yes || echo no)"
   rec setup.encoders "$([[ "$(said setup 'webp')" == yes && "$(said setup 'avif|av1')" == yes ]] && echo yes || echo no)"

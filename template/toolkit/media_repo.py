@@ -85,7 +85,10 @@ PLAYWRIGHT_REVISION = "1248"   # Chromium and chromium-headless-shell in Playwri
 SETTINGS_ALLOW = ("Bash(python3 toolkit/*.py *)", "Bash(uv run toolkit/*.py *)", "Bash(ffmpeg *)",
                   "Bash(ffprobe *)", "WebSearch", "WebFetch")
 SETTINGS_DENY = ("Edit(**/generated/**)", "Edit(**/renders/**)")   # D13; required, like the allows (D49)
-SETTINGS_ASK = tuple(f"mcp__elevenlabs__{t}" for t in (
+# D90: the credit-spending ElevenLabs tools the seed allows since 0.10.0. The author's yes to a
+# stated batch guards the credits (rules 03 Section 4), so each is clean when allowed and only a
+# note otherwise: asked or absent, each call prompts, which is the owner's choice. Never a FAIL.
+SETTINGS_CREDIT = tuple(f"mcp__elevenlabs__{t}" for t in (
     "text_to_speech", "speech_to_text", "compose_music", "text_to_sound_effects", "speech_to_speech",
     "voice_clone", "isolate_audio", "text_to_voice", "create_voice_from_preview"))
 # D82: the one ElevenLabs call the toolkit makes; the broad toolkit allow covers it, so only these
@@ -927,16 +930,16 @@ def setup_report(root: Path) -> tuple:
     for entry in SETTINGS_ALLOW:
         item(entry in allow, f"allow {entry}" + ("" if entry in allow else f" is not in {C.SETTINGS}"),
              f"add \"{entry}\" to permissions.allow by hand")
-    for entry in SETTINGS_ASK:
-        if entry in ask:
-            item(True, f"ask {entry}")
-        elif entry in allow:
-            item(False, f"{entry} is allowed without a prompt", f"move it from permissions.allow to "
-                 "permissions.ask: every credit-spending call must prompt")
-        elif entry in deny:
+    for entry in SETTINGS_CREDIT:
+        if entry in deny:
             item(None, f"{entry} is denied (the tool cannot run at all)")
+        elif entry in ask:
+            item(None, f"{entry} is asked: each call prompts (your choice; the seed allows it since 0.10.0)")
+        elif entry in allow:
+            item(True, f"allow {entry}")
         else:
-            item(False, f"ask {entry} is not in {C.SETTINGS}", f"add \"{entry}\" to permissions.ask by hand")
+            item(None, f"{entry} is not allowed in {C.SETTINGS}: each call prompts until you add "
+                 f"\"{entry}\" to permissions.allow")
     for entry in SETTINGS_ASK_COMMANDS:
         if entry in ask:
             item(True, f"ask {entry}")

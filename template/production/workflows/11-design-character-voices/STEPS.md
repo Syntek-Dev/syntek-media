@@ -32,10 +32,10 @@ Confirm that the author asked for a character's voice, and for which characters.
 
 Load the `elevenlabs` tools with ToolSearch (searching 'elevenlabs'). Run
 `python3 toolkit/media.py check --setup` and read its ElevenLabs lines: the server's base path
-must contain this repository, every credit-spending tool must be an ask rule, and so must
-`voice remix run`. If any line fails, give the fix it prints and stop. Ask the author to confirm
-that `ELEVENLABS_API_KEY` is exported in the shell at user scope; never print it, echo it or type
-it on a command line. _Mechanical._
+must contain this repository, and `voice remix run` must be an ask rule (a note that an MCP
+tool prompts is fine). If any line fails, give the fix it prints and stop. Ask the author to
+confirm that `ELEVENLABS_API_KEY` is exported in the shell at user scope; never print it, echo
+it or type it on a command line. _Mechanical._
 
 ## 3. Confirm the source clone and its consent
 
@@ -94,9 +94,9 @@ author. _Substantive._
 
 > **Skill:** `voiceover` · **Guide:** `production/docs/reference/character-voices.md`
 
-Ask before saving: `mcp__elevenlabs__create_voice_from_preview` is on the ask list. Call it with
-the chosen preview's `generated_voice_id`, a voice name the author agrees and the agreed
-description (`VERIFY` on first use that it accepts a remix's ID). Write its credits-log row with
+Ask before saving: `mcp__elevenlabs__create_voice_from_preview` spends credits without a
+prompt. Call it with the chosen preview's `generated_voice_id`, a voice name the author agrees
+and the agreed description (`VERIFY` on first use that it accepts a remix's ID). Write its credits-log row with
 `—` for the piece. Stop at the first error and report it. _Mechanical._
 
 ## 9. Record the character's row

@@ -72,10 +72,10 @@ repository:
   `migrations/family-refresh.json` lists, adds that file's settings entries to
   `.claude/settings.json` and its two MCP servers to the MCP files, once each, and puts back
   the read-only `how-to/` guide. Any of them touching more than it says.
-- **The standalone `.claude/settings.json` seed** (D13): an allow, ask or deny rule that lets a
-  credit-spending ElevenLabs tool, `media.py voice remix run` or a Scrapling or code-review-graph
-  tool it asks before go ahead without the promised prompt, or that allows more than the
-  documentation says; its `Edit(/how-to/**)` deny that keeps the guide read-only (D84); and the
+- **The standalone `.claude/settings.json` seed** (D13): an allow, ask or deny rule that lets
+  `media.py voice remix run` or a Scrapling or code-review-graph tool it asks before go ahead
+  without the promised prompt, or that allows more than the documentation says (the nine
+  credit-spending ElevenLabs tools are allowed by design, D90); its `Edit(/how-to/**)` deny that keeps the guide read-only (D84); and the
   hooks it registers: four handoff entries, the data-root guard and the guide guard (D80, D84).
 - **The session hooks and the two family scripts** (D80): the three `.claude/hooks/*.sh`, which
   Claude Code runs in the owner's sessions, the guide guard `how-to-read-only.sh` among them

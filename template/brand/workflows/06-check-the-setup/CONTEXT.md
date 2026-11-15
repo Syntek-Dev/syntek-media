@@ -41,8 +41,8 @@ kit (`brand/workflows/01-set-up-the-brand-kit/`), a large export
 
 A missing tool found halfway through a piece: a render that cannot burn captions, a thumbnail
 that cannot be drawn, a speech-to-text call that the server rejects as outside its allowed
-folder, or a credit-spending call that never asked permission because its rule was missing. Each
-costs time, and the last costs money. Checked once, before the first spend, every gap is named
+folder, or a voice remix that ran without a prompt because its ask rule was missing. Each costs
+time, and the last costs money. Checked once, before the first spend, every gap is named
 with its fix while nothing depends on it.
 
 ## Cross-references

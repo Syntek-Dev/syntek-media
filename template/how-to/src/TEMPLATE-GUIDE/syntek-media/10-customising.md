@@ -55,7 +55,8 @@ Change how the project behaves instead, and the template's file stays as it ship
 - `.claude/settings.json` is written once, by whichever template was applied first, and no update renders it again.
 - An update may add an entry the template lists that the file lacks, once only, and never again once it has been offered.
 - You may add allows of your own, but never remove or weaken an ask or a deny.
-- The asks stop Claude Code before every call that spends ElevenLabs credits, and an allow never overrides them.
+- The asks stop Claude Code before a voice remix, and an allow never overrides them.
+- The ElevenLabs tools that spend credits are allowed: Claude asks you about the batch and its cost first, then runs it without a prompt per call.
 - The denies keep hand edits out of every generated and renders folder and out of `how-to/`.
 - After you change an ask or a deny, carry it to the other coding agents' files the project has with `python3 .claude/syntek-media-permissions.py --write`.
 

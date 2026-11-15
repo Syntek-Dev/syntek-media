@@ -139,7 +139,7 @@ fetch models. Author-edited data stays TOML; tool-written timing is finite JSON.
   syntek-media folder where another template stands beside this one); practice clips and
   renders stay outside the repository.
 - Claude never spends credits unasked: it states the characters, the calls and the estimated
-  credits, waits for your yes, and the settings make every credit-spending tool ask again.
+  credits, and waits for your yes to the batch; the calls then run without a prompt each.
 - Claude never posts. It prepares each post and its schedule row; you post.
 - Anything Claude cannot settle on its own is left in the text as an `AUTHOR TO CONFIRM` or
   `VERIFY` flag. `python3 toolkit/media.py flags` lists them.
@@ -290,8 +290,8 @@ each uses is in `.claude/rules/syntek-media/05-model-allocation.md`.
 <: endif :>
 After the first copy, run `python3 .claude/syntek-media-permissions.py --write` once: it passes
 the asks and denies of `.claude/settings.json` to the other clients' settings files, which
-cannot read Claude Code's, and it is the only way the ElevenLabs asks reach Gemini CLI and
-OpenCode. The same production rules, work tiers and spending approval apply in every client,
+cannot read Claude Code's, and it is the only way the MCP asks reach Gemini CLI and OpenCode
+(and the voice remix asks OpenCode). The same production rules, work tiers and spending approval apply in every client,
 and a client's permission is never your approval.
 
 The entrypoints and client settings are copy-only shared paths. Updates preserve edits and

@@ -50,7 +50,7 @@ Item 2 of the message after the copy lists what no copy adds to a `.claude/setti
 project already had. Read it with the author, and add each entry only on their word, exactly as
 the message prints it, changing nothing else in the file:
 
-- **Where step 1 showed `.claude/settings.json` as `conflict` then `skip`:** the six entries
+- **Where step 1 showed `.claude/settings.json` as `conflict` then `skip`:** the fifteen entries
   the message lists under `allow`, which no copy or update offers.
 - **Where the framed `family-update did NOT run` message appeared, or the copy took
   `--skip-tasks`:** every other entry item 2 lists too, at the top level, in `ask`, in `deny`
@@ -59,9 +59,9 @@ the message prints it, changing nothing else in the file:
   entry, which no copy or update offers in either template.
 
 Where the message has gone, `python3 toolkit/media.py check --setup` at step 7 reports the
-missing entries the toolkit needs: its allows, the ElevenLabs and voice-remix asks, and the
-denies on every generated and renders folder. It never checks the others, so compare the file with
-item 2 by hand. _Substantive._
+missing entries the toolkit needs: its allows, the voice-remix asks, and the denies on every
+generated and renders folder, and notes each ElevenLabs tool that still prompts. It never
+checks the others, so compare the file with item 2 by hand. _Substantive._
 
 ## 3. Carry the asks and denies to the other coding agents
 

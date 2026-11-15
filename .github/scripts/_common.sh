@@ -471,8 +471,8 @@ is_family_skill() { [[ " $SM_FAMILY_SKILLS " == *" $1 "* ]]; }   # SM_FAMILY_SKI
 # The skill contract (DESIGN.md Section 5), as skill-conformance.sh compares it. The mode
 # paragraph is syntek-author's with the three names swapped, and is compared whitespace- and
 # `> `-normalised; the guard sentence is syntek-author's, verbatim, in every skill that names a
-# credit-spending ElevenLabs tool (SM_SETTINGS_ASK lists those tools, its mcp__ entries; its two
-# Bash entries are the voice remix run asks of D82).
+# credit-spending ElevenLabs tool (SM_SETTINGS_CREDIT lists those tools, D90) or names voice remix
+# run (SM_SETTINGS_ASK's two Bash entries, the asks of D82).
 SM_MODE_PARA="**Mode.** Before step 1, read the brand-kind mode file beside this one — exactly one of \`BUSINESS.md\`, \`FICTION.md\`, \`NONFICTION.md\` ships in this folder. The mode owns the domain (paths, unit, extra reads, domain rules, examples); this file owns the procedure. Where they disagree, the procedure wins and the disagreement is reported to the author."
 SM_MODE_H2S="Paths and unit|Additions to the steps|Domain rules|Examples"
 SM_GUARD_SENTENCE="If nothing was asked, stop: never generate unasked, including as a 'helpful' extra after another skill."
@@ -1062,8 +1062,9 @@ SM_COMPANIONS="spelling grammar comprehension flow fact-check improve-section ad
 # ends, since 0.6.0, with the guide's one anchored Edit rule (D84; syntek-author D56), after
 # media's three and before the family's embed_graph_tool deny, as the seed orders them.
 SM_SETTINGS_DENY=("AskUserQuestion" "Edit(**/generated/**)" "Edit(**/renders/**)" "Edit(/how-to/**)")
-SM_SETTINGS_ALLOW=("Bash(python3 toolkit/*.py *)" "Bash(uv run toolkit/*.py *)" "Bash(ffmpeg *)" "Bash(ffprobe *)" "WebSearch" "WebFetch")
-SM_SETTINGS_ASK=(
+# D90: the nine credit-spending ElevenLabs tools, allowed since 0.10.0 (no longer asked). Their
+# own list, so skill-conformance.sh check 21 reads them as ElevenLabs calls; they join the allows.
+SM_SETTINGS_CREDIT=(
   "mcp__elevenlabs__text_to_speech"
   "mcp__elevenlabs__speech_to_text"
   "mcp__elevenlabs__compose_music"
@@ -1073,6 +1074,11 @@ SM_SETTINGS_ASK=(
   "mcp__elevenlabs__isolate_audio"
   "mcp__elevenlabs__text_to_voice"
   "mcp__elevenlabs__create_voice_from_preview"
+)
+SM_SETTINGS_ALLOW=("Bash(python3 toolkit/*.py *)" "Bash(uv run toolkit/*.py *)" "Bash(ffmpeg *)" "Bash(ffprobe *)" "WebSearch" "WebFetch"
+  "${SM_SETTINGS_CREDIT[@]}")
+# The voice remix run asks of D82, media's own two (D13 as D90 amends it).
+SM_SETTINGS_ASK=(
   "Bash(python3 toolkit/media.py voice remix run *)"
   "Bash(uv run toolkit/media.py voice remix run *)"
 )
@@ -1084,8 +1090,8 @@ SM_SETTINGS_TOP=("autoCompactEnabled=false" "idleCompaction=false" 'outputStyle=
 # The family's rules in the same seed (DESIGN.md D13 as D80 amends it; syntek-author D54), after
 # media's own: the eight MCP asks in the family's order (Scrapling's six browser tools, then
 # code-review-graph's two that write), and the deny on embed_graph_tool, which --tools already
-# withholds. Kept apart from media's lists: skill-conformance.sh check 21 reads SM_SETTINGS_ASK's
-# mcp__ entries as ElevenLabs calls, and these spend no credits.
+# withholds. Kept apart from media's lists: skill-conformance.sh check 21 reads SM_SETTINGS_CREDIT
+# as ElevenLabs calls and SM_SETTINGS_ASK as voice remix run, and these spend no credits.
 SM_SETTINGS_FAMILY_ASK=(
   "mcp__scrapling__stealthy_fetch"
   "mcp__scrapling__bulk_stealthy_fetch"
@@ -1173,7 +1179,7 @@ SM_LEARNING_PATH_RE='(^|[^A-Za-z0-9_./-])(/learning([/"'"'"'<[:space:]*]|$)|lear
 # data-root guard, for a settings.json that syntek-author did not seed; since 0.6.0 also
 # "idleCompaction": false and the SessionStart entry, and since 0.7.0 "outputStyle": "Concise".
 # Item 1's 0.5.0 sentence on coding-agent answers went with D81: the family questions block now
-# takes syntek-author's recorded clients itself. Since 0.6.0 (D81) item 2 gives the six allows
+# takes syntek-author's recorded clients itself. Since 0.6.0 (D81) item 2 gives the six allows (and since 0.10.0 the nine ElevenLabs tools, D90)
 # by hand, which no lane offers, the refresh data's entries only where the baseline task says
 # family-update did NOT run (or the copy took --skip-tasks), and the data-root guard, which no
 # lane offers, for a settings file that lacks it.
@@ -1222,7 +1228,7 @@ SM_AUTHOR_GUIDE_WARNING="so this syntek-author is older than v0.6.0, which a com
 # syntek-author's, verbatim (the thirteen working-practice files and D84's fourteen); the hooks
 # are its refresh data's hooks object, verbatim (the four handoff-hook entries and the guide
 # guard, never the data-root guard, which names no script under .claude/hooks/); the denies and
-# asks are the seed's, the six allows apart (D13); the top-level values are the seed's three; the
+# asks are the seed's, the fifteen allows apart (D13, D90); the top-level values are the seed's three; the
 # mcp lane is syntek-author's, verbatim: two servers, five files at their keys, never
 # .claude/mcp_config.json (D76). "model" is never listed.
 SM_REFRESH_DATA="migrations/family-refresh.json"
@@ -2202,7 +2208,7 @@ if mode == "compare":
             say("_common.sh's SM_SETTINGS_HOOKS is not the --author tree's seed's hooks key, byte for byte as JSON: media's seed registers "
                 "the family's hooks as syntek-author's does (DESIGN.md D13, D35, D80)")
     # D81: the family lists of the two templates' refresh data agree, entry by entry. Media's own
-    # asks and denies (ElevenLabs, voice remix run, generated and renders) and syntek-author's own
+    # asks and denies (voice remix run, generated and renders) and syntek-author's own
     # denies are each template's; everything else either lists is the family's.
     rd = E["SMF_REFRESH_DATA"]
     mr, merr = load(root / rd)
@@ -2231,7 +2237,7 @@ if mode == "compare":
                 say(f"media's {rd} lists {k} {json.dumps(st(mr).get(k, 'absent'))}, the --author tree's {json.dumps(st(ar).get(k, 'absent'))} (DESIGN.md D81)")
         own_ask = [a for a in E["SMF_MEDIA_ASK"].splitlines() if a]
         if [a for a in perm(mr, "ask") if a not in own_ask] != perm(ar, "ask"):
-            say(f"media's {rd} asks, its own eleven apart, are not the --author tree's, in order: syntek-author D54's eight are the family's "
+            say(f"media's {rd} asks, its own two apart, are not the --author tree's, in order: syntek-author D54's eight are the family's "
                 "(DESIGN.md D13, D81)")
         family_deny = ["AskUserQuestion"] + [r for r in E["SMF_EDIT_DENY"].splitlines() if r]
         for rule in family_deny:

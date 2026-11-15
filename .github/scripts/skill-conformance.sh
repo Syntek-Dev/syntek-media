@@ -60,9 +60,10 @@
 #                             amends it). The file is read on every run: a missing one is exit 2,
 #                             never a SKIP. A folder this check claims is not also reported by
 #                             check 19.
-#                         21. A skill naming a credit-spending ElevenLabs call (an `ask` entry
-#                             of DESIGN.md D13: the nine mcp__ tools, or the two voice remix run
-#                             asks of D82, matched by the words `voice remix run`) carries the
+#                         21. A skill naming a credit-spending ElevenLabs call (one of
+#                             DESIGN.md D13's nine mcp__ tools, allowed since 0.10.0 (D90), or
+#                             the two voice remix run asks of D82, matched by the words `voice
+#                             remix run`) carries the
 #                             guard sentence verbatim — "If nothing was asked, stop: never
 #                             generate unasked, including as a 'helpful' extra after another
 #                             skill." A skill naming an mcp__ tool also carries the strings
@@ -211,12 +212,13 @@ mode_para_line() { # line number where the verbatim mode paragraph starts, or no
 # wrapped over several lines, or inside a list item or a quote, reads as written (check 21).
 flat() { sed -E 's/^[[:space:]]*>[[:space:]]?//' "$1" | tr -s '[:space:]' ' '; }
 
-# The credit-spending ElevenLabs calls a skill's files name (DESIGN.md D13, D21, D82): each mcp__
-# ask the files name, then the Bash asks once, as the words 'voice remix run' (both of D82's Bash
-# entries run that one command). Check 21 asks the guard of either, output_directory of mcp__ only.
+# The credit-spending ElevenLabs calls a skill's files name (DESIGN.md D13, D21, D82, D90): each of
+# the nine credit tools the files name (allowed since 0.10.0, D90), then the Bash asks once, as the
+# words 'voice remix run' (both of D82's Bash entries run that one command). Check 21 asks the
+# guard of either, output_directory of mcp__ only.
 spending_tools_named() { # $1 = skill dir → one tool per line
   local t bash=false
-  for t in "${SM_SETTINGS_ASK[@]}"; do
+  for t in "${SM_SETTINGS_CREDIT[@]}" "${SM_SETTINGS_ASK[@]}"; do
     if [[ "$t" == mcp__* ]]; then
       grep -qF -- "$t" "$1"/*.md 2>/dev/null && printf '%s\n' "$t"
     elif [[ "$t" == *'voice remix run'* ]]; then

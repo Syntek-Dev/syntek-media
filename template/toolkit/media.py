@@ -1262,8 +1262,11 @@ def write_fixture(root: Path) -> None:
     write(root / C.AUDIOBOOK / "008-fixture-voice-format.md", CHAPTER_REG_NO_FORMAT)
     write(root / C.AUDIOBOOK / "008-fixture-voice-format.ch00.md", CREDITS_CH00_MD)
     write(root / "manuscript/src/01-the-ford/01-the-ford.md", CHAPTER_MD)
-    settings = {"permissions": {"allow": list(R.SETTINGS_ALLOW), "ask": [entry for entry in R.SETTINGS_ASK
-                                                                    if not entry.endswith("create_voice_from_preview")],
+    # D90: the credit tools are allowed, one left out and one asked, each a note, never a FAIL.
+    settings = {"permissions": {"allow": list(R.SETTINGS_ALLOW) + [entry for entry in R.SETTINGS_CREDIT
+                                                                   if not entry.endswith(("create_voice_from_preview",
+                                                                                          "voice_clone"))],
+                                "ask": ["mcp__elevenlabs__voice_clone"],
                                 "deny": ["AskUserQuestion"]}}
     write(root / C.SETTINGS, json.dumps(settings, indent=2))
 
@@ -2512,9 +2515,13 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
                 code == 1 and all(f"FAIL  ask {entry} is not in" in out and f'fix: add "{entry}" to permissions.ask'
                                   in out for entry in R.SETTINGS_ASK_COMMANDS)
                 and "ELEVENLABS_API_KEY: absent" in out, out)
-        verdict("check --setup reports a missing ask rule and a base path outside the repository",
-                code == 1 and "ask mcp__elevenlabs__create_voice_from_preview is not in" in out
-                and "does not contain this repository" in out, out)
+        verdict("check --setup notes a credit tool left out or asked, and passes one allowed, never a FAIL (D90)",
+                "--    mcp__elevenlabs__create_voice_from_preview is not allowed in" in out
+                and "--    mcp__elevenlabs__voice_clone is asked: each call prompts" in out
+                and "ok    allow mcp__elevenlabs__text_to_speech" in out
+                and not any(line.startswith("FAIL") and "mcp__elevenlabs__" in line for line in out.splitlines()), out)
+        verdict("check --setup reports a base path outside the repository",
+                code == 1 and "does not contain this repository" in out, out)
         verdict("check --setup prints no other value from ~/.claude.json",
                 secret not in out and "fixture@example.com" not in out and "uvx elevenlabs-mcp" in out, out)
         verdict("check --setup names the optional encoders image needs, as notes, never findings",

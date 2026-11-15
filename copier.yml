@@ -1505,7 +1505,10 @@ _migrations:
 # fifteen family-shared questions an update asks for the first time and says their defaults
 # keep the project as it is, or take syntek-author's recorded answers (D80, D81), without
 # reading any answer itself: no client's file is written (the questions' own help says the
-# rest). Since 0.6.0 the 0.4.4 paragraph no longer gives the two remix asks by hand: D81's
+# rest). Since 0.10.0 (D90) a paragraph, after the 0.6.0 one, says the nine credit-spending
+# ElevenLabs tools are allowed, not asked, and that an existing project moves them by hand,
+# in .claude/settings.json and in any client file the permissions script wrote, because
+# neither an update nor that script ever removes an entry. Since 0.6.0 the 0.4.4 paragraph no longer gives the two remix asks by hand: D81's
 # update script adds both once, on Python 3.14, never one the owner removed after committing
 # it, and until then check --setup reports each missing one; the Consent and credits-log
 # edits stay by hand. And a 0.6.0 paragraph, before the BRAND_KIND one (D81, D84): Python
@@ -1582,6 +1585,19 @@ _message_before_update: |
   a link inside it. If it stops, never commit what it left: README.md 'Updating a project'
   gives the recovery.
 
+  Updating to 0.10.0: the nine ElevenLabs tools that spend credits no longer ask before
+  every call (D90). A batch still runs only after you agree it and its cost, and every call
+  is still logged in production/src/credits-log.md. An update never removes or changes an
+  entry of yours, so to stop the prompts move the nine mcp__elevenlabs__ entries
+  (text_to_speech, speech_to_text, compose_music, text_to_sound_effects, speech_to_speech,
+  voice_clone, isolate_audio, text_to_voice, create_voice_from_preview) from "ask" to
+  "allow" in .claude/settings.json by hand. Keep the two voice remix run asks. The
+  permissions script never removes a rule either: delete the nine by hand from any client
+  file it wrote (the [mcp_servers.elevenlabs.tools.*] tables of .codex/config.toml, the
+  mcp_elevenlabs_* entries of tools.confirmationRequired in .gemini/settings.json, and the
+  elevenlabs_* ask rules of opencode.json). Or keep the asks: python3 toolkit/media.py check
+  --setup notes them, and no longer fails a tool you allow.
+
   BRAND_KIND never changes: the update refuses it, because a different brand kind is a new
   project. After a platform or media-kind change, edit by hand the files that describe your
   options: README.md, CONTEXT.md and .claude/CLAUDE.md Section 1 in a standalone project (over
@@ -1600,10 +1616,10 @@ _message_before_update: |
 # the clients ticked in AGENT_CLIENTS, with Section 8's hand edits 2 and 3: the optional index
 # lines, and nothing to add to .gitignore or .mcp.json. Since 0.6.0 the family questions block
 # takes syntek-author's recorded clients over syntek-author (D81), so no static advice on
-# matching them stands here; (2) since 0.6.0 (D81) the six allows, which no lane offers, to
-# add by hand to an existing settings.json; the entries migrations/family-refresh.json lists
-# (the two compaction values and the output style, media's eleven asks and syntek-author D54's
-# eight, the five denies, the guide's Edit(/how-to/**) among them, and the handoff-hook and
+# matching them stands here; (2) since 0.6.0 (D81) the six allows, and since 0.10.0 the nine
+# ElevenLabs tools (D90), which no lane offers, to add by hand to an existing settings.json; the
+# entries migrations/family-refresh.json lists (the two compaction values and the output style,
+# media's two voice remix run asks and syntek-author D54's eight, the five denies, the guide's Edit(/how-to/**) among them, and the handoff-hook and
 # guide-guard entries of the seed's hooks object) by hand only where the copy's baseline task
 # printed, framed in lines of =, that family-update did NOT run (a Python older than 3.14) or
 # the copy took --skip-tasks, since on 3.14 that task offers them to the file the copy kept; and
@@ -1666,25 +1682,15 @@ _message_after_copy: |
 
   2. Permissions. If .claude/settings.json was skipped, add these to its "permissions", in
      "allow", by hand: no copy or update offers them (syntek-author's settings already allow
-     the last two):
+     WebSearch and WebFetch). The last nine are the ElevenLabs tools that spend credits: each
+     runs only after you agree the batch and its cost, so allowing them spares a prompt per
+     call (D90); leave them out and every call asks:
        "Bash(python3 toolkit/*.py *)",
        "Bash(uv run toolkit/*.py *)",
        "Bash(ffmpeg *)",
        "Bash(ffprobe *)",
        "WebSearch",
-       "WebFetch"
-     The copy's last task offered the seed's other entries to the file you kept, once each, and
-     every update offers any it still lacks, never removing or changing one of yours. Only if a
-     message above, framed in lines of =, says family-update did NOT run (Copier ran on a
-     Python older than 3.14), or this copy ran with --skip-tasks, add them by hand too.
-     At the top level:
-       "autoCompactEnabled": false,
-       "idleCompaction": false,
-       "outputStyle": "Concise"
-     In "ask" (every ElevenLabs tool that spends credits; the server marks each one read-only,
-     so only an ask rule makes Claude Code stop and ask; voice remix run, the one ElevenLabs
-     call the toolkit makes itself, which the toolkit allow above would otherwise let run
-     unprompted, D82 and D66; then the family's Scrapling and code-review-graph tools):
+       "WebFetch",
        "mcp__elevenlabs__text_to_speech",
        "mcp__elevenlabs__speech_to_text",
        "mcp__elevenlabs__compose_music",
@@ -1693,7 +1699,18 @@ _message_after_copy: |
        "mcp__elevenlabs__voice_clone",
        "mcp__elevenlabs__isolate_audio",
        "mcp__elevenlabs__text_to_voice",
-       "mcp__elevenlabs__create_voice_from_preview",
+       "mcp__elevenlabs__create_voice_from_preview"
+     The copy's last task offered the seed's other entries to the file you kept, once each, and
+     every update offers any it still lacks, never removing or changing one of yours. Only if a
+     message above, framed in lines of =, says family-update did NOT run (Copier ran on a
+     Python older than 3.14), or this copy ran with --skip-tasks, add them by hand too.
+     At the top level:
+       "autoCompactEnabled": false,
+       "idleCompaction": false,
+       "outputStyle": "Concise"
+     In "ask" (voice remix run, the one ElevenLabs call the toolkit makes itself, which the
+     toolkit allow above would otherwise let run unprompted, D82 and D66; then the family's
+     Scrapling and code-review-graph tools):
        "Bash(python3 toolkit/media.py voice remix run *)",
        "Bash(uv run toolkit/media.py voice remix run *)",
        "mcp__scrapling__stealthy_fetch",
