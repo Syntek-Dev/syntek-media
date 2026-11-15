@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Changed
+
+- **`family-shared.json` records `unreleased` again** after the `v0.11.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9). This is what `shipped-seeds.sh --write-manifest` writes on the first commit after a release tag, so that check 23 holds on every commit until the next release. Development only: nothing ships.
+
 ## [0.11.0] - 15/11/2026
 
 Adds D91: media vendors syntek-author's `v0.12.0`. Its permissions script now notes each rule in another coding agent's file that still asks first for an MCP tool `.claude/settings.json` allows. An owner who moved the ElevenLabs asks to `"allow"` for 0.10.0 (D90) is told which client rules to delete by hand, instead of hunting for them.
