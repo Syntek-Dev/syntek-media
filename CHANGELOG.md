@@ -7,15 +7,32 @@ All notable changes to syntek-media are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D76 and D80–D90; D77–D79 are reserved) or section.
+Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite it by decision (D1–D76 and D80–D91; D77–D79 are reserved) or section.
 
 ---
 
 ## [Unreleased]
 
+## [0.11.0] - 15/11/2026
+
+Adds D91: media vendors syntek-author's `v0.12.0`. Its permissions script now notes each rule in another coding agent's file that still asks first for an MCP tool `.claude/settings.json` allows. An owner who moved the ElevenLabs asks to `"allow"` for 0.10.0 (D90) is told which client rules to delete by hand, instead of hunting for them.
+
 ### Changed
 
-- **`family-shared.json` records `unreleased` again** after the `v0.10.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9). This is what `shipped-seeds.sh --write-manifest` writes on the first commit after a release tag, so that check 23 holds on every commit until the next release. Development only: nothing ships.
+- **Media vendors syntek-author `v0.12.0`** (DESIGN.md D91, D80, D81; `.claude/CLAUDE.md` 7.9; the maintainer, 15/11/2026). Since `v0.11.1` its family-shared changes are two files, taken byte for byte:
+  - `.claude/syntek-media-permissions.py`. Its `--check` and `--write` print a note, with a count, for each client rule that still asks first for an MCP tool the settings file allows: OpenCode's top-level ask, Codex's `approval_mode = "prompt"`, and Gemini CLI's `tools.confirmationRequired` entry. A note never changes the exit code and never removes a rule.
+  - The shared chapter `how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md`, which says so.
+
+  Every other family file and block is byte-identical, and so are its `copier.yml` blocks, `migrations/` and settings seed. `SM_FAMILY_RELEASE` and CI's `SYNTEK_AUTHOR_TAG` move to `v0.12.0` together. `syntek-author-names.txt` is refreshed against it: the same 101 names (52 skills), with only its header moving. Every media text that names the vendored tag follows.
+- **`_message_before_update`** gains an 'Updating to 0.11.0' paragraph, mirrored in DESIGN.md Section 3.5, and **`README.md`** gains the same under 'Updating a project'. Both point owners to `python3 .claude/syntek-media-permissions.py --check`.
+- **The bridge** (`template/.claude/syntek-media-agents.md`) and **`template/.claude/CONTEXT.md`** describe the note. The bridge says to delete a noted rule where the allow is meant for that client too, and it carries the line wrapping 0.10.0 missed.
+- **`family-shared.json`** records `v0.11.0` (syntek-author D48's release rule).
+
+**What existing projects receive, and how.** The permissions script is template-owned and arrives through Copier's merge. The shared chapter is put back by the update script on Python 3.14, like every file of the read-only guide (D81, D84). No migration runs: nothing moves and no seed's required content changes (D11).
+
+**syntek-author baseline.** Vendored from syntek-author's `v0.12.0` tag (commit `27e38fb`), read 15/11/2026 from a clean clone. The permissions-script feature is commit `609d99d`, and syntek-author's CI passed on `2ca82a5`, the commit before it.
+
+**Results.** The vendored self-tests passed on Python 3.14.8: the permissions script's 80 probes and `family-update.py`'s. `shipped-seeds.sh --write-manifest` held every family file and block to `family-shared.json`. A read-only review of the re-vendoring from two angles ran before the commit. The byte-fidelity angle found nothing. The text angle found five wording issues, all fixed here. The full `run-all.sh` was stopped before it finished, at the maintainer's instruction, with no finding before it stopped. This release relies on CI's audit run on the release commit instead.
 
 ## [0.10.0] - 15/11/2026
 

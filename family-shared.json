@@ -1,7 +1,7 @@
 {
   "format": 1,
   "owner": "syntek-media",
-  "release": "unreleased",
+  "release": "v0.11.0",
   "files": [
     {"path": ".agents/mcp_config.json", "source": "template/.agents/mcp_config.json", "kind": "file", "bytes": 1308, "sha256": "6438111483f24ec49f27c8a785a772dd4670e84e04778c2c92e69c22cfbceb29"},
     {"path": ".agents/skills", "source": "template/.agents/skills", "kind": "symlink", "target": "../.claude/skills"},
@@ -18,7 +18,7 @@
     {"path": ".claude/skills/wait-what/SKILL.md", "source": "template/.claude/skills/wait-what/SKILL.md", "kind": "file", "bytes": 5434, "sha256": "4e0ca29f860b403bc84bf21cac4c24e97468f3205b9361e4405f1aab81e169dc"},
     {"path": ".claude/skills/wayfinder/SKILL.md", "source": "template/.claude/skills/wayfinder/SKILL.md", "kind": "file", "bytes": 12208, "sha256": "259651782732c446509ce560d6f9d4515e4123c55ebf03654fa7e5024cdd720e"},
     {"path": ".claude/syntek-<template>-dataroot.py", "source": "template/.claude/syntek-media-dataroot.py", "kind": "file", "bytes": 246499, "sha256": "4fbe80ba34a04110f808c2c9020dc090a5db64bc454ebe85558e0ba23d5fb326"},
-    {"path": ".claude/syntek-<template>-permissions.py", "source": "template/.claude/syntek-media-permissions.py", "kind": "file", "bytes": 40594, "sha256": "9a3a0e514b1b9fd17abf0dfc1f01fefb14dc4a7dd6a2d93654c4084d649a883f"},
+    {"path": ".claude/syntek-<template>-permissions.py", "source": "template/.claude/syntek-media-permissions.py", "kind": "file", "bytes": 52187, "sha256": "922b671aa6a63cc65a17a04b4c8bf88724a56c0372d900cb4c4c2bad187b1079"},
     {"path": ".codex/CLAUDE.md", "source": "template/.codex/CLAUDE.md", "kind": "file", "bytes": 1728, "sha256": "d5f8f68837733124a0d50318f72f5ae985c6a21be830993968dcca4ef0797d92"},
     {"path": ".codex/CONTEXT.md", "source": "template/.codex/CONTEXT.md", "kind": "file", "bytes": 2143, "sha256": "e65106ae3e70e22bda752cf7739d34bd68deec6df2e403b60b7eff10104955b1"},
     {"path": ".codex/config.toml", "source": "template/.codex/config.toml", "kind": "file", "bytes": 2685, "sha256": "cefb1d206d545a99253714a91f754f72f7afb92019b381fcc67e594fadde041d"},
@@ -38,7 +38,7 @@
     {"path": "how-to/src/CONTEXT.md", "source": "template/how-to/src/CONTEXT.md", "kind": "file", "bytes": 1761, "sha256": "fd1947c10b84ad4adecb7970b93eb1e6631f921662c3bf748e0d4c25319fb183"},
     {"path": "how-to/src/TEMPLATE-GUIDE/CLAUDE.md", "source": "template/how-to/src/TEMPLATE-GUIDE/CLAUDE.md", "kind": "file", "bytes": 2557, "sha256": "6d762bb0a38c5ef680a42b5230be1edede96e2c878ed53c597d24a09517f5f1e"},
     {"path": "how-to/src/TEMPLATE-GUIDE/CONTEXT.md", "source": "template/how-to/src/TEMPLATE-GUIDE/CONTEXT.md", "kind": "file", "bytes": 3056, "sha256": "9094398bc257b0f47860bfbf91f0c8cd293f81b2b76b18261c0f2757e249bb7c"},
-    {"path": "how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md", "source": "template/how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md", "kind": "file", "bytes": 12910, "sha256": "43f51658f7cff165e67fd021561645db8231a3100478cb694c98ee6fdebadb92"},
+    {"path": "how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md", "source": "template/how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md", "kind": "file", "bytes": 13364, "sha256": "2906b8094dc1a4d16cf51f930e58707a8a50430e0129ab238d35c6d0ee9036d9"},
     {"path": "how-to/src/TEMPLATE-GUIDE/the-data-root.md", "source": "template/how-to/src/TEMPLATE-GUIDE/the-data-root.md", "kind": "file", "bytes": 10649, "sha256": "e79b94237accb35460e3e2b7de0d24338d3415d5339132826960af3da7b83957"},
     {"path": "how-to/src/TEMPLATE-GUIDE/updating-and-recovery.md", "source": "template/how-to/src/TEMPLATE-GUIDE/updating-and-recovery.md", "kind": "file", "bytes": 15603, "sha256": "8a2c3b979c1fa6fd9ebc1557ae67c3a131ac85a138ced6d94d414807040452db"},
     {"path": "how-to/workflows/CLAUDE.md", "source": "template/how-to/workflows/CLAUDE.md", "kind": "file", "bytes": 2396, "sha256": "876ab794968968be1d4f6fc4035052f5450726af88a2a322652ea7f96f048b45"},

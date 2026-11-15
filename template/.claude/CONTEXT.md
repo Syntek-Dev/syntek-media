@@ -61,7 +61,8 @@ marks which is which.
   follow by hand, the model tiers, each client's setup and how to add a client later.
 - `syntek-media-permissions.py` — run with `python3` (3.14 or later): `--check` reports which of
   `settings.json`'s denies and asks each other client's file carries, and `--write` adds the
-  missing ones to client files that already exist. It never creates a file.
+  missing ones to client files that already exist; each notes an ask left in a client for an MCP
+  tool `settings.json` now allows. It never creates a file or removes a rule.
 - `syntek-media-dataroot.py` and its map `syntek-media-dataroot.json` — the data-root resolver
   every Syntek template ships (`python3`, 3.14 or later) and the guard the `PreToolUse` hook
   runs; media's map claims the footage folder, `production/src/footage`, with two roles,

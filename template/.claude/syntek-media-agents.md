@@ -72,13 +72,16 @@ paths and paid-call discipline. Do not infer author approval from client permiss
   (Python 3.14 or later) prints which of those denies and asks each client's file already
   carries, which it cannot express and why, and exits 1 if one it can express is missing.
   `--write` adds the missing ones to the client files that already exist, changing only their
-  permission keys; it never creates a file, and never removes a rule. Run it once after the
-  first copy, because the MCP asks reach Gemini CLI and OpenCode, and the voice remix asks
-  OpenCode, only this way (Gemini CLI cannot hold a shell ask, and `--check` says so), and again
-  after changing `.claude/settings.json` or adding a client, with the author's agreement. Run `--write` too when an update report gives it: the two
-  MCP servers reach opencode.json and Gemini CLI's settings only once each holds every ask form.
-  Allow rules stay with each client. Every `.claude/syntek-*-permissions.py` present is the same
-  script.
+  permission keys; it never creates a file, and never removes a rule. Where the settings file
+  now allows an MCP tool it once asked about (the ElevenLabs tools since media 0.10.0), the ask
+  written for it still prompts: each run notes that rule, for the author to delete by hand where
+  the allow is meant for that client too. Run it once after the first copy, because the MCP asks
+  reach Gemini CLI and OpenCode, and the voice remix asks OpenCode, only this way (Gemini CLI
+  cannot hold a shell ask, and `--check` says so), and again after changing
+  `.claude/settings.json` or adding a client, with the author's agreement. Run `--write` too
+  when an update report gives it: the two MCP servers reach opencode.json and Gemini CLI's
+  settings only once each holds every ask form. Allow rules stay with each client. Every
+  `.claude/syntek-*-permissions.py` present is the same script.
 - **The data root stays out of the session.** A data root is a folder outside every
   repository that holds a `.syntek-data-root` marker; this machine's is the one
   `SYNTEK_DATA_ROOT` names. Claude Code's `PreToolUse` hook (where `.claude/settings.json`

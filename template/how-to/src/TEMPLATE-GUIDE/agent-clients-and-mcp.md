@@ -128,7 +128,10 @@ With your agreement, this command adds the missing rules, changing only the perm
 for f in .claude/syntek-*-permissions.py; do python3 "$f" --write; break; done
 ```
 
-It never creates a client file.
+It never creates a client file, and it never removes a rule.
+If you move an MCP tool from the ask list to the allow list in `.claude/settings.json`, the ask rule the script wrote for that tool stays in each client's file, and that client still asks you first.
+Both commands print a note naming each such rule, so you can delete it by hand where you want the allow in that client too.
+A note is not a problem: the command still ends by saying that every rule it can express is in place.
 Run it after each template is first copied into the project, after an update adds deny or ask rules to `.claude/settings.json`, and after you add a client.
 What it writes for Codex and Gemini CLI works only once you trust the project.
 Its OpenCode rules assume you start OpenCode at the top of the project.

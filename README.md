@@ -2,7 +2,7 @@
 
 **A Copier template that adds audio and video production to a repository — brand, scripts, production and publishing layers, a small ffmpeg toolkit and a Claude Code skill suite — for a business or an author.**
 
-![Version](https://img.shields.io/badge/version-0.10.0-blue)
+![Version](https://img.shields.io/badge/version-0.11.0-blue)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
 ![Template: Copier](https://img.shields.io/badge/template-copier-blue)
 
@@ -407,6 +407,8 @@ The second run updates from the version you had (Copier prints 'Updating to temp
 
 **Updating to 0.10.0.** The nine ElevenLabs tools that spend credits are allowed, not asked (D90): a batch still runs only after you agree it and its cost, and each call is still logged in `production/src/credits-log.md`, but Claude Code no longer stops before every call. An update never removes or changes an entry of yours, so a project made earlier keeps its nine `mcp__elevenlabs__` asks, and its prompts, until you move them from `"ask"` to `"allow"` in `.claude/settings.json` by hand; keep the two `voice remix run` asks. The permissions script never removes a rule either: delete the nine from any client file it wrote (Gemini CLI's `tools.confirmationRequired`, OpenCode's ask rules, and Codex's tables where `.codex/config.toml` declares the server). Keeping the asks is your choice: `python3 toolkit/media.py check --setup` notes them, and no longer fails a tool you allow. No migration runs.
 
+**Updating to 0.11.0.** Media vendors syntek-author v0.12.0, whose permissions script now notes each rule in another coding agent's file that still asks first for an MCP tool `.claude/settings.json` allows, such as an ElevenLabs tool you moved to `"allow"` for 0.10.0 (D91). Run `python3 .claude/syntek-media-permissions.py --check` and delete by hand each rule it names, where the allow is meant for that client too. The script still never removes a rule, and a note never changes its exit code. The shared chapter `how-to/src/TEMPLATE-GUIDE/agent-clients-and-mcp.md` says the same and is put back by the update script on Python 3.14. No migration runs.
+
 **Why Python 3.14.** Every update ends with media's update script, `migrations/family-update.py`, and the outside-link pair runs around the render; both run on the Python that runs Copier (D81, D85). The quoted `--python '>=3.14'` makes `uvx` choose 3.14 or later; on an older Python each script changes nothing and says so in a message framed in lines of `=`.
 
 **Why `-a`.** The answers file is called `.copier-answers.syntek-media.yml`, not Copier's default `.copier-answers.yml`, so that it can sit beside syntek-author's own. Copier only finds a non-default answers file when you name it; without `-a` it stops and changes nothing.
@@ -639,7 +641,7 @@ bash .github/scripts/run-all.sh --author "$A"
 
 `shipped-brands.sh`, `doc-references.sh` and `toolkit-smoke.sh` take a rendered tree; `generate-all.sh` makes them.
 The audits need Python 3.14: `.github/scripts/_common.sh` pins `UV_PYTHON` to `python3` where it is unset, so every Copier they run, and the family scripts inside it, run on 3.14, and it stops a run with exit `2` where `python3` or `UV_PYTHON` is older.
-The renders over syntek-author, the over-author half of `update-test.sh` check 24 and `coexist-test.sh` need a syntek-author checkout, named with `--author DIR`: a clean clone of [github.com/Syntek-Dev/syntek-author](https://github.com/Syntek-Dev/syntek-author) at the tag media vendors from, `v0.11.1` (`SYNTEK_AUTHOR_TAG` in `.github/workflows/audit-template.yml`), made with `git clone --branch "$TAG"` as above, which reads the tag from the workflow, as CI makes it, or the checks that compare the family files and the frozen names report the drift. Without one they print a named SKIP and exit `0`; `coexist-test.sh` check 24 also SKIPs where that checkout is older than v0.6.0 or `make` is missing. A SKIP is never reported as a pass, and no release is tagged while `run-all.sh`'s summary counts one for `coexist-test.sh`.
+The renders over syntek-author, the over-author half of `update-test.sh` check 24 and `coexist-test.sh` need a syntek-author checkout, named with `--author DIR`: a clean clone of [github.com/Syntek-Dev/syntek-author](https://github.com/Syntek-Dev/syntek-author) at the tag media vendors from, `v0.12.0` (`SYNTEK_AUTHOR_TAG` in `.github/workflows/audit-template.yml`), made with `git clone --branch "$TAG"` as above, which reads the tag from the workflow, as CI makes it, or the checks that compare the family files and the frozen names report the drift. Without one they print a named SKIP and exit `0`; `coexist-test.sh` check 24 also SKIPs where that checkout is older than v0.6.0 or `make` is missing. A SKIP is never reported as a pass, and no release is tagged while `run-all.sh`'s summary counts one for `coexist-test.sh`.
 
 ---
 

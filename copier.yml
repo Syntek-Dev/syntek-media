@@ -258,7 +258,7 @@ _exclude:
   - /.claude/mcp_config.json
   #
   # D80: seventeen more shared paths, syntek-author's family-shared files (syntek-author D48,
-  # D51), vendored byte for byte from its v0.11.1 tag (since 0.9.0, D89) and listed in
+  # D51), vendored byte for byte from its v0.12.0 tag (since 0.11.0, D91) and listed in
   # family-shared.json: the Gemini CLI settings and their pair, OpenCode's settings, the
   # SKILL.md of the seven working-practice skills, the two session hooks with the
   # .claude/hooks/ pair, and the handoffs/ pair. Each takes the same two lines as the
@@ -289,7 +289,7 @@ _exclude:
   - "<: if _copier_operation == 'update' :>/handoffs/CLAUDE.md<: endif :>"
   #
   # D84: fourteen more shared paths, syntek-author's family-shared files for the user guide
-  # (syntek-author D56), vendored byte for byte from its v0.11.1 tag (since 0.9.0, D89) with
+  # (syntek-author D56), vendored byte for byte from its v0.12.0 tag (since 0.11.0, D91) with
   # every other family file and listed in family-shared.json: the guide guard,
   # .claude/hooks/how-to-read-only.sh, then the five container pairs of how-to/ and its three
   # shared chapters, in syntek-author's order. Each takes the same two lines as the rest, FILE
@@ -978,8 +978,9 @@ DATE:
 # project uses, and their models (syntek-author D47); where its binary files are kept, and
 # with what layout (syntek-author D50); and which service keeps a copy of that data root
 # (syntek-author D53). Since 0.5.0 (D80) the lines strictly between the two marker lines below
-# are syntek-author's family-shared 'questions' block, byte for byte: since 0.9.0 at its
-# v0.11.1 tag (D89), not its v0.5.0, v0.8.0 or v0.9.1 (D81), as family-shared.json records it.
+# are syntek-author's family-shared 'questions' block, byte for byte: since 0.11.0 at its
+# v0.12.0 tag (D91), not its v0.5.0, v0.8.0, v0.9.1 or v0.11.1 (D81, D89), as
+# family-shared.json records it.
 # Never edit them here: they come again only from a later syntek-author tag (one tag for all,
 # D85). Its client and model defaults now read the project's previous answers, then
 # syntek-author's record (syntek-author D47 and its Section 9 rule 7), so its peer read covers
@@ -1399,7 +1400,7 @@ _migrations:
   #
   # Since 0.4.5 the pair is syntek-author's family-shared 'migrations' block (D85; syntek-author
   # D48): the lines strictly between the two marker lines below are that block's bytes, since
-  # 0.9.0 at syntek-author's v0.11.1 tag (D89), as migrations/agents-outside-link.py is its
+  # 0.11.0 at syntek-author's v0.12.0 tag (D91), as migrations/agents-outside-link.py is its
   # script. The block's bytes are unchanged since v0.5.0; the script now needs Python 3.14 and,
   # below it, moves nothing and prints a framed message naming the Python found. Never edit
   # either here; both come again only from a later syntek-author tag (shipped-seeds.sh checks
@@ -1471,8 +1472,8 @@ _migrations:
   - version: v0.9.0
     command: '"<% _copier_python %>" "<% _copier_conf.src_path %>/migrations/v0.9.0-footage-roles.py"'
     when: "<% _stage == 'after' %>"
-  # D81 (0.6.0): syntek-author's family-shared 'update' block, byte for byte from its v0.11.1
-  # tag (D89); the marker lines are syntek-author's too, so their D48 is syntek-author's decision,
+  # D81 (0.6.0): syntek-author's family-shared 'update' block, byte for byte from its v0.12.0
+  # tag (D91); the marker lines are syntek-author's too, so their D48 is syntek-author's decision,
   # never media's D48. Its one entry runs migrations/family-update.py, vendored from the same
   # tag and never edited here, through _copier_python. It is the second stated exception to
   # the version-keyed rule (above, and .claude/CLAUDE.md Section 7.7), and it stays LAST, so it
@@ -1508,8 +1509,10 @@ _migrations:
 # rest). Since 0.10.0 (D90) a paragraph, after the 0.6.0 one, says the nine credit-spending
 # ElevenLabs tools are allowed, not asked, and that an existing project moves them by hand,
 # in .claude/settings.json and in any client file the permissions script wrote, because
-# neither an update nor that script ever removes an entry. Since 0.6.0 the 0.4.4 paragraph no longer gives the two remix asks by hand: D81's
-# update script adds both once, on Python 3.14, never one the owner removed after committing
+# neither an update nor that script ever removes an entry. Since 0.11.0 (D91) a paragraph
+# after it points owners to the note syntek-author v0.12.0's permissions script prints for
+# such a rule. Since 0.6.0 the 0.4.4 paragraph no longer gives the two remix asks by hand:
+# D81's update script adds both once, on Python 3.14, never one the owner removed after committing
 # it, and until then check --setup reports each missing one; the Consent and credits-log
 # edits stay by hand. And a 0.6.0 paragraph, before the BRAND_KIND one (D81, D84): Python
 # 3.14 and the framed message; syntek-author first; the read-only guide; untracked files
@@ -1597,6 +1600,13 @@ _message_before_update: |
   mcp_elevenlabs_* entries of tools.confirmationRequired in .gemini/settings.json, and the
   elevenlabs_* ask rules of opencode.json). Or keep the asks: python3 toolkit/media.py check
   --setup notes them, and no longer fails a tool you allow.
+
+  Updating to 0.11.0: the permissions script now notes each rule in another coding agent's
+  file that still asks first for an MCP tool .claude/settings.json allows, such as an
+  ElevenLabs tool you moved to "allow" for 0.10.0 (D91). Run python3
+  .claude/syntek-media-permissions.py --check and delete by hand each rule it names, where
+  the allow is meant for that client too. It never removes a rule, and a note never changes
+  its exit code.
 
   BRAND_KIND never changes: the update refuses it, because a different brand kind is a new
   project. After a platform or media-kind change, edit by hand the files that describe your
@@ -1866,7 +1876,7 @@ _tasks:
   # a failing task aborts the whole generation, or the whole update, after the files are
   # already written. Tasks 1 and 2 are syntek-author's exact commands, so without git task 1
   # fails as syntek-author's does; the toolkit and the skills need git in any case. Task 5 is
-  # syntek-author's too, transcribed byte for byte from its v0.11.1 copier.yml, and stays
+  # syntek-author's too, transcribed byte for byte from its v0.12.0 copier.yml, and stays
   # last. No task runs the permissions script: _message_after_copy item (2) gives its --write.
   #
   # There are no `mv` seed tasks. Seeds are _skip_if_exists, which is safe over an existing

@@ -17,8 +17,12 @@ Drift is a mapped rule missing from an existing client file, or one a later, les
 rule overrides: in opencode.json that includes an agent's own rules (agents.<id>.permissions),
 which OpenCode applies after the file's, so --write cannot outweigh them and only reports
 them. Rules a client file holds beyond the mapped ones belong to the project's owner and are
-never flagged or removed. Rules OpenCode reads from outside the project (the user's own
-configuration) are beyond what this script can see.
+never flagged or removed. One exception is only noted: an ask in the form this script writes
+for an mcp__S__T ask (OpenCode's top-level S_T rule, Codex's approval_mode = "prompt", Gemini
+CLI's mcp_S_T) whose tool settings.json now allows (by mcp__S__T, mcp__S or mcp__S__*, with no
+ask or deny over it). That client still asks first, so the run prints a note naming the rule
+to delete by hand; it is never removed and never drift. Rules OpenCode reads from outside the
+project (the user's own configuration) are beyond what this script can see.
 
 What is written (version 1: deny and ask rules only):
 
@@ -523,6 +527,109 @@ def apply_gemini(path: Path, plan: Plan, write: bool, out: list[str]) -> int:
 APPLIERS = {"opencode": apply_opencode, "codex": apply_codex, "gemini-cli": apply_gemini}
 
 
+# ── Asks left behind by an allow ────────────────────────────────────────────
+
+
+def mcp_rule_parts(rule: str) -> tuple[str, str | None] | None:
+    """'mcp__S__T' -> (S, T); 'mcp__S' and 'mcp__S__*' -> (S, None), the whole server; else None."""
+    star = rule.endswith("__*") and NAME_SAFE.fullmatch(rule[:-3]) is not None
+    tool, spec = (rule[:-3], None) if star else split_rule(rule)
+    if spec is not None or not tool.startswith("mcp__"):
+        return None
+    if star:
+        return (tool[5:], None) if mcp_parts(tool) is None and tool[5:] else None
+    parts = mcp_parts(tool)
+    if parts is None:
+        return (tool[5:], None) if tool[5:] else None
+    return (parts[0], None) if parts[1] == "*" else parts
+
+
+def allowed_mcp(rules: list[tuple[str, str]]) -> tuple[set[str], set[str], callable]:
+    """The servers settings.json allows a tool of, every server any of its MCP rules names, and a
+    test of (S, T): true when an allow covers the tool and no ask or deny does (Claude Code's deny
+    and ask outrank an allow)."""
+    held: dict[str, list[tuple[str, str | None, str]]] = {"allow": [], "ask": [], "deny": []}
+    for effect, rule in rules:
+        parts = mcp_rule_parts(rule)
+        if parts:
+            held[effect].append((*parts, rule))
+
+    def covers(effect: str, s: str, t: str) -> str | None:
+        for rule_s, rule_t, rule in held[effect]:
+            if rule_s == s and rule_t in (None, t):
+                return rule
+        return None
+
+    def allows(s: str, t: str) -> str | None:
+        if covers("ask", s, t) or covers("deny", s, t):
+            return None
+        return covers("allow", s, t)
+
+    named = {s for effect in held for s, _t, _r in held[effect]}
+    return {s for s, _t, _r in held["allow"]}, named, allows
+
+
+def name_splits(name: str) -> list[tuple[str, str]]:
+    """Every (S, T) an underscore-joined 'S_T' could stand for: a server name may hold '_'."""
+    if not NAME_SAFE.fullmatch(name):
+        return []  # a glob or other character: never a form this script writes
+    return [(name[:i], name[i + 1:]) for i, c in enumerate(name) if c == "_" and 0 < i < len(name) - 1]
+
+
+def stale_asks(client: str, path: Path, rules: list[tuple[str, str]]) -> list[str]:
+    """Notes on each ask in the form this script writes for an mcp__S__T ask (OpenCode's
+    top-level S_T rule, Codex's approval_mode = "prompt", Gemini CLI's mcp_S_T) whose tool
+    settings.json now allows. The rule still prompts in that client. It is never removed and
+    never counted as drift: whether the allow is meant for that client too is the owner's call.
+    OpenCode's and Gemini CLI's names join server and tool with '_', and a server name may hold
+    '_', so a rule is noted only when every reading of its name whose server settings.json
+    names is a tool it allows: a rule still mapped from an ask is never noted."""
+    servers, named, allows = allowed_mcp(rules)
+    if not servers:
+        return []
+    found: list[tuple[str, list[tuple[str, str]]]] = []  # (client rule, its readings as (S, T))
+    if client == "opencode":
+        data = load_json(path)
+        perms = data.get("permissions") if isinstance(data.get("permissions"), list) else []
+        for i, r in enumerate(perms):
+            if not (isinstance(r, dict) and r.get("effect") == "ask" and r.get("resource") == "*"
+                    and isinstance(r.get("action"), str)):
+                continue
+            # OpenCode applies the last matching rule: a later rule for this action decides it.
+            later = [x for x in perms[i + 1:] if isinstance(x, dict) and isinstance(x.get("action"), str)
+                     and isinstance(x.get("resource"), str) and glob_match(r["action"], x["action"])
+                     and glob_match("*", x["resource"])]
+            if later and later[-1].get("effect") != "ask":
+                continue
+            found.append((json.dumps(r), name_splits(r["action"])))
+    elif client == "codex":
+        try:
+            data = tomllib.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as err:
+            raise Unreadable(f"{path} is not readable TOML: {err}") from None
+        table = data.get("mcp_servers", {})
+        for s in sorted(servers):
+            server = table.get(s) if isinstance(table, dict) else None
+            tools = server.get("tools") if isinstance(server, dict) else None
+            for t, tool in (tools.items() if isinstance(tools, dict) else []):
+                if isinstance(tool, dict) and tool.get("approval_mode") == "prompt":
+                    found.append((f"[mcp_servers.{toml_key(s)}.tools.{toml_key(t)}] approval_mode = \"prompt\"", [(s, t)]))
+    elif client == "gemini-cli":
+        data = load_json(path)
+        tools = data.get("tools", {})
+        names = tools.get("confirmationRequired", []) if isinstance(tools, dict) else []
+        for name in names if isinstance(names, list) else []:
+            if isinstance(name, str) and name.startswith("mcp_"):
+                found.append((f"tools.confirmationRequired holds {json.dumps(name)}", name_splits(name[4:])))
+    notes = []
+    for label, readings in found:
+        verdicts = [allows(s, t) for s, t in readings if s in named]
+        if verdicts and all(verdicts):
+            notes.append(f"note: {label} still asks first, but settings.json allows {verdicts[0]}; "
+                         "if the allow is meant for this client too, delete that rule by hand")
+    return notes
+
+
 # ── The run ─────────────────────────────────────────────────────────────────
 
 
@@ -531,7 +638,7 @@ def run(root: Path, clients: list[str], write: bool) -> int:
     print(f"Rules from {root / '.claude' / 'settings.json'}: "
           f"{sum(e == 'deny' for e, _ in rules)} deny, {sum(e == 'ask' for e, _ in rules)} ask, "
           f"{sum(e == 'allow' for e, _ in rules)} allow")
-    total = 0
+    total = stale = 0
     for client in clients:
         plan = PLANNERS[client](rules)
         out: list[str] = []
@@ -543,6 +650,9 @@ def run(root: Path, clients: list[str], write: bool) -> int:
         else:
             head = f"{client}: {rel}"
             total += APPLIERS[client](root / rel, plan, write, out)
+            left_behind = stale_asks(client, root / rel, rules)
+            stale += len(left_behind)
+            out += [f"  {n}" for n in left_behind]
         print(f"\n{head}")
         if rel is not None and not (root / rel).is_file():
             out = [f"  · would hold {json.dumps(w[1]) if isinstance(w[1], dict) else w[1]} ({w[2]})" for w in plan.wanted]
@@ -553,6 +663,9 @@ def run(root: Path, clients: list[str], write: bool) -> int:
         for line in plan.left:
             print(f"  left to the client: {line}")
     print()
+    if stale:
+        print(f"· {stale} client rule(s) still ask first for a tool settings.json allows; see the notes above "
+              "(never removed, and not drift)")
     if total:
         print(f"✗ {total} rule(s) missing or overridden" + ("; they could not be written, so set them by hand" if write else "; run with --write to add them"))
         return 1
@@ -686,6 +799,9 @@ def self_test() -> int:
     check("Bash(npm run:*) -> shell 'npm run *'", shell_resource("npm run:*") == ("npm run *", ""))
     check("Bash(rm -rf $(pwd)) is reported", shell_resource("rm -rf $(pwd)")[0] is None)
     check("mcp__S__T splits at the first '__'", mcp_parts("mcp__my_srv__go__now") == ("my_srv", "go__now"))
+    check("an MCP rule names one tool, or with mcp__S or mcp__S__* the whole server",
+          [mcp_rule_parts(x) for x in ("mcp__a__b", "mcp__a", "mcp__a__*", "mcp__a__b__*", "mcp__a(x)", "Bash(x)")]
+          == [("a", "b"), ("a", None), ("a", None), None, None, None])
     check("OpenCode's matcher: '*' crosses '/'", glob_match("a/b/c.pdf", "*.pdf") and glob_match("make", "make *"))
 
     rules = [(e, r) for e in ("deny", "ask", "allow") for r in SETTINGS["permissions"][e]]
@@ -766,6 +882,72 @@ def self_test() -> int:
         check("a second --write changes nothing", code == 0 and all(p.read_bytes() == b for p, b in after.items()))
         code, _ = quiet(r + ["--check"])
         check("--check after --write exits 0", code == 0)
+        # An ask the owner moves to allow: the client rules written for it are noted, never removed.
+        written = {p: p.read_bytes() for p in before}
+        moved = json.loads(json.dumps(SETTINGS))
+        moved["permissions"]["ask"].remove("mcp__voice__speak")
+        moved["permissions"]["allow"].append("mcp__voice__speak")
+        (root / ".claude" / "settings.json").write_text(json.dumps(moved), encoding="utf-8")
+        code, text = quiet(r + ["--check"])
+        check("an ask moved to allow: --check exits 0 and notes the rule left in each client",
+              code == 0 and text.count("settings.json allows mcp__voice__speak") == 3
+              and '"action": "voice_speak"' in text and "[mcp_servers.voice.tools.speak]" in text
+              and 'confirmationRequired holds "mcp_voice_speak"' in text
+              and "3 client rule(s) still ask first" in text)
+        code, _ = quiet(r + ["--write"])
+        check("an ask moved to allow: --write removes nothing",
+              code == 0 and all(p.read_bytes() == b for p, b in written.items()))
+        moved["permissions"]["allow"][-1] = "mcp__voice"
+        moved["permissions"]["ask"].append("mcp__voice__speak")
+        (root / ".claude" / "settings.json").write_text(json.dumps(moved), encoding="utf-8")
+        code, text = quiet(r + ["--check"])
+        check("a server-wide allow with the tool still asked: no note", code == 0 and "note:" not in text)
+        moved["permissions"]["ask"].remove("mcp__voice__speak")
+        moved["permissions"]["allow"][-1] = "mcp__voice__*"
+        (root / ".claude" / "settings.json").write_text(json.dumps(moved), encoding="utf-8")
+        code, text = quiet(r + ["--check"])
+        check("mcp__voice__* allows the whole server: the rule in each client is noted",
+              code == 0 and text.count("settings.json allows mcp__voice__*") == 3)
+        moved["permissions"]["allow"].pop()
+        (root / ".claude" / "settings.json").write_text(json.dumps(moved), encoding="utf-8")
+        code, text = quiet(r + ["--check"])
+        check("an ask removed without an allow: no note (Claude Code asks by default)", code == 0 and "note:" not in text)
+        for label, perms, oc_rules in (
+            ("a rule still mapped from an ask, read through a shorter allowed server: no note",
+             {"allow": ["mcp__a", "mcp__a__b_c"], "ask": ["mcp__a_b__c"], "deny": []},
+             [{"action": "a_b_c", "resource": "*", "effect": "ask"}]),
+            ("an owner's glob ask is never read as the script's form: no note",
+             {"allow": ["mcp__voice"], "ask": [], "deny": []},
+             [{"action": "voice_*", "resource": "*", "effect": "ask"}]),
+            ("a later OpenCode allow already decides the action: no note",
+             {"allow": ["mcp__voice__speak"], "ask": [], "deny": []},
+             [{"action": "voice_speak", "resource": "*", "effect": "ask"},
+              {"action": "voice_speak", "resource": "*", "effect": "allow"}]),
+        ):
+            (root / ".claude" / "settings.json").write_text(json.dumps({"permissions": perms}), encoding="utf-8")
+            keep = (root / "opencode.json").read_bytes()
+            dump_json(root / "opencode.json", {"permissions": oc_rules})
+            code, text = quiet(r + ["--check", "--client", "opencode"])
+            check(label, code == 0 and "note:" not in text)
+            (root / "opencode.json").write_bytes(keep)
+        (root / ".claude" / "settings.json").write_text(
+            json.dumps({"permissions": {"allow": ["mcp__a", "mcp__a_b"], "ask": [], "deny": []}}), encoding="utf-8")
+        keep = (root / "opencode.json").read_bytes()
+        dump_json(root / "opencode.json", {"permissions": [{"action": "a_b_c", "resource": "*", "effect": "ask"}]})
+        code, text = quiet(r + ["--check", "--client", "opencode"])
+        check("every reading allowed: one note for one rule", code == 0 and text.count("note:") == 1)
+        (root / ".claude" / "settings.json").write_text(
+            json.dumps({"permissions": {"allow": ["mcp__voice__read_aloud"], "ask": [], "deny": []}}), encoding="utf-8")
+        dump_json(root / "opencode.json", {"permissions": [{"action": "voice_read_aloud", "resource": "*", "effect": "ask"}]})
+        gkeep = (root / ".gemini" / "settings.json").read_bytes()
+        dump_json(root / ".gemini" / "settings.json", {"tools": {"confirmationRequired": ["mcp_voice_read_aloud"]}})
+        code, text = quiet(r + ["--check", "--client", "opencode", "--client", "gemini-cli"])
+        check("a tool name holding '_' (read_aloud) is still noted in OpenCode and Gemini CLI",
+              code == 0 and text.count("settings.json allows mcp__voice__read_aloud") == 2)
+        (root / "opencode.json").write_bytes(keep)
+        (root / ".gemini" / "settings.json").write_bytes(gkeep)
+        (root / "opencode.json").write_bytes(keep)
+        (root / ".claude" / "settings.json").write_text(json.dumps(SETTINGS), encoding="utf-8")
         data = load_json(root / "opencode.json")
         data["permissions"] = [p for p in data["permissions"] if p.get("resource") != "build/*"]
         dump_json(root / "opencode.json", data)
