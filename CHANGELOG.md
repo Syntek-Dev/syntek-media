@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Changed
+
+- **`family-shared.json` records `unreleased` again** after the `v0.10.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9). This is what `shipped-seeds.sh --write-manifest` writes on the first commit after a release tag, so that check 23 holds on every commit until the next release. Development only: nothing ships.
+
 ## [0.10.0] - 15/11/2026
 
 Adds D90: the nine ElevenLabs tools that spend credits are allowed, not asked. A production run makes a hundred calls or more. Each one was a prompt, after the author had already agreed the batch and its cost, and that agreement is what guards the credits: rules 03 Section 4, the guard sentence in every skill that names a tool, and the credits log. The prompt per call added nothing.
