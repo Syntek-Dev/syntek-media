@@ -12,11 +12,11 @@ live in `toolkit/data/platforms.toml`, not here.
 brand/src/
 ├── CONTEXT.md                  ← this file
 ├── CLAUDE.md                   ← operating rules
-├── design-register.md          ← seed: one row per design, its Claude Design link and its export
-├── design-system/              ← the kit Claude Design syncs with
+├── design-register.md          ← seed: one row per design, the app it was made in and its export
+├── design-system/              ← the kit, as plain files written by hand
 │   ├── tokens.css              ← seed: the custom properties every layout imports
 │   ├── fonts/                  ← the brand's font files; each licence is in the rights register
-│   └── previews/               ← seven @dsCard cards; thumbnail.html and card.html are the layouts
+│   └── previews/               ← seven cards, each indexed by @dsCard; thumbnail.html and card.html are the layouts
 ├── exports/                    ← small exported design assets, committed as ordinary files
 │   └── large/                  ← large exports, stored by Git LFS through its own .gitattributes
 ├── voice/                      ← voice.md (seed): spoken style, narrators, pronunciations
@@ -36,12 +36,12 @@ brand/src/
 ## What's here
 
 - `brand/src/design-system/` — **the source of truth for how the brand looks.** `tokens.css`
-  holds every colour, typeface, space and caption style; the preview cards show them to Claude
-  Design, and two of them, `design-system/previews/thumbnail.html` and
+  holds every colour, typeface, space and caption style; the preview cards show them, each
+  filed by its `@dsCard` index line, and two of them, `design-system/previews/thumbnail.html` and
   `design-system/previews/card.html`, are the brand's thumbnail and title-card layouts, which
   every later piece copies.
-- `brand/src/design-register.md` — one row per design: the brand's design-system project, and
-  every design exported from Claude Design, with where its file sits and how Git stores it.
+- `brand/src/design-register.md` — one row per design exported into this repository, with the
+  app it was made in, where its file sits and how Git stores it.
 - `brand/src/exports/` — exported assets of 10 MB or less; anything larger goes in
   `brand/src/exports/large/`, which Git LFS stores.
 - `brand/src/voice/` — **`voice.md`, the one record of how the brand sounds aloud**: pace and

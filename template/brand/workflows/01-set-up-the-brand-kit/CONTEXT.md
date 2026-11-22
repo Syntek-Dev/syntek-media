@@ -24,8 +24,7 @@ brand/workflows/01-set-up-the-brand-kit/
 - A font is added, replaced or found to lack a licence for video.
 - `python3 toolkit/media.py tokens` or `uv run toolkit/card.py check` fails.
 
-Reach for a **different** procedure when a component is to be brought across from or to Claude
-Design (`brand/workflows/02-sync-with-claude-design/`), an exported asset is to be filed
+Reach for a **different** procedure when a design is to be made in an app or its export filed
 (`brand/workflows/03-record-a-design-export/`), or one piece's thumbnail is being briefed
 (`publishing/workflows/04-brief-a-thumbnail/`).
 

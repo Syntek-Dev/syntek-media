@@ -131,6 +131,12 @@ It prints the command that installs the browser, which you run yourself:
 uv run --with playwright==1.64.0 playwright install chromium
 ```
 
+**Drawing the boards stops with exit code 2.**
+`python3 toolkit/media.py boards` draws through the same browser as cards, and through ffmpeg for frames and the animatic.
+When the browser, uv or ffmpeg is missing it stops and names the tool and how to install it.
+It stops the same way where the piece has no storyboard yet, so board the piece first.
+The storyboard then waits for the tool, or you may waive seeing the boards in your own words, and the waiver is recorded with its date and reason.
+
 **A card or scene command stops and names `MEDIA_CHROMIUM`.**
 `MEDIA_CHROMIUM` is set, so cards and scenes use the browser it names instead of Playwright's own, and that browser could not be found or would not start.
 The command stops with exit code 2, and never falls back to Playwright's own Chromium.
@@ -141,6 +147,22 @@ Correct the value at user scope, to the browser's full path or a command name yo
 Every render, caption burn and audio master needs an ffmpeg built with libass, libx264 and libmp3lame.
 Install the full build your system offers, as the setup check's fix line says, then check again.
 Encoding images to WebP or AVIF needs further libraries, which are optional: JPEG and PNG need none.
+
+**A long master runs out of memory.**
+A master of many clips already renders its picture in sections, split at its cuts, and its sound in one pass.
+A finished master prints one `memory: peak` line, the most memory one of its renders held, which tells you what limit to set.
+Set `MEDIA_THREADS` at user scope to fewer threads, or pass `--memory-max SIZE`, so the render stops at that limit with exit code 2 instead of taking the machine.
+Without `MEDIA_THREADS`, the toolkit takes the CPU limit the system sets, where there is one, and otherwise every CPU but two.
+`production/docs/reference/edit-decision-lists.md` says which clips cost memory.
+
+**A render prints a note that the true peak is above the ceiling.**
+Encoding to a compressed format can lift the loudest moments over the ceiling, so the command renders again, at most twice, aiming a little lower.
+On very peaky sound the last render can still report a finding, sometimes the loudness instead of the peak.
+Report it as printed, and never change the target to force a pass: `production/docs/reference/sound-and-loudness.md` explains the targets.
+
+**`speak plan` or `audiobook text` reports `FILE NAME`.**
+ElevenLabs names the saved file from the first five characters of the text it is sent, so a '/' of a pronunciation written in IPA there, or a backslash, would fail the save after the credits are spent.
+Never send it: respell that word or reorder the words, and run the command again.
 
 ## When updating
 

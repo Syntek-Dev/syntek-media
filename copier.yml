@@ -621,7 +621,8 @@ _skip_if_exists:
   - /how-to/workflows/CLAUDE.md
   # ── brand/: the design register, the design system and the spoken voice ──
   # tokens.css and the two layout components (previews/thumbnail.html and previews/card.html)
-  # are the brand's source of truth, synced with its Claude Design project by the author (D18).
+  # are the brand's source of truth, written by hand (D18); art made in a design app comes back
+  # as an export, never into the kit (D96). design-register.md keeps an older project's header.
   - /brand/src/design-register.md
   - /brand/src/design-system/tokens.css
   - /brand/src/design-system/previews/colors.html
@@ -1607,6 +1608,38 @@ _message_before_update: |
   .claude/syntek-media-permissions.py --check and delete by hand each rule it names, where
   the allow is meant for that client too. It never removes a rule, and a note never changes
   its exit code.
+
+  Updating to 0.12.0: M3 now needs the board sheet seen (D92). Before a piece is
+  storyboarded, python3 toolkit/media.py boards <piece> draws one still per board, a
+  contact sheet and, where a board moves or builds up, an animatic, into the ignored
+  production/src/renders/<piece>/boards/; M3 is dated once you have seen them. A piece
+  already past M3 keeps its date until it is next re-boarded. A shot beyond what assemble
+  makes (a moving push-in or pan, a build-up, a lower third, a composite) is made in an
+  outside editor, DaVinci Resolve, EffectCraft, FilmCraft or AniCraft, and logged as
+  footage, its shot-list Type edited and its Source to render until then, as
+  production/docs/reference/complex-shots.md says (D93). assemble now caps each input's
+  decoder threads and renders a long picture in sections, so a many-clip master fits under
+  a memory cap, and prints its peak memory; every render's threads follow MEDIA_THREADS,
+  else the system's CPU quota, else every CPU but two. Every lossy output is measured after
+  its encode and rendered again where its true peak is over the ceiling, a cut by lowering
+  its sound (D94); a master made earlier is checked only when you render it again. speak
+  plan and audiobook text now mark FILE NAME a request whose first five characters hold a
+  / (inline IPA), a backslash or a NUL, because the ElevenLabs server names the saved take
+  from them and the save fails after the credits are spent: respell the word or reorder
+  the words before it is sent (D95).
+
+  Claude Design leaves the template (D96). The update deletes
+  brand/workflows/02-sync-with-claude-design/ and brand/docs/reference/claude-design.md
+  (Git keeps them; your copies under brand/workflows/local/ or brand/docs/project/ stay,
+  outside the toolkit rule's paths from now on). Designs are made in the ArtCraft apps
+  (VectorCraft, PhotoCraft, DesignCraft) or DaVinci Resolve, exported into
+  brand/src/exports/ and recorded through brand/workflows/03-record-a-design-export/, as
+  brand/docs/reference/design-apps.md says. Seeds are never updated:
+  brand/src/design-register.md keeps its Claude Design link column and every link in it,
+  as history; new rows name the app, its version and the project file's label there, and
+  you may rename the header to Made in by hand. The @dsCard first line of each preview
+  card stays and is still checked. An app's export with sound is footage, its loudness
+  set by media.py, never by the app (D94). No migration runs.
 
   BRAND_KIND never changes: the update refuses it, because a different brand kind is a new
   project. After a platform or media-kind change, edit by hand the files that describe your

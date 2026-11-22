@@ -35,7 +35,7 @@ customer and member of staff who can be recognised.
   recognised need a `footage-release` or `likeness` row; filming on a client's premises needs a
   `location` row; a client's logo or work on screen is an `artwork` row, with that client's
   permission.
-- **Step 9 — also group the shoot by place.** The shoot list groups every `to shoot` shot by
+- **Step 10 — also group the shoot by place.** The shoot list groups every `to shoot` shot by
   location and names who must be on camera, so that one visit covers each place.
 
 - **Steps 4–6 — a scene uses the same domain rules.** Type every drawn board `scene`, frame

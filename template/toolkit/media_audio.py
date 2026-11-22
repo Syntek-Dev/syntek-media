@@ -5,10 +5,12 @@ Not run directly: python3 toolkit/media.py extract-audio, loudness …, audioboo
 call it, and media.py's self-test exercises it.
 
 Loudness (DESIGN D24): two-pass EBU R128 loudnorm, always with -ar on the output (loudnorm
-works at 192 kHz inside). social is the house target of platforms.toml [house]; podcast is
-[platform.podcast.apple_rss_audio]; acx masters to about -20 LUFS and -3.5 dBTP, inside the
-window of [audiobook.acx], which is then checked as ACX measures it: RMS, sample peak and the
-noise floor (the quietest 0.5 s window, windows of digital silence below -90 dB left out, so a
+works at 192 kHz inside); the written file is measured again, and one whose lossy encode lifted
+its true peak over the ceiling is rendered again with a lower peak target (to_ceiling, at most
+twice). social is the house target of platforms.toml [house]; podcast is
+[platform.podcast.apple_rss_audio]; acx masters to about -20 LUFS and -3.5 dBTP, its MP3 held
+under that peak by the same retry, inside the window of [audiobook.acx], which is then checked
+as ACX measures it: RMS, sample peak and the noise floor (the quietest 0.5 s window, windows of digital silence below -90 dB left out, so a
 padded file is measured by its own recording; never astats' own trough).
 
 The audiobook route (DESIGN D23): 'audiobook text' turns a chapter in syntek-author's markup
@@ -76,6 +78,22 @@ MODEL_LIMITS = {   # characters per request (ElevenLabs documentation, 03/10/202
 DEFAULT_LIMIT = 5000
 IPA_MODELS = {"eleven_v4", "eleven_v4_turbo"}   # read inline IPA between slashes (VERIFY on change)
 TAG_MODELS = {"eleven_v3", "eleven_v4", "eleven_v4_turbo"}   # confirmed by the maintainer
+# The ElevenLabs MCP server (elevenlabs-mcp 0.12.2, utils.make_output_file) names a saved file from
+# the request's first five characters, replacing only spaces, and calls the API before it saves, so a
+# '/' there (inline IPA such as '/feri/'), a backslash or a NUL fails the save after the credits are
+# spent (DESIGN D95).
+NAME_CHARS, NAME_HAZARDS = 5, ("/", "\\", "\0")
+NAME_FINDING = ("the server names the take from its first {n} characters, and {c} there fails the save "
+                "after the credits are spent; respell that word, or reorder the words, with the author")
+
+
+def name_hazard(request: str) -> str:
+    """The finding for a request whose first characters would break the server's file name, else ''."""
+    head = request[:NAME_CHARS]
+    found = [{"/": "'/'", "\\": "a backslash", "\0": "a NUL"}[c] for c in NAME_HAZARDS if c in head]
+    return NAME_FINDING.format(n=NAME_CHARS, c=" and ".join(found)) if found else ""
+
+
 SCENE = "QQSCENEBREAKQQ"   # a placeholder no chapter carries
 USE_PANDOC = True   # the self-test turns it off to prove the plain fallback
 BOOKS = ("Genesis|Gen|Exodus|Exod|Ex|Leviticus|Lev|Numbers|Num|Deuteronomy|Deut|Joshua|Josh|"
@@ -180,17 +198,57 @@ def loudnorm_filter(m: dict, target: tuple) -> str:
             "print_format=summary")
 
 
-def loudness_findings(p, target: tuple, name: str) -> tuple:
-    """(summary, findings) for a rendered file against a loudness target: within 1 LU, under the peak."""
-    got = ebur128(p)
+def under_ceiling(tp: float, peak: float) -> bool:
+    """The true-peak test every loudness verdict uses: within 0.2 dB of the ceiling."""
+    return tp <= peak + 0.2
+
+
+def loudness_findings(p, target: tuple, name: str, got=None) -> tuple:
+    """(summary, findings) for a rendered file against a loudness target: within 1 LU, under the
+    peak. got is p's ebur128 measurement where the caller has just taken it."""
+    got = got or ebur128(p)
     integrated, peak = target
     found = []
     if not abs(got["I"] - integrated) <= 1.0:
         found.append(f"integrated loudness {got['I']:.1f} LUFS is not within 1 LU of the {name} "
                      f"target {integrated:g}")
-    if not got["TP"] <= peak + 0.2:
+    if not under_ceiling(got["TP"], peak):
         found.append(f"true peak {got['TP']:.1f} dBTP is above the {name} ceiling {peak:g}")
     return f"{got['I']:.1f} LUFS, {got['TP']:.1f} dBTP, LRA {got['LRA']:.1f} LU", found
+
+
+PEAK_RETRIES = 2      # renders after the first, at most, aiming loudnorm's true peak lower
+PEAK_MARGIN = 0.3     # dB below the overshoot each retry aims
+PEAK_FLOOR = 3.0      # dB below the ceiling no retry aims under
+
+
+def to_ceiling(render_once, out, target: tuple, name: str, peak_only: bool = False, lever=None) -> tuple:
+    """Render, measure the written file, and render again while a lossy encode has lifted its
+    true peak over the ceiling: (summary, findings) of the last render. render_once(aim) writes
+    out with loudnorm aimed at aim, an (integrated, true peak) pair, measuring its source again
+    for that aim. loudnorm holds the peak at 192 kHz before the resample and the encode, and AAC
+    at 192k then added about 0.8 dB (a social master measured -0.4 dBTP against a -1 ceiling, and
+    pink noise with 5 kHz bursts -0.1; ffmpeg 9.0.2). Each retry lowers the peak target by the
+    overshoot and PEAK_MARGIN, never under the ceiling less PEAK_FLOOR, at most PEAK_RETRIES
+    times, with one note line naming the target; integrated loudness may then be the finding.
+    peak_only keeps only the true-peak finding, for a render that keeps its source's loudness
+    (cut, whose render_once turns the aim into a gain: aim less the ceiling) or that is judged
+    another way (the audiobook master, by the ACX check); lever(aim) words the note's remedy."""
+    integrated, peak = target
+    aim = peak
+    for attempt in range(PEAK_RETRIES + 1):
+        render_once((integrated, aim))
+        got = ebur128(out)
+        if under_ceiling(got["TP"], peak) or attempt == PEAK_RETRIES or aim <= peak - PEAK_FLOOR:
+            break
+        aim = round(max(peak - PEAK_FLOOR, aim - (got["TP"] - peak) - PEAK_MARGIN), 2)
+        remedy = lever(aim) if lever else f"loudnorm's peak target at {aim:g} dBTP"
+        print(f"  note: true peak {got['TP']:.1f} dBTP after the encode is above the {name} ceiling "
+              f"{peak:g}: rendering again with {remedy}")
+    summary, found = loudness_findings(out, target, name, got=got)
+    if peak_only:
+        found = [f for f in found if f.startswith("true peak")]
+    return summary, found
 
 
 AUDIO_CODECS = {".mp3": ["-c:a", "libmp3lame", "-b:a", "192k"], ".m4a": ["-c:a", "aac", "-b:a", "192k"],
@@ -207,7 +265,7 @@ def cmd_measure(args) -> int:
 
 
 def normalise(src: Path, out: Path, name: str, data=None) -> tuple:
-    """Two-pass loudnorm of src into out; (summary, findings)."""
+    """Two-pass loudnorm of src into out, held under the ceiling (to_ceiling); (summary, findings)."""
     target = C.loudness_target(name, data)
     info = C.probe(src)
     if not C.streams(info, "audio"):
@@ -223,10 +281,12 @@ def normalise(src: Path, out: Path, name: str, data=None) -> tuple:
     sr = C.streams(info, "audio")[0].get("sample_rate")
     ar = 44100 if name in ("acx", "podcast") else int(sr or 48000)
     pre = "aformat=channel_layouts=mono," if name == "acx" else ""
-    m = loudnorm_measure(src, target, pre=pre)
-    render(["-y"] + C.input_args(src) + ["-af", pre + loudnorm_filter(m, target), "-ar", str(ar)]
-           + codec + [str(out)], out, what="loudnorm")
-    return loudness_findings(out, target, name)
+
+    def once(aim):
+        m = loudnorm_measure(src, aim, pre=pre)
+        render(["-y"] + C.input_args(src) + ["-af", pre + loudnorm_filter(m, aim), "-ar", str(ar)]
+               + codec + [str(out)], out, what="loudnorm")
+    return to_ceiling(once, out, target, name)
 
 
 def render(cmd: list, out: Path, cwd=None, what="ffmpeg"):
@@ -545,11 +605,17 @@ def cmd_speak_plan(args) -> int:
     folder.mkdir(parents=True, exist_ok=True)
     print(f"speak plan {piece}: model {model}, limit {limit} characters per call")
     print(f"output_directory: {folder.resolve()}")
+    findings = 0
     for sid, request in requests:
-        print(f"{sid}: {len(request)} characters / {limit}" + (" — OVER LIMIT" if len(request) > limit else ""))
+        hazard = name_hazard(request)
+        print(f"{sid}: {len(request)} characters / {limit}" + (" — OVER LIMIT" if len(request) > limit else "")
+              + (" — FILE NAME" if hazard else ""))
         print(f"  request: {request}")
+        if hazard:
+            print(f"  file name: {hazard}")
+        findings += len(request) > limit or bool(hazard)
     print(f"total: {sum(len(request) for _, request in requests)} characters; {len(requests)} calls")
-    return 1 if any(len(request) > limit for _, request in requests) else 0
+    return 1 if findings else 0
 
 
 def voice_join_graph(segments: list, sample_rate: int, add, graph: list, prefix: str) -> float:
@@ -561,7 +627,7 @@ def voice_join_graph(segments: list, sample_rate: int, add, graph: list, prefix:
         if not math.isfinite(pause) or pause < 0:
             raise C.Fatal("pause_after must be finite and non-negative")
         samples = math.floor((duration + pause) * sample_rate + 0.5)
-        index = add(C.input_args(file))
+        index = add(["-threads", str(C.decoder_threads(video=False))] + C.input_args(file))
         label = f"{prefix}s{number}"
         graph.append(f"[{index}:a]asetpts=PTS-STARTPTS,aresample={sample_rate},"
                      f"aformat=sample_fmts=fltp:channel_layouts=mono,apad=whole_len={samples},"
@@ -1189,23 +1255,29 @@ def cmd_ab_text(args) -> int:
     print(f"audiobook text {C.shown(src)} → {args.piece} {ch} (footnotes {args.footnotes}; "
           f"limit {limit:,} characters: {why}; pronunciations as "
           f"{'inline IPA' if model in IPA_MODELS else 'respellings'})")
-    rows = []
+    rows, named = [], []
     for k, (chunk, pause) in enumerate(chunks, start=1):
         out = gen / f"{args.piece}.{ch}.p{k:02d}.txt"
         out.write_text(chunk + "\n", encoding="utf-8")
         rows.append((f"p{k:02d}", out.name, len(chunk), pause))
+        hazard = name_hazard(chunk)
+        named += [f"p{k:02d}"] if hazard else []
         print(f"  p{k:02d}  {len(chunk):>7,} characters  {C.shown(out)}"
-              + (f"  then {pause:g} s of room tone" if pause else ""))
+              + (f"  then {pause:g} s of room tone" if pause else "") + (" — FILE NAME" if hazard else ""))
+        if hazard:
+            print(f"       opens {chunk[:NAME_CHARS]!r}: {hazard}")
     side = write_sidecar(args.piece, ch, src, rows)
     print(f"  total {sum(len(c) for c, _ in chunks):,} characters in {len(chunks)} chunk(s); "
           f"the pauses between them are in {C.shown(side)}, never in the text")
+    if named:
+        print(f"Chunks whose opening would break the saved file's name ({', '.join(named)}): send none of "
+              "them until the word is respelled or the words reordered, with the author")
     if unspoken:
         print("Words and references with no spoken form (add a row to the Pronunciations table of "
               "brand/src/voice/voice.md, or settle them with the author, before any call):")
         for kind, item in unspoken:
             print(f"  {kind:<13} {item}")
-        return 1
-    return 0
+    return 1 if unspoken or named else 0
 
 
 # ── audiobook master ────────────────────────────────────────────────────────────────────
@@ -1281,15 +1353,19 @@ def cmd_ab_master(args) -> int:
         render(cmd + ["-filter_complex", graph, "-map", "[out]", "-ac", "1", "-ar", "44100",
                       "-c:a", "pcm_s16le", str(joined)], joined, what="joining the takes")
         target = C.loudness_target("acx")
-        m = loudnorm_measure(joined, target)
         tags = ["-id3v2_version", "3", "-metadata", f"title={title}", "-metadata",
                 f"album={piece_title(args.piece)}"]
         if ch not in CREDITS:
             tags += ["-metadata", f"track={int(ch[2:])}"]
         if not C.BRAND_NAME.startswith("<"):
             tags += ["-metadata", f"artist={C.BRAND_NAME}"]
-        render(["-y", "-i", str(joined), "-af", loudnorm_filter(m, target), "-ar", "44100", "-ac", "1",
-                "-c:a", "libmp3lame", "-b:a", "192k"] + tags + [str(out)], out, what="ACX master")
+
+        def once(aim):
+            render(["-y", "-i", str(joined), "-af", loudnorm_filter(loudnorm_measure(joined, aim), aim), "-ar",
+                    "44100", "-ac", "1", "-c:a", "libmp3lame", "-b:a", "192k"] + tags + [str(out)], out,
+                   what="ACX master")
+        # The MP3 encode can lift the peak loudnorm held; the ACX check below is the verdict.
+        to_ceiling(once, out, target, "acx", peak_only=True)
     inner = [f"{p:g} s after {Path(t).name}" for t, p in zip(takes, pauses) if p > 0]
     print(f"wrote {C.shown(out)} from {len(takes)} take(s): head {args.head:g} s, tail {args.tail:g} s"
           + (f"; room tone {', '.join(inner)}" if inner else ""))

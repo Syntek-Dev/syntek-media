@@ -35,7 +35,7 @@ only for large design exports in `brand/src/exports/large/`.
 | `location` | the label of the master copy's home |
 | `recorded` | DD/MM/YYYY |
 | `rights` | the rights-register ID when the file is licensed or shows people |
-| `notes` | for a generated file, the take or chapter it archives |
+| `notes` | for a generated file, the take or chapter it archives; for an outside editor's export, the editor, its version and the project file's label, never a path |
 
 `python3 toolkit/media.py footage add FILE --kind KIND --location LABEL` copies the file into the
 mirror when it lies outside it (it never moves the original), measures it and appends the next

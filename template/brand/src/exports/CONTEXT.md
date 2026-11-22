@@ -1,6 +1,6 @@
 # CONTEXT.md — brand/src/exports/
 
-Design assets exported from Claude Design, or made from a design, and kept in the repository so a
+Design assets exported from a design app, or made from a design, and kept in the repository so a
 piece can use them: a logo, a cover, a background plate, a lower-third, a print file. Files of
 10 MB or less are committed here as ordinary files; larger ones go in `large/`, which Git LFS
 stores. Every file here has a row in `brand/src/design-register.md`. Renders are not exports
@@ -24,7 +24,7 @@ brand/src/exports/
   the first export is recorded, this folder holds only its pair and `large/`.**
 - `large/` — the same, for files over 10 MB, which Git would otherwise commit whole; its own
   `.gitattributes` marks them for Git LFS.
-- Each file's row in `brand/src/design-register.md` gives its Claude Design link, its storage
+- Each file's row in `brand/src/design-register.md` gives the app it was made in, its storage
   (`git` here) and the date it was exported.
 - A revision sits beside the original it supersedes, which stays for reference and for pieces made
   with it; the register says which file is current.

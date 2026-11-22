@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board</title>
+<link rel="stylesheet" href="../../brand/src/design-system/tokens.css">
+<!--
+  The page of one board still, made by python3 toolkit/media.py boards before M3 (DESIGN D92):
+  never copied by a piece, never edited for one. The command fills the frame below for each board,
+  and each step of a build-up, in a scratch copy that links tokens.css and the picture by their
+  full paths, then renders it at the master's size with uv run toolkit/card.py. The picture is
+  already framed to the size (a card's own render, a still framed as assemble frames it, a frame
+  of logged video or a colour), or the board is a placeholder that names itself and says why. The
+  On screen cues sit over the picture in draft styling, inside a title-safe margin, so layout can
+  be judged; the finished words are a card's, made at M5. Every colour, face and space comes from
+  the brand's tokens; where a token is missing, the browser's own system colours stand in.
+-->
+<style>
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    background: var(--color-bg, Canvas);
+    color: var(--color-text, CanvasText);
+    font-family: var(--font-body, sans-serif);
+    font-weight: var(--weight-body, 400);
+  }
+  .frame { position: relative; width: 100%; height: 100%; }
+  .picture { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .placeholder {
+    position: absolute;
+    inset: 4vmin;
+    box-sizing: border-box;
+    border: 0.6vmin dashed var(--color-text-muted, GrayText);
+    background: var(--color-surface, Canvas);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5vmin;
+    padding: 6vmin;
+    text-align: center;
+  }
+  .placeholder p { margin: 0; }
+  .board-id {
+    font-family: var(--font-display, sans-serif);
+    font-weight: var(--weight-display, 700);
+    font-size: 9vmin;
+    color: var(--color-accent, CanvasText);
+  }
+  .why { font-size: 4.2vmin; }
+  .what { font-size: 3.4vmin; color: var(--color-text-muted, GrayText); max-width: 80%; }
+  .label {
+    position: absolute;
+    top: 3vmin;
+    left: 3vmin;
+    margin: 0;
+    padding: 0.8vmin 1.6vmin;
+    border-radius: var(--radius, 0.6vmin);
+    background: var(--color-bg, Canvas);
+    color: var(--color-text, CanvasText);
+    font-size: 2.6vmin;
+    opacity: 0.88;
+  }
+  /* The On screen cues: a lower third inside a 5% title-safe margin, one plate a cue. */
+  .cues {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    bottom: 8%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.6vmin;
+  }
+  .cue {
+    margin: 0;
+    max-width: 80%;
+    padding: 1.4vmin 2.6vmin;
+    border-radius: var(--radius, 0.6vmin);
+    background: var(--color-surface, Canvas);
+    color: var(--color-text, CanvasText);
+    font-family: var(--font-display, sans-serif);
+    font-weight: var(--weight-display, 700);
+    font-size: 5.4vmin;
+    line-height: 1.1;
+  }
+  /* Tall frames (9:16): the cues sit in the middle band, clear of the platforms' controls. */
+  @media (max-aspect-ratio: 2/3) {
+    .cues { bottom: 30%; }
+    .cue { max-width: 100%; font-size: 6.4vmin; }
+  }
+</style>
+</head>
+<body>
+<main class="frame"><!--slot:frame--></main>
+</body>
+</html>

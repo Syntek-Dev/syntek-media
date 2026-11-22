@@ -36,8 +36,8 @@ a later design can supersede them without losing the record.
 - **Licensed content is cleared first.** An export that carries a licensed font, image or
   piece of music has its rows in `production/src/rights-register.md` before a piece using it is
   scheduled.
-- **No secret goes in a file name.** A Claude Design link belongs in the register's link column,
-  never in a name or a note here.
+- **No secret or path goes in a file name.** A design link, and an app's project label, belong in
+  the register's second column, never in a name or a note here.
 
 ## Output & naming
 

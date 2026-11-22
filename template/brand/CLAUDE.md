@@ -14,9 +14,8 @@ voice is drawn from it and nothing about the brand is invented piece by piece.
 
 - **Routing:** start every job from the matching procedure in `brand/workflows/` (the index is
   `brand/workflows/CLAUDE.md`; the `run-media-workflow` skill resolves `workflows/local/`
-  first). Tokens, fonts and layouts → `brand/workflows/01-set-up-the-brand-kit/`; Claude Design →
-  `brand/workflows/02-sync-with-claude-design/`; an exported asset →
-  `brand/workflows/03-record-a-design-export/`; a platform →
+  first). Tokens, fonts and layouts → `brand/workflows/01-set-up-the-brand-kit/`; a design made
+  in an app, or any exported asset → `brand/workflows/03-record-a-design-export/`; a platform →
   `brand/workflows/04-set-up-a-platform/`; the spoken voice →
   `brand/workflows/05-write-the-spoken-voice/`; tools, permissions and the ElevenLabs server →
   `brand/workflows/06-check-the-setup/`. Guides: `brand/docs/reference/`,
@@ -48,7 +47,7 @@ voice is drawn from it and nothing about the brand is invented piece by piece.
 - **Credits and consent come first.** Trying a voice spends credits, and a cloned voice needs the
   person's recorded consent (`.claude/rules/syntek-media/03-production-ethics.md` Sections 4
   and 6).
-- **Voice IDs, handles and Claude Design links live only in this layer's own files**, never in a
+- **Voice IDs, handles and design links live only in this layer's own files**, never in a
   guide, a procedure, a post or `.claude/MEMORY.md`
   (`.claude/rules/syntek-media/06-global-rules.md` Section 10).
 - **Never overwrite** the tokens, a preview card, an exported asset, the voice or a profile

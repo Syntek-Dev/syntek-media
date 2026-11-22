@@ -10,13 +10,11 @@ model: opus
 **Language**: British English (en_GB)
 
 **What it is.** The storyboard says what the viewer sees while each line of the approved script is
-spoken; the shot list names each source and whether it is cleared. Together they are what the edit decision list is written from, so a gap here becomes a
-hole in the master. A piece with no picture, or a recorded one, has neither, and its M3 is `n/a`.
+spoken; the shot list names each source and whether it is cleared. Together they are what the edit decision list is written from, so a gap here becomes a hole in the master. A piece with no picture, or a recorded one, has neither, and its M3 is `n/a`.
 
 ## The storyboard
 
-`scripts/src/pieces/<piece>/storyboard.md`: frontmatter `piece`, `version`, `approved`, the H1
-`# <Title> — storyboard`, then one table, one row per board. The shot list has no frontmatter.
+`scripts/src/pieces/<piece>/storyboard.md`: frontmatter `piece`, `version`, `approved`, the H1 `# <Title> — storyboard`, then one table, one row per board. The shot list has no frontmatter.
 
 | Column | Holds |
 |---|---|
@@ -33,11 +31,9 @@ hole in the master. A piece with no picture, or a recorded one, has neither, and
 ## The shot list
 
 `shot-list.md`, beside it: `| Shot | Board | Type | Source | Framing | Seconds | Status | Rights |`.
-Shots are `S01`, `S02` …, each naming its board. Type is
-`camera · screen · stock · still · card · colour · generated · scene`. Source is a footage ID (`F0007`),
+Shots are `S01`, `S02` …, each naming its board. Type is `camera · screen · stock · still · card · colour · generated · scene · edited`. Source is a footage ID (`F0007`),
 an image or text capture under `production/src/assets/` (`.txt`, `.ansi`, `.html`), a card under `production/src/cards/`, a colour
-`#RRGGBB`, `production/src/scenes/<piece>.scene.py` for a scene, or `to shoot`. Status moves `needed · captured · logged · cleared`; Rights is a
-rights-register ID, or `—` where nothing needs clearing.
+`#RRGGBB`, `production/src/scenes/<piece>.scene.py` for a scene, `to shoot`, or `to render` for an `edited` shot until its export is logged. Status moves `needed · captured · logged · cleared`; Rights is a rights-register ID, or `—` where nothing needs clearing.
 
 ## Vertical framing
 
@@ -57,23 +53,27 @@ voice or likeness needs recorded consent. Production clears rights; boarding rec
 ## How we apply it here
 
 - Board from the approved script only; every spoken line sits in exactly one board's range.
-- Stills, cards and colour clips are shots; note a push-in or fade in Picture for the edit list.
-- A generated picture is typed `generated` and must agree with the brief's `ai_visuals`; if it
-  does not, the brief's disclosure plan changes first, with the author.
-- Every board of a scene piece is Type `scene`; its other sources are images or text captures,
-  never recorded video inside a scene; index them with `media.py real <piece>` and accept through `-o`. The brief records `ai_visuals: assisted`.
-- After voice timing, `media.py cues <piece>` prints the table; accept the cue index with `-o`
-  in `production/src/scenes/`, through `production/workflows/09-time-the-voice/`.
-- Re-time Time and shot Seconds or timing-only notes: raise `version`, keep approval and M3,
-  clear `M4.cues`, `M4.stills`, M4 and later gates. A word or shot change clears approval and M3.
+- Stills, cards and colour clips are shots; a board that moves names `push-in`, `pan`, `zoom` or
+  `fade` in Picture, and a build-up says `build-up` there or holds two or more `TEXT:` cues.
+  Smoother motion is an `edited` shot made outside (`production/docs/reference/complex-shots.md`).
+- Before M3, `media.py boards <piece>` renders one still per board at the master's size, with its
+  on-screen text in place, a contact sheet captioned beneath each still, and an animatic where a
+  board moves or builds up, into `production/src/renders/<piece>/boards/`, never tracked. Each
+  still is opened by its printed path; the author sees the sheet and plays the animatic. A card
+  with no HTML yet, a shot `to shoot` or `to render`, or a scene board is a labelled placeholder.
+- A generated picture is typed `generated` and must agree with the brief's `ai_visuals`; if not, the brief's disclosure plan changes first, with the author.
+- Every board of a scene piece is Type `scene`, and its brief records `ai_visuals: assisted`; its other sources are images or text captures, never recorded video, indexed with `media.py real <piece>` and accepted through `-o`.
+- After voice timing, `media.py cues <piece>` prints the table; accept the cue index with `-o` in `production/src/scenes/`, through `production/workflows/09-time-the-voice/`.
+- Re-time Time and shot Seconds or timing-only notes: raise `version`, keep approval and M3 (no new board sheet),
+  clear `M4.cues`, `M4.stills`, M4 and later gates. A word or shot change clears approval and M3, and needs a new sheet.
 - Eight-column older boards remain readable; a hyphen or an en dash separates Spoken references.
 - Printed Time encloses the words (start rounded down, end up); JSON keeps exact seconds.
 
 ## Who implements it
 
 - **Workflow:** `scripts/workflows/03-storyboard-a-piece/`.
-- **Skills:** `storyboard` writes both files and opens the rights rows; `cut-for-platform`
-  writes the edit decision list from them, through `production/workflows/03-assemble-the-master/`.
+- **Skills:** `storyboard` writes both files, opens the rights rows and renders only the board sheet and animatic; `cut-for-platform`
+  writes the edit decision list and the master from them, through `production/workflows/03-assemble-the-master/`.
 
 ## Governing standard
 

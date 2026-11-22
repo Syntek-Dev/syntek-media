@@ -1,7 +1,7 @@
 # CONTEXT.md — brand/src/design-system/previews/
 
 The preview cards: one small HTML page per part of the kit, each opening on line 1 with the
-`@dsCard` comment Claude Design reads to build its Design System pane, and each linking
+`@dsCard` comment, the kit's own index line that files the card in its group, and each linking
 `../tokens.css` so it shows the tokens as they stand. Five cards only show the kit. Two are the
 brand's layout components: `thumbnail.html` is the layout every thumbnail and cover is copied
 from, and `card.html` the layout every title and end card is copied from. All seven are seeds,
@@ -25,7 +25,7 @@ brand/src/design-system/previews/
 ## What's here
 
 - **Line 1 of every card is `<!-- @dsCard group="…" -->`,** with the group `Colors`, `Type`,
-  `Spacing`, `Brand` or `Components`. Claude Design builds its card index from that line alone.
+  `Spacing`, `Brand` or `Components`; `card.py check` requires it, and nothing goes above it.
 - **The two layout components** meet the layout contract (`CLAUDE.md` here): one file serves
   every aspect ratio, text stays inside the safe zone the renderer sets, and nothing loads over
   the network. `thumbnail-brief` copies `thumbnail.html` for each piece's thumbnails and covers;
@@ -37,6 +37,6 @@ brand/src/design-system/previews/
 ## Cross-references
 
 - `brand/docs/reference/the-brand-kit.md` — the tokens these cards show, and the two layouts.
-- `brand/docs/reference/claude-design.md` — how a card is synced with the design project.
+- `brand/docs/reference/design-apps.md` — which app makes the art a layout places.
 - `publishing/docs/reference/thumbnails.md` — how a piece's thumbnail is briefed and rendered.
 - `toolkit/templates/` — the fallback layouts.

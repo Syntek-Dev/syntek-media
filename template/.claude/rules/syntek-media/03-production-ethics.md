@@ -79,7 +79,7 @@ each gate checks.
 |---|---|---|
 | M1 | idea → briefed | the brief is complete: real deliverable keys, purpose, shape and metaphor (each answered, `n/a` valid), call to action, disclosure plan, rights needs |
 | M2 | briefed → scripted | the script, or a recorded piece's transcript, is approved, timed and fact-checked, with no flag in it; an audiobook, which has no script, has its chapter register approved |
-| M3 | scripted → storyboarded | every spoken line boarded and every shot sourced, with a rights row for anything licensed or identifiable |
+| M3 | scripted → storyboarded | every spoken line boarded and every shot sourced, with a rights row for anything licensed or identifiable; board sheet and any animatic seen |
 | M4 | storyboarded → produced | every master probes clean, its footage verifies, its takes are approved and archived (an audiobook's mastered chapters), the author has watched or heard it; a scene piece dates the four `M4.*` first, other pieces record them `n/a` |
 | M5 | produced → cut | every deliverable rendered, verified, and seen or heard by the author; a feed episode's audio encoded untagged |
 | M6 | cut → captioned | every deliverable with speech and picture has captions that pass `captions check --script`; on a site of the website or blog profile, a `.vtt` sidecar and a published transcript of exactly what each page plays; a feed episode's transcript and master-timed `.vtt` |
@@ -88,12 +88,12 @@ each gate checks.
 `published` is not a gate: it follows when every schedule row is `posted` or `dropped`.
 
 A scene piece (a shot typed `scene`) dates `M4.takes`, `M4.words`, `M4.cues` and `M4.stills` in
-that order under `storyboarded`; the router chooses the first undated one. Each change clears
-that sub-check, every later one, M4 and later gates. Every other piece records all four `n/a`
-with its reason at M3, or before M4 where M3 is `n/a`; the master procedure fills any missing.
-A re-time raises board `version` and keeps `approved:` and M3, but clears `M4.cues`, `M4.stills`
-and M4 and later gates. A note changing words or replacing a shot also clears M3. A new take
-clears all four and requires joining, alignment and lip sync again; a re-time alone needs no new mouths.
+order under `storyboarded` (the router takes the first undated). A change clears its sub-check,
+every later one, M4 and later gates. Other pieces record all four `n/a` with a reason at M3, or
+before M4 where M3 is `n/a`; the master procedure fills any missing. A re-time raises board
+`version`, keeps `approved:` and M3, and clears `M4.cues` onwards; a word or shot change also
+clears M3. A new take clears all four (join, align and lip-sync again); a re-time needs no new
+mouths.
 
 **Why this rule exists.** A ladder a project guide could quietly relax is not a ladder. The gates
 catch a fabricated claim, an uncleared track or an unheard take before it is public.

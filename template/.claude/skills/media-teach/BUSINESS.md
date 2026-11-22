@@ -32,7 +32,7 @@ invents all four.
 | Family | What is practised | House source |
 |---|---|---|
 | Craft | a hook in the first seconds; writing for the ear; a call to action a viewer can act on; a storyboard with a picture for every line; an edit that holds one idea per shot | `scripts/docs/reference/writing-for-the-ear.md`; `scripts/docs/reference/storyboards-and-shot-lists.md`; `production/docs/reference/edit-decision-lists.md` |
-| Tool | the toolkit's presets, cuts and checks; `card.py` and the card layouts; captions and loudness; Claude Design for the brand kit | `toolkit/CONTEXT.md`; `publishing/docs/reference/captions.md`; `production/docs/reference/sound-and-loudness.md`; `brand/docs/reference/claude-design.md` |
+| Tool | the toolkit's presets, cuts and checks; `card.py` and the card layouts; captions and loudness; the design apps for the brand kit | `toolkit/CONTEXT.md`; `publishing/docs/reference/captions.md`; `production/docs/reference/sound-and-loudness.md`; `brand/docs/reference/design-apps.md` |
 | Platform | reading the platform data; a cut-down that stands alone; a post package; the AI label | `publishing/docs/reference/platform-specs.md`; `publishing/docs/reference/cut-downs.md`; `publishing/docs/reference/posting-and-the-log.md`; `publishing/docs/reference/ai-disclosure.md` |
 | Business media | consent and releases for staff and customers on camera; paid partnerships and their disclosure; licensed music and stock for commercial use; claims about the business said aloud | `production/docs/reference/rights-and-consent.md`; `publishing/docs/reference/ai-disclosure.md`; the rule itself, through `media-research` |
 

@@ -18,7 +18,7 @@ deliverable is one line and a failed render says exactly what failed.
   `voiceover` runs `take add` and `footage add --kind generated`; `thumbnail-brief` runs
   `uv run toolkit/card.py render`, then `media.py image` for every still in its deliverable's
   format and `media.py cut … --overlay` for a newsletter's preview GIF; `write-script` runs
-  `script time`; `prepare-post` reads `presets`, runs `flags --piece`, and for a self-hosted
+  `script time`; `storyboard` runs `boards` before M3, and opens each still by its printed path; `prepare-post` reads `presets`, runs `flags --piece`, and for a self-hosted
   podcast `feed new`, `feed add`, `feed chapters`, `feed check` and `feed write`. The audiobook
   skill, where the project makes audiobooks, runs `audiobook text`, `audiobook master` and
   `audiobook check`. `brand/workflows/03-record-a-design-export/` runs `image` for a show's cover.
@@ -63,7 +63,9 @@ deliverable is one line and a failed render says exactly what failed.
 - **Never edit a render.** Masters, deliverables, card and thumbnail PNGs and takes are generated;
   change the source and render again.
 - **Never stream-copy a cut.** `-c copy` cuts on the nearest keyframe; `cut` and `assemble` seek
-  before the input and re-encode, so every caption stays on its frame.
+  before the input and re-encode, so every caption stays on its frame. `assemble` copies only what
+  it has just encoded: the join of a long master's sections, each rendered to start on its own
+  keyframe, and its final pass, which sets the sound under the picture.
 - **Never overwrite outside the output folders.** A path `-o` names may be new; an existing
   script, register, caption file, master copy or design export is never written over. The
   exceptions are a show's tracked feed, which only `feed write -o` replaces, after its
@@ -73,8 +75,10 @@ deliverable is one line and a failed render says exactly what failed.
   `feed new` and `feed add`; never type one by hand, and `feed new --rekey` only while nothing is
   published.
 - **Voice planning is offline.** `speak plan` prints requests, characters and calls and creates
-  only the takes or trial folder. `voice join` reads approved takes by their recorded paths;
-  `levels` writes only working JSON, never a tracked copy or a credit rate.
+  only the takes or trial folder. It and `audiobook text` flag, exit 1, a request whose first five
+  characters hold '/', a backslash or a NUL: the ElevenLabs server names the take from them and
+  fails the save after the credits are spent. `voice join` reads approved takes by their recorded
+  paths; `levels` writes only working JSON, never a tracked copy or a credit rate.
 - **Never read what Git ignores.** Each scan lists only what Git tracks or would track; an ignored
   media file is opened only by the path a manifest, register or argument names.
 - **A piece's output folders are the toolkit's.** It makes a piece's folder in
@@ -90,12 +94,16 @@ deliverable is one line and a failed render says exactly what failed.
   with its working folder set where filtergraph quoting would bite, so a path with spaces or quotes
   is safe in any shell.
 - **Never take the whole machine.** Every ffmpeg call runs under a thread cap: `MEDIA_THREADS`
-  when it is set, else every CPU but two; run one render at a time.
+  when it is set, else the CPUs the process may use, held to a cgroup CPU quota where one applies
+  and otherwise every CPU but two; run one render at a time. `assemble` gives each of its inputs
+  its own decoder threads (two for a video, one for a sound), renders a picture with more open
+  inputs than `SECTION_INPUTS` in sections, and names its peak memory on a `memory:` line.
 
 - **Scene review:** `uv run toolkit/scene.py stills <piece> [--size WxH]` prints every first/middle
   still path and box finding. Open each named still and agree the mouths and preview with the author.
   `render <piece> [--size WxH] [--memory-max SIZE]` makes a native master using the shared audio mix;
-  it refuses clip/overlay rows and verifies frames, sound length and the edit's loudness target.
+  it refuses clip/overlay rows and verifies frames, sound length and the edit's loudness target,
+  rendering the sound again aiming lower where the AAC encode lifts the true peak over the ceiling.
 - **Scene sources:** `real <piece>` reads the shot-list Source column, excluding the scene file.
   It hashes named assets, uses footage-image metadata without opening the mirror, and prints
   findings for missing sources, video or sound. Accept a clean index with
@@ -131,7 +139,9 @@ deliverable is one line and a failed render says exactly what failed.
   (`<piece>[--cNN].<platform>-<format>[.burned].<ext>`), thumbnail PNGs, encoded images
   (`<stem>.<platform>-<format>.<ext>`), preview GIFs, captions, stills, a feed episode's audio
   (`<piece>.podcast-feed-audio.mp3`, tagged in place by `feed tag`) and JSON chapters
-  (`<piece>.chapters.json`) in `publishing/src/renders/<piece>/`, and a feed's upload copy
+  (`<piece>.chapters.json`) in `publishing/src/renders/<piece>/`, board stills
+  (`<piece>.bNN.board[.kK].<W>x<H>.png`), the contact sheet (`<piece>.boards.html`) and the
+  animatic (`<piece>.animatic.toml`, `.mp4`) in `production/src/renders/<piece>/boards/`, and a feed's upload copy
   (`<show>.feed.xml`) at that folder's top; takes (`<piece>.sNN.tN.mp3` or `.pcm`) in
   `production/src/voiceover/generated/<piece>/takes/`, as
   `.claude/rules/syntek-media/08-naming-and-memory.md` Section 1 names them. A name with no

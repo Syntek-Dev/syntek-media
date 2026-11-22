@@ -38,7 +38,8 @@ approve them in proof, so that no piece improvises the brand.
   rights register saying what its licence allows; a generic family stands in until then.
 - **Tokens, never values, in a layout.** A colour or a size typed into a card is one the next
   brand change will miss.
-- **Line 1 of every card stays its `@dsCard` comment.** Claude Design reads nothing else.
+- **Line 1 of every card stays its `@dsCard` comment,** the kit's index line; `card.py check`
+  requires it.
 - **Never overwrite** `tokens.css` or a card without confirming with the author, and never touch
   a piece's copied thumbnail or card from here.
 
@@ -49,5 +50,5 @@ approve them in proof, so that no piece improvises the brand.
 - **Also writes:** a `font` row per licence in `production/src/rights-register.md`; dated
   decisions in `.claude/MEMORY.md`; proofs, through `-o`, in the git-ignored
   `production/src/renders/proofs/brand-kit-DD-MM-YYYY/`.
-- **Does not touch:** any piece's thumbnail or card, `toolkit/templates/`, or the Claude Design
-  project (that is `brand/workflows/02-sync-with-claude-design/`).
+- **Does not touch:** any piece's thumbnail or card, `toolkit/templates/`, or an exported design
+  (that is `brand/workflows/03-record-a-design-export/`).

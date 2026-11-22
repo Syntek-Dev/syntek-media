@@ -12,7 +12,7 @@ brand/docs/reference/
 ├── CONTEXT.md                ← this file
 ├── CLAUDE.md                 ← operating rules
 ├── the-brand-kit.md          ← one set of tokens behind every layout
-├── claude-design.md          ← keeping the brand and its design project in step
+├── design-apps.md            ← made in an app outside the repository, brought back as exports
 ├── design-exports.md         ← small files in Git, large files in Git LFS, every one registered
 ├── the-spoken-voice.md       ← how the brand sounds aloud, and who says it
 └── platform-profiles.md      ← the brand's own choices for each platform, and its corrections
@@ -23,8 +23,8 @@ brand/docs/reference/
 - `the-brand-kit.md` — **read before changing a token, a font or a layout.** The required
   tokens, fonts and their licences, the preview cards and the two layout components, and how the
   kit agrees with syntek-author's brand guide, where present.
-- `claude-design.md` — the brand's design-system project in Claude Design, the two sync routes,
-  and why a sync moves one component at a time.
+- `design-apps.md` — which app takes which design job (VectorCraft, PhotoCraft, DesignCraft,
+  DaVinci Resolve), the round trip back as an export, and why no project file is kept here.
 - `design-exports.md` — where an exported asset goes by size, Git LFS and its tripwire, and the
   design register's columns.
 - `the-spoken-voice.md` — the spoken voice against the written one, a narrator for each use,

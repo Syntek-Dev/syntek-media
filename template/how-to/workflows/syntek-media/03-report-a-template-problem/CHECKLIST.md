@@ -34,7 +34,7 @@ model: opus
 
 **Before anything is shown**
 
-- [ ] **Every key, voice ID, account ID, Claude Design link, real person's detail and private message taken out.** · _opus_
+- [ ] **Every key, voice ID, account ID, Claude Design link, app project path or label, real person's detail and private message taken out.** · _opus_
 - [ ] Home paths written as `~`, and a local `_src_path` described, not quoted. · _opus_
 - [ ] **A security problem sent only to the source's private vulnerability reporting, never a public issue.** · _opus_
 

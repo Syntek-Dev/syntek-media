@@ -54,9 +54,9 @@ brand's card component; `assemble` renders any card PNG that is missing or older
 or the brand's tokens before it composites, so a master always rebuilds from tracked files.
 Clip boundaries use the frame nearest each running total, never durations rounded clip by clip.
 Each still, card and colour is framed alone; different sizes, formats and orientations with no
-push-in or fade are one input, read an image at a time, and
-a long run needs no more memory than a short one; each video, push-in or fade opens another.
-Further assemble transitions and motion are deferred; a scene uses `scenes-as-code.md` instead.
+push-in or fade are one input, read an image at a time, and a long run needs no more memory than
+a short one; each video, push-in or fade opens another, and past 12 the picture renders in sections.
+Other motion is a complex shot, made outside (`complex-shots.md`); a scene uses `scenes-as-code.md`.
 A scene edit has only `[edit]` and `[[audio]]`: its joined voice drives timing and the same mix,
 with the edit's size/rate/loudness; no clip/overlay rows. Each further aspect is rendered natively.
 `--memory-max SIZE` or `MEDIA_MEMORY_MAX` optionally caps assemble and scene renders with no swap.

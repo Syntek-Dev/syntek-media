@@ -56,8 +56,9 @@ components in `brand/src/design-system/`; and what already exists in
 Write `storyboard.md`: frontmatter `piece`, `version`, an empty `approved:`, then one row per
 board, `B01` onwards, with its beat, its time, the picture in one sentence, the script lines it
 covers as `beat.line`, the words of its `TEXT:` cues and the sounds under it. Every spoken line
-sits in exactly one board's range. Add Timing notes after Vertical framing, initially `—`. A still or a card that should push in, or a board that should
-fade in, says so in its Picture cell. _Substantive._
+sits in exactly one board's range. Add Timing notes after Vertical framing, initially `—`. A
+board that moves names `push-in`, `pan`, `zoom` or `fade` in its Picture cell, and a build-up says
+`build-up` there or holds two or more `TEXT:` cues, so the animatic shows it. _Substantive._
 
 ## 5. Frame every vertical deliverable
 
@@ -73,11 +74,12 @@ the preset lists as `verify` is unconfirmed, so check it by eye and say so. _Sub
 
 Write `shot-list.md`: one row per shot, `S01` onwards, naming its board, its type, its source (a
 footage ID, an asset under `production/src/assets/`, a card under `production/src/cards/`, a
-colour `#RRGGBB`, or `to shoot`), its framing, its seconds and its status. A shot typed
-`generated` must agree with the brief's `ai_visuals`; where it does not, stop and settle the
-brief's disclosure plan with the author first. Every board of a code-animated piece is Type
-`scene`, with Source `production/src/scenes/<piece>.scene.py` and `ai_visuals: assisted`;
-other sources are images or text captures, never recorded video inside its scene. _Substantive._
+colour `#RRGGBB`, `to shoot`, or `to render` for an `edited` shot made in an outside editor),
+its framing, its seconds and its status. A shot typed `generated` must agree with the brief's
+`ai_visuals`; where it does not, stop and settle the brief's disclosure plan with the author
+first. Every board of a code-animated piece is Type `scene`, with Source
+`production/src/scenes/<piece>.scene.py` and `ai_visuals: assisted`; other sources are images or
+text captures, never recorded video inside its scene. _Substantive._
 
 ## 7. Open the rights rows
 
@@ -90,22 +92,37 @@ likeness is used only with the person's recorded consent
 (`.claude/rules/syntek-media/03-production-ethics.md` Section 6). _Mechanical (writing rows);
 deciding what needs one is substantive._
 
-## 8. Read it back and record M3
+## 8. See the boards
+
+> **Skill:** `storyboard` · **Guide:** `scripts/docs/reference/storyboards-and-shot-lists.md`
+
+Run `python3 toolkit/media.py boards <piece>`. It writes one still per board at the master's
+size, the contact sheet `<piece>.boards.html` and, where a board moves or builds up, the animatic,
+into `production/src/renders/<piece>/boards/`, and prints every path and finding. Open each still
+by its printed path, never by listing the folder, and report what it shows. Fix what the author
+asks as board revisions, not re-times, and run it again. Then the author opens the contact sheet
+in a browser and plays the animatic; a scene piece needs the sheet only. On exit 2, name what is
+missing: M3 waits, or the author waives this check on their explicit word, recorded in `verified:`
+with the date and reason. _Mechanical (rendering); the review is substantive._
+
+## 9. Read it back and record M3
 
 > **Skill:** `storyboard` · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
 Walk the author through the boards in order against the script, then the shot list. Apply their
-corrections. Check M3 (scripted → storyboarded) against the ladder guide, item by item. When the
-author approves, date `approved:` in the storyboard, set the brief's `status: storyboarded`,
-record `M3` with today's date in `verified`, and update `last_updated`. For every non-scene
-piece, also record all four `M4.*` as `n/a — footage`, filling missing entries in older boards. _Mechanical (writing);
-the read-back is substantive._
+corrections; a revision that clears M3 needs a new board sheet (step 8). Check M3 (scripted →
+storyboarded) against the ladder guide, item by item. When the author approves, date `approved:` in
+the storyboard, set the brief's `status: storyboarded`, record `M3` with today's date in `verified`,
+and update `last_updated`. For every non-scene piece, also record all four `M4.*` as
+`n/a — footage`, filling missing entries in older boards. _Mechanical (writing); the read-back is
+substantive._
 
-## 9. Hand on
+## 10. Hand on
 
 > **Skill:** none · **Guide:** `scripts/docs/reference/the-piece-ladder.md`
 
-Tell the author what is boarded, what is still `to shoot`, and which rights rows are `needed`.
+Tell the author what is boarded, the contact sheet's and the animatic's paths, what is still
+`to shoot` or `to render`, and which rights rows are `needed`.
 Name the next procedures by their full folder names: `production/workflows/01-log-source-media/`
 for footage, `production/workflows/02-make-a-voiceover/` for the voice,
 `production/workflows/07-clear-the-rights/` for the rows just opened, and then

@@ -14,11 +14,11 @@ stay in its brand and style files, and this layer cites them rather than copying
 brand/
 ├── CONTEXT.md                  ← this file
 ├── CLAUDE.md                   ← operating rules for the layer
-├── docs/                       ← the guides: the kit, Claude Design, exports, the voice, profiles
+├── docs/                       ← the guides: the kit, the design apps, exports, the voice, profiles
 │   ├── reference/              ← template-owned guides, updated by copier update
 │   └── project/                ← your own guides; a same-named file overrides reference/
 ├── src/                        ← the brand itself
-│   ├── design-register.md      ← seed: one row per design, with its Claude Design link
+│   ├── design-register.md      ← seed: one row per design, with the app it was made in
 │   ├── design-system/          ← tokens.css, fonts/ and previews/: the source of every layout
 │   ├── exports/                ← exported design assets: small ones in Git, large/ in Git LFS
 │   ├── voice/                  ← voice.md: the spoken voice, narrators and pronunciations
@@ -30,14 +30,14 @@ brand/
 
 ## What's here
 
-- `brand/docs/reference/` — five guides: `the-brand-kit.md`, `claude-design.md`,
+- `brand/docs/reference/` — five guides: `the-brand-kit.md`, `design-apps.md`,
   `design-exports.md`, `the-spoken-voice.md` and `platform-profiles.md`.
 - `brand/docs/project/` — your own guides. The template ships only the folder's pair.
 - `brand/src/` — the brand. **`brand/src/design-system/tokens.css` is the one source of every
   colour, typeface, space and caption style** a layout uses, and **`brand/src/voice/voice.md` is
   the one record of every narrator and pronunciation** a voiceover uses.
-- `brand/workflows/` — six procedures, numbered and frozen: set up the brand kit, sync with
-  Claude Design, record a design export, set up a platform, write the spoken voice, and check the
+- `brand/workflows/` — five procedures, numbered and frozen (02 is retired, never reused): set up
+  the brand kit, record a design export, set up a platform, write the spoken voice, and check the
   setup before the first credit is spent.
 
 Set the brand up before the first piece is cut: a thumbnail, a title card or a burned caption

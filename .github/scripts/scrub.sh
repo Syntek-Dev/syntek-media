@@ -8,9 +8,9 @@
 #            published with the template; a seed that carries a real name, a channel handle,
 #            a voice ID or an API key cannot be retracted by any update. So DESIGN.md D36 is
 #            absolute — no real brand or person names, channel handles or URLs, account IDs,
-#            ElevenLabs voice IDs, API keys, Claude Design links, follower or view counts or
-#            prices — and it is enforced here, not trusted to review. A hit is fixed at the
-#            source.
+#            ElevenLabs voice IDs, API keys, Claude Design links (still caught after D96),
+#            follower or view counts or prices — and it is enforced here, not trusted to
+#            review. A hit is fixed at the source.
 #
 #            Eleven checks, over every text file under template/ and examples/ (and every file
 #            NAME) — syntek-author's nine, then media's two:
@@ -43,7 +43,9 @@
 #                 key character, and a dollar sign is not one.
 #             11. A real voice ID or Claude Design link: a voice_id given a twenty-character
 #                 identifier, or a claude.ai/design/… project link. The design register and
-#                 voice.md ship empty; real links and IDs are the author's.
+#                 voice.md ship empty; real links and IDs are the author's. The link arm stays
+#                 after D96 took Claude Design out of the template: a register made before
+#                 0.12.0 still holds such links, and pasted text can carry one back in.
 #
 #            A line that must keep a match carries `scrub: allow — <reason>` (in a comment).
 #

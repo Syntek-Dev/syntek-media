@@ -25,6 +25,7 @@ toolkit/
 ├── media_captions.py   ← captions (check, from-segments, align, retime, rewrap, vtt, transcript, burn) and script time
 ├── media_repo.py       ← footage, real sources, tokens, flags, check, where
 ├── media_image.py      ← image, and the GIF pass of cut (a newsletter's preview GIF)
+├── media_boards.py     ← boards: the board stills, contact sheet and animatic seen before M3
 ├── media_score.py      ← offline title/thumbnail requests and approved Jev scoring
 ├── media_voice.py      ← voice remix: offline plan, one approved ElevenLabs call into a voice trial
 ├── media_scene.py     ← deterministic frame timing, native mouth sampling and safe zones
@@ -33,22 +34,29 @@ toolkit/
 ├── scene.py            ← deterministic scenes to stills and native masters (pinned Playwright)
 ├── transcribe.py       ← offline known-word alignment; WhisperX 3.8.6, Python >=3.10,<3.14
 ├── data/               ← dated delivery specs and the versioned Jev editorial rubric
-└── templates/          ← thumbnail.html and card.html: fallbacks for the brand's two layouts
+└── templates/          ← thumbnail.html and card.html, fallbacks for the brand's two layouts; board.html, boards' page
 ```
 
 ## What's here
 
 - `media.py` — **the only entry point.** Every render, check and register write goes through
   `python3 toolkit/media.py <command>`: probe, presets, script time, assemble, cut, encode, frame,
-  image, still-video, extract-audio, captions, loudness, audiobook, take add, speak plan, voice join,
+  boards, image, still-video, extract-audio, captions, loudness, audiobook, take add, speak plan, voice join,
   levels, transcribe, lipsync, cues, real, feed, footage,
   tokens, flags, where, score, voice remix and check. Its `--self-test` writes lavfi clips, a still, screen recordings in the
   shapes Playwright and VHS write (WebM, MP4, animated GIF, none with sound), SRT, TOML, a show
   register and a git repository at run time and exercises every module; a probe that needs
   ffmpeg, or an encoder this ffmpeg lacks, is skipped by name, never passed.
 - `media_common.py`, `media_video.py`, `media_audio.py`, `media_captions.py`, `media_repo.py`,
-  `media_image.py`, `media_feed.py`, `media_score.py`, `media_voice.py` — the helper modules `media.py` imports. **They have no
+  `media_image.py`, `media_boards.py`, `media_feed.py`, `media_score.py`, `media_voice.py` — the helper modules `media.py` imports. **They have no
   command of their own**; each opens with a docstring saying what it owns.
+- **Boards before M3** (`media_boards.py`): `media.py boards <piece>` draws the storyboard at the
+  master's size, one still per board through `card.py` on `templates/board.html`, its picture the
+  board's first shot (a card's own render, an image framed as `assemble` frames it, a labelled
+  frame of logged video, a colour, else a placeholder saying why; a Source outside the assets and
+  cards folders is never opened), its On screen cues laid over but on a card; a still per build-up step, the contact sheet `<piece>.boards.html` and, where a board moves or
+  builds up, the animatic, through `assemble -o`, all in `production/src/renders/<piece>/boards/`.
+  Nothing later reads them; each still is opened by the path it printed.
 - **The brand's own channels** (sites, blogs and newsletters): web video is `cut` or `encode` to a
   `website.*` or `blog.*` key; a silent loop is a cut whose table sets `audio_tracks = 0`, and gets
   no sound track; every still (a poster, a share, featured or preview image, a show's cover) is
@@ -64,7 +72,7 @@ toolkit/
   uploads. Nothing is fetched or posted.
 - `card.py` — renders a thumbnail or card layout at a deliverable's exact size with the
   safe-zone variables set on `:root`, aborting every outside request, and checks a layout against
-  the contract: tokens linked and resolving, brand fonts loading, `@dsCard` on line 1 of a
+  the contract: tokens linked and resolving, brand fonts loading, `@dsCard`, the kit's own index line, on line 1 of a
   preview. **A script with a dependency**, declared inline (PEP 723) and pinned, so
   `uv run toolkit/card.py` fetches Playwright for itself and installs nothing globally.
   **The browser** is Playwright's own Chromium, the reference, unless `MEDIA_CHROMIUM`, set by

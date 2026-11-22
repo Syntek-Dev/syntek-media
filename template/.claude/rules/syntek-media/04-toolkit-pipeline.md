@@ -8,17 +8,17 @@ paths:
   - "publishing/src/{captions,cut-downs,podcast,thumbnails}/**"
   - "brand/src/{design-system,exports}/**"
   - "brand/src/platforms/overrides.toml"
-  - "brand/workflows/*-{set-up-the-brand-kit,sync-with-claude-design,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**"
-  - "brand/workflows/local/*-{set-up-the-brand-kit,sync-with-claude-design,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**"
+  - "brand/workflows/*-{set-up-the-brand-kit,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**"
+  - "brand/workflows/local/*-{set-up-the-brand-kit,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**"
   - "scripts/workflows/*-{write-a-script,storyboard-a-piece}/**"
   - "scripts/workflows/local/*-{write-a-script,storyboard-a-piece}/**"
   - "production/workflows/*-{log-source-media,make-a-voiceover,assemble-the-master,master-a-podcast-episode,narrate-an-audiobook,master-an-audiobook,bring-in-a-recording,time-the-voice,animate-a-scene,design-character-voices}/**"
   - "production/workflows/local/*-{log-source-media,make-a-voiceover,assemble-the-master,master-a-podcast-episode,narrate-an-audiobook,master-an-audiobook,bring-in-a-recording,time-the-voice,animate-a-scene,design-character-voices}/**"
   - "publishing/workflows/*-{plan-the-cut-downs,cut-for-a-platform,caption-a-piece,brief-a-thumbnail,prepare-a-post,record-a-publication,refresh-the-platform-specs,publish-the-podcast-feed}/**"
   - "publishing/workflows/local/*-{plan-the-cut-downs,cut-for-a-platform,caption-a-piece,brief-a-thumbnail,prepare-a-post,record-a-publication,refresh-the-platform-specs,publish-the-podcast-feed}/**"
-  - "brand/docs/{reference,project}/{claude-design,design-exports,the-brand-kit}.md"
+  - "brand/docs/{reference,project}/{design-apps,design-exports,the-brand-kit}.md"
   - "scripts/docs/{reference,project}/storyboards-and-shot-lists.md"
-  - "production/docs/{reference,project}/{audiobook-narration,character-voices,edit-decision-lists,elevenlabs,scenes-as-code,sound-and-loudness,source-media,voiceover}.md"
+  - "production/docs/{reference,project}/{audiobook-narration,character-voices,complex-shots,edit-decision-lists,elevenlabs,scenes-as-code,sound-and-loudness,source-media,voiceover}.md"
   - "publishing/docs/{reference,project}/{captions,cut-downs,platform-specs,podcast,podcast-feed,scoring-options,thumbnails}.md"
   - ".claude/skills/{captions,cut-for-platform,narrate-audiobook,prepare-post,repurpose,storyboard,thumbnail-brief,voiceover,write-script}/**"
   - "how-to/src/TEMPLATE-GUIDE/syntek-media/{02-prerequisites,09-your-first-piece,13-troubleshooting}.md"
@@ -45,6 +45,9 @@ this file is reported as stale. Media has no root Makefile; one that exists is s
 ```text
 brand/src/design-system/tokens.css ──► HTML layouts (the brand's previews, else toolkit/templates/)
         └──► uv run toolkit/card.py render ──► card and thumbnail PNGs
+storyboard.md + shot-list.md (+ existing cards, footage frames, stills; else placeholders)
+        └──► media.py boards <piece> ──► board stills, contact sheet, animatic (renders/<piece>/boards/)
+a complex shot (an outside editor) ──► one exported file ──► media.py footage add ──► a footage ID
 footage (manifest + local mirror), cards, the voice track
         └──► media.py assemble production/src/edits/<piece>.toml ──► master (production/src/renders/<piece>/)
                 └──► media.py cut / encode / still-video ──► deliverables (publishing/src/renders/<piece>/)
@@ -81,12 +84,13 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 | `score plan` / `score run` | `INPUT [--rubric TOML] [--model NAME] [-o JSON]`; run requires `--approve-call` | offline request / one approved Jev request; versioned scores and review findings; concepts only, author selection remains required | 0 · 1 · 2 |
 | `presets` | `[KEY] [--stale-after DAYS --today DD/MM/YYYY]` | deliverable tables with their `verify` keys and brand overrides applied; lists stale `checked` dates | 0 · 1 · 2 |
 | `script time` | `PATH [--wpm N] [--write]` | spoken words and pauses per beat (each against its own `(target MM:SS)`) and in total, at the brief's `words_per_minute` unless `--wpm` overrides, against `target_seconds` (±10%) and each `max_seconds` | 0 · 1 · 2 |
-| `assemble` | `EDL [--memory-max SIZE] [-o OUT]` | the master from an edit decision list: frame-accurate clips, stills, cards, colour, fades, push-in, the voice track, `[[audio]]` ranges, ducking, loudness; ffprobe-verified | 0 · 1 · 2 |
-| `cut` | `SRC --deliverable KEY --in TC --out TC [--cut cNN] [--frame crop\|pad] [--x PX] [--captions SRT] [--overlay PNG] [-o OUT]` | trims, reframes and encodes one deliverable in one pass, burning captions when given and laying a transparent overlay of the deliverable's size when given; verifies size, codecs, duration and moov first; an audio deliverable (no width or height, such as an audiobook's retail sample) is trimmed and encoded as audio only; a table with `audio_tracks = 0` gets no sound track; a GIF table (`newsletter.preview_gif`) is cut to a GIF within its `max_seconds`, `fps_max`, `colours_max` and `max_size` | 0 · 1 · 2 |
-| `encode` | `SRC --deliverable KEY [--frame crop\|pad] [-o OUT]` | a whole file to a video or audio deliverable, loudness to its target; an audio deliverable from a picture master takes its sound only; `podcast.feed_audio` untagged, its tags `feed tag`'s | 0 · 1 · 2 |
+| `assemble` | `EDL [--memory-max SIZE] [-o OUT]` | the master from an edit decision list: frame-accurate clips, stills, cards, colour, fades, push-in, the voice track, `[[audio]]` ranges, ducking, loudness; each input's decoder threads capped (two for a video, one for a sound or an image); past 12 open inputs the picture renders in sections split only at a cut and joined by stream copy, the sound in one pass, loudness measured on the whole programme; prints one `sections:` line where it splits and one `memory: peak` line; ffprobe-verified, re-rendered where the encode lifts the true peak over the ceiling | 0 · 1 · 2 |
+| `cut` | `SRC --deliverable KEY --in TC --out TC [--cut cNN] [--frame crop\|pad] [--x PX] [--captions SRT] [--overlay PNG] [-o OUT]` | trims, reframes and encodes one deliverable in one pass, burning captions when given and laying a transparent overlay of the deliverable's size when given; verifies size, codecs, duration and moov first; an audio deliverable (no width or height, such as an audiobook's retail sample) is trimmed and encoded as audio only; a table with `audio_tracks = 0` gets no sound track; a GIF table (`newsletter.preview_gif`) is cut to a GIF within its `max_seconds`, `fps_max`, `colours_max` and `max_size`; a lossy sound keeps its source's loudness, re-rendered lower where the encode lifts the true peak over the ceiling | 0 · 1 · 2 |
+| `encode` | `SRC --deliverable KEY [--frame crop\|pad] [-o OUT]` | a whole file to a video or audio deliverable, loudness to its target; an audio deliverable from a picture master takes its sound only; `podcast.feed_audio` untagged, its tags `feed tag`'s; re-rendered where the encode lifts the true peak over the ceiling | 0 · 1 · 2 |
 | `frame` | `SRC --at TC [-o OUT]` | one PNG still, for a thumbnail background | 0 · 2 |
+| `boards` | `PIECE [--size WxH] [--no-animatic] [--sound FILE]` | before M3, from the piece's storyboard, shot list and script: one still per board at `--size` (default the edit decision list's `[edit] size`, else `1920x1080`) through `card.py`, its picture the board's first shot (an existing card's HTML, a still or image framed as `assemble` frames it, one labelled frame of logged video at its first tenth, a colour, else a labelled placeholder naming the board, never an invented image) with its `On screen` cues laid over in place (never over a real card, whose words they are); a step still per build-up (`.kK`); the contact sheet `<piece>.boards.html`, captioned beneath each still with the board's Time, spoken words, Picture, On screen, Sound, motion and Vertical framing drawn as a box; where a board names `push-in`, `pan`, `zoom` or `fade` or builds up (two or more `TEXT:` cues, or `build-up` in Picture), unless `--no-animatic` or a scene piece, `<piece>.animatic.toml` and `<piece>.animatic.mp4`, rendered by `assemble -o`, `loudness = "none"`, sound `--sound`, else the joined voice where it exists, else silent; all in `production/src/renders/<piece>/boards/`, never tracked or read by a later command; prints every path and each finding (a board with no shot, a placeholder and why, an unreadable Time, a missing card HTML) | 0 · 1 · 2 |
 | `image` | `SRC --deliverable KEY [--at TC] [--format jpg\|png\|webp\|avif] [--frame crop\|pad] [-o OUT]` | an image deliverable from a PNG or still, or from a video at `--at` (a poster): scaled to the table's size, in its first `formats` entry or `--format`, flattened where `alpha = false`, verified for size, format and `max_size`; never a GIF (that is `cut`'s) | 0 · 1 · 2 |
-| `still-video` | `IMAGE AUDIO --deliverable KEY [-o OUT]` | a still under audio as video | 0 · 1 · 2 |
+| `still-video` | `IMAGE AUDIO --deliverable KEY [-o OUT]` | a still under audio as video, re-rendered where the encode lifts the true peak over the ceiling | 0 · 1 · 2 |
 | `extract-audio` | `SRC [--in TC --out TC] [--rate HZ] [-o OUT]` | mono 16-bit WAV of a file or a range, for speech-to-text or alignment; by default `production/src/renders/<piece>/<stem>[.<in>-<out>].wav`, or at the folder's top for a stem with no piece key, such as a footage file's | 0 · 2 |
 | `captions check` | `SRT [--deliverable KEY] [--script SCRIPT]` | the caption limits, overlaps and gaps; with `--script`, the words against a script or transcript | 0 · 1 · 2 |
 | `captions from-segments` | `REGISTER --deliverable KEY [--offset TC] [-o SRT]` | cues from approved voiceover segments, each segment's duration shared by character count; joins exact | 0 · 1 · 2 |
@@ -100,12 +104,12 @@ install hint, or the tool itself failed). `--deliverable KEY` takes a `<platform
 | `captions transcript` | `TEXT [--lines B.L-B.L] [--date DD/MM/YYYY] [-o MD]` | the published transcript of a script or transcript, whole or one cut's lines: one sentence per line, a paragraph per beat, on-screen text kept, directions dropped; to standard output without `-o` | 0 · 2 |
 | `captions burn` | `SRC SRT --deliverable KEY [-o OUT]` | an ASS file sized to the output, styled from the caption tokens, burned in; fails when the caption font fell back | 0 · 1 · 2 |
 | `loudness measure` | `FILE` | integrated LUFS, true peak and range | 0 · 2 |
-| `loudness normalise` | `FILE --target social\|podcast\|acx [-o OUT]` | two-pass `loudnorm` with `-ar`, then re-measured | 0 · 1 · 2 |
-| `audiobook text` | `SOURCE --piece PIECE --chapter chNN [--footnotes drop\|inline] [--limit CHARS]` | chapter text with syntek-author's markup stripped and pronunciations applied, every unspoken word listed, chunked into the audiobook's generated folder; a chunk ends at every pause, recorded in the chapter's `<piece>.chNN.chunks.toml` | 0 · 1 · 2 |
-| `audiobook master` | `CHUNKS… --piece PIECE --chapter chNN [--head S] [--tail S] [-o OUT]` | joins takes with the pauses the chunk sidecar records, adds room tone, masters to the ACX profile | 0 · 1 · 2 |
+| `loudness normalise` | `FILE --target social\|podcast\|acx [-o OUT]` | two-pass `loudnorm` with `-ar`, then the written file re-measured and re-rendered where its true peak is over the ceiling | 0 · 1 · 2 |
+| `audiobook text` | `SOURCE --piece PIECE --chapter chNN [--footnotes drop\|inline] [--limit CHARS]` | chapter text with syntek-author's markup stripped and pronunciations applied, every unspoken word listed, chunked into the audiobook's generated folder; a chunk ends at every pause, recorded in the chapter's `<piece>.chNN.chunks.toml`; a chunk whose first five characters hold '/' (inline IPA), a backslash or NUL is a `FILE NAME` finding | 0 · 1 · 2 |
+| `audiobook master` | `CHUNKS… --piece PIECE --chapter chNN [--head S] [--tail S] [-o OUT]` | joins takes with the pauses the chunk sidecar records, adds room tone, masters to the ACX profile, re-rendered where the encode lifts the true peak over the ceiling | 0 · 1 · 2 |
 | `audiobook check` | `FILE…` | the ACX checks: RMS, peak, noise floor, sample rate, constant bitrate, channels, length, room tone | 0 · 1 · 2 |
 | `take add` | `FILE --piece PIECE (--segment sNN \| --chapter chNN --part pNN)` | renames a fresh ElevenLabs file to its name (`.pcm` for a `pcm_*` format) where it landed, a voiceover's in the piece's `generated/<piece>/takes/` (or the flat folder an earlier release used), numbered after the highest take in either; writes the register's `take` and `file`, and for a segment resets `status` to `generated` and `archived` to empty; appends the credits-log row | 0 · 2 |
-| `speak plan` | `PIECE [--segment sNN…]` · `--trial NAME` | offline requests, model-specific pronunciations and script delivery tags, character limits and calls, never credits; creates only the takes or trial folder (`NAME`: letters, digits, `.`, `_` and `-`, starting with a letter or digit, up to 64 characters) | 0 · 1 · 2 |
+| `speak plan` | `PIECE [--segment sNN…]` · `--trial NAME` | offline requests, model-specific pronunciations and script delivery tags, character limits and calls, never credits; creates only the takes or trial folder (`NAME`: letters, digits, `.`, `_` and `-`, starting with a letter or digit, up to 64 characters); a request whose first five characters hold '/' (inline IPA), a backslash or NUL is a `FILE NAME` finding, because the server names the take from them and fails the save after the credits are spent | 0 · 1 · 2 |
 | `voice remix plan` / `voice remix run` | `NAME --from VOICE --describe TEXT [--text TEXT]`; run requires `--approve-call` | offline request, one call and its characters, writing nothing / one approved ElevenLabs remix of a voice the account owns, the shell's user-scope `ELEVENLABS_API_KEY` never written or printed, no retry: `<name>.pNN.mp3` and `<name>.remix.json`, written to a staging folder and moved whole into the voice trial `NAME` (the rule of `speak plan --trial`), and the trial's credits-log row (the generated preview text's characters counted when no `--text` is given); refuses a trial already remixed; the chosen preview is saved through MCP | 0 · 2 |
 | `voice join` | `PIECE [-o OUT]` | approved takes in register order, with pauses, as mono 16-bit WAV at the register's rate; refuses an unapproved segment | 0 · 1 · 2 |
 | `levels` | `PIECE [--window S]` | RMS dBFS of the joined voice in 0.1 s windows by default, silence floored at -120; only a working JSON copy in the piece's timing output folder, no `-o` | 0 · 2 |
@@ -141,7 +145,8 @@ resolve, or a browser that will not start, is exit 2 naming the variable. The pi
 - `stills PIECE [--size WxH --size WxH]`: first/middle board frames and a measured boxes report;
   overlaps, safe-zone violations, text overflow and fractional positions are findings, exit 1.
 - `render PIECE [--size WxH] [--memory-max SIZE]`: a native master, no clip/overlay rows, sharing
-  assemble's audio mix and accepted joined voice; frame count, sound length and loudness checked.
+  assemble's audio mix and accepted joined voice; frame count, sound length and loudness checked,
+  re-rendered where the encode lifts the true peak over the ceiling.
 - The scene defines `build_scene(root, piece)` returning the standard-library kit's `Scene`;
   native layout and frame state live in Python, the fresh local page only draws them.
 - Missing timing names its producing command; missing art is exit 2 naming the frame.
@@ -157,10 +162,25 @@ resolve, or a browser that will not start, is exit 2 naming the variable. The pi
 - **Renders are generated.** Never hand-edit a master, deliverable, PNG or take; change the source
   and render again. Deliverables come from `media.py`, never a hand-typed ffmpeg command, so each
   carries its verification; ffmpeg and ffprobe may still inspect a file.
+- **Complex shots go to an outside editor, never forced through `assemble`**: a moving push-in,
+  parallax, an animated build-up or lower third, a speed ramp, a composite or a transition beyond
+  a cross-fade. Its export is logged with `footage add` and cut as a clip; assembly, the encodes,
+  loudness, captions and platform checks stay here (`production/docs/reference/complex-shots.md`).
 - **Read the render before reporting it.** The skill reports the command's own probe, and the
   author watches or listens: a render that succeeded is not a deliverable that was checked.
 - **Never `-c copy` for a frame-accurate cut**: a stream copy cuts on the nearest keyframe and
-  drifts every caption after it.
+  drifts every caption after it. `assemble` copies only pictures it has just encoded: the join
+  of whole sections, each already cut to its frames, and its final pass, never a source.
+- **One render at a time, under the thread cap**: `MEDIA_THREADS`, set by the author at user scope,
+  first; else the cgroup CPU quota (`cpu.max`) where one applies; else every CPU but two. A long
+  master that runs out of memory is reported as printed (only a finished `assemble` prints its
+  `memory: peak` line, the figure a cap is set by); the author lowers `MEDIA_THREADS` or sets
+  `--memory-max`, never a session.
+- **The true peak is measured on the written file.** Where a lossy encode lifts it over the
+  ceiling, the command renders again, at most twice, aiming loudnorm's peak (a `cut`'s gain)
+  lower by the overshoot plus 0.3 dB (never more than 3 dB under the ceiling), prints a note line
+  per retry and reports the last render's findings. On very peaky sound the retry can trade a
+  peak finding for a loudness finding: report it as printed, never hand-tune a render.
 - **Outputs go to a renders or generated folder**, a piece's into its own folder there
   (`production/src/renders/<piece>/`, `production/src/voiceover/generated/<piece>/takes/`,
   `publishing/src/renders/<piece>/`), named and placed as
@@ -194,8 +214,8 @@ resolve, or a browser that will not start, is exit 2 naming the variable. The pi
   ignored media file is opened only by the path a manifest, register or argument names, its name
   and hash printed, never its content; `where` names a piece's ignored folders without listing
   them, and a working copy in a piece's `timing` folder is never opened, because the command
-  that wrote it printed what it found
-  (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
+  that wrote it printed what it found; a still `scene.py stills` or `boards` printed is opened
+  by that path to look at it (`.claude/rules/syntek-media/06-global-rules.md` Section 12).
 - **Keep the toolkit minimal**: standard-library Python 3.14 or later and author-edited TOML; tool-written
   timing is finite JSON. Heavy dependencies stay in pinned PEP 723 scripts: `toolkit/card.py`
   and `toolkit/scene.py` (Playwright 1.64.0), and `toolkit/transcribe.py` (WhisperX 3.8.6; Python >=3.10,<3.14).
@@ -213,7 +233,7 @@ resolve, or a browser that will not start, is exit 2 naming the variable. The pi
 |---|---|
 | `ffmpeg` and `ffprobe`, built with libass, x264 and mp3lame | every render, probe, loudness pass and caption burn |
 | `python3` (3.14 or later) and `git` | every `media.py` command; the repository root and what Git ignores |
-| `uv`, with Playwright's Chromium, or the browser `MEDIA_CHROMIUM` names | `toolkit/card.py`, `toolkit/scene.py`, and the card PNGs `assemble` renders |
+| `uv`, with Playwright's Chromium, or the browser `MEDIA_CHROMIUM` names | `toolkit/card.py`, `toolkit/scene.py`, the card PNGs `assemble` renders, and `boards`, so every piece with picture needs it at M3 |
 | WhisperX 3.8.6 and its fetched English weights, punkt_tab and cross-check model (optional), on a Python from 3.10 to 3.13 kept beside 3.14, in uv's environment or at the interpreter path `MEDIA_TRANSCRIBE_PYTHON` names, never an environment the author activates | `transcribe`; the author runs `transcribe fetch` once, no skill downloads models |
 | Rhubarb Lip Sync 1.14.0 (optional), unzipped at user scope and linked onto PATH | `lipsync`; keep res/sphinx/cmudict-en-us.dict beside the real executable, never copy the binary alone |
 | `git-lfs` | large design exports in `brand/src/exports/large/` |
@@ -231,3 +251,4 @@ project, and the transcribe interpreter's own Python against `transcribe.py`'s r
 (`brand/workflows/06-check-the-setup/`). Optional tools' absence is a note naming the commands blocked; an installed tool that is broken
 is a finding with its fix. Rhubarb's version alone cannot prove its dictionary is present.
 If a tool is missing, say which one and which command it blocks. Never report a command as passed when it could not run.
+Where `boards` exits 2, M3 waits, or the author waives its seen-check on their explicit word, recorded in `verified:` with the date and reason.

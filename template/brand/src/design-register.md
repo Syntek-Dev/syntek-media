@@ -1,4 +1,4 @@
-# design-register.md — every design <%BRAND_NAME%> has made in Claude Design
+# design-register.md — every design <%BRAND_NAME%> has exported into this repository
 
 **Last Updated**: <%DATE%> **Version**: 0.1.0 **Maintained By**: <%OWNER_NAME%>
 **Language**: British English (en_GB)
@@ -7,15 +7,14 @@
 > It ships with the project so that the skills which route here point at something real from day one.
 > Until `brand/workflows/03-record-a-design-export/` has recorded an export, the table below has no rows.
 
-The register is the one list of the brand's designs: its design-system project in Claude Design, and every design exported from Claude Design into this repository.
-Each row gives the design's Claude Design link, where its exported file sits, and how Git stores it.
-Claude Design links are kept here and nowhere else in the repository: never in a guide, a procedure, a post or `.claude/MEMORY.md`.
+The register is the one list of the brand's designs: every design exported into this repository, from whichever app made it.
+Each row gives the app the design was made in, where its exported file sits, and how Git stores it.
+A design link, where one exists, is kept here and nowhere else in the repository: never in a guide, a procedure, a post or `.claude/MEMORY.md`.
 
 ## How to add a design
 
 - Add rows through `brand/workflows/03-record-a-design-export/`, or by hand keeping every column, one exported file per row, oldest first.
-- The brand's design-system project has a row of its own, written the first time `brand/workflows/02-sync-with-claude-design/` runs, with a dash for its Export path, Storage and Exported.
-- The Claude Design link column holds the link exactly as Claude Design gives it.
+- The Made in column names the app and its version, and the label of the project file the design was made in, never its path or a link.
 - The Export path column takes the file's path from the repository root, under `brand/src/exports/` or `brand/src/exports/large/`.
 - The Storage column takes one of `git · lfs`: `lfs` for every file in `brand/src/exports/large/`, `git` for every other.
 - The Exported column takes the date the file was exported, DD/MM/YYYY.
@@ -25,5 +24,5 @@ Claude Design links are kept here and nowhere else in the repository: never in a
 
 ## Register
 
-| Design | Claude Design link | Export path | Storage | Exported | Notes |
+| Design | Made in | Export path | Storage | Exported | Notes |
 |---|---|---|---|---|---|

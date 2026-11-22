@@ -135,7 +135,10 @@ The mode file adds this kind of book's source, the words it cannot say unaided, 
    (`mp3_44100_192` needs Creator or above, `pcm_44100` Pro or above); say plainly that a 128 kbps
    take re-encoded up to 192 kbps meets the letter of ACX's bitrate rule, not its intent. Agree how
    many chapters go in one batch, give the balance from `mcp__elevenlabs__check_subscription` if
-   the author wants it, and wait for a yes.
+   the author wants it, and wait for a yes. A chunk `audiobook text` flags `FILE NAME` (a '/' of
+   inline IPA, a backslash or NUL in its first five characters) is never sent: the server names
+   the take from them and fails the save after the credits are spent; respell that word or reorder
+   the words, with the author, and make the chunks again.
    *Complete when:* the author has seen the count and said yes.
 
 7. **Generate, one chunk at a time.** Call `mcp__elevenlabs__text_to_speech` once per chunk, in part
@@ -199,20 +202,18 @@ The mode file adds this kind of book's source, the words it cannot say unaided, 
 12. **Hand back.** Report the chapters made or recorded, mastered and checked; the characters and
     calls spent; the voice and model; every check result; what is archived; each channel's route,
     package and disclosure; and open words and flags. First fill all four `M4.*` as
-    `n/a — no picture`, including missing entries in older pieces. The procedure records
-    the gates on the author's word: M4 (storyboarded → produced, with M3 `n/a — no picture`)
-    once every chapter's master, the credits' included, exists, probes clean, has been heard through,
-    is approved and is archived; then M5 (produced → cut) once `audiobook check` passes on every
-    file, with `M6: 'n/a — audiobook'` beside it and `status: cut`. The author uploads to each
-    channel; this skill never does. M7 still needs every rights row `cleared` and the announcement
-    through `prepare-post`.
+    `n/a — no picture`, including missing entries in older pieces. The procedure records the gates
+    on the author's word: M4 (storyboarded → produced, with M3 `n/a — no picture`) once every
+    chapter's master, the credits' included, exists, probes clean, has been heard through, is
+    approved and is archived; then M5 (produced → cut) once `audiobook check` passes on every file,
+    with `M6: 'n/a — audiobook'` beside it and `status: cut`. The author uploads to each channel;
+    this skill never does. M7 still needs every rights row `cleared` and the announcement through `prepare-post`.
     *Complete when:* the author has the report, and nothing was generated, mastered or sent
     without the author's word.
 
 ## Anti-patterns
 
-- **Generating unasked.** Every call spends the author's credits; a chapter nobody requested is a
-  cost nobody agreed.
+- **Generating unasked.** Every call spends the author's credits: an unasked chapter is an unagreed cost.
 - **AI narration for ACX or Audible without authorisation, or anything made for an `external`
   channel.** ACX asks for a human narrator; an external channel takes ElevenLabs' own package.
 - **Copying chapter text into a tracked file, or editing a chunk.** The source is the record; the
@@ -223,8 +224,7 @@ The mode file adds this kind of book's source, the words it cannot say unaided, 
   default model is not the narrator's, the default folder is outside the project, and `take add`
   runs straight after each call.
 - **A second narrator mid-book**, or another person's voice without a cleared release.
-- **Forcing the check**, or calling a 128 kbps take a 192 kbps master without saying what the
-  re-encode does not fix.
+- **Forcing the check**, or passing off a 128 kbps take re-encoded to 192 kbps as a true master.
 - **Retrying on error**, or offering an espeak-ng read that is not installed or mastering one.
 - **Committing audio, or leaving an approved master unarchived.**
 

@@ -38,8 +38,8 @@ production/
 ## What's here
 
 - `production/docs/reference/` — the guides: `source-media.md`, `edit-decision-lists.md`,
-  `sound-and-loudness.md`, `rights-and-consent.md`, `elevenlabs.md`, `voiceover.md`,
-  `character-voices.md` and `recorded-pieces.md` for every project<: if 'audiobook' in MEDIA_KINDS :>, and
+  `complex-shots.md`, `sound-and-loudness.md`, `rights-and-consent.md`, `elevenlabs.md`,
+  `voiceover.md`, `character-voices.md` and `recorded-pieces.md` for every project<: if 'audiobook' in MEDIA_KINDS :>, and
   `audiobook-narration.md` for audiobooks<: endif :>.
 - `production/docs/project/` — your own guides. The template ships only the folder's pair.
 - `production/src/` — the material. **`production/src/footage/manifest.toml` is the one list of

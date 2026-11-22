@@ -15,7 +15,7 @@ standing in for the brand's look once it has them.
 - **Routing:** `thumbnail-brief` copies `thumbnail.html` and `cut-for-platform` copies `card.html`,
   each only where the brand's own component under `brand/src/design-system/previews/` is absent.
   A change to how the brand looks belongs in those components
-  (`brand/workflows/01-set-up-the-brand-kit/`, `brand/workflows/02-sync-with-claude-design/`),
+  (`brand/workflows/01-set-up-the-brand-kit/`),
   never here.
 - **Model:** the mechanical tier for copying a layout and fixing its path; **Opus** for the words
   a copy carries and for any change to a layout here
@@ -49,7 +49,8 @@ standing in for the brand's look once it has them.
 
 ## Output & naming
 
-- **Template-owned:** `thumbnail.html`, `card.html`.
+- **Template-owned:** `thumbnail.html`, `card.html`, `board.html` (which `media.py boards` fills, never a
+  piece).
 - **Written by skills (elsewhere):** `publishing/src/thumbnails/<piece>[--cNN].html` and
   `production/src/cards/<piece>.<card>.html`, copies of these or of the brand's components.
 - **Generated (never hand-edit):** their PNGs, in `publishing/src/renders/` and

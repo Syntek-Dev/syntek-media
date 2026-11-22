@@ -21,13 +21,15 @@ in Git history cannot be taken out by a later commit) and tick `CHECKLIST.md` as
 
 > **Skill:** none · **Guide:** `brand/docs/reference/design-exports.md`
 
-Ask the author which design the file comes from, its Claude Design link, and the date it was
-exported; never guess a link. Ask whether it replaces an earlier export, read the design register
-for that export's row, and ask whether the author approves it to replace that export now or will
-decide later. If the author is approving a revision filed earlier (its row says 'awaiting
-approval'), read its row and the original's, confirm the approval, and go straight to step 7,
-then step 8 for the files step 7 changed, and step 10: steps 2 to 6 and 9 ran when it was filed.
-_Substantive._
+Where the design is still to be made or revised, the author makes it in its app first, as
+`brand/docs/reference/design-apps.md` says, and exports it. Ask the author which design the file
+comes from, the app it was made in with its version and the project file's label (never a path),
+and the date it was exported; never guess one. Ask whether it replaces an earlier export, read
+the design register for that export's row, and ask whether the author approves it to replace
+that export now or will decide later. If the author is approving a revision filed earlier (its
+row says 'awaiting approval'), read its row and the original's, confirm the approval, and go
+straight to step 7, then step 8 for the files step 7 changed, and step 10: steps 2 to 6 and 9 ran
+when it was filed. _Substantive._
 
 ## 2. Check what it carries
 
@@ -79,9 +81,10 @@ with each export; see `production/docs/reference/scenes-as-code.md`. _Mechanical
 
 > **Skill:** none · **Guide:** `brand/docs/reference/design-exports.md`
 
-Add one row to `brand/src/design-register.md`: the design, its link exactly as the author gave
-it, the export path from the repository root, the storage, the date exported (DD/MM/YYYY), and
-the rights IDs in Notes. For a revision, its Notes also name the export it revises and, until the
+Add one row to `brand/src/design-register.md`: the design, the app, version and project label
+the author gave in its second column (headed `Claude Design link` in a register made before
+0.12.0), the export path from the repository root, the storage, the date exported (DD/MM/YYYY),
+and the rights IDs in Notes. For a revision, its Notes also name the export it revises and, until the
 author approves it, 'awaiting approval'; the original's row is marked in step 7, once they do.
 _Mechanical._
 
@@ -148,7 +151,7 @@ python3 toolkit/media.py image <export> --deliverable podcast.cover
 python3 toolkit/media.py image <export> --deliverable podcast.id3_cover
 ```
 
-Exit 1 names what failed (a size, a shape, transparency): the export is remade in Claude Design,
+Exit 1 names what failed (a size, a shape, transparency): the export is remade in its app,
 never stretched. Give the author the renders' names for the show register or the placement.
 _Mechanical._
 

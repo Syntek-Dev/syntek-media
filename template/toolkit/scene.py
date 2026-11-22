@@ -198,13 +198,18 @@ def cmd_render(args) -> int:
                         yield browser.capture(page, type='png', full_page=False)
                 C.stream_run(command, frames(), cwd=C.ROOT, what='scene frame encoder')
             finally: page.close()
-        filters = []
+        def once(aim):
+            # The picture copied, the sound to aim and held to the picture; a retry (A.to_ceiling)
+            # aims loudnorm's peak lower where the AAC encode lifted it over the ceiling.
+            filters = [A.loudnorm_filter(A.loudnorm_measure(stage, aim), aim)] if aim else []
+            filters.append(V.held_sound(samples, rate))
+            V.render(['-y', '-i', str(stage), '-map', '0:v:0', '-map', '0:a:0', '-c:v', 'copy', '-af',
+                      ','.join(filters), '-c:a', 'aac', '-b:a', '192k', '-ar', str(rate), '-movflags', '+faststart',
+                      str(out)], out, what='scene master')
         if loudness != 'none':
-            target = C.loudness_target(loudness)
-            filters.append(A.loudnorm_filter(A.loudnorm_measure(stage, target), target))
-        filters.append(V.held_sound(samples, rate))
-        V.render(['-y', '-i', str(stage), '-map', '0:v:0', '-map', '0:a:0', '-c:v', 'copy', '-af', ','.join(filters),
-                  '-c:a', 'aac', '-b:a', '192k', '-ar', str(rate), '-movflags', '+faststart', str(out)], out, what='scene master')
+            summary, loud_findings = A.to_ceiling(once, out, C.loudness_target(loudness), loudness)
+        else:
+            once(None)
     info = json.loads(C.run([C.need('ffprobe'), '-v', 'error', '-count_frames', '-show_streams', '-of', 'json', str(out)]).stdout)
     picture, audio = C.streams(info, 'video'), C.streams(info, 'audio')
     if not picture or int(picture[0].get('nb_read_frames') or 0) != scene.frames:
@@ -216,12 +221,10 @@ def cmd_render(args) -> int:
         audio_end = float(audio[0].get('start_time') or 0) + float(audio[0].get('duration') or 0)
         if abs(audio_end - video_end) > 2 / rate:
             findings.append(f'sound ends at {audio_end:.6f}s, picture at {video_end:.6f}s')
-    if loudness != 'none':
-        target = C.loudness_target(loudness)
-        measured = A.loudnorm_measure(out, target)
-        if abs(float(measured['input_i']) - target[0]) > 1:
-            findings.append(f'master loudness {measured["input_i"]} LUFS is outside the selected {target[0]:g} LUFS target')
     print(f'wrote {C.shown(out)}; {scene.frames} frames at {scene.fps:g} fps')
+    if loudness != 'none':
+        print(f'  loudness: {summary} ({loudness} target)')
+        findings += loud_findings
     for finding in findings: print('  FAIL ' + finding)
     return int(bool(findings))
 
@@ -384,8 +387,28 @@ def self_test() -> int:
                             info=C.probe(master)
                             check('native scene master ' + (size or '160x90') + ' has exact frames and held sound', code==0
                                   and V.parse_size(size or '160x90') == tuple(int(C.streams(info,'video')[0][k]) for k in ('width','height')))
-                            target=C.loudness_target('social'); measure=A.loudnorm_measure(master,target)
-                            check('master loudness is selected by the edit key', abs(float(measure['input_i'])-float(target[0])) <= 1, measure)
+                            target=C.loudness_target('social'); measure=A.ebur128(master)
+                            check('master loudness is selected by the edit key, its true peak within the ceiling',
+                                  abs(measure['I']-target[0]) <= 1 and A.under_ceiling(measure['TP'], target[1]), measure)
+                        # The AAC encode lifting the peak is stood in for on the master's first reading.
+                        master = root / C.PROD_RENDERS / scene.piece / (scene.piece+'.master.mp4')
+                        real_meter, seen = A.ebur128, []
+                        def meter(p, pcm_format=None):
+                            got = real_meter(p, pcm_format)
+                            if Path(p) == master:
+                                seen.append(got['TP'])
+                                if len(seen) == 1: got = dict(got, TP=target[1] + 1.0)
+                            return got
+                        import contextlib, io
+                        said = io.StringIO(); A.ebur128 = meter
+                        try:
+                            with contextlib.redirect_stdout(said):
+                                code = cmd_render(argparse.Namespace(piece=scene.piece,size=None,memory_max=None))
+                        finally: A.ebur128 = real_meter
+                        check('a scene master the encode lifts over the true-peak ceiling is rendered again aiming '
+                              'lower (one note line) and verified', code == 0 and len(seen) == 2
+                              and said.getvalue().count('rendering again') == 1 and 'loudness:' in said.getvalue(),
+                              said.getvalue())
                     attempt('scene masters',render_checks)
                 else:
                     skips.append('ffmpeg or ffprobe is missing: scene render'); print('  SKIP '+skips[-1])

@@ -917,15 +917,86 @@ def memory_scope(limit, command: list, cwd=None):
     return code
 
 
+PROC_CGROUP = Path("/proc/self/cgroup")   # this process's cgroup v2 path, on its '0::' line
+CGROUP_ROOT = Path("/sys/fs/cgroup")      # where cgroup v2 is mounted; each folder may hold cpu.max
+
+
+def cpu_quota():
+    """The CPUs a cgroup v2 quota allows this process, rounded up, or None where none applies: the
+    tightest cpu.max ('QUOTA PERIOD', or 'max PERIOD' for none) of this process's cgroup and every
+    ancestor up to the mount, the mount's own included (inside a container it is the container's).
+    A missing or unreadable file, cgroup v1 or another system is no quota."""
+    folders = [CGROUP_ROOT]
+    try:
+        for line in PROC_CGROUP.read_text(encoding="utf-8").splitlines():
+            if line.startswith("0::"):
+                parts = [p for p in line[3:].strip().split("/") if p and p != ".."]
+                folders += [CGROUP_ROOT.joinpath(*parts[:n]) for n in range(1, len(parts) + 1)]
+    except (OSError, UnicodeDecodeError):
+        pass
+    found = []
+    for folder in folders:
+        try:
+            quota, period = (folder / "cpu.max").read_text(encoding="utf-8").split()[:2]
+            if quota != "max" and int(quota) > 0 and int(period) > 0:
+                found.append(-(-int(quota) // int(period)))
+        except (OSError, UnicodeDecodeError, ValueError):
+            continue
+    return min(found) if found else None
+
+
 def threads() -> int:
-    """The house thread cap for ffmpeg: MEDIA_THREADS when it is a whole number of 1 or more,
-    else every CPU but two (at least one), so a render never takes the whole machine."""
+    """The house thread cap for ffmpeg: MEDIA_THREADS when it is a whole number of 1 or more.
+    Else the CPUs this process may use (os.process_cpu_count, which honours the affinity mask a
+    container or taskset sets). Where a cgroup v2 quota applies (cpu_quota), those CPUs or the
+    quota, whichever is fewer, and at least one: a quota is already somebody's limit, so nothing
+    more is held back. With none, every CPU but two (at least one), so a render never takes the
+    whole machine."""
     raw = os.environ.get("MEDIA_THREADS", "").strip()
     if raw:
         if raw.isdigit() and int(raw) >= 1:
             return int(raw)
         raise Fatal(f"MEDIA_THREADS={raw!r} is not a whole number of threads, 1 or more")
-    return max(1, (os.cpu_count() or 1) - 2)
+    base = None
+    counter = getattr(os, "process_cpu_count", None)
+    if counter:
+        base = counter()
+    if not base and hasattr(os, "sched_getaffinity"):
+        try:
+            base = len(os.sched_getaffinity(0))
+        except OSError:
+            base = None
+    base = base or os.cpu_count() or 1
+    quota = cpu_quota()
+    if quota is not None:
+        return max(1, min(base, quota))
+    return max(1, base - 2)
+
+
+def decoder_threads(video: bool = True) -> int:
+    """The decoder threads of one input among many in a render (assemble), as its own -threads
+    input option. Each frame thread holds frames of its own, and assemble opens an input for every
+    video clip at once: 33 clips of one 1920x1080 H.264 source peaked at 4.4 GB with ffmpeg 6.1.1
+    choosing a thread per CPU for each, 1.0 GB at two and 0.7 GB (and half the speed) at one
+    (16 CPUs, 22/11/2026). A video decoder takes two, or threads() where that is fewer; a sound
+    decoder takes one. A single-input job (cut, encode) keeps ffmpeg's own choice (input_args)."""
+    return min(2, threads()) if video else 1
+
+
+def peak_memory() -> None:
+    """One line naming the most memory any one child process of this command has held (ffmpeg's
+    passes, a card's browser), from the operating system's own account of them: the figure to set
+    a --memory-max or MEDIA_MEMORY_MAX cap by. Nothing is printed where the system keeps none."""
+    try:
+        import resource
+        peak = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+    except (ImportError, OSError, AttributeError):
+        return
+    if peak <= 0:
+        return
+    kib = peak / 1024 if sys.platform == "darwin" else peak   # bytes on macOS, KiB on Linux
+    shown = f"{kib / 1024 / 1024:.1f} GiB" if kib >= 1024 * 1024 else f"{kib / 1024:.0f} MiB"
+    print(f"  memory: peak {shown} in one child process (the largest of this command's renders)", flush=True)
 
 
 def ffmpeg(args: list, cwd=None, what: str = "ffmpeg") -> subprocess.CompletedProcess:

@@ -12,6 +12,7 @@ production/docs/reference/
 ├── CLAUDE.md                   ← operating rules
 <: if 'audiobook' in MEDIA_KINDS :>├── audiobook-narration.md      ← three routes chosen per channel; chapter text; the ACX targets
 <: endif :>├── character-voices.md         ← a character's voice remixed from the author's clone, chosen and recorded
+├── complex-shots.md            ← a shot beyond assemble, made in an outside editor and logged as footage
 ├── edit-decision-lists.md      ← the master as a list of clips, overlays and sounds, rebuilt on demand
 ├── elevenlabs.md               ← the user-scope server, the base path, cost before spend, one call at a time
 ├── recorded-pieces.md          ← a recording in, a transcript as its script, captions to every cut
@@ -28,6 +29,8 @@ production/docs/reference/
   manifest field by field, the mirror, and music beds, stock and archived takes.
 - `edit-decision-lists.md` — the edit decision list field by field: clips, stills, cards,
   colour clips, fades, push-ins, overlays and sound.
+- `complex-shots.md` — what `assemble` makes and what goes to an outside editor (DaVinci
+  Resolve, EffectCraft, FilmCraft, AniCraft); the `edited` shot, its export and `footage add`.
 - `scenes-as-code.md` — the scene kit, frame clock, sprite slot, movement and anchor interactions;
   first/middle stills and the preview review, then a master rendered natively per aspect.
 - `sound-and-loudness.md` — the loudness targets and where each comes from; where a music bed

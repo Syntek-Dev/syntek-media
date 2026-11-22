@@ -45,8 +45,8 @@ are authoritative: `opus` items are judgement; `sonnet` items belong to the mech
   it.
 - **Never run `git lfs track`.** It writes a root `.gitattributes`, a shared file no template
   seeds.
-- **The link comes from the author.** Never guess a Claude Design link, and never write one
-  anywhere but the register.
+- **The app comes from the author.** Never guess an app, a version or a project label; never
+  write a project file's path, and never a design link anywhere but the register.
 
 ## Output & naming
 

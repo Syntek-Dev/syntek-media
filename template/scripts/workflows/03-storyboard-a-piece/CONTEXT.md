@@ -4,8 +4,9 @@ The procedure for turning an approved script into a storyboard and a shot list t
 approved: a picture for every spoken line, framing for every vertical deliverable, the words and
 sounds over each board, and a source for every shot, stills, cards and colour clips included.
 Every licensed or identifiable thing it shows or plays opens a rights row as it is boarded. It
-ends with the piece at `status: storyboarded` and M3 (scripted → storyboarded) recorded. It
-shoots, renders and clears nothing.
+ends with the piece at `status: storyboarded` and M3 (scripted → storyboarded) recorded, once
+the author has seen the boards as pictures. It shoots and clears nothing, and renders only the
+board sheet and the animatic; the master stays production's.
 
 ## Directory Tree
 
@@ -37,6 +38,9 @@ boarded (`production/workflows/07-clear-the-rights/`).
   rights ID.
 - A `needed` row in `production/src/rights-register.md` for every licensed or identifiable item,
   and its ID in the brief's `rights:` list.
+- `production/src/renders/<piece>/boards/` — git-ignored, never tracked: one still per board at
+  the master's size, `<piece>.boards.html` (the contact sheet) and, where a board moves or builds
+  up, `<piece>.animatic.toml` and `<piece>.animatic.mp4`, from `python3 toolkit/media.py boards`.
 - The brief's `status: storyboarded`, with `M3` dated in `verified`.
 
 ## The failure this procedure exists to prevent
@@ -45,7 +49,9 @@ A master assembled from whatever footage was to hand. Lines go out over a face t
 speaking them, a vertical cut crops the one detail the line was about, and a stock clip, a song
 or a stranger's face is found uncleared only when the post is ready. A board for every line and
 a source for every shot let the edit decision list be written without guessing, and a rights row
-opened at the first sketch means nothing reaches M7 unasked about.
+opened at the first sketch means nothing reaches M7 unasked about. A board approved from the table
+alone hides a juddering push-in or a card laid out wrong until the master; the board sheet shows it
+first.
 
 ## Cross-references
 

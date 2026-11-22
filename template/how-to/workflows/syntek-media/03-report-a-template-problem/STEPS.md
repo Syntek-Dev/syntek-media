@@ -82,8 +82,9 @@ Where the toolkit was involved, add the first line of `ffmpeg -version`. _Mechan
 
 Read everything collected with the author, line by line, and take out what
 `.claude/rules/syntek-media/06-global-rules.md` Section 10 keeps private: API keys and any line
-that holds one, voice IDs, Claude Design links, platform account IDs and channel handles, a real
-person's name or a release form's details, and private correspondence. Write a home folder as
+that holds one, voice IDs, Claude Design links, a design app's project file path or label,
+platform account IDs and channel handles, a real person's name or a release form's details, and
+private correspondence. Write a home folder as
 `~`, and replace any other absolute path that names a person or a machine with a short
 description. Where `_src_path` is a folder on this machine, write that the project came from a
 local clone, and of which release. Leave every error message, file name inside the project and

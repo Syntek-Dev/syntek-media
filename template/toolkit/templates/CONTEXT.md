@@ -4,8 +4,8 @@ The toolkit's fallback layouts: a thumbnail and a card, in plain HTML and CSS, r
 colour, face, weight and space from the brand's `brand/src/design-system/tokens.css`. They are used
 only where the brand has no layout of its own: the brand's components,
 `brand/src/design-system/previews/thumbnail.html` and `brand/src/design-system/previews/card.html`,
-always win, and they are what a change in Claude Design reaches. A piece never edits a file here;
-it copies one.
+always win, and they are what a change to the brand kit reaches. A piece never edits a file here;
+it copies one. Beside them is the page `media.py boards` draws each board on, which no piece copies.
 
 ## Directory Tree
 
@@ -14,7 +14,8 @@ toolkit/templates/
 ├── CONTEXT.md          ← this file
 ├── CLAUDE.md           ← operating rules
 ├── thumbnail.html      ← one thumbnail, image and cover layout for every aspect: 1.91:1, 16:9, 1:1, 4:5 and 9:16
-└── card.html           ← title and end cards: a lower-third title or a centred end card
+├── card.html           ← title and end cards: a lower-third title or a centred end card
+└── board.html          ← the page of one board still: its picture or placeholder, a label, its On screen cues
 ```
 
 ## What's here
@@ -45,7 +46,13 @@ toolkit/templates/
   class. `title` is a lower-third title; `end` is a centred end card with its call to action. The
   background is transparent, so an `[[overlay]]` rendered with `--transparent` lays it over the
   picture; a card used as a `[[clip]]` adds the class `solid`, or it renders on white.
-- **The layout contract** both meet, as every piece's copy must: `<!doctype html>` and
+- `board.html` — **the page of a board still** (DESIGN D92), never copied by a piece:
+  `media.py boards` fills a scratch copy for each board, and each build-up step, linking
+  `tokens.css` and the picture by their full paths, and renders it with `card.py` at the master's
+  size. It holds the framed picture (or a placeholder naming the board and why), a label on a
+  frame of video, and the On screen cues in draft styling inside a title-safe margin. Its system
+  colours stand in only where a token is missing.
+- **The layout contract** the thumbnail and the card meet, as every piece's copy must: `<!doctype html>` and
   `<html lang="en-GB">`; one stylesheet link to `tokens.css` by relative path, fixed on copy (from
   `publishing/src/thumbnails/` or `production/src/cards/` it climbs three folders,
   ../../../brand/src/design-system/tokens.css); `html, body` at the full frame with no margin or

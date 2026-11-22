@@ -18,7 +18,7 @@ pattern and are not files in this project.
 | Pattern | Example | Used for |
 |---|---|---|
 | `NNN-kebab-title` | 003-why-the-ferry-runs-late | a piece: its folder, and the key every other file uses (frozen) |
-| `<piece>/` | 003-why-the-ferry-runs-late/ | a piece's output folder inside `production/src/renders/`, `production/src/voiceover/generated/` and `publishing/src/renders/`, made by the toolkit: git-ignored, never holding a tracked file, with no pair and no README |
+| `<piece>/` | 003-why-the-ferry-runs-late/ | a piece's output folder inside `production/src/renders/`, `production/src/voiceover/generated/` and `publishing/src/renders/`, made by the toolkit: git-ignored, with no pair and no README |
 | `proofs/<what>-DD-MM-YYYY/` | proofs/brand-kit-05-10-2026/ | brand-kit proofs, which no piece owns, in `production/src/renders/` |
 | `voice-trials/<name>/` | voice-trials/warm-narrator/ | voice trials, which no piece owns, in `production/src/voiceover/generated/`, made by `speak plan --trial <name>`, or by `voice remix run` for a remix: never a take, never in a register |
 | `<name>.pNN.mp3` / `<name>.remix.json` | ferrywoman-1.p01.mp3 | a voice remix's previews / its record of the request and each preview's `generated_voice_id`, in `voice-trials/<name>/`, both written by `voice remix run`, which refuses a name already used |
@@ -35,6 +35,7 @@ pattern and are not files in this project.
 | `<piece>.cues.json` / `<piece>.real.json` | 003-….cues.json | the piece's cue index / the index of the real sources its scene shows, tracked in `production/src/scenes/` |
 | `<piece>.scene.py` / `<piece>/scene/index.html` | 003-….scene.py | a piece's scene as code, tracked in `production/src/scenes/` and run by its path / the page it writes, in `production/src/renders/` |
 | `<piece>.bNN[.mid].<W>x<H>.png` / `<piece>.stills.json` | 003-….b02.mid.1080x1920.png | a board's first (or middle) frame, `bNN` its storyboard number in lower case / every box and flag of the piece's stills; both in `production/src/renders/<piece>/stills/` |
+| `<piece>.bNN.board[.kK].<W>x<H>.png` / `<piece>.boards.html` / `<piece>.animatic.toml` (`.mp4`) | 003-….b02.board.1920x1080.png | a board still (`.kK` a build-up step) / the contact sheet / the animatic's working list (and render), in `production/src/renders/<piece>/boards/` |
 | `<sprite>-<pose>-mouth-<shape>` · `<sprite>-<pose>` with `<sprite>-mouth-<shape>` · `<sprite>-<pose>-blink` | host-point-mouth-d.svg | a character's whole frame · a mouthless pose and its mouth layer · its blink layer: design exports in `brand/src/exports/`, read by the scene kit's sprite slot; `<sprite>` and `<pose>` are kebab slugs, `<shape>` is `a`–`h` or `x` |
 | `<design>-vN.<ext>` · `<sprite>-<pose>-vN` | harbour-lane-logo-v2.svg · host-point-v2-mouth-d.svg | a revised design export beside the original it supersedes, `N` the next unused number from 2; a sprite revision renames its pose, so every name built on `<pose>` takes `<pose>-vN` and the scene names it; a pose is filed whole under `<pose>-vN`, and a revised mouth layer, which names no pose, renames the sprite (`<sprite>-vN`) (`brand/workflows/03-record-a-design-export/`) |
 | `<piece>.chNN.pNN.txt` / `<piece>.chNN.pNN.tN.mp3` / `<piece>.chNN.mp3` | 012-….ch03.p02.t1.mp3 | an audiobook text chunk / its take / a mastered chapter |
@@ -58,9 +59,8 @@ pattern and are not files in this project.
 | `NN-verb-first-name/` | 04-update-the-template/ | one of media's procedures, in `how-to/workflows/syntek-media/`, numbered from 01, frozen and append-only |
 
 **Folders.** In an output folder, a name that begins with a piece's key lands in that piece's
-folder: a take in its takes folder, a card PNG in its cards folder, the working copy of a timing
-or scene file in its timing folder, a scene's page in its scene folder and its stills in its
-stills folder, and anything else in `<piece>/` itself. A name with no piece key stays at the
+folder: in the subfolder its row names (a timing or scene file's working copy in timing), or
+else in `<piece>/` itself. A name with no piece key stays at the
 folder's top, and the audiobook folder's generated and renders folders stay flat. A tracked file
 never sits in a per-piece folder: it stays flat in its tracked folder under its `<piece>.` name.
 
@@ -86,7 +86,7 @@ this project's heading, and media reads and writes under that heading.
 | A piece's status and gates | its brief: `status` and `verified` |
 | A narrator, a voice or model ID, a pronunciation | `brand/src/voice/voice.md` |
 | Credits spent; a right, a licence or a consent | `production/src/credits-log.md`; `production/src/rights-register.md` |
-| A design and its Claude Design link | `brand/src/design-register.md` |
+| A design export and the app it was made in | `brand/src/design-register.md` |
 | A planned post; what was posted, with what disclosure | `publishing/src/schedule.md`; `publishing/src/publish-log.md` |
 | A platform limit that has changed | an `[[override]]` in `brand/src/platforms/overrides.toml` |
 | The brand's name, kind, platforms or media kinds | the Copier answers (`.claude/rules/syntek-media/06-global-rules.md` Section 11) |

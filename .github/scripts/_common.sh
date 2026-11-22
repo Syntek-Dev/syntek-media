@@ -618,7 +618,7 @@ always        d  brand/docs/project
 always        d  brand/src
 always        d  brand/workflows/local
 always        f  brand/docs/reference/the-brand-kit.md
-always        f  brand/docs/reference/claude-design.md
+always        f  brand/docs/reference/design-apps.md
 always        f  brand/docs/reference/design-exports.md
 always        f  brand/docs/reference/the-spoken-voice.md
 always        f  brand/docs/reference/platform-profiles.md
@@ -651,7 +651,6 @@ p:blog        f  brand/src/platforms/blog.md
 p:newsletter  f  brand/src/platforms/newsletter.md
 always        f  brand/src/platforms/overrides.toml
 always        d  brand/workflows/01-set-up-the-brand-kit
-always        d  brand/workflows/02-sync-with-claude-design
 always        d  brand/workflows/03-record-a-design-export
 always        d  brand/workflows/04-set-up-a-platform
 always        d  brand/workflows/05-write-the-spoken-voice
@@ -679,6 +678,7 @@ always        d  production/src
 always        d  production/workflows/local
 always        f  production/docs/reference/source-media.md
 always        f  production/docs/reference/edit-decision-lists.md
+always        f  production/docs/reference/complex-shots.md
 always        f  production/docs/reference/sound-and-loudness.md
 always        f  production/docs/reference/rights-and-consent.md
 always        f  production/docs/reference/elevenlabs.md
@@ -764,12 +764,14 @@ always        f  toolkit/media_image.py
 always        f  toolkit/media_feed.py
 always        f  toolkit/media_score.py
 always        f  toolkit/media_voice.py
+always        f  toolkit/media_boards.py
 always        f  toolkit/card.py
 always        f  toolkit/transcribe.py
 always        f  toolkit/data/platforms.toml
 always        f  toolkit/data/packaging-score.toml
 always        f  toolkit/templates/thumbnail.html
 always        f  toolkit/templates/card.html
+always        f  toolkit/templates/board.html
 seed          d  scripts/src/pieces/000-example-piece
 seed          f  production/src/edits/000-example-piece.toml
 seed          f  production/src/cards/000-example-piece.title.html
@@ -1032,17 +1034,17 @@ production/src/{assets,audiobook,cards,edits,footage,scenes,timing,voiceover}/**
 publishing/src/{captions,cut-downs,podcast,thumbnails}/**
 brand/src/{design-system,exports}/**
 brand/src/platforms/overrides.toml
-brand/workflows/*-{set-up-the-brand-kit,sync-with-claude-design,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**
-brand/workflows/local/*-{set-up-the-brand-kit,sync-with-claude-design,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**
+brand/workflows/*-{set-up-the-brand-kit,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**
+brand/workflows/local/*-{set-up-the-brand-kit,record-a-design-export,set-up-a-platform,write-the-spoken-voice,check-the-setup}/**
 scripts/workflows/*-{write-a-script,storyboard-a-piece}/**
 scripts/workflows/local/*-{write-a-script,storyboard-a-piece}/**
 production/workflows/*-{log-source-media,make-a-voiceover,assemble-the-master,master-a-podcast-episode,narrate-an-audiobook,master-an-audiobook,bring-in-a-recording,time-the-voice,animate-a-scene,design-character-voices}/**
 production/workflows/local/*-{log-source-media,make-a-voiceover,assemble-the-master,master-a-podcast-episode,narrate-an-audiobook,master-an-audiobook,bring-in-a-recording,time-the-voice,animate-a-scene,design-character-voices}/**
 publishing/workflows/*-{plan-the-cut-downs,cut-for-a-platform,caption-a-piece,brief-a-thumbnail,prepare-a-post,record-a-publication,refresh-the-platform-specs,publish-the-podcast-feed}/**
 publishing/workflows/local/*-{plan-the-cut-downs,cut-for-a-platform,caption-a-piece,brief-a-thumbnail,prepare-a-post,record-a-publication,refresh-the-platform-specs,publish-the-podcast-feed}/**
-brand/docs/{reference,project}/{claude-design,design-exports,the-brand-kit}.md
+brand/docs/{reference,project}/{design-apps,design-exports,the-brand-kit}.md
 scripts/docs/{reference,project}/storyboards-and-shot-lists.md
-production/docs/{reference,project}/{audiobook-narration,character-voices,edit-decision-lists,elevenlabs,scenes-as-code,sound-and-loudness,source-media,voiceover}.md
+production/docs/{reference,project}/{audiobook-narration,character-voices,complex-shots,edit-decision-lists,elevenlabs,scenes-as-code,sound-and-loudness,source-media,voiceover}.md
 publishing/docs/{reference,project}/{captions,cut-downs,platform-specs,podcast,podcast-feed,scoring-options,thumbnails}.md
 .claude/skills/{captions,cut-for-platform,narrate-audiobook,prepare-post,repurpose,storyboard,thumbnail-brief,voiceover,write-script}/**
 how-to/src/TEMPLATE-GUIDE/syntek-media/{02-prerequisites,09-your-first-piece,13-troubleshooting}.md

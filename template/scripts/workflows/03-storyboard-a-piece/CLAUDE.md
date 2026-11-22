@@ -8,8 +8,8 @@ folder's `CONTEXT.md` (imported above) → this file → `STEPS.md` (with `CHECK
 
 ## Purpose (one line)
 
-Board one approved script with the author and leave a storyboard and a shot list that the edit
-decision list can be written from without guessing.
+Board one approved script with the author, show it as a board sheet and animatic, and leave a
+storyboard and a shot list that the edit decision list can be written from without guessing.
 
 ## How to work here
 
@@ -26,18 +26,19 @@ are authoritative.
   (`.claude/rules/syntek-media/05-model-allocation.md`).
 - **Concrete steps:** confirm the piece → confirm no clobber → read the script, the brief and the
   guides → board every spoken line → frame every vertical deliverable → give every shot a source
-  → open the rights rows → read back and record M3 → hand on.
+  → open the rights rows → see the boards → read back and record M3 → hand on.
 - **Definition of done:** every spoken line of the approved script sits in a board; every board
   has a shot with a source; every vertical deliverable has its framing; every licensed or
-  identifiable item has a `needed` rights row; the author has approved the storyboard and the
-  brief records M3.
+  identifiable item has a `needed` rights row; the author has seen the board sheet and, where a
+  board moves or builds up, the animatic; the author has approved the storyboard and the brief
+  records M3.
 
 ## Guardrails
 
 - **Board the approved script, never a draft.** A storyboard of words that later change is a
   storyboard to redo.
-- **A source for every shot.** `to shoot` is a source; a blank is not. A shot nobody can find or
-  make is reported, never papered over.
+- **A source for every shot.** `to shoot` and `to render` are sources; a blank is not. A shot
+  nobody can find or make is reported, never papered over.
 - **Rights at the first sketch.** Music, stock, people, private places, likenesses, quotations,
   fonts and generated art each open a `needed` row as they are boarded; a voice or a likeness is
   used only with recorded consent (`.claude/rules/syntek-media/03-production-ethics.md`
@@ -45,6 +46,9 @@ are authoritative.
 - **Generated pictures match the brief.** A board that needs AI-generated visuals the brief does
   not declare goes back to the author before it is kept, because the disclosure plan changes.
 - **Not for a recorded piece.** Its M3 is `n/a — recorded`; its edit is cut from its transcript.
+- **Open a board still only by the path `media.py boards` printed**, never by listing its folder
+  (`.claude/rules/syntek-media/06-global-rules.md` Section 12). Exit 2 means M3 waits, or the
+  author waives the check in their own words; it is never reported as seen.
 - **Never overwrite** an approved storyboard or shot list. Revise in place with the author's
   confirmation, knowing that a replaced shot clears M3 and every later gate.
 
@@ -53,5 +57,7 @@ are authoritative.
 - **Produces:** `scripts/src/pieces/<piece>/storyboard.md` and `shot-list.md`.
 - **Also writes:** `needed` rows in `production/src/rights-register.md`; the brief's `rights`,
   `status`, `verified` and `last_updated`.
-- **Does not touch:** the script, the footage manifest, the cards, the edit decision list or any
-  render.
+- **Also renders:** the board sheet and animatic in `production/src/renders/<piece>/boards/`,
+  never tracked and read by no later command.
+- **Does not touch:** the script, the footage manifest, the cards, the edit decision list or the
+  master.

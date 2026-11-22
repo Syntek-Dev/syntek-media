@@ -511,26 +511,36 @@ def cmd_where(args) -> int:
 
 # ── real sources ────────────────────────────────────────────────────────────────────────
 
+def shot_rows(shot: Path) -> tuple:
+    """(headers, [(line number, cells)]) of a shot list's table (DESIGN Section 6.3), its cells
+    as written: exit 2 where the table or a row's cells are wrong. real and boards read it."""
+    lines = C.read_text(shot).splitlines()
+    first, last = C.find_table(lines, ('Shot', 'Board', 'Type', 'Source'))
+    if first is None:
+        raise C.Fatal(f'{C.shown(shot)} needs the shot-list table with its Source column')
+    headers = C.split_row(lines[first])
+    rows = []
+    for number in range(first + 2, last + 1):
+        cells = C.split_row(lines[number])
+        if len(cells) != len(headers):
+            raise C.Fatal(f'{C.shown(shot)}:{number + 1}: shot row has the wrong number of cells')
+        rows.append((number, cells))
+    return headers, rows
+
+
 def cmd_real(args) -> int:
     """D69, D66: index named scene sources, using footage metadata without opening raw/."""
     piece = piece_name(args.piece, 'PIECE')
     shot = C.path(C.PIECES) / piece / 'shot-list.md'
     default = C.piece_folder(C.PROD_RENDERS, piece, 'timing') / f'{piece}.real.json'
     out = Path(args.o) if args.o else default
-    lines = C.read_text(shot).splitlines()
-    first, last = C.find_table(lines, ('Shot', 'Board', 'Type', 'Source'))
-    if first is None:
-        raise C.Fatal(f'{C.shown(shot)} needs the shot-list table with its Source column')
-    headers = C.split_row(lines[first])
+    _, rows = shot_rows(shot)
     sources, findings, seen = [], [], set()
     manifest = None
     images = C.IMAGE_EXT | {'.svg'}
     text_formats = {'.txt', '.ansi', '.html'}
     scene_file = f'{C.SCENES}/{piece}.scene.py'
-    for number in range(first + 2, last + 1):
-        cells = C.split_row(lines[number])
-        if len(cells) != len(headers):
-            raise C.Fatal(f'{C.shown(shot)}:{number + 1}: shot row has the wrong number of cells')
+    for number, cells in rows:
         source = cells[3].strip('`').strip()
         if source == scene_file or source in seen:
             continue

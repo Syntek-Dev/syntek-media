@@ -109,7 +109,9 @@ Report these to the project that maintains them:
   by design and documented; read `_tasks` and `_migrations` in `copier.yml` before you generate,
   as with any template.
 - **ElevenLabs** (the service and its MCP server's own code), **TypeSafe**, **Claude Code**,
-  **Claude Design**, **Codex**, **Antigravity** and any other coding agent.
+  **Codex**, **Antigravity** and any other coding agent.
+- **The design and editing apps** a project's owner installs: VectorCraft, PhotoCraft,
+  DesignCraft, EffectCraft, FilmCraft, AniCraft and DaVinci Resolve, with any MCP server for them.
 - **Upstream tools**: uv, Python, git, git-lfs, ffmpeg, Playwright and Chromium, WhisperX, Rhubarb,
   espeak-ng and GitHub Actions.
 - **syntek-author's own files** in a project that has both templates: report them to

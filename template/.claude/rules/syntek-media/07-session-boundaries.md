@@ -63,7 +63,7 @@ The `handoff` skill's media mode file carries this list as the part its step 5 a
   be made again.
 - **Approved deliverables not yet published**, and the gate each piece stands at.
 - **Scheduled posts**, with their dates, times and platforms.
-- **Unsynced design changes** between Claude Design and `brand/src/design-system/`.
+- **Design exports not yet registered** in `brand/src/design-register.md`.
 
 ---
 

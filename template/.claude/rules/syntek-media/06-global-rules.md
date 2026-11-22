@@ -150,7 +150,7 @@ session that has not seen it.
 **Requirement.** API keys live at user scope only: the ElevenLabs key in the user-scope server's
 environment, and exported in the user's shell for `media.py voice remix run`, never in `.mcp.json`
 or a committed file, never typed on a command line, and never printed or echoed. Voice
-IDs go only in `brand/src/voice/voice.md`, Claude Design links only in
+IDs go only in `brand/src/voice/voice.md`, design links only in
 `brand/src/design-register.md`. Never paste credentials, a release form's personal details or
 private correspondence into a handoff, a brief or a plan; name and locate them instead.
 
@@ -207,8 +207,8 @@ folders** (`production/src/renders/<piece>/`, `production/src/voiceover/generate
 `publishing/src/renders/<piece>/`) are never listed: `python3 toolkit/media.py where <piece>`
 lists the piece's tracked files and names those folders, saying whether each exists, never what
 is inside them. A working copy the toolkit writes in a piece's `timing` folder is never opened:
-read what the command that wrote it printed instead. A still `scene.py stills` has just written
-may be opened by its printed path to look at it; never list the folder to find it.
+read what the command that wrote it printed instead. A still `scene.py stills` or `media.py
+boards` has just written may be opened by its printed path to look at it; never list its folder.
 
 **The data root is off-limits too, whatever the store.** A data root is a folder outside every
 repository that holds a `.syntek-data-root` marker; this machine's is the one `SYNTEK_DATA_ROOT`

@@ -43,7 +43,7 @@ will not parse. The brand may add tokens of its own beside them.
 ## The previews and the two layouts
 
 Each card in `brand/src/design-system/previews/` opens on line 1 with
-`<!-- @dsCard group="…" -->`, the line Claude Design indexes, and links ../tokens.css. Five show
+`<!-- @dsCard group="…" -->`, the kit's index line, and links ../tokens.css. Five show
 the kit; `thumbnail.html` and `card.html` (group `Components`) are the brand's layouts.
 `thumbnail-brief` copies the first for a piece's thumbnails and covers, and `cut-for-platform`
 copies the second into `production/src/cards/` for its title and end cards, each falling back to
@@ -64,8 +64,8 @@ reported to the author with both values, never resolved silently.
   group's `/* AUTHOR TO CONFIRM: … */` slot until the decision is made.
 - Captions are judged at the narrowest vertical size, in a proof of the captions card, and again
   in the first burned deliverable.
-- A change to the kit is committed on its own, before any sync with Claude Design, so each
-  sync's diff is readable.
+- A change to the kit is committed on its own, before any design is made from it in an app, so
+  each change's diff is readable.
 
 ## Who implements it
 

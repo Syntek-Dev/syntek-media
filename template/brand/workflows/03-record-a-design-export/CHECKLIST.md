@@ -15,7 +15,7 @@ model: opus
 ## Pre-Conditions
 
 - [ ] Read `.claude/CLAUDE.md` and `.claude/MEMORY.md`, then this folder's `CONTEXT.md` and `CLAUDE.md`. · _sonnet_
-- [ ] **The design, its Claude Design link and its export date given by the author;** none guessed; or, for a revision filed earlier and approved now, its row and its original's read and steps 2 to 6 not repeated. · _opus_
+- [ ] **The design, the app, version and project label it was made with, and its export date, given by the author;** none guessed; or, for a revision filed earlier and approved now, its row and its original's read and steps 2 to 6 not repeated. · _opus_
 - [ ] The design register read for any export this one replaces. · _sonnet_
 - [ ] **For a revision, the author asked whether it replaces the original now or later.** · _opus_
 

@@ -120,7 +120,7 @@ Record each decision in `.claude/MEMORY.md` under Decisions, dated (under the he
 syntek-author's 00-project.md Memory headings map it to, where present). Run
 `python3 toolkit/media.py flags brand/src/design-system/` and confirm no `AUTHOR TO CONFIRM` is
 left in `tokens.css` or the two layouts. With the author's agreement, commit the kit before any
-sync with Claude Design. _Mechanical._
+design is made from it in an app. _Mechanical._
 
 ## 11. Hand back
 
@@ -128,5 +128,5 @@ sync with Claude Design. _Mechanical._
 
 Report the values decided, the fonts added with their rights rows, the proofs and where they are,
 each difference from the written brand and how the author settled it, and anything still
-flagged. Where the brand keeps a Claude Design project, the next procedure is
-`brand/workflows/02-sync-with-claude-design/`. _Substantive._
+flagged. Where a logo, a sprite or other art is to be made in an app, the next procedure is
+`brand/workflows/03-record-a-design-export/`. _Substantive._

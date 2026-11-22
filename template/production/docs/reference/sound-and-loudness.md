@@ -25,9 +25,11 @@ the toolkit measures it rather than trusting a meter on screen.
 
 `loudness` in an edit decision list (`social`, `podcast` or `none`) chooses the master's target.
 `python3 toolkit/media.py loudness normalise FILE --target social|podcast|acx` applies one in two
-passes, always resampling the output, then measures again: within ±1 LU and under the peak, or it
-fails. `loudness measure` reports integrated loudness, true peak and range. The social value is a
-house decision and is recorded as one; if a platform ever publishes a target, the data file
+passes, always resampling the output, then measures the written file: within ±1 LU and under the
+peak, or it fails. Where a lossy encode lifts the true peak over the ceiling, it renders again, at
+most twice, aiming the peak lower, with a note line each; every master, encode, cut and still
+video does the same, a cut by lowering its sound. `loudness measure` reports integrated loudness, true peak and range. The social
+value is a house decision, recorded as one; if a platform ever publishes a target, the data file
 changes, not this guide.
 
 ## Where a music bed goes

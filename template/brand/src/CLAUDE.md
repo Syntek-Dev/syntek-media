@@ -16,7 +16,7 @@ in files the toolkit and the skills can read without asking again.
 
 | File or folder | Written by | Procedure |
 |---|---|---|
-| `design-system/` (`tokens.css`, `design-system/fonts/`, `design-system/previews/`) | the author, with Claude | `brand/workflows/01-set-up-the-brand-kit/`; kept in step with Claude Design by `brand/workflows/02-sync-with-claude-design/` |
+| `design-system/` (`tokens.css`, `design-system/fonts/`, `design-system/previews/`) | the author, with Claude | `brand/workflows/01-set-up-the-brand-kit/`; no design app writes into it |
 | `design-register.md`, `exports/` | the author, with Claude | `brand/workflows/03-record-a-design-export/` |
 | `voice/voice.md` | the author, with Claude; `voiceover` adds a narrator the first time it needs one | `brand/workflows/05-write-the-spoken-voice/` |
 | `platforms/` | the author, with Claude | `brand/workflows/04-set-up-a-platform/` |
@@ -37,7 +37,7 @@ in files the toolkit and the skills can read without asking again.
 ## Guardrails
 
 - **One fact, one home.** A colour lives in `tokens.css`, a voice ID in `voice.md`, a handle in
-  its profile, a Claude Design link in the register. A second copy drifts.
+  its profile, a design's app and export in the register. A second copy drifts.
 - **Never invent on the author's behalf.** Options are offered; the author chooses. A gap is
   flagged `<!-- AUTHOR TO CONFIRM: … -->` (`/* … */` in CSS), not filled.
 - **One sentence per line** in every Markdown file here, applied when a paragraph is edited,

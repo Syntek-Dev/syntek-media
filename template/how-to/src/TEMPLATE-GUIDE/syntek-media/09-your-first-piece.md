@@ -47,7 +47,10 @@ Then the piece is boarded, unless it has no picture to board.
 - `scripts/workflows/03-storyboard-a-piece/` runs the `storyboard` skill, which gives every spoken line a picture and every shot a source.
 - It opens a row in `production/src/rights-register.md` for anything licensed or identifiable that a shot uses.
 - A recorded piece records this gate as not applicable, and so does a piece with no picture.
-- M3 passes when you agree the board, and the piece is then storyboarded.
+- Before you approve it, `python3 toolkit/media.py boards <piece>` draws one picture per board at the master's size, with its on-screen words in place.
+- You open the contact sheet it writes in a browser, and where a board moves or builds up, you play the short animatic it makes too.
+- These pictures are drafts to look at, kept out of Git; the master is still made later, in production.
+- M3 passes when you have seen the boards this way and agree them, and the piece is then storyboarded.
 
 ## Produce it (M4)
 
@@ -58,6 +61,7 @@ Then the piece is boarded, unless it has no picture to board.
 - A piece with characters can have their voices designed first, through `production/workflows/11-design-character-voices/`.
 - A scene piece times its joined voice through `production/workflows/09-time-the-voice/` and is animated through `production/workflows/10-animate-a-scene/`.
 - Every other piece is assembled through `production/workflows/03-assemble-the-master/`, where the `cut-for-platform` skill renders and probes the master.
+- A shot smoother than the toolkit makes, such as a moving push-in or an animated title, is made in an outside editor and logged as footage, as `production/docs/reference/complex-shots.md` explains.
 - The rights are cleared through `production/workflows/07-clear-the-rights/`, which can run once the board lists what the piece uses, and must be done before M7.
 - A podcast episode and an audiobook have production workflows of their own, where the project makes them, and the project's workflow indexes list them.
 - M4 passes when every master probes clean and you have watched or heard it, and the piece is then produced.

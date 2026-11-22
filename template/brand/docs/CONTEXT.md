@@ -1,6 +1,6 @@
 # CONTEXT.md — brand/docs/
 
-The brand layer's guides: short explanations of how the brand kit, its design project, its
+The brand layer's guides: short explanations of how the brand kit, its design apps, its
 exports, its spoken voice and its platform profiles are kept in this project, each answering one
 question. Guides explain and route; the rules they serve live in `.claude/rules/syntek-media/`,
 and the procedures that apply them live in `brand/workflows/`. No brand file is written here.

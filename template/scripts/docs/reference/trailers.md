@@ -13,7 +13,8 @@ model: opus
 series, briefly, ending on where to find it. In this version of the template a trailer is built
 from what the toolkit can assemble without a motion-graphics tool — stills, title and end cards,
 colour clips, cross-fades and a slow push-in on a still or a card — under a voiceover and a
-music bed. Anything more elaborate is made elsewhere and brought in as footage.
+music bed. Anything more elaborate is a complex shot, made in an outside editor and brought in
+as footage (`production/docs/reference/complex-shots.md`).
 
 ## What a trailer promises
 

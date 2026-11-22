@@ -8,13 +8,12 @@ Read order: `.claude/CLAUDE.md` → `.claude/MEMORY.md` → `brand/CONTEXT.md` �
 
 ## Purpose (one line)
 
-Show the kit to Claude Design one card at a time, and hold the two layouts every thumbnail and
-card is copied from.
+Show the kit one card at a time, each filed by its index line, and hold the two layouts every
+thumbnail and card is copied from.
 
 ## How to work here
 
 - **Routing:** workflow `brand/workflows/01-set-up-the-brand-kit/` to change a card;
-  `brand/workflows/02-sync-with-claude-design/` to bring one across;
   `brand/workflows/03-record-a-design-export/` to move a reference to an approved export
   revision; guide `brand/docs/reference/the-brand-kit.md`.
 - **Model:** **Opus** for a layout change and for judging its proof; the mechanical tier for
@@ -37,7 +36,7 @@ card is copied from.
   `--frame-height`; images by relative path; `card.html` leaves its background transparent so it
   can overlay a picture.
 - **Tokens only.** A card names `var(--…)` for every colour, face, weight, space and radius;
-  a value typed into a card is a value Claude Design and the toolkit cannot change for you.
+  a value typed into a card is a value the next brand change and the toolkit cannot reach.
 - **Placeholder words stay placeholders.** The words in the layouts are replaced per piece by the
   skill that copies them; never write a real title or claim into the brand's layout.
 - **Never overwrite** a card without confirming with the author.

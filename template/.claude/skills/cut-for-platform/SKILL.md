@@ -8,6 +8,7 @@ description: >-
   its preset. Renders stay ignored and regenerable. Use for 'assemble the master', 'animate the
   scene', 'cut the shorts', 'encode it for YouTube' or 'why did the cut fail?'. Not choosing
   moments (`repurpose`), making captions (`captions`) or thumbnails and GIFs (`thumbnail-brief`).
+  Not the board sheet or animatic seen before M3 (`storyboard`).
 ---
 
 # Skill: Cut for Platform (<%BRAND_NAME%>)
@@ -85,8 +86,10 @@ are the procedure of record — do not restate them at length here.
    where the storyboard asks for one. A card over the picture is an `[[overlay]]`. Sound goes in
    `[[audio]]`: the voice as `vo:<piece>`, a music bed by its footage ID with `role = "music"`,
    `duck = true` under the voice, trimmed with `in` and `out` and faded, and effects. A sound-only
-   source never stands as a clip of a picture master. A shot whose source is still `to shoot`, or
-   a footage ID the manifest lacks, blocks the list: report it. Raise `version` when an approved
+   source never stands as a clip of a picture master. A shot whose source is still `to shoot` or
+   `to render`, or a footage ID the manifest lacks, blocks the list: report it. An `edited` shot's
+   logged export is a clip like any footage, cut with `in` and `out`; never rebuild its motion
+   here (`production/docs/reference/complex-shots.md`). Raise `version` when an approved
    list changes, and never overwrite an approved list without the author's word.
    *Complete when:* every storyboard row, or every transcript beat the piece uses, has its clip,
    every source resolves, and the author has approved the list.
@@ -178,6 +181,7 @@ are the procedure of record — do not restate them at length here.
 - Assembling with a voice take that is not approved and archived: it cannot be made again.
 - Putting a sound-only source in a picture master as a clip.
 - Changing the list, the plan, a preset or an override to make a verification pass.
+- Forcing a complex shot through `assemble`'s push-in or fade instead of an outside editor.
 - Rendering a cut the plan has not approved, or one the brief does not name.
 - Adding a render to Git, or forcing it past the ignore rule.
 - Mastering an audiobook here: its targets and checks belong to the narrate-audiobook skill,

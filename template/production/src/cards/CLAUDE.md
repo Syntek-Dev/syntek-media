@@ -15,7 +15,7 @@ on a file made somewhere else.
 
 - **Routing:** skill `cut-for-platform`; workflow `production/workflows/03-assemble-the-master/`;
   guide `production/docs/reference/edit-decision-lists.md`. A change to the layout itself is the
-  brand layer's job (`brand/workflows/02-sync-with-claude-design/`).
+  brand layer's job (`brand/workflows/01-set-up-the-brand-kit/`).
 - **Model:** **Opus** for a card's words, with the author; the mechanical tier for copying the
   component, fixing its path and rendering (`.claude/rules/syntek-media/05-model-allocation.md`).
 - **Concrete steps:** copy the brand's component to `<piece>.<card>.html` → fix the tokens link

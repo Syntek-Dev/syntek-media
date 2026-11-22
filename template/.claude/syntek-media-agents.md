@@ -46,8 +46,9 @@ paths and paid-call discipline. Do not infer author approval from client permiss
 - Client tool names may differ. Map an available tool by capability, then follow the same
   input checks and spending approval. If a required capability is unavailable, report that
   limit and use the documented manual or offline route; never pretend a call succeeded.
-- Claude Design exports and ElevenLabs calls require an installed, authenticated capability
-  in the chosen client. Local binaries and the toolkit remain available independently.
+- ElevenLabs calls require an installed, authenticated capability in the chosen client. The
+  design apps and DaVinci Resolve are the owner's desktop installs, offered no server by the
+  template. Local binaries and the toolkit remain available independently.
 - Seven skills are family-shared (`grilling`, `grill-me`, `grill-with-docs`, `wayfinder`,
   `handoff`, `to-questionnaire`, `wait-what`): every Syntek template ships the same SKILL.md,
   and `.claude/rules/syntek-media/02-skills.md` Section 4 gives each role they name its media

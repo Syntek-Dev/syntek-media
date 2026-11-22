@@ -30,8 +30,8 @@ that should stay private.
 - **A session drafts; the author files.** A session never opens, files or comments on an issue,
   and never writes the source's web address: it names the source as `_src_path` records it.
 - **Redact before anything is shown.** No API key, voice ID, account ID, Claude Design link,
-  real person's details from a release form, private correspondence or home path goes into the
-  draft (`.claude/rules/syntek-media/06-global-rules.md` Section 10).
+  app project path or label, real person's details from a release form, private correspondence
+  or home path goes into the draft (`.claude/rules/syntek-media/06-global-rules.md` Section 10).
 - **A security problem is reported privately**, through the source's private vulnerability
   reporting, never in a public issue, discussion or pull request.
 - **Reproduce without spending.** No ElevenLabs tool is called and no credit spent to show a

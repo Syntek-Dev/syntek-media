@@ -19,7 +19,7 @@ These skills carry a piece from its script to its post, and you decide at every 
 | Skill | What it does | Say something like |
 |---|---|---|
 | `write-script` | Turns a brief into a spoken script, timed, with a hook, beats and a call to action | 'write the script for the new short' |
-| `storyboard` | Gives every spoken line a picture and every shot a source, and opens a rights row for anything that needs clearing | 'storyboard the explainer' |
+| `storyboard` | Gives every spoken line a picture and every shot a source, opens a rights row for anything that needs clearing, and draws the boards for you to see | 'storyboard the explainer' |
 | `voiceover` | Makes a voiceover with ElevenLabs, one segment at a time, after telling you what it will cost | 'record the voiceover for the trailer' |
 | `captions` | Writes and checks captions and transcripts, burned in or alongside | 'caption the talk' |
 | `cut-for-platform` | Assembles the master and cuts and encodes each deliverable through the toolkit, then checks each one | 'cut this for every platform' |

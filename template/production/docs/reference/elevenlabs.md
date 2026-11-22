@@ -44,9 +44,10 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
   `production/src/voiceover/generated/voice-trials/<name>/`, made by `media.py speak plan` before
   the first call (the server refuses a folder whose parent is missing; never `mkdir` it). A trial
   is never a take: it keeps the server's name, a remix's previews excepted, and enters no register.
-- The server names a file by the second and can overwrite one, so run
-  `python3 toolkit/media.py take add` straight after each call: it renames the take and writes its
-  register and credits-log rows. Never rename a take with a shell `mv`.
+- The server names a file by the second and can overwrite one, so run `take add` straight after
+  each call: it renames the take and writes its register and credits-log rows; never a shell `mv`.
+  It also names it from the request's first five characters: a '/' there (inline IPA) fails the
+  save after the credits are spent, so a request `speak plan` flags `FILE NAME` is never sent.
 - Choose `output_format` for the deliverable and say when it needs a higher tier (`mp3_44100_192`
   needs Creator or above, `pcm_44100` Pro or above). A `pcm_*` take is headerless 16-bit PCM named
   `.mp3`: `take add` names it `.pcm`, read as mono `s16le` at the register's rate (`VERIFY` on
@@ -70,9 +71,8 @@ claude mcp add --env ELEVENLABS_API_KEY="$ELEVENLABS_API_KEY" --env ELEVENLABS_M
 
 ## Who implements it
 
-- **Workflows:** `production/workflows/02-make-a-voiceover/`,
-  `production/workflows/08-bring-in-a-recording/`, `production/workflows/11-design-character-voices/`
-  and `publishing/workflows/03-caption-a-piece/`.
+- **Workflows:** `production/workflows/02-make-a-voiceover/`, `production/workflows/08-bring-in-a-recording/`,
+  `production/workflows/11-design-character-voices/` and `publishing/workflows/03-caption-a-piece/`.
 - **Skills:** `voiceover` (takes) and `captions` (transcripts); audiobook narration follows suit.
 
 ## Governing standard

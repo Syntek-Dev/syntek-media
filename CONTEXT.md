@@ -13,7 +13,7 @@ syntek-media/
 ├── README.md                 ← the user guide: applying over syntek-author, standalone, the questions, updating, coexistence, audio, audits, the licence
 ├── DESIGN.md                 ← the build contract; where any file disagrees with it, DESIGN.md wins
 ├── copier.yml                ← questions, gated _exclude, _skip_if_exists, messages, _tasks, _migrations
-├── VERSION                   ← the template's release number (0.11.0)
+├── VERSION                   ← the template's release number (0.12.0)
 ├── CHANGELOG.md              ← the template's history, Keep a Changelog
 ├── family-shared.json        ← the family-shared files and blocks media vendors from syntek-author's release tag, with their sizes and hashes (D80)
 ├── LICENSE · CONTRIBUTING.md · SECURITY.md · CODE_OF_CONDUCT.md   ← community files (D83), never shipped: MIT; changes to the template; private vulnerability reports; Contributor Covenant 2.1
@@ -48,16 +48,16 @@ syntek-media/
     ├── handoffs/             ← its pair only, copy-only shared: syntek-author's bytes (D80)
     ├── how-to/               ← the user guide, read-only and put back by every full update (D84): the family's shared pairs and chapters, media's own under its syntek-media/ folders
     ├── .claude/              ← CLAUDE.md, CONTEXT.md, MEMORY.md, settings.json (copy-only shared) · hooks/ (the two handoff hooks and the guide guard) and the seven working-practice skills (copy-only shared, syntek-author's bytes, refreshed by the update script while the owner never changed them, D81) · the bridge, data-root and permissions files · rules/syntek-media/ · skills/
-    ├── brand/                ← the visual tokens and layouts, the spoken voice, one profile per platform
+    ├── brand/                ← the visual tokens and layouts, the design register and its exports, the spoken voice, one profile per platform
     ├── scripts/              ← pieces: briefs, scripts or transcripts, storyboards, shot lists
     ├── production/           ← footage manifest, voiceover, timing and scene files, edit decision lists, cards, masters, rights, credits; audiobook (gated)
     ├── publishing/           ← cut-downs, captions, thumbnails, post packages, schedule, publish log
-    └── toolkit/              ← supporting: media.py (ffmpeg; each piece's output in a folder of its own), card.py (HTML → PNG), platform data, fallback layouts
+    └── toolkit/              ← supporting: media.py (ffmpeg; each piece's output in a folder of its own; the board sheet and animatic before M3), card.py (HTML → PNG), platform data, fallback layouts
 ```
 
 ## What's here
 
-- `DESIGN.md` — the decisions (D1–D76 and D80–D91; D77–D79 are reserved, and later decisions take D92 onwards), the questions, the ownership classes and gating table, the generated tree, the skills, the formats, the audits, applying over syntek-author and coexistence. **Read the sections your change touches before changing anything**; comments in `copier.yml` cite it by section.
+- `DESIGN.md` — the decisions (D1–D76 and D80–D96; D77–D79 are reserved, and later decisions take D97 onwards), the questions, the ownership classes and gating table, the generated tree, the skills, the formats, the audits, applying over syntek-author and coexistence. **Read the sections your change touches before changing anything**; comments in `copier.yml` cite it by section.
 - `copier.yml` — the contract Copier executes. **Every gated path is one `_exclude` line whose gate is copied verbatim from DESIGN.md Section 3.5** (`'youtube' in PLATFORMS`, `'audiobook' in MEDIA_KINDS`), each of the fifty shared paths has an update-gated `_exclude` line beside its `_skip_if_exists` line (and `/.claude/mcp_config.json` one more, unconditional, that stops a copy shipping it, D76), each coding agent's files carry syntek-author's gate on `AGENT_CLIENTS` (D80), the fifteen family-shared questions sit last, between syntek-author's own marker lines, byte for byte (D80), the only reads of `_external_data` are `BRAND_KIND`'s validator, that block and `_message_after_update` (D14 as D80 widens it and D81 corrects its text), `_tasks` runs media's three copy-only tasks, then D84's warning where syntek-author's answers file stands without its guide, and last syntek-author's `baseline` task (D81), `_migrations` runs D76's outside-link pair, then `v0.4.2`, then `v0.6.0`'s report (D84), then `v0.7.0`'s (D86), then `v0.9.0`'s (D89), and closes with the family 'update' block (D81), the one path ever negated back in is an output folder's own `README.md`, listed above every gated line (DESIGN.md Section 3.5, D19), and the mode-file block between its `BEGIN`/`END generated mode excludes` markers is written by `.github/scripts/gen-mode-excludes.sh`, never by hand.
 - `template/` — the product. **Every file in it is rendered**, so the delimiters `<%`, `<:` and `<~` appear only where a token is meant (token discipline: `.claude/CLAUDE.md` Section 4), HTML, CSS, TOML and SRT included.
 - `.claude/` — the development manual. Its settings deny every skill under `template/.claude/skills/` and exclude the template's `CLAUDE.md` files from development sessions, so the product's instructions never steer the people building it.
@@ -70,6 +70,6 @@ syntek-media/
 
 ## Cross-references
 
-- `README.md` — what a user of the template needs: applying it over a syntek-author project without `--overwrite`, the hand edits after a copy, standalone generation, the user guide, the questions, the five ownership classes, updating with `-a`, coexistence, large files, ElevenLabs and Claude Design, and the licence.
+- `README.md` — what a user of the template needs: applying it over a syntek-author project without `--overwrite`, the hand edits after a copy, standalone generation, the user guide, the questions, the five ownership classes, updating with `-a`, coexistence, large files, ElevenLabs, the design apps and complex shots, and the licence.
 - `.claude/CLAUDE.md` — what a maintainer needs: dev isolation, token discipline, how to add a skill, a mode file, a gated path, a workflow, a seed, a question, a platform or a media kind, and how to release.
 - `DESIGN.md` Section 3 — ownership classes and the gating table; Section 7 — this repository's root and audits; Section 8 — applying syntek-media; Section 9 — coexistence with syntek-author; Section 10 — hazards.

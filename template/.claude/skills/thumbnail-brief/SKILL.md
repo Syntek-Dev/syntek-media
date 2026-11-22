@@ -23,9 +23,9 @@ piece's platforms ask for, so the image a viewer judges the piece by is chosen o
 checked where it will be seen. **The image promises only what the piece delivers**: a thumbnail
 that oversells costs the viewer's trust in every piece after it.
 
-The layout is the brand's, `brand/src/design-system/previews/thumbnail.html`, kept in step with
-the brand's Claude Design project. It is copied once per thumbnail, so a layout change synced into
-the brand reaches every later piece and never rewrites an approved one. This skill edits the copy
+The layout is the brand's, `brand/src/design-system/previews/thumbnail.html`, written by hand
+with the author. It is copied once per thumbnail, so a layout change made in the brand kit
+reaches every later piece and never rewrites an approved one. This skill edits the copy
 only, never the brand's component and never `tokens.css`; <%OWNER_FIRST_NAME%> approves every
 thumbnail before it is used.
 
@@ -191,8 +191,8 @@ it never puts on one.
 - `cut-for-platform` — title and end cards inside the video, from the brand's card component.
 - `brand/src/design-system/previews/thumbnail.html` — the brand's layout;
   `toolkit/templates/thumbnail.html` where it is absent.
-- `brand/workflows/02-sync-with-claude-design/` — how a change to the brand's layout arrives from
-  Claude Design.
+- `brand/docs/reference/design-apps.md` — the app that makes a photograph or graphic the layout
+  places; `brand/workflows/03-record-a-design-export/` files it.
 - `production/src/rights-register.md` — likeness, artwork, font and stock rows.
 - syntek-author's brand guide, where present (by default standards/brand/brand-guide.md) — the
   brand's visual rules in words; a disagreement with `tokens.css` is reported, never resolved here.

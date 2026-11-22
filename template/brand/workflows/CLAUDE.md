@@ -21,8 +21,7 @@ procedure with the same slug replaces the one here (`run-media-workflow` does th
 | You want to… | Procedure |
 |---|---|
 | Set the brand's colours, type, spacing, caption style and layouts | `brand/workflows/01-set-up-the-brand-kit/` |
-| Bring a component across between the kit and Claude Design | `brand/workflows/02-sync-with-claude-design/` |
-| File a logo, cover, plate or other exported design asset, or a revision of one; switch everything to a revision the author has approved | `brand/workflows/03-record-a-design-export/` |
+| Make a logo, cover, plate or other design in an app, or file its export or a revision of one; switch everything to a revision the author has approved | `brand/workflows/03-record-a-design-export/` |
 | Set up the brand's account and choices on one platform | `brand/workflows/04-set-up-a-platform/` |
 | Decide how the brand sounds aloud, who narrates, how words are said | `brand/workflows/05-write-the-spoken-voice/` |
 | Check the tools, permissions and ElevenLabs server before spending | `brand/workflows/06-check-the-setup/` |
@@ -47,8 +46,8 @@ with `CHECKLIST.md` open.
 ## Guardrails
 
 - **Order is load-bearing.** The written brand is read before a token is set; the kit is
-  committed before a sync; the setup is checked before the first credit is spent. Reversed, each
-  produces work that has to be redone.
+  committed before a design is made from it; the setup is checked before the first credit is
+  spent. Reversed, each produces work that has to be redone.
 - **Procedures cite rules; they never restate them.** If a step explains why consent comes
   before a cloned voice, that explanation belongs in the rules file. Point at it.
 - **The author chooses.** Every procedure offers options; none picks a colour, a font, a

@@ -8,13 +8,12 @@ Read order: `.claude/CLAUDE.md` → `.claude/MEMORY.md` → `brand/CONTEXT.md` �
 
 ## Purpose (one line)
 
-Keep the brand's tokens, fonts and layouts in plain files that every render reads and Claude
-Design can sync, so a brand change is made once and every later piece follows.
+Keep the brand's tokens, fonts and layouts in plain files that every render reads and the author
+edits by hand, so a brand change is made once and every later piece follows.
 
 ## How to work here
 
 - **Routing:** workflow `brand/workflows/01-set-up-the-brand-kit/` for any change to the kit;
-  `brand/workflows/02-sync-with-claude-design/` to bring a component across;
   `brand/workflows/03-record-a-design-export/` to move a reference to an approved export
   revision; guide `brand/docs/reference/the-brand-kit.md`.
 - **Model:** **Opus** for every token and layout decision and for judging a proof; the
@@ -24,7 +23,7 @@ Design can sync, so a brand change is made once and every later piece follows.
   `python3 toolkit/media.py tokens` → `uv run toolkit/card.py check` on every card the change
   touches → render a proof at a landscape and a vertical size, `-o` naming a file in
   `production/src/renders/proofs/<what>-DD-MM-YYYY/` → the author approves → commit before any
-  sync.
+  design is made from it.
 - **Definition of done:** every required token is present and parses; every card passes
   `card.py check`; the author has seen a proof; no `AUTHOR TO CONFIRM` slot is left in a token
   group a layout uses.
@@ -37,12 +36,12 @@ Design can sync, so a brand change is made once and every later piece follows.
   may add tokens of its own beside them.
 - **Nothing loads over the network.** Fonts and images are referenced by relative path;
   `card.py` aborts every http(s) request and fails the render.
-- **Line 1 of every preview card is its `@dsCard` comment.** Anything above it hides the card from
-  Claude Design.
+- **Line 1 of every preview card is its `@dsCard` comment.** It files the card in its group;
+  `card.py check` fails a card without it.
 - **A font enters with its licence.** No font file is added without a `font` row in
   `production/src/rights-register.md`, checked against use in video.
 - **Never overwrite** `tokens.css` or a card without confirming with the author, and never
-  replace the kit wholesale from Claude Design.
+  replace the kit wholesale from a design app's export.
 
 ## Output & naming
 

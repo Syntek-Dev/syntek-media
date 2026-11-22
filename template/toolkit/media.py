@@ -10,6 +10,7 @@ Usage:
                                  [--x PX] [--captions SRT] [--overlay PNG] [-o OUT]
     python3 toolkit/media.py encode SRC --deliverable KEY [--frame crop|pad] [-o OUT]
     python3 toolkit/media.py frame SRC --at TC [-o OUT]
+    python3 toolkit/media.py boards PIECE [--size WxH] [--no-animatic] [--sound FILE]
     python3 toolkit/media.py image SRC --deliverable KEY [--at TC] [--format jpg|png|webp|avif]
                                    [--frame crop|pad] [-o OUT]
     python3 toolkit/media.py still-video IMAGE AUDIO --deliverable KEY [-o OUT]
@@ -85,9 +86,10 @@ The modules beside this file do the work and have no command of their own: media
 (TOML, timecodes, presets and overrides, paths, the ffmpeg runner), media_video.py (assemble,
 cut, encode, frame, still-video), media_audio.py (extract-audio, loudness, audiobook, take),
 media_captions.py (captions, script time), media_repo.py (footage, tokens, flags, where, check),
-media_image.py (image, and the GIF pass of cut) and media_feed.py (a self-hosted podcast's
-register, feed, chapters and file tags), media_score.py (Jev option scoring) and media_voice.py
-(voice remix into a voice trial). card.py renders HTML and CSS to PNG and runs through uv:
+media_image.py (image, and the GIF pass of cut), media_boards.py (boards: the board sheet and
+animatic seen before M3) and media_feed.py (a self-hosted podcast's register, feed, chapters and
+file tags), media_score.py (Jev option scoring) and media_voice.py (voice remix into a voice
+trial). card.py renders HTML and CSS to PNG and runs through uv:
 uv run toolkit/card.py --help.
 
 Standard library only; Python 3.14+; ffmpeg and ffprobe for every command that touches media,
@@ -118,11 +120,13 @@ import subprocess
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
+from fractions import Fraction
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import media_common as C  # noqa: E402
 import media_audio as A  # noqa: E402
+import media_boards as B  # noqa: E402
 import media_captions as K  # noqa: E402
 import media_feed as F  # noqa: E402
 import media_image as I  # noqa: E402
@@ -338,6 +342,30 @@ def build_parser() -> argparse.ArgumentParser:
            "name has no piece key, at the folder's top)")
     p.set_defaults(func=V.cmd_frame)
 
+    p = sub.add_parser("boards", help="before M3: one still per board, the contact sheet and the animatic",
+                       description="Draws the piece's storyboard before M3 (DESIGN D92): one still per board at "
+                       "the master's size, through card.py, its picture the board's first shot (an existing "
+                       "card's HTML, an image framed as assemble frames a still, one labelled frame of logged "
+                       "video at its first tenth, a colour, else a labelled placeholder naming the board and "
+                       "why: a shot to shoot, an edited shot to render, a scene board, a missing card), with its "
+                       "On screen cues laid over in draft styling; a still per step of a build-up (.kK); the "
+                       "contact sheet <piece>.boards.html, captioned beneath each still with its Time, spoken "
+                       "words, Picture, On screen, Sound, motion and Vertical framing drawn as a box; and, where "
+                       "a board names push-in, pan, zoom or fade or builds up (two or more TEXT: cues, or "
+                       "build-up in Picture), unless --no-animatic or a scene piece, <piece>.animatic.toml and "
+                       "<piece>.animatic.mp4, rendered by assemble -o with loudness none. All go to "
+                       "production/src/renders/<piece>/boards/, never tracked and read by nothing later; every "
+                       "path and finding is printed. Exit 1: a board with no shot, a placeholder (and why), an "
+                       "unreadable Time, a missing card HTML. Exit 2: no storyboard, no uv or Chromium for "
+                       "card.py, no ffmpeg.")
+    p.add_argument("piece", metavar="PIECE")
+    p.add_argument("--size", metavar="WxH", help="the stills' size (default: the edit decision list's [edit] size, "
+                   "else 1920x1080)")
+    p.add_argument("--no-animatic", action="store_true", help="the stills and the sheet only")
+    p.add_argument("--sound", metavar="FILE", help="the animatic's sound (default: the joined voice "
+                   "production/src/renders/<piece>/<piece>.voice.wav where it exists, else silence)")
+    p.set_defaults(func=B.cmd_boards)
+
     p = sub.add_parser("image", help="encode one image deliverable from a still or a frame of a video",
                        description="Scales a PNG or other still (a card.py render, a frame, an asset or a design "
                        "export), or a video's frame at --at (a poster: the deliverable's own render), to the table's "
@@ -486,7 +514,10 @@ def build_parser() -> argparse.ArgumentParser:
                       "each chunk goes in the sidecar <piece>.chNN.chunks.toml, never in the text. Exit 1 "
                       "lists what has no spoken form: constructed-language spans, Greek and Hebrew, "
                       "scripture references, citation keys, abbreviations with no row in voice.md's "
-                      "Pronunciations, and every table and image, which are left out of the text. Exit 2 "
+                      "Pronunciations, and every table and image, which are left out of the text; exit 1 also "
+                      "flags a chunk whose first five characters hold '/', a backslash or a NUL (FILE NAME: "
+                      "the ElevenLabs server names the take from them and fails the save after the credits "
+                      "are spent). Exit 2 "
                       "when the chapter register's channels name anything but an [audiobook.<store>] store "
                       "of platforms.toml (acx, google_play, …).")
     q.add_argument("source", help="the chapter's source; for ch00 and ch99 the credits' own file, "
@@ -540,7 +571,10 @@ def build_parser() -> argparse.ArgumentParser:
     q = ss.add_parser("plan", help="print request text, characters and calls; create the output folder",
                      description="Offline: applies voice.md pronunciations and supported delivery tags from "
                      "the script; prints character counts and calls, never credits. Skips approved takes "
-                     "unless --segment names them. Creates only the takes folder, or --trial's trial folder.")
+                     "unless --segment names them. Flags, exit 1, a request over the model's limit (OVER "
+                     "LIMIT) and one whose first five characters hold '/', a backslash or a NUL (FILE NAME: "
+                     "the ElevenLabs server names the take from them and fails the save after the credits "
+                     "are spent). Creates only the takes folder, or --trial's trial folder.")
     q.add_argument("piece", nargs="?", metavar="PIECE")
     q.add_argument("--segment", action="append", metavar="sNN", help="plan this segment, repeat for more")
     q.add_argument("--trial", metavar="NAME", help="create only this voice trial's output directory")
@@ -979,6 +1013,8 @@ def self_test() -> int:
             groups.append(('offline voice remix plans and paid-call boundaries', lambda: W.self_test(verdict)))
             groups.append(('scene layouts, movement, interaction and local sources', lambda: test_scene_model(verdict)))
             groups.append(('streamed frame input and opt-in memory scopes', lambda: test_render_helpers(verdict, root)))
+            groups.append(('the thread cap, decoder threads, sections and the true-peak retry',
+                           lambda: test_threads(verdict)))
             groups.append(('eight- and nine-column storyboard input', lambda: test_storyboards(verdict, root)))
             groups.append(('cue index, script events and audio cue links',
                            lambda: test_cues(verdict, cli, root, have_git)))
@@ -986,12 +1022,16 @@ def self_test() -> int:
                            lambda: test_real(verdict, cli, have_git)))
             groups.append(("offline voice plans and tracked timing guards",
                            lambda: test_voice_plan(verdict, skip, cli, root, have_git)))
+            groups.append(('boards: Times, cues, framing boxes, the animatic list and the missing storyboard',
+                           lambda: test_boards_plan(verdict, cli, root)))
             groups.append(('word alignment logic and captions from words',
                            lambda: test_words(verdict, cli, root)))
             if have_ff:
                 groups.append(("the shared sound of both master routes", lambda: test_shared_mix(verdict)))
                 groups.append(("cut, burn-in, loudness, assemble, align and the audiobook master",
                                lambda: test_media(verdict, skip, cli, root)))
+                groups.append(("boards: the board stills, the contact sheet and the animatic",
+                               lambda: test_boards(verdict, skip, cli, root)))
                 groups.append(("image, the GIF preview, the silent loop and web video",
                                lambda: test_web(verdict, skip, cli, root)))
                 groups.append(("the podcast feed: register, tags, feed, chapters and checks",
@@ -1598,6 +1638,263 @@ def test_uv(verdict, skip, cli, root: Path) -> None:
         C.UV_LOCKS = saved_locks
 
 
+BOARD_SCRIPT = """# Boards fixture — script
+
+## 1. Open (target 00:02)
+
+VO: The ferry is late again.
+VO: The tide decides.
+
+## 2. Wait (target 00:09)
+
+VO: We wait at the slip.
+VO: The bell rings twice.
+VO: Then the ramp drops.
+"""
+BOARD_HEAD = ("| # | Beat | Time | Picture | Spoken | On screen | Sound | Vertical framing | Timing notes |\n"
+              "|---|---|---|---|---|---|---|---|---|\n")
+SHOT_HEAD = ("| Shot | Board | Type | Source | Framing | Seconds | Status | Rights |\n"
+             "|---|---|---|---|---|---|---|---|\n")
+
+
+def board_rows(rows: list) -> str:
+    return "# Boards fixture — storyboard\n\n" + BOARD_HEAD + "".join(
+        "| " + " | ".join(r) + " | — |\n" for r in rows)
+
+
+def shot_rows_md(rows: list) -> str:
+    return "# Boards fixture — shot list\n\n" + SHOT_HEAD + "".join(
+        f"| S{n:02d} | " + " | ".join(r) + " |\n" for n, r in enumerate(rows, start=1))
+
+
+def test_boards_plan(verdict, cli, root: Path) -> None:
+    """media_boards' readers and builders, which need no ffmpeg and no browser (DESIGN D92, D93)."""
+    verdict("boards reads a Time as MM:SS–MM:SS (a hyphen too, seconds with a fraction), and nothing else",
+            B.board_seconds("00:01–00:03") == 2 and B.board_seconds("01:00-01:02.5") == 2.5
+            and B.board_seconds("soon") is None and B.board_seconds("00:04–00:04") is None)
+    verdict("boards reads each TEXT: cue of On screen (a build-up holds two or more), a plain cell as one cue, and "
+            "a dash as none", B.board_cues("TEXT: Ten past · TEXT: Twenty to") == ["Ten past", "Twenty to"]
+            and B.board_cues("Late again?") == ["Late again?"] and B.board_cues("—") == []
+            and B.board_cues("TEXT: One<br>TEXT: Two") == ["One", "Two"])
+    verdict("an edited shot's editor is read from its Picture (D93)",
+            B.editor_named("Eased push-in, made in EffectCraft") == "EffectCraft"
+            and B.editor_named("a pan in DaVinci Resolve") == "DaVinci Resolve" and B.editor_named("a pan") == "")
+    box, said = B.vertical("crop x=40", 320, 180)
+    centre, _ = B.vertical("centre", 320, 180)
+    held, held_said = B.vertical("crop x=900", 320, 180)
+    none = [B.vertical(t, 320, 180)[0] for t in ("pad", "native")] + [B.vertical("centre", 90, 160)[0]]
+    verdict("the Vertical framing box: crop x=<px> is the 9:16 crop from x in the master's pixels, centre the "
+            "centred crop, an x past the edge held at the edge (and said), pad and native named, no box on a "
+            "vertical master", box == (40 / 320, 101 / 320) and centre == ((320 - 101) / 2 / 320, 101 / 320)
+            and held == (219 / 320, 101 / 320) and "held at 219" in held_said and none == [None, None, None],
+            (box, centre, held, held_said, none))
+    row = lambda bid, time, picture, screen="—": K.Board(bid, 1, [bid, "1", time, picture, "—", screen, "—",
+                                                                   "centre", "—"])
+    boards = [B.Board(row("B01", "00:00–00:02", "The harbour"), {"type": "still"}),
+              B.Board(row("B02", "00:02–00:04", "Fade to the slip"), {"type": "still"}),
+              B.Board(row("B03", "00:04–00:07", "Push-in on the bell"), {"type": "still"}),
+              B.Board(row("B04", "00:07–00:09", "Build-up", "TEXT: A · TEXT: B"), {"type": "colour"}),
+              B.Board(row("B05", "later", "An eased push-in made in EffectCraft"), {"type": "edited"})]
+    for b in boards:
+        b.motion = sorted({m.lower().replace(" ", "-") for m in B.MOTION_RE.findall(B.cell(b.row, 3))})
+        b.cues = B.board_cues(B.cell(b.row, 5))
+        b.seconds = B.board_seconds(B.cell(b.row, 2))
+        b.stills = [root / C.PROD_RENDERS / "070-x" / "boards" / f"070-x.{b.stem}.board.320x180.png"]
+    boards[3].stills += [boards[3].stills[0].with_name(f"070-x.b04.board.k{k}.320x180.png") for k in (1, 2)]
+    notes = []
+    text = B.animatic_toml("070-x", boards, 320, 180, root / "sound.wav", notes)
+    data = __import__("tomllib").loads(text)
+    clips = data["clip"]
+    verdict("the animatic's list: every board a still clip lasting its Time, a fade board entering with a fade "
+            "its clip is lengthened by (so it ends on its Time), a push-in on its board, a build-up's steps "
+            "dividing its time, an edited board held still, an unread Time held 3 s (noted), loudness none",
+            data["edit"] == {"piece": "070-x", "size": "320x180", "loudness": "none"}
+            and [c["id"] for c in clips] == ["b01", "b02", "b03", "b04k1", "b04k2", "b05"]
+            and [c["seconds"] for c in clips] == [2, 2.5, 3, 1, 1, 3]
+            and clips[1].get("transition") == "fade" and clips[1]["transition_seconds"] == 0.5
+            and clips[2].get("motion") == "push-in" and "motion" not in clips[4] and "motion" not in clips[5]
+            and clips[3]["source"].endswith("070-x.b04.board.k1.320x180.png")
+            and data["audio"] == [{"source": "sound.wav", "role": "voice"}]
+            and any("B05: held 3 s" in n for n in notes), f"{text}\n{notes}")
+    entries = {"F0001": {"path": "raw/a.mp4"}, "F0002": {"path": "../outside.mp4"}, "F0003": {"path": "/abs.mp4"}}
+    link = C.path(C.ASSETS) / "boards-link"
+    link.parent.mkdir(parents=True, exist_ok=True)
+    if not link.is_symlink():
+        link.symlink_to(root.parent, target_is_directory=True)
+    refused = [B.unreadable(s, entries) for s in ("F0002", "F0003", "/etc/hosts.png", "production/src/assets/../../x.png",
+                                               "production/src/renders/070-x/a.png", "brand/src/a.png",
+                                               "production/src/assets/boards-link/a.png")]
+    allowed = [B.unreadable(s, entries) for s in ("F0001", "F0009", "production/src/assets/boards/a.png",
+                                               "production/src/cards/070-x.title.html")]
+    link.unlink()
+    outside = B.Board(K.Board("B01", 1, ["B01", "1", "00:00–00:02", "The slip", "—", "—", "—", "centre", "—"]),
+                      {"type": "still", "source": "production/src/renders/070-x/a.png"})
+    B.choose(outside, "070-x", entries)
+    refused.append(outside.picture == "placeholder" and "no Source a shot may name" in outside.reason)
+    verdict("boards opens only a footage ID inside the footage folder or a file under production/src/assets/ or "
+            "production/src/cards/: an absolute path, '..', another folder (an ignored renders folder among them) "
+            "or a link out is refused, never read (D50)", all(refused) and not any(allowed), (refused, allowed))
+    hostile = '<img src=x onerror="alert(1)">'
+    evil = B.Board(K.Board("B01", 1, ["B01", "1", "00:00–00:02", hostile + "<br>again", "—", "TEXT: " + hostile,
+                                      "<b>SFX</b>", "centre", "—"]), None, reason=hostile, label=hostile,
+                   cues=[hostile], spoken=hostile)
+    evil.stills = [Path(f"070-x.b01.board.320x180.png")]
+    pages = B.sheet('070-x', [evil], 320, 180, None) + B.page(B.SLOT, evil, None, evil.cues)
+    verdict("the contact sheet and every board page escape the storyboard's words: no tag of theirs reaches the "
+            "page, and a table's <br> is a line break", "<img src=x" not in pages and "<b>" not in pages
+            and pages.count("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;") >= 5 and "&lt;br&gt;" not in pages
+            and "\nagain" in pages, pages)
+    voice = write(C.path(C.PROD_RENDERS) / "070-x" / "070-x.voice.wav", "a stand-in\n")
+    order = (B.animatic_sound("070-x", root / "given.wav"), B.animatic_sound("070-x", None))
+    voice.unlink()
+    verdict("the animatic's sound: --sound first, else the joined voice where it exists, else silence",
+            order == (root / "given.wav", voice) and B.animatic_sound("070-x", None) is None, order)
+    piece = root / C.PIECES / "063-boards-none"
+    write(piece / "brief.md", "---\npiece: 063-boards-none\n---\n")
+    code, out = cli("boards", "063-boards-none")
+    code2, out2 = cli("boards", "063-Boards")
+    verdict("boards with no storyboard is exit 2, naming it and the workflow that makes it; a name that is no "
+            "piece's is exit 2", code == 2 and "storyboard.md is missing" in out
+            and "03-storyboard-a-piece" in out and code2 == 2 and not (root / C.PROD_RENDERS / "063-boards-none").exists(),
+            out + out2)
+
+
+def test_boards(verdict, skip, cli, root: Path) -> None:
+    """media.py boards on fixture pieces (DESIGN D92, D93): a card, a still, a frame of logged video,
+    a colour with a fade, a shot to shoot, an edited shot to render, a push-in, a build-up and a board
+    with no shot; a clean piece whose edited shot is a logged export; and a scene piece."""
+    browser, why_not = card_browser()
+    if not (shutil.which("uv") and browser):
+        skip("boards: the board stills, the contact sheet and the animatic (card.py renders every still)",
+             "uv is not installed" if browser else why_not)
+        return
+    piece, assets = "060-boards", C.path(C.ASSETS) / "boards"
+    assets.mkdir(parents=True, exist_ok=True)
+    harbour = assets / "harbour.png"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=640x360:rate=1", "-frames:v", "1", "-update", "1", harbour)
+    slip = assets / "slip.mp4"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25:duration=4", "-c:v", "libx264", "-preset",
+          "ultrafast", "-pix_fmt", "yuv420p", slip)
+    code, out = cli("footage", "add", slip, "--kind", "video", "--location", "Boards card")
+    video = logged_id(out)
+    tone = assets / "bed.wav"
+    lavfi("-f", "lavfi", "-i", "sine=frequency=330:sample_rate=48000:duration=11", "-ac", "2", tone)
+    write(C.path(C.CARDS) / f"{piece}.title.html", CARD_HTML)
+    write(C.path(C.EDITS) / f"{piece}.toml", f'[edit]\npiece = "{piece}"\nsize = "320x180"\n')
+    folder = root / C.PIECES / piece
+    write(folder / "script.md", BOARD_SCRIPT)
+    write(folder / "storyboard.md", board_rows([
+        ["B01", "1", "00:00–00:01", "Title card over the harbour", "1.1", "TEXT: Late again?", "—", "centre"],
+        ["B02", "1", "00:01–00:02", "The harbour at dawn", "1.2", "—", "SFX: gulls", "crop x=40"],
+        ["B03", "2", "00:02–00:03", "The slip, filmed", "2.1", "—", "—", "pad"],
+        ["B04", "2", "00:03–00:04", "A plain field, a fade in", "—", "—", "—", "centre"],
+        ["B05", "2", "00:04–00:05", "The bell, close", "2.2", "—", "—", "centre"],
+        ["B06", "2", "00:05–00:06", "An eased push-in on the ramp, made in EffectCraft", "—", "—", "—", "centre"],
+        ["B07", "2", "00:06–00:08", "Push-in on the harbour", "2.3", "—", "—", "crop x=900"],
+        ["B08", "2", "00:08–00:10", "The timetable builds", "—", "TEXT: Ten past · TEXT: Twenty to", "—", "centre"],
+        ["B09", "2", "00:10–00:11", "A board nobody shot", "—", "—", "—", "centre"]]))
+    write(folder / "shot-list.md", shot_rows_md([
+        ["B01", "card", f"production/src/cards/{piece}.title.html", "fit", "1", "logged", "—"],
+        ["B02", "still", "production/src/assets/boards/harbour.png", "fit", "1", "logged", "—"],
+        ["B03", "camera", video, "fit", "—", "logged", "—"],
+        ["B04", "colour", "#2050c0", "—", "1", "logged", "—"],
+        ["B05", "camera", "to shoot", "—", "—", "needed", "—"],
+        ["B06", "edited", "to render", "—", "—", "needed", "—"],
+        ["B07", "still", "production/src/assets/boards/harbour.png", "crop", "2", "logged", "—"],
+        ["B08", "colour", "#203040", "—", "2", "logged", "—"]]))
+    boards = C.path(C.PROD_RENDERS) / piece / "boards"
+    stale = write(boards / f"{piece}.b99.board.320x180.png", "an earlier run's still\n")
+    code, out = cli("boards", piece, "--sound", tone)
+    names = [f"{piece}.b{n:02d}.board.320x180.png" for n in range(1, 10)] + \
+        [f"{piece}.b08.board.k{k}.320x180.png" for k in (1, 2)]
+    sizes = [png_size(boards / n) for n in names]
+    verdict("boards writes one still per board at the edit decision list's size, and one per step of a "
+            "build-up, named <piece>.bNN.board[.kK].<W>x<H>.png in the piece's boards/ folder, each path "
+            "printed, an earlier run's still taken out",
+            code == 1 and sizes == [(320, 180)] * 11 and all(f"wrote {C.shown(boards / n)}" in out for n in names)
+            and not stale.exists(), f"{sizes}\n{out}")
+    findings = [line for line in out.splitlines() if line.startswith("  FAIL ")]
+    verdict("boards' findings (exit 1): each placeholder and why (a shot to shoot, an edited shot to render "
+            "naming its editor) and a board with no shot; a card, a still, a frame of logged video and a "
+            "colour are no finding", len(findings) == 3 and "B05: a placeholder is shown: to shoot" in out
+            and "B06: a placeholder is shown: edited in EffectCraft, to render" in out
+            and "B09: no shot in the shot list names this board" in out, out)
+    sheet = C.read_text(boards / f"{piece}.boards.html") if (boards / f"{piece}.boards.html").is_file() else ""
+    order = [sheet.find(f'id="b{n:02d}"') for n in range(1, 10)]
+    verdict("the contact sheet shows every board in order, captioned beneath with its Time, spoken words, "
+            "Picture, On screen, Sound and motion, the vertical box drawn (centre, crop x=40 at 9:16, an x "
+            "past the edge held), pad named, placeholders and the video frame labelled, the animatic linked",
+            all(k >= 0 for k in order) and order == sorted(order) and sheet.count("<figcaption>") == 9
+            and "VO: The ferry is late again." in sheet and "VO: Then the ramp drops." in sheet
+            and "Late again?" in sheet and "SFX: gulls" in sheet and "00:06–00:08" in sheet
+            and 'style="left: 12.50%; width: 31.56%"' in sheet and "held at 219" in sheet
+            and "over a blurred copy" in sheet and "placeholder: to shoot" in sheet
+            and "placeholder: edited in EffectCraft, to render" in sheet
+            and f"frame from {video} — the edit chooses the moment" in sheet and "push-in" in sheet
+            and "build-up" in sheet and f'href="{piece}.animatic.mp4"' in sheet
+            and sheet.index("<figcaption>") > sheet.index('class="still"'), sheet[-3000:])
+    edl = boards / f"{piece}.animatic.toml"
+    data = __import__("tomllib").loads(C.read_text(edl)) if edl.is_file() else {"clip": []}
+    animatic = boards / f"{piece}.animatic.mp4"
+    info = C.probe(animatic) if animatic.is_file() else {}
+    got = C.duration(info) if info else 0.0
+    push = [c for c in data["clip"] if c.get("motion") == "push-in"]
+    verdict("the animatic: its working list in boards/ (every board a clip, the push-in on B07, the fade on B04, "
+            "the edited B06 held still, the build-up in two steps, --sound under it, loudness none), rendered by "
+            "assemble -o to <piece>.animatic.mp4, lasting the boards' summed Time (11 s), with sound",
+            [c["id"] for c in push] == ["b07"] and any(c.get("transition") == "fade" and c["id"] == "b04"
+                                                       for c in data["clip"])
+            and [c["id"] for c in data["clip"]][-3:] == ["b08k1", "b08k2", "b09"]
+            and data["edit"].get("loudness") == "none" and data["audio"][0]["source"].endswith("bed.wav")
+            and abs(got - 11.0) < 0.05 and C.streams(info, "audio") and f"wrote {C.shown(animatic)}" in out,
+            f"{got}\n{out[-2500:]}")
+    if animatic.is_file():
+        a, b = (subprocess.run(["ffmpeg", "-v", "error", "-ss", t, "-i", str(animatic), "-frames:v", "1", "-f",
+                                "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True).stdout
+                for t in ("6.05", "7.90"))
+        moved = sum(abs(x - y) for x, y in zip(a, b)) / max(1, len(a))
+        verdict("the animatic's push-in board moves across its Time", len(a) == 320 * 180 and moved > 1.0,
+                f"{len(a)} {moved:.2f}")
+    clean = "061-boards-clean"
+    write(root / C.PIECES / clean / "storyboard.md", board_rows([
+        ["B01", "1", "00:00–00:02", "The harbour", "—", "TEXT: The harbour", "—", "crop x=10"],
+        ["B02", "1", "00:02–00:04", "An eased pan of the slip, made in DaVinci Resolve", "—", "—", "—", "centre"]]))
+    write(root / C.PIECES / clean / "shot-list.md", shot_rows_md([
+        ["B01", "still", "production/src/assets/boards/harbour.png", "fit", "2", "logged", "—"],
+        ["B02", "edited", video, "—", "—", "logged", "—"]]))
+    code, out = cli("boards", clean, "--size", "160x90", "--no-animatic")
+    cboards = C.path(C.PROD_RENDERS) / clean / "boards"
+    csheet = C.read_text(cboards / f"{clean}.boards.html") if (cboards / f"{clean}.boards.html").is_file() else ""
+    verdict("boards of a piece whose every board has its own picture is exit 0: --size wins, an edited shot "
+            "whose export is logged is a frame of that clip naming its editor, and --no-animatic makes none",
+            code == 0 and png_size(cboards / f"{clean}.b01.board.160x90.png") == (160, 90)
+            and f"frame from {video} (DaVinci Resolve export) — the edit chooses the moment" in csheet
+            and not (cboards / f"{clean}.animatic.toml").exists() and "--no-animatic" in out
+            and "FAIL" not in out, out)
+    scene = "062-boards-scene"
+    write(root / C.PIECES / scene / "storyboard.md", board_rows([
+        ["B01", "1", "00:00–00:02", "A push-in on the drawn harbour", "—", "—", "—", "native"]]))
+    write(root / C.PIECES / scene / "shot-list.md", shot_rows_md([
+        ["B01", "scene", f"production/src/scenes/{scene}.scene.py", "native", "2", "needed", "—"]]))
+    code, out = cli("boards", scene, "--size", "160x90")
+    sboards = C.path(C.PROD_RENDERS) / scene / "boards"
+    verdict("a scene piece gets its board sheet, a scene board a placeholder, and no animatic even where a board "
+            "moves", code == 1 and (sboards / f"{scene}.boards.html").is_file()
+            and not (sboards / f"{scene}.animatic.toml").exists() and "a scene piece, so no animatic" in out
+            and "scene.py draws it" in out, out)
+
+
+def png_size(p: Path):
+    """A PNG's (width, height) from its header, or None."""
+    try:
+        head = Path(p).read_bytes()[:24]
+    except OSError:
+        return None
+    if head[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    return int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big")
+
+
 def test_piece_defaults(verdict) -> None:
     """Where the commands' default outputs land (DESIGN D64, Section 6.16), worked out without a
     render: the piece's own folder inside the right renders/ folder, keyed on the leading piece key
@@ -1797,6 +2094,78 @@ def test_shared_mix(verdict) -> None:
         C.ROOT = saved_root
 
 
+def test_threads(verdict) -> None:
+    """The thread cap (C.threads), each input's decoder threads (C.decoder_threads), where a long
+    picture master is cut into sections (V.sections), and the true-peak retry (A.to_ceiling), on
+    files written here and with the measurement stood in for, so none needs ffmpeg."""
+    from unittest.mock import patch
+    with tempfile.TemporaryDirectory(prefix="media-threads-") as folder, held_env(drop=("MEDIA_THREADS",)):
+        mount = Path(folder) / "cgroup"
+        leaf = mount / "user.slice" / "render.scope"
+        leaf.mkdir(parents=True)
+        own = write(Path(folder) / "self-cgroup", "1:net_cls:/\n0::/user.slice/render.scope\n")
+
+        def cap(cpus=16, files=None, proc=own):
+            for f in mount.rglob("cpu.max"):
+                f.unlink()
+            for where, text in (files or {}).items():
+                write(mount / where / "cpu.max", text)
+            with patch.object(C, "CGROUP_ROOT", mount), patch.object(C, "PROC_CGROUP", proc), \
+                    patch.object(C.os, "process_cpu_count", return_value=cpus):
+                return C.threads()
+        got = (cap(), cap(files={"": "max 100000\n", "user.slice": "max 100000\n"}),
+               cap(files={"": "200000 100000\n"}),
+               cap(files={"user.slice": "50000 100000\n", "user.slice/render.scope": "max 100000\n"}),
+               cap(files={"user.slice": "400000 100000\n", "user.slice/render.scope": "250000 100000\n"}),
+               cap(files={"": f"{32 * 100_000} 100000\n"}), cap(cpus=2), cap(cpus=1, files={"": "not a quota\n"}),
+               cap(files={"": "300000 100000\n"}, proc=Path(folder) / "absent"))
+        verdict("threads: every CPU but two with no quota (16 gives 14, 2 and 1 give 1); a cgroup v2 cpu.max on "
+                "this process's cgroup, an ancestor or the mount caps it at the quota, rounded up and never less "
+                "than one, the tightest winning, two never taken off, and a quota above the CPUs leaves the CPUs; "
+                "unreadable files are no quota", got == (14, 14, 2, 1, 3, 16, 1, 1, 3), f"{got}")
+        with held_env(MEDIA_THREADS="3"), patch.object(C, "CGROUP_ROOT", mount):
+            write(mount / "cpu.max", "100000 100000\n")
+            first = C.threads()
+        with held_env(MEDIA_THREADS="1"):
+            one = (C.decoder_threads(), C.decoder_threads(video=False))
+        with held_env(MEDIA_THREADS="8"):
+            eight = (C.decoder_threads(), C.decoder_threads(video=False))
+        verdict("MEDIA_THREADS comes before any quota; a video decoder among many inputs takes two threads, or "
+                "fewer where the cap is lower, and a sound decoder one", first == 3 and one == (1, 1)
+                and eight == (2, 1), f"{first} {one} {eight}")
+    # ten blocks of 10 ticks; a fade into block 4 (it overlaps 3) and an overlay over ticks 25 to 65
+    bounds, overs = [10 * k for k in range(11)], [0, 0, 0, 0, 3, 0, 0, 0, 0, 0]
+    parts = V.sections(bounds, overs, [(25, 65)], 4)
+    whole = V.sections(bounds, overs, [(25, 65)], 11)
+    verdict("sections: a programme within its limit is one section; past it, runs of blocks within the limit "
+            "(the overlay counted in each section it shows in), never split before a block entered with a fade, "
+            "the first block always the first section's", whole == [(0, 10)]
+            and parts == [(0, 3), (3, 6), (6, 9), (9, 10)], f"{parts} {whole}")
+    renders, said = [], io.StringIO()
+    readings = iter([{"I": -14.1, "LRA": 3.0, "TP": -0.4}, {"I": -14.6, "LRA": 3.0, "TP": -1.3}])
+    with patch.object(A, "ebur128", lambda p, pcm_format=None: next(readings)), contextlib.redirect_stdout(said):
+        summary, found = A.to_ceiling(renders.append, Path("unused.m4a"), (-14.0, -1.0), "social")
+    verdict("to_ceiling renders again once a lossy encode lifts the true peak over the ceiling (-0.4 dBTP against "
+            "-1, allowed -0.8), aiming loudnorm lower by the overshoot and 0.3 dB (-1.9), says so on one line and "
+            "reports the last render", renders == [(-14.0, -1.0), (-14.0, -1.9)] and not found
+            and "-1.3 dBTP" in summary and said.getvalue().count("\n") == 1
+            and "peak target at -1.9 dBTP" in said.getvalue(), f"{renders} {summary} {found} {said.getvalue()}")
+    renders, said = [], io.StringIO()
+    readings = iter([{"I": -14.0, "LRA": 3.0, "TP": 1.5}, {"I": -14.0, "LRA": 3.0, "TP": 0.2},
+                     {"I": -14.0, "LRA": 3.0, "TP": -0.5}, {"I": -14.0, "LRA": 3.0, "TP": -2.0}])
+    with patch.object(A, "ebur128", lambda p, pcm_format=None: next(readings)), contextlib.redirect_stdout(said):
+        summary, found = A.to_ceiling(renders.append, Path("unused.m4a"), (-14.0, -1.0), "social")
+    verdict("to_ceiling renders at most three times, never aims under the ceiling less 3 dB, and a peak still "
+            "over the ceiling after the last is the finding", [r[1] for r in renders] == [-1.0, -3.8, -4.0]
+            and len(found) == 1 and "true peak -0.5 dBTP is above the social ceiling -1" in found[0],
+            f"{renders} {found}")
+    renders = []
+    with patch.object(A, "ebur128", lambda p, pcm_format=None: {"I": -14.2, "LRA": 3.0, "TP": -0.85}):
+        summary, found = A.to_ceiling(renders.append, Path("unused.m4a"), (-14.0, -1.0), "social")
+    verdict("to_ceiling renders once where the peak is within the allowance loudness_findings gives (-0.85 dBTP "
+            "against -1)", renders == [(-14.0, -1.0)] and not found, f"{renders} {found}")
+
+
 def test_render_helpers(verdict, root: Path) -> None:
     from unittest.mock import patch
     import time
@@ -1884,10 +2253,15 @@ def test_render_helpers(verdict, root: Path) -> None:
         pid = int(pidfile.read_text())
         status = Path('/proc') / str(pid) / 'stat'
         if sys.platform.startswith('linux'):
-            until = time.monotonic() + 2
-            while status.is_file() and status.read_text().split()[2] != 'Z' and time.monotonic() < until:
+            def state():  # the child's state letter, or '' once it is gone (reaped between two reads)
+                try:
+                    return status.read_text().split()[2]
+                except (FileNotFoundError, ProcessLookupError, IndexError):
+                    return ''
+            until = time.monotonic() + 10
+            while state() not in ('', 'Z') and time.monotonic() < until:
                 time.sleep(0.01)
-            stopped = stopped and (not status.is_file() or status.read_text().split()[2] == 'Z')
+            stopped = stopped and state() in ('', 'Z')
         else:
             try:
                 os.kill(pid, 0)
@@ -2356,6 +2730,24 @@ def test_repo(verdict, skip, cli, root: Path, have_git: bool, have_ff: bool) -> 
     verdict("audiobook text inlines footnotes and chunks under --limit at paragraph boundaries",
             len(parts) >= 2 and all(len(t) <= 200 for t in texts) and any("breath is a count" in t for t in texts),
             texts)
+    # DESIGN D95: a chunk opening on an inline-IPA word would break the server's file name.
+    opening = write(root / "manuscript/src/03-tharvel/03-tharvel.md", "Tharvel counted the stones.\n")
+    write(root / C.AUDIOBOOK / "010-fixture-respelled.md",
+          CHAPTER_REG.replace("002-fixture-book", "010-fixture-respelled")
+          .replace("model_id: eleven_v4", "model_id: eleven_multilingual_v2"))
+    flagged = {}
+    for book in ("002-fixture-book", "010-fixture-respelled"):
+        code, out = cli("audiobook", "text", opening, "--piece", book, "--chapter", "ch03")
+        chunk = C.path(C.AB_GENERATED) / f"{book}.ch03.p01.txt"
+        flagged[book] = (code, out, C.read_text(chunk) if chunk.is_file() else "")
+    code, out, chunk = flagged["002-fixture-book"]
+    verdict("audiobook text writes a chunk whose first five characters hold inline IPA's '/', and flags "
+            "it for the server's file name (exit 1)",
+            code == 1 and chunk.startswith("/ˈθɑːvəl/") and "p01" in out and "— FILE NAME" in out
+            and "after the credits are spent" in out, out)
+    code, out, chunk = flagged["010-fixture-respelled"]
+    verdict("audiobook text leaves a respelled opening word unflagged",
+            code == 0 and chunk.startswith("THAR-vel") and "FILE NAME" not in out, out)
     credits = C.path(C.AUDIOBOOK) / "008-fixture-voice-format.ch00.md"
     code, out = cli("audiobook", "text", credits, "--piece", "008-fixture-voice-format", "--chapter", "ch00")
     credit = C.read_text(C.path(C.AB_GENERATED) / "008-fixture-voice-format.ch00.p01.txt") \
@@ -2942,6 +3334,24 @@ def test_voice_plan(verdict, skip, cli, root: Path, have_git: bool) -> None:
         code, out = cli("speak", "plan", piece)
         verdict("speak plan flags a request over the model's limit, reporting characters and calls, no rate",
                 code == 1 and "OVER LIMIT" in out and "1 calls" in out and "credits" not in out.lower(), out[-400:])
+        # DESIGN D95: the server names the take from the request's first five characters.
+        for line, model, flagged in (("Ferry crosses at dawn.", "eleven_v4", True),
+                                     ("The ferry crosses at dawn.", "eleven_v4_turbo", True),
+                                     ("Ferry crosses at dawn.", "eleven_multilingual_v2", False)):
+            write(script, f"## 1. Opening\n\nVO: {line}\n")
+            write(register, reg.replace("The ferry is late again.", line)
+                  .replace('model_id = "eleven_v4"', f'model_id = "{model}"'))
+            code, out = cli("speak", "plan", piece)
+            verdict(f"speak plan {model}: " + ("flags a '/' in the request's first five characters, which "
+                    "the server's file name cannot hold (exit 1)" if flagged else
+                    "leaves a respelled opening word unflagged"),
+                    (code == 1 and "s02: " in out and "— FILE NAME" in out and "file name: " in out
+                     and "after the credits are spent" in out and "/feri/ crosses" in out) if flagged else
+                    (code == 0 and "FILE NAME" not in out and "feh ree crosses" in out), out)
+        verdict("speak plan's file-name check holds a backslash and a NUL, a '/' as the fifth character but "
+                "not the sixth", A.name_hazard("a\\b c") and A.name_hazard("ab\0cd") and A.name_hazard("abcd/")
+                and not A.name_hazard("abcde/") and not A.name_hazard("[sad] /feri/")
+                and not A.name_hazard("Ferry"), A.name_hazard("a\\b"))
         code, out = cli("speak", "plan", "--trial", "candidate-a")
         trial = C.path(C.VO_GENERATED) / "voice-trials" / "candidate-a"
         verdict("speak plan --trial creates only the trial directory, with no piece or register",
@@ -3345,6 +3755,10 @@ def test_media(verdict, skip, cli, root: Path) -> None:
     test_screen(verdict, skip, cli, work)
     test_held_sound(verdict, cli, work)
     test_source_sound(verdict, cli, work)
+    test_sections(verdict, cli, work)
+    test_push_in(verdict, cli)
+    test_peak_master(verdict, cli)
+    test_peak_cut(verdict, cli, work)
 
 
 def test_voice_join(verdict, cli) -> None:
@@ -3791,6 +4205,10 @@ def test_stills(verdict, cli) -> None:
             "only where a push-in, a fade or a video comes between them, never by decoder or orientation",
             len(seen) == 71 and not off and counts == [2, 2, 2] and stage.get("loops") == 1,
             f"{len(seen)} frames; off: {off[:6]}; runs {counts}; looped {stage.get('loops')}\n{out}")
+    caps = [t for t, _, _ in stage.get("caps", [])]
+    verdict("assemble gives each input of its graph its own decoder threads: the video clip two at most, every "
+            "still, push-in and run of stills one", caps == ["1", "1", "1", str(C.decoder_threads()), "1"],
+            f"{stage.get('caps')}")
     test_still_sources(verdict, cli, stills)
 
 
@@ -4017,17 +4435,212 @@ def test_source_sound(verdict, cli, work: Path) -> None:
             f"{ends}\n{out}")
 
 
+def test_sections(verdict, cli, work: Path) -> None:
+    """A picture master past V.SECTION_INPUTS renders its picture in sections, joined by stream
+    copy, and its sound once for the whole programme: the same frames, each the same colour, as
+    the same edit in one pass, at 25 and 30000/1001 fps, with a fade the split never cuts, an
+    overlay over a join, a ducked bed and every input's decoder threads capped."""
+    folder = C.path(C.ASSETS) / "sections"
+    folder.mkdir(parents=True, exist_ok=True)
+    lavfi("-f", "lavfi", "-i", "color=c=red@0.5:s=160x90,format=rgba", "-frames:v", "1", folder / "veil.png")
+    lavfi("-f", "lavfi", "-i", "sine=frequency=550:sample_rate=48000:duration=8", "-af", "volume=0.4", "-ac", "2",
+          folder / "bed.wav")
+    real = V.SECTION_INPUTS
+    for rate, label in (("25", "25"), ("30000/1001", "29.97")):
+        source = work / f"sections-{label}.mp4"   # every frame its own colour, so a frame out of place shows
+        lavfi("-f", "lavfi", "-i", f"color=c=black:s=160x90:r={rate}:d=8,format=rgb24,geq=r='mod(N*7,200)+20':"
+              "g='mod(N*13,200)+20':b='mod(N*3,200)+20'", "-f", "lavfi", "-i",
+              "sine=frequency=330:sample_rate=48000:duration=8", "-c:v", "libx264", "-preset", "ultrafast",
+              "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", source)
+        code, out = cli("footage", "add", source, "--kind", "video", "--location", "Sections")
+        fid = logged_id(out)
+        clips = "".join(f'\n[[clip]]\nsource = "{fid}"\nin = "{start:.3f}"\nout = "{start + 0.6:.3f}"\n'
+                        + ('transition = "fade"\ntransition_seconds = 0.2\n' if n == 4 else "")
+                        for n, start in enumerate((0.0, 1.1, 2.3, 0.7, 3.2, 4.0, 5.1, 1.9, 6.0)))
+        body = ('size = "160x90"\n' + clips + '\n[[overlay]]\nsource = "production/src/assets/sections/veil.png"\n'
+                'at = "00:00:01.500"\nuntil = "00:00:03.300"\n\n[[audio]]\n'
+                'source = "production/src/assets/sections/bed.wav"\nduck = true\nrole = "music"\n')
+        masters, said, passes = {}, {}, {}
+        for piece, limit in ((f"040-sections-{label.replace('.', '')}", 4), (f"041-whole-{label.replace('.', '')}",
+                                                                              real)):
+            edl = write(C.path(C.EDITS) / f"{piece}.toml", f'[edit]\npiece = "{piece}"\n' + body)
+            V.SECTION_INPUTS = limit
+            try:
+                code, out, stage = spied_assemble(cli, edl)
+            finally:
+                V.SECTION_INPUTS = real
+            masters[limit] = C.path(C.PROD_RENDERS) / piece / f"{piece}.master.mp4"
+            said[limit], passes[limit] = (code, out), stage
+        (code, out), stage = said[4], passes[4]
+        cut, whole = (frame_colours(m) if m.is_file() else [] for m in (masters[4], masters[real]))
+        expect = V.tick(Fraction(52, 10), Fraction(rate))   # nine clips of 0.6 s, less the 0.2 s fade
+        worst = max((max(abs(a - b) for a, b in zip(x, y)) for x, y in zip(cut, whole)), default=999)
+        verdict(f"assemble at {label} fps past SECTION_INPUTS renders the picture in sections (one line saying so) "
+                "and the sound once, every input's decoder capped (a video at most two, a sound one with no picture "
+                "decoder): verified, the frames of the one-pass render, each within 4 levels of its colour",
+                code == 0 and said[real][0] == 0 and "verified" in out and "verified" in said[real][1]
+                and "sections: the picture renders in 3 sections" in out and stage["sections"] == 3
+                and passes[real]["sections"] == 0 and len(cut) == len(whole) == expect and worst <= 4
+                and all(t is not None for t, _, _ in stage["all_caps"])
+                and all(t == str(C.decoder_threads()) for t, vn, name in stage["all_caps"]
+                        if name.endswith(".mp4") and not vn)
+                and all(t == "1" for t, vn, _ in stage["all_caps"] if vn)
+                and sum(vn for _, vn, name in stage["all_caps"] if name.endswith((".mp4", ".wav"))) == 10,
+                f"{len(cut)} and {len(whole)} frames of {expect}; worst {worst}; {stage}\n{out}")
+        loud = [A.ebur128(m)["I"] if m.is_file() else float("nan") for m in (masters[4], masters[real])]
+        verdict(f"the sectioned master at {label} fps has the one-pass master's sound: loudness measured on the "
+                "whole programme, within 0.2 LU", abs(loud[0] - loud[1]) <= 0.2, f"{loud}")
+
+
+def test_push_in(verdict, cli) -> None:
+    """A push-in moves on every frame, by a steady amount: zoompan truncated its window to whole
+    pixels, so on a fine-patterned still frames held and then jumped (a frame-to-frame change
+    whose spread was 0.94 of its mean; perspective's, sub-pixel, 0.05 before the encode)."""
+    still = C.path(C.ASSETS) / "stills" / "pattern.png"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=320x180:rate=1", "-frames:v", "1", "-update", "1", still)
+    edl = write(C.path(C.EDITS) / "042-push.toml", '[edit]\npiece = "042-push"\nsize = "320x180"\nloudness = "none"\n'
+                '\n[[clip]]\nsource = "production/src/assets/stills/pattern.png"\nseconds = 2.0\nmotion = "push-in"\n')
+    code, out = cli("assemble", edl)
+    master = C.path(C.PROD_RENDERS) / "042-push" / "042-push.master.mp4"
+    proc = subprocess.run(["ffmpeg", "-v", "error", "-i", str(master), "-f", "rawvideo", "-pix_fmt", "gray", "-"],
+                          capture_output=True) if master.is_file() else None
+    size = 320 * 180
+    frames = [proc.stdout[k:k + size] for k in range(0, len(proc.stdout), size)] if proc else []
+    steps = [sum(abs(a - b) for a, b in zip(x, y)) / size for x, y in zip(frames, frames[1:])]
+    mean = sum(steps) / len(steps) if steps else 0.0
+    spread = (sum((s - mean) ** 2 for s in steps) / len(steps)) ** 0.5 if steps else 99.0
+    verdict("assemble's push-in moves on every frame and smoothly (60 frames; no step under half the mean, the "
+            "steps' spread under a quarter of their mean)", code == 0 and "verified" in out and len(frames) == 60
+            and steps and min(steps) > 0.5 * mean and spread < 0.25 * mean,
+            f"{len(frames)} frames, steps mean {mean:.3f} spread {spread:.3f} min {min(steps, default=0):.3f}\n{out}")
+
+
+def test_peak_master(verdict, cli) -> None:
+    """A master whose AAC encode lifts its true peak over the social ceiling: pink noise, a low tone
+    and 5 kHz clicks, which loudnorm aimed at -1 dBTP left at -0.5 dBTP after AAC 192k (ffmpeg
+    9.0.2; -0.3 on 6.1.1), over the -0.8 the verdict allows. The master is rendered again aiming
+    lower and ends within the ceiling and the loudness window. Each measurement of the master is
+    read as it is taken, so the case holds where an encoder does not overshoot as well."""
+    folder = C.path(C.ASSETS) / "peaky"
+    folder.mkdir(parents=True, exist_ok=True)
+    lavfi("-f", "lavfi", "-i", "color=c=0x2050c0:s=64x36", "-frames:v", "1", folder / "a.png")
+    lavfi("-f", "lavfi", "-i", "anoisesrc=color=pink:amplitude=0.3:seed=7:sample_rate=48000:duration=6", "-f",
+          "lavfi", "-i", "aevalsrc='0.15*sin(2*PI*220*t)+0.9*sin(2*PI*5000*t)*exp(-400*mod(t,0.5))':s=48000:d=6",
+          "-filter_complex", "[0:a][1:a]amix=inputs=2:normalize=0,aformat=channel_layouts=stereo", "-c:a",
+          "pcm_s16le", folder / "peaky.wav")
+    edl = write(C.path(C.EDITS) / "043-peak.toml", '[edit]\npiece = "043-peak"\nsize = "64x36"\n\n[[clip]]\n'
+                'source = "production/src/assets/peaky/a.png"\nseconds = 6.0\n\n[[audio]]\n'
+                'source = "production/src/assets/peaky/peaky.wav"\nrole = "music"\n')
+    master = C.path(C.PROD_RENDERS) / "043-peak" / "043-peak.master.mp4"
+    peaks, real = [], A.ebur128
+
+    def meter(p, pcm_format=None):
+        got = real(p, pcm_format)
+        if Path(p) == master:
+            peaks.append(got["TP"])
+        return got
+    A.ebur128 = meter
+    try:
+        code, out = cli("assemble", edl)
+    finally:
+        A.ebur128 = real
+    over = [tp for tp in peaks[:-1] if not A.under_ceiling(tp, -1.0)]
+    verdict("assemble of a peaky programme ends within the social ceiling after the AAC encode, rendered again "
+            "aiming lower after each render the encode lifted over it (one note line each), verified, with its "
+            "peak memory named", code == 0 and "verified" in out and peaks and A.under_ceiling(peaks[-1], -1.0)
+            and len(over) == len(peaks) - 1 == out.count("peak target at") and "memory: peak" in out,
+            f"{peaks}\n{out}")
+
+
+class stand_in_peak:
+    """Wrap A.ebur128 so the first reading of one file reports its true peak over the ceiling by
+    over dB (a lossy encode lifting it, made certain), every reading of that file recorded in peaks
+    (the real ones); restore() puts the meter back."""
+
+    def __init__(self, target: Path, over: float, ceiling: float | None = None):
+        self.real, self.peaks, self.target = A.ebur128, [], Path(target)
+
+        def meter(p, pcm_format=None):
+            got = self.real(p, pcm_format)
+            if Path(p) == self.target:
+                self.peaks.append(got["TP"])
+                if len(self.peaks) == 1:
+                    got = dict(got, TP=max(got["TP"], (ceiling if ceiling is not None else got["TP"]) + over))
+            return got
+        A.ebur128 = meter
+
+    def restore(self) -> None:
+        A.ebur128 = self.real
+
+
+def test_peak_cut(verdict, cli, work: Path) -> None:
+    """cut keeps its source's loudness, and holds a lossy deliverable under its ceiling: a tone
+    at -0.1 dBFS, cut to an AAC audio deliverable and to a vertical video, measures over the -1
+    dBTP ceiling after the encode, and is rendered again with its sound lowered by a gain (never
+    loudnorm), ending within the ceiling; a cut already within it renders once, its loudness
+    unchanged."""
+    hot = work / "002-hot.mov"
+    lavfi("-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30:duration=4", "-f", "lavfi", "-i",
+          "aevalsrc='0.99*sin(2*PI*997*t)|0.99*sin(2*PI*997*t)':s=48000:d=4", "-c:v", "libx264", "-preset", "ultrafast",
+          "-pix_fmt", "yuv420p", "-c:a", "pcm_s16le", "-shortest", hot)
+    for key, made, cut in (("podcast.apple_rss_audio", "002-hot--c01.podcast-apple-rss-audio.m4a", "c01"),
+                           ("youtube.short", "002-hot--c02.youtube-short.mp4", "c02")):
+        out_path = C.path(C.PUB_RENDERS) / "002-hot" / made
+        readings = stand_in_peak(out_path, 0.0)
+        try:
+            code, out = cli("cut", hot, "--deliverable", key, "--in", "00:00:00.500", "--out", "00:00:02.500",
+                            "--cut", cut)
+        finally:
+            readings.restore()
+        over = [tp for tp in readings.peaks[:-1] if not A.under_ceiling(tp, -1.0)]
+        verdict(f"cut to {key} of a source at -0.1 dBFS measures its encode over the ceiling, renders again with "
+                "the sound lowered by a gain after each render over it (one note line each) and ends within it, "
+                "verified", code == 0 and "verified" in out and len(readings.peaks) >= 2 and readings.peaks[0] > -0.8
+                and A.under_ceiling(readings.peaks[-1], -1.0) and len(over) == len(readings.peaks) - 1
+                == out.count("dB lower") and "the source's own" in out, f"{readings.peaks}\n{out}")
+    calm = work / "002-calm.wav"
+    lavfi("-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=4,volume=0.25", "-ac", "2", calm)
+    out_path = C.path(C.PUB_RENDERS) / "002-calm" / "002-calm--c01.podcast-apple-rss-audio.m4a"
+    readings = stand_in_peak(out_path, 0.0)
+    try:
+        code, out = cli("cut", calm, "--deliverable", "podcast.apple_rss_audio", "--in", "0", "--out", "2",
+                        "--cut", "c01")
+    finally:
+        readings.restore()
+    source, made = A.ebur128(calm), A.ebur128(out_path) if out_path.is_file() else {"I": 99}
+    verdict("cut of a source within the ceiling renders once and keeps its loudness (within 0.5 LU)",
+            code == 0 and len(readings.peaks) == 1 and "dB lower" not in out and abs(source["I"] - made["I"]) <= 0.5,
+            f"{source} {made}\n{out}")
+
+
+def input_caps(args: list) -> list:
+    """(decoder threads or None, -vn given, name) of each input of an ffmpeg command, from the
+    options between it and the input before it."""
+    found, after = [], 0
+    for n, a in enumerate(args[:-1]):
+        if a == "-i":
+            opts = args[after:n]
+            found.append((opts[opts.index("-threads") + 1] if "-threads" in opts else None, "-vn" in opts,
+                          args[n + 1]))
+            after = n + 2
+    return found
+
+
 def spied_assemble(cli, edl: Path) -> tuple:
-    """(exit code, output, stage) of one assemble, stage holding its render's input count, looped
-    inputs and each ffconcat list, read while the list exists, and how many images it framed."""
-    stage, real = {"framed": 0}, C.ffmpeg
+    """(exit code, output, stage) of one assemble, stage holding its last graph's input count,
+    looped inputs, each ffconcat list (read while the list exists) and each input's decoder
+    threads (caps), every graph's inputs (all_caps), how many images it framed and how many
+    sections of the picture it rendered."""
+    stage, real = {"framed": 0, "sections": 0, "all_caps": []}, C.ffmpeg
 
     def spy(args, cwd=None, what="ffmpeg"):
         args = [str(a) for a in args]
         if args and Path(args[-1]).name.startswith("framed-"):   # framed_still's own pass
             stage["framed"] += 1
         elif "-filter_complex" in args:
-            stage.update(inputs=args.count("-i"), loops=args.count("-loop"), lists=[
+            stage["sections"] += Path(args[-1]).name.startswith("section-")
+            stage["all_caps"] += input_caps(args)
+            stage.update(inputs=args.count("-i"), loops=args.count("-loop"), caps=input_caps(args), lists=[
                 Path(args[args.index("-i", n) + 1]).read_text(encoding="utf-8")
                 for n in range(len(args) - 1) if args[n:n + 2] == ["-f", "concat"]])
         return real(args, cwd=cwd, what=what)
@@ -4160,6 +4773,17 @@ def test_audiobook(verdict, cli, root: Path, work: Path) -> None:
                     room, "-o", C.path(C.AB_RENDERS) / "with-room.mp3")
     verdict("audiobook master --room-tone FILE loops a recording of the room for the gaps, and passes",
             code == 0 and "room tone: --room-tone" in out and "passes the ACX check" in out, out)
+    forced = C.path(C.AB_RENDERS) / "forced-peak.mp3"
+    readings = stand_in_peak(forced, 1.0, ceiling=-3.5)
+    try:
+        code, out = cli("audiobook", "master", tone, "--piece", "002-fixture-book", "--chapter", "ch03",
+                        "--room-tone", room, "-o", forced)
+    finally:
+        readings.restore()
+    verdict("audiobook master renders again aiming lower where its MP3 encode lifts the true peak over the acx "
+            "ceiling (stood in for on the first reading: one note line), and the ACX check passes the last",
+            code == 0 and len(readings.peaks) == 2 and out.count("rendering again with loudnorm's peak target") == 1
+            and "passes the ACX check" in out, f"{readings.peaks}\n{out}")
     code, out = cli("cut", mp3, "--deliverable", "audiobook.acx", "--in", "00:00:01.000", "--out", "00:00:06.000")
     sample = C.path(C.PUB_RENDERS) / "002-fixture-book" / "002-fixture-book.audiobook-acx.mp3"
     a = C.streams(C.probe(sample), "audio") if sample.is_file() else []

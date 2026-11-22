@@ -37,10 +37,17 @@ model: opus
 
 **The shots**
 
-- [ ] One shot list row per shot, `S01` onwards, each with a source; `to shoot` used where nothing exists yet. · _sonnet_
+- [ ] One shot list row per shot, `S01` onwards, each with a source; `to shoot` used where nothing exists yet, `to render` for an `edited` shot. · _sonnet_
 - [ ] Every `generated` shot agrees with the brief's `ai_visuals`, or the brief's disclosure plan was settled with the author first. · _opus_
 - [ ] A `needed` rights row opened or reused for every licensed or identifiable item, its ID in the shot and in the brief's `rights:`. · _sonnet_
 - [ ] No voice or likeness boarded without the person's recorded consent, or a row saying it must be obtained. · _opus_
+
+**Seeing it**
+
+- [ ] `python3 toolkit/media.py boards <piece>` run: one still per board at the master's size, and the contact sheet written. · _sonnet_
+- [ ] Where a board has motion or a build-up (and the piece is not a scene), the animatic written. · _sonnet_
+- [ ] Each still opened by its printed path and reported; every finding reported; the author's fixes made as board revisions and the command run again. · _opus_
+- [ ] The author has seen the contact sheet and any animatic, or waived the check in their own words, recorded in `verified:` with the date and reason. · _opus_
 
 **Approval**
 
@@ -53,6 +60,6 @@ model: opus
 
 ## Done When
 
-- [ ] **The author has approved the storyboard, and an edit decision list could be written from it without guessing.** · _opus_
-- [ ] Nothing was shot, rendered or cleared in this procedure. · _sonnet_
+- [ ] **The author has seen the boards and approved the storyboard, and an edit decision list could be written from it without guessing.** · _opus_
+- [ ] Nothing was shot or cleared in this procedure, and only the board sheet and animatic were rendered. · _sonnet_
 - [ ] The hand-back names the next procedures by their full folder names and offers to start one. · _opus_

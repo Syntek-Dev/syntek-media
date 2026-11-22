@@ -1,6 +1,6 @@
 # Prerequisites — the tools and accounts to have first, and checking them
 
-The audio and video side of the project needs a few free tools on your computer, and two accounts if you use a voice service or a design project.
+The audio and video side of the project needs a few free tools on your computer, and an account if you use a voice service.
 This chapter lists them, says what each one is for, and shows how to check which ones you already have.
 
 ## The tools
@@ -11,12 +11,14 @@ This chapter lists them, says what each one is for, and shows how to check which
 | Python 3.14 or later | `toolkit/media.py`, the scripts in `.claude/` and the update script that ends every update | Yes |
 | uv | Running Copier, the thumbnail and card renderer, and the two MCP servers | Yes |
 | git 2.31 or later | Recording every version of the project; every update relies on it, and the update script reads the Git history of the files it updates | Yes |
-| Playwright's Chromium, or another Chromium-based browser that `MEDIA_CHROMIUM` names | Rendering thumbnails, cards and scenes to images | Yes, for any card or thumbnail |
+| Playwright's Chromium, or another Chromium-based browser that `MEDIA_CHROMIUM` names | Rendering thumbnails, cards, scenes and the storyboard's board pictures to images | Yes, for any card or thumbnail, and to see the boards of any piece with picture |
 | git-lfs | Large design exports in `brand/src/exports/large/`, and nothing else | Only for large design exports |
 | espeak-ng | A rough offline voice for timing a script, labelled approximate | Optional |
 | Rhubarb Lip Sync | Mouth shapes for an animated scene, from a voice track | Optional |
 | WhisperX, on its own older Python | Word-by-word timing of a voice track, offline | Optional |
 | pandoc | Cleaner chapter text for an audiobook, where the project makes audiobooks | Optional |
+| VectorCraft, PhotoCraft, DesignCraft or DaVinci Resolve | Logos, sprites, photographs and other brand art, made outside the project and brought back as exports | Optional, and the toolkit does not check for it |
+| DaVinci Resolve, EffectCraft, FilmCraft or AniCraft | Complex shots the toolkit does not make, such as a moving push-in or an animated title, exported and logged as footage | Optional, and the toolkit does not check for it |
 | Claude Code | Running the skills, the rules and the procedures | Yes |
 
 A missing optional tool blocks only the commands that need it, and the toolkit's check names them.
@@ -85,8 +87,9 @@ The voice service is ElevenLabs, which Claude reaches through an MCP server, a s
 Add that server once, at user scope, named `elevenlabs`, with a base path that contains this project, or it refuses every project file.
 Keep its key, `ELEVENLABS_API_KEY`, in your shell, and never type it on a command line or commit it.
 `production/docs/reference/elevenlabs.md` gives the exact commands and the rule for choosing the base path.
-Claude Design is where the brand's layouts are explored visually, in one design project kept in step with `brand/src/design-system/`.
-`brand/docs/reference/claude-design.md` says how the two are kept in step, and what a sync must never do.
+The design apps need no account here: they are desktop apps you install yourself, and the template offers no server for them.
+The brand's tokens and layouts stay plain files you edit by hand, in `brand/src/design-system/`.
+`brand/docs/reference/design-apps.md` says which app makes which design, and how each one comes back into the project as an export.
 
 ## Checking what you have
 

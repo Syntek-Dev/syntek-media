@@ -117,7 +117,10 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
    original script lines named by `script_lines`, as tags for v3, v4 and v4_turbo, dropped for
    other models. Copy the printed requests and lengths to `request` and `characters`; the command
    never edits the register. A `{pause S}` inside a sentence is never sent: report it and keep
-   the sentence whole. Neither the script nor caption `text` changes.
+   the sentence whole. Neither the script nor caption `text` changes. A request the plan flags
+   `FILE NAME` (a '/' of inline IPA, a backslash or NUL in its first five characters) is never
+   sent: the server names the take from them and fails the save after the credits are spent;
+   respell that word or reorder the words, with the author, and plan again.
    *Complete when:* every segment to voice has its `request` and `characters`.
 
 6. **State the characters and calls and wait.** Present the offline plan's counts, one call per
@@ -183,21 +186,18 @@ The mode file adds this project's kinds of voiceover, the lines it voices and it
 
 ## Anti-patterns
 
-- **Generating unasked.** Every call spends the author's credits; a take nobody requested is a cost
-  nobody agreed.
+- **Generating unasked.** Every call spends the author's credits: an unasked take is an unagreed cost.
 - **Voicing a draft.** A revised line throws away the take made from the old one.
 - **One segment per caption cue.** A sentence split over two calls ends twice; the captions are
   timed from the segments whatever their size.
 - **Omitting the model ID.** The server's default model is not the one the narrator was chosen with.
 - **Audio on the desktop.** Without the absolute `output_directory`, files land outside the project
   and its ignore rule.
-- **Renaming later, or by hand.** Two takes made in the same second can overwrite each other: run
-  `take add` straight after each call, never a shell `mv`.
+- **Renaming later, or by hand.** Takes made in one second can overwrite each other: `take add` at once.
 - **A second narrator.** One use, one recorded voice.
 - **A voice nobody consented to.** No clone without a cleared consent row; the owner's own clone is
   still synthetic, and is disclosed. A remix starts only from the author's own cleared clone.
-- **Committing audio, or leaving an approved take unarchived.** It is too large for plain Git, and
-  once lost it cannot be made again.
+- **Committing audio, or leaving an approved take unarchived.** Too large for Git; lost, never remade.
 - **Retrying on error.** Stop at the first failure and report it.
 - **Offering a fallback that is not installed.** Check for `espeak-ng` before offering it; with
   neither route, give the setup steps and stop.

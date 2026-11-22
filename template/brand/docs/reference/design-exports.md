@@ -48,7 +48,7 @@ folder, so a large export in the wrong place is caught before it spreads to ever
 | Column | Holds |
 |---|---|
 | Design | the design's name, as the author calls it |
-| Claude Design link | its link, exactly as Claude Design gives it; kept here and nowhere else |
+| Made in | the app, its version and the project file's label, never a path (headed `Claude Design link` in a register made before 0.12.0, whose links stay here and nowhere else) |
 | Export path | the file's path from the repository root |
 | Storage | `git` or `lfs` |
 | Exported | the date it was exported, DD/MM/YYYY |

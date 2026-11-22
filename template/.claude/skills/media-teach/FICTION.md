@@ -32,7 +32,7 @@ instead of the book's.
 | Family | What is practised | House source |
 |---|---|---|
 | Craft | a hook that sells the premise without the ending; writing a reading for the ear; a board that shows mood without a cast; pacing a cut to music | `scripts/docs/reference/writing-for-the-ear.md`; `scripts/docs/reference/storyboards-and-shot-lists.md`; `production/docs/reference/edit-decision-lists.md` |
-| Tool | the toolkit's presets, cuts and checks; `card.py` and the card layouts; captions and loudness; Claude Design for a cover-led look | `toolkit/CONTEXT.md`; `publishing/docs/reference/captions.md`; `production/docs/reference/sound-and-loudness.md`; `brand/docs/reference/claude-design.md` |
+| Tool | the toolkit's presets, cuts and checks; `card.py` and the card layouts; captions and loudness; the design apps for a cover-led look | `toolkit/CONTEXT.md`; `publishing/docs/reference/captions.md`; `production/docs/reference/sound-and-loudness.md`; `brand/docs/reference/design-apps.md` |
 | Platform | reading the platform data; a cut-down that stands alone; a post package; the AI label | `publishing/docs/reference/platform-specs.md`; `publishing/docs/reference/cut-downs.md`; `publishing/docs/reference/posting-and-the-log.md`; `publishing/docs/reference/ai-disclosure.md` |
 | Book media | spoilers and what a trailer withholds; a character's voice described for a narrator; quoting the book aloud and showing its cover; a reading's credits; where the project makes audiobooks, the narration guide | `production/docs/reference/character-voices.md`; `production/docs/reference/rights-and-consent.md`; the audiobook narration guide, where the project makes audiobooks, and the trailers guide, where it makes trailers |
 
