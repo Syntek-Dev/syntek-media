@@ -13,6 +13,10 @@ Dates are DD/MM/YYYY. The design behind every entry is `DESIGN.md`; entries cite
 
 ## [Unreleased]
 
+### Changed
+
+- **`family-shared.json` records `unreleased` again** after the `v0.12.0` tag (DESIGN.md Section 7, D80; syntek-author D48's release rule; `.claude/CLAUDE.md` Section 9). This is what `shipped-seeds.sh --write-manifest` writes on the first commit after a release tag, so that check 23 holds on every commit until the next release. Development only: nothing ships.
+
 ## [0.12.0] - 22/11/2026
 
 Adds D92–D96. A production run on 22/11/2026 found four faults in one piece's master, none of which anything before the render could show. A push-in juddered, a card was laid out wrongly for its purpose, and both were seen only in the rendered master. `assemble` passed 5 GB in one ffmpeg and stalled under a 5G memory cap. The master read −0.4 dBTP after its AAC encode against a −1 ceiling. In the same run a voiceover request that opened with inline IPA was paid for and then failed to save. This release makes the picture visible before M3 (D92), sends the shots `assemble` cannot make well to an outside editor (D93), fixes `assemble`'s memory, its push-in and the true peak after every lossy encode, the loudness decision of 0.12.0 (D94), flags the failing request before it is sent (D95), and replaces Claude Design with desktop design apps (D96).
